@@ -1,0 +1,3 @@
+[workspace]
+members = ["rust/miniproto_native"]
+resolver = "2"

@@ -1,0 +1,83 @@
+[build-system]
+requires = ["maturin==1.14.1,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "miniproto"
+version = "0.1.0"
+description = "Async-first MTProto client core for Python with bundled Rust acceleration"
+readme = "README.md"
+requires-python = ">=3.13"
+license = { file = "LICENSE" }
+authors = [{ name = "EDM115", email = "miniproto@edm115.dev" }]
+keywords = ["telegram", "mtproto", "asyncio", "pyo3", "rust"]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Framework :: AsyncIO",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Rust",
+  "Typing :: Typed",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+  "maturin==1.14.1,<2.0",
+  "pytest==9.1.1",
+  "ruff==0.15.19",
+  "ty==0.0.53",
+]
+uvloop = [
+  "uvloop==0.22.1; (sys_platform == 'linux' or sys_platform == 'darwin') and implementation_name == 'cpython'",
+]
+
+[project.urls]
+Homepage = "https://github.com/EDM115/miniproto"
+Issues = "https://github.com/EDM115/miniproto/issues"
+Funding = "https://github.com/EDM115#support-me-"
+
+[tool.maturin]
+module-name = "miniproto._native"
+python-source = "src"
+manifest-path = "rust/miniproto_native/Cargo.toml"
+features = ["pyo3/extension-module"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+exclude = [".venv"]
+target-version = "py313"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.format]
+docstring-code-format = true
+line-ending = "lf"
+skip-magic-trailing-comma = true
+
+[tool.ruff.lint]
+# future-annotations = true
+select = ["E", "F", "I", "UP", "B", "ASYNC", "C4", "SIM", "RUF", "N", "S", "W"]
+ignore = ["S101", "E501", "N818"]
+
+[tool.ruff.lint.isort]
+split-on-trailing-comma = false
+
+[tool.ty.environment]
+python-version = "3.13"
+
+[tool.ty.src]
+exclude = [".venv"]
+
+[tool.uv]
+compile-bytecode = true
+link-mode = "copy"
+
+[tool.uv.pip]
+compile-bytecode = true
+generate-hashes = true
+link-mode = "copy"
