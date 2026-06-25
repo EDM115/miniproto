@@ -1,4 +1,7 @@
 # miniproto
 A minimalistic MTProto library to interact with Telegram  
-Inspiration from pyrogram & its forks, Telethon, but also https://npmx.dev/package/telegram, https://npmx.dev/package/@mtcute/core, https://npmx.dev/package/teleproto & https://npmx.dev/package/@mtproto/core  
-Probably going to be in Python. Also doesn't implement stars, webapps, ...
+Inspiration from pyrogram & its forks (https://github.com/Mayuri-Chan/pyrofork, https://github.com/KurimuzonAkuma/kurigram, https://github.com/eyMarv/pyroblack, https://github.com/hydrogram/hydrogram & https://github.com/TelegramPlayGround/pyrogram), Telethon, but also https://npmx.dev/package/telegram, https://npmx.dev/package/@mtcute/core, https://npmx.dev/package/teleproto & https://npmx.dev/package/@mtproto/core  
+Probably going to be in Python. If not, they it should be "reachable" through Python code (idk how but maybe we can write the lib in Go or Rust and then access it from Python).  
+Also doesn't implement stars, webapps, admin features, ... Concentrating on the core : sending & receiving messages, media, files, polling for updates, ...  
+This library will heavily focus on speed, performance, and low memory usage. It will be designed to be used in a server environment, where multiple clients can connect and interact with Telegram simultaneously. If written in Python, it should be compatible with the latest version's features such as no-GIL mode. The lib should be async by default, have a proper documentation and type hints. It should also be modular, allowing users to only import the parts they need.  
+Generation of methods could reuse the telegram schema generators made by previous projects. Inspiration from TgCrypto for the speedups (https://github.com/Mayuri-Chan/tgcrypto-pyrofork) should be taken and built-in the lib.
