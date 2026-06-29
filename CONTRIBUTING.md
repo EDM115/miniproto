@@ -12,3 +12,7 @@ This project is early-stage and follows the implementation plan in `PLAN.md`.
 ## Expected Checks
 
 Run the narrow checks for your change first, then the full release acceptance set when the protocol surface grows: `uv run ruff format --check .`, `uv run ruff check .`, `uv run ty check`, `uv run pytest`, `cargo fmt --check`, `cargo clippy --all-targets --all-features -- -D warnings`, and `cargo test --all-features`.
+
+## Command Reference
+
+Use [docs/development.md](docs/development.md) as the canonical local command reference for dependency sync, linting, formatting, testing, building, and publishing.

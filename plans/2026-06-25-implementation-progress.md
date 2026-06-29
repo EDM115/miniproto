@@ -6,7 +6,7 @@ Status: first implementation slice completed on branch `codex/v1`.
 
 - Added Python package metadata in `pyproject.toml` using `maturin` as the build backend and `src/miniproto` as the Python source tree.
 - Added `uv.lock` for the initial Python dependency set.
-- Added Cargo workspace metadata and a minimal PyO3 extension crate under `rust/miniproto_native`.
+- Added Cargo workspace metadata and a minimal PyO3 extension crate under `rust/miniproto` after the 2026-06-29 package-boundary rename.
 - Added public API exports for `Client`, config types, session storage types, peer/message/update dataclasses, and core RPC errors.
 - Added a pure Python native fallback path and a tiny native/fallback `xor_bytes` smoke target.
 - Added async client lifecycle scaffolding, authorization-state checks, update queue iteration, and handler dispatch with both direct and decorator registration forms.

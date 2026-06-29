@@ -42,7 +42,7 @@ Funding = "https://github.com/EDM115#support-me-"
 [tool.maturin]
 module-name = "miniproto._native"
 python-source = "src"
-manifest-path = "rust/miniproto_native/Cargo.toml"
+manifest-path = "rust/miniproto/Cargo.toml"
 features = ["pyo3/extension-module"]
 
 [tool.pytest.ini_options]
@@ -81,3 +81,4 @@ link-mode = "copy"
 compile-bytecode = true
 generate-hashes = true
 link-mode = "copy"
+

@@ -3,19 +3,19 @@
 ## Summary
 
 - Start from clean `master`; create `codex/v1` only after plan approval. The first approved action is writing this plan to `PLAN.md`, not implementing code.
-- Build v1 as an async-first Python 3.13+ package with a mandatory bundled Rust/PyO3 extension for crypto and TL hot paths, plus pure Python fallbacks for source builds/tests. This directly answers Pyroblack/Hydrogram's speedup lesson: native acceleration must be built in, not an optional afterthought.
+- Build v1 as an async-first Python 3.13+ reusable MTProto engine and SDK with a mandatory bundled Rust/PyO3 extension for crypto and TL hot paths, plus pure Python fallbacks for source builds/tests. This directly answers Pyroblack/Hydrogram's speedup lesson: native acceleration must be built in, not an optional afterthought.
 - Use `uv`, `ruff`, and `ty` for Python; use Cargo, `cargo fmt`, `clippy`, and `maturin` for Rust/Python packaging.
 - Target production-grade core MTProto: authorization, encrypted sessions, generated raw API, TCP transports, retries/reconnects, ordered updates, text messages, media upload/download, docs, CI, and wheels.
-- Exclude stars, webapps, admin/business helpers, payments, secret chats, calls, stories helpers, and framework-level bot abstractions from v1 unless needed to keep raw API compatibility.
+- Exclude stars, webapps, admin/business helpers, payments, secret chats, calls, stories helpers, and framework-level bot abstractions from v1 unless needed to keep raw API compatibility. Routers, filters, decorators, middleware, plugins, conversation helpers, and broad high-level Telegram framework behavior belong in `mpgram`, not `miniproto`.
 
 ## Key Changes
 
-- Repository setup: add `pyproject.toml`, `uv.lock`, `Cargo.toml`, `rust/miniproto_native/`, `src/miniproto/`, `tools/schema/`, `tests/`, `docs/`, `.github/workflows/ci.yml`, `.gitignore`, `CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md`, and `PLAN.md`.
+- Repository setup: add `pyproject.toml`, `uv.lock`, `Cargo.toml`, `rust/miniproto/`, `src/miniproto/`, `tools/schema/`, `tests/`, `docs/`, `.github/workflows/ci.yml`, `.gitignore`, `CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md`, and `PLAN.md`.
 - Packaging: use `maturin` as the build backend; expose Python modules from `src/miniproto` and native extension as `miniproto._native`; ship regular and free-threaded CPython wheels where supported.
 - Public API: expose `Client`, `ClientConfig`, `TransportConfig`, `DeviceInfo`, `SessionStorage`, `EncryptedSQLiteSessionStorage`, `InMemorySessionStorage`, `Peer`, `Message`, `Media`, `Update`, `NewMessage`, `RpcError`, `FloodWait`, `Unauthorized`, and generated `miniproto.raw.functions` / `miniproto.raw.types`.
 - Client API: implement `async with Client(...)`, `connect()`, `disconnect()`, `is_authorized()`, `sign_in_phone(phone, code_callback, password_callback=None)`, `sign_in_bot(token)`, `get_me()`, `resolve_peer(peer)`, `send_message(peer, text, ...)`, `send_file(peer, file, ...)`, `download_media(media, destination, ...)`, `iter_updates()`, `on(NewMessage, handler)`, and `invoke(raw_request)`.
 - Schema/codegen: treat TelegramPlayGround's compiler-oriented repo as a signal that generation is a first-class subsystem; pin official Telegram schema metadata with layer, source URL, fetch date, and SHA-256; generate deterministic typed dataclasses, serializers, deserializers, RPC error mappings, docs stubs, and stale-generation CI checks.
-- Runtime architecture: follow the useful Pyrogram-family layout without inheriting LGPL/GPL code: separate `connection`, `crypto`, `session`, `storage`, `raw`, `types`, `methods`, `dispatcher`, and `errors`, but keep v1 smaller than Pyroblack/Hydrogram by exposing raw escape hatches instead of implementing every high-level feature.
+- Runtime architecture: follow the useful Pyrogram-family layout without inheriting LGPL/GPL code: separate `connection`, `crypto`, `session`, `storage`, `raw`, `types`, `methods`, `dispatcher`, and `errors`, but keep v1 smaller than Pyroblack/Hydrogram by exposing raw escape hatches instead of implementing every high-level feature. Do not add framework primitives such as routers, filters, middleware, plugins, or decorator-first application lifecycles to `miniproto`; those are `mpgram` responsibilities.
 - Protocol core: implement MTProto 2.0 only; support auth key generation, RSA padding, DH exchange, AES-IGE encryption, msg_key derivation, salt management, monotonic msg_id generation, seq_no rules, containers, gzip payloads, acks, ping/pong, bad salt/msg recovery, RPC response correlation, reconnects, and bounded retry policy.
 - Transport: default to TCP abridged; implement TCP intermediate and padded intermediate behind config; support IPv4/IPv6 DC options, DC migration, export/import authorization, connection pools for media, proxy hooks, deadlines, and backpressure.
 - Performance: ship Rust implementations for AES-256-IGE, AES-CTR, AES-CBC, key derivation, XOR, fast TL primitive encode/decode, and `pq` factorization; offload pack/unpack and media crypto to executor-friendly native calls; add optional `uvloop` extra on supported Linux/macOS CPython, documented as opt-in.
@@ -25,6 +25,20 @@
 - Media/messages: implement text send/edit/delete basics, plain text and Markdown-lite entities, `messages.sendMessage`, small/big upload paths, 512KB default chunks, concurrent upload queues, streamed upload for unknown-size files, resumable download, CDN redirect/decryption support, progress callbacks, and flood-wait handling.
 - Observability: use stdlib `logging` with structured `extra`; expose counters/hooks for bytes sent/received, RPC latency, reconnects, flood waits, update gaps, queue depth, and upload/download throughput; no telemetry by default.
 - Documentation: add install, quickstart, auth, session security, raw API, updates, media, production deployment, Telegram ToS/API warning, migration-from-Pyrogram/Telethon notes, speedups/native-extension notes, and runnable examples.
+
+## Package Boundary
+
+- `miniproto` is the reusable MTProto protocol engine and SDK for Python. It owns protocol correctness, generated raw API access, sessions, transport, auth, RPC correlation, updates, peer/access-hash handling, media primitives, observability hooks, and a small high-level surface that proves the core works.
+- The bundled Rust crate is named `miniproto` because the crates.io name is reserved for this project, but its current role is still the native acceleration layer for the Python package. The Python extension module remains `miniproto._native`.
+- `mpgram` is the separate high-level Telegram application framework package. It is cloned as the sibling `MPGram` repository next to this one, and the `mpgram` PyPI name is already reserved with dummy low-version package content.
+- PyPI `miniproto` and crates.io `miniproto` are already reserved with dummy low-version package content; repository metadata and release tooling should assume those names are intentional, not accidental placeholders.
+- `mpgram` must consume public `miniproto` APIs. It should not depend on private `miniproto._*` modules except for short-lived experiments before alpha.
+
+## Future `mpgram` Work
+
+- Start `mpgram` after the `miniproto` alpha API can authorize, invoke raw requests, persist sessions, generate raw schema classes, and consume basic updates.
+- Put framework lifecycle, routers, nested routers, filters, command handling, middleware, dependency/context helpers, plugins, conversation/state helpers, bound message methods, and broad Telegram helper methods in `mpgram`.
+- Keep `miniproto` focused on long-standing reliability problems in Python MTProto clients: memory leaks, disconnects, missed updates, timeouts, reconnect behavior, update gaps, and bounded resource use.
 
 ## Test Plan
 

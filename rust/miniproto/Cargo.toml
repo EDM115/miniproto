@@ -1,8 +1,10 @@
 [package]
+authors = ["EDM115 <miniproto@edm115.dev>"]
+description = "Rust acceleration layer for the miniproto Python MTProto SDK"
 edition = "2024"
 license = "MIT"
-name = "miniproto-native"
-publish = false
+name = "miniproto"
+repository = "https://github.com/EDM115/miniproto"
 rust-version = "1.96"
 version = "0.1.0"
 
@@ -12,12 +14,3 @@ pyo3 = { version = "~0.29.0", features = ["experimental-async"] }
 [lib]
 name = "miniproto_native"
 crate-type = ["cdylib"]
-
-[profile.release]
-codegen-units = 1
-incremental = true
-lto = "fat"
-opt-level = 3
-overflow-checks = true
-panic = "abort"
-strip = true
