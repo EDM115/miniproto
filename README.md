@@ -12,6 +12,10 @@ The sibling `MPGram` repository already exists next to this repository in the sa
 
 The Rust crate lives in `rust/miniproto/` and is named `miniproto` for crates.io ownership. For Python users it is still imported as the private extension module `miniproto._native`; direct Rust reuse is not a v1 priority, though the crate layout should not block a future public Rust API.
 
+## Session Security
+
+Encrypted durable session storage is implemented through `EncryptedSQLiteSessionStorage`, which requires an explicit key or `MINIPROTO_SESSION_KEY`. See [Session Security](docs/session-security.md) for key handling, envelope behavior, persisted session data, and redaction rules.
+
 ## Non-Goals For v1
 
 `miniproto` v1 will not implement a full Pyrogram-compatible framework API, smart plugins, complex filters, middleware, conversation FSM, broad admin helpers, stars/payments helpers, web app helpers, stories helpers, business helper layers, calls, or secret chats unless a later roadmap explicitly makes them protocol-core requirements. Raw schema compatibility is different from high-level helper ownership.

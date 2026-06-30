@@ -110,180 +110,180 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
 ### Implementation Phase 0 - Repository Baseline And Package Boundary
 
 - **GOAL-001**: Preserve the completed scaffold and package-boundary work as the baseline for all future implementation
-  | Task | Description | Completed | Date |
-  |------|-------------|-----------|------|
-  | TASK-001 | Keep `pyproject.toml`, `uv.lock`, `Cargo.toml`, `Cargo.lock`, `rust/miniproto/Cargo.toml`, and `rust/miniproto/src/lib.rs` as the active Python/Rust package scaffold described by REQ-001, REQ-003, CON-001, CON-002, and CON-006. | yes | 2026-06-29 |
-  | TASK-002 | Keep public Python API exports in `src/miniproto/__init__.py` for `Client`, config types, storage types, domain wrappers, and RPC errors. | yes | 2026-06-25 |
-  | TASK-003 | Keep the async lifecycle, update queue, handler registration, and intentional protocol placeholders in `src/miniproto/client.py` until later phases replace each placeholder with tested behavior. | yes | 2026-06-25 |
-  | TASK-004 | Keep `InMemorySessionStorage` and fail-closed `EncryptedSQLiteSessionStorage` placeholder in `src/miniproto/session/storage.py` until Phase 2 replaces the durable implementation. | yes | 2026-06-25 |
-  | TASK-005 | Keep the native/fallback `xor_bytes` smoke path in `src/miniproto/crypto/native.py`, `src/miniproto/_native_fallback.py`, and `rust/miniproto/src/lib.rs` until Phase 4 expands it. | yes | 2026-06-25 |
-  | TASK-006 | Keep raw namespace placeholders in `src/miniproto/raw/__init__.py`, `src/miniproto/raw/functions.py`, and `src/miniproto/raw/types.py` until Phase 3 generates deterministic content. | yes | 2026-06-25 |
-  | TASK-007 | Keep package-boundary docs in `README.md`, `docs/index.md`, `docs/development.md`, `CHANGELOG.md`, and `plans/README.md` aligned with future `mpgram` separation. | yes | 2026-06-29 |
-  | TASK-008 | Keep CI workflow `.github/workflows/ci.yml` as the baseline for Python and Rust checks before adding schema, docs, wheel, and integration jobs. | yes | 2026-06-25 |
+  | Task     | Description                                                                                                                                                                                                                         | Completed | Date       |
+  | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---------- |
+  | TASK-001 | Keep `pyproject.toml`, `uv.lock`, `Cargo.toml`, `Cargo.lock`, `rust/miniproto/Cargo.toml`, and `rust/miniproto/src/lib.rs` as the active Python/Rust package scaffold described by REQ-001, REQ-003, CON-001, CON-002, and CON-006. | yes       | 2026-06-29 |
+  | TASK-002 | Keep public Python API exports in `src/miniproto/__init__.py` for `Client`, config types, storage types, domain wrappers, and RPC errors.                                                                                           | yes       | 2026-06-25 |
+  | TASK-003 | Keep the async lifecycle, update queue, handler registration, and intentional protocol placeholders in `src/miniproto/client.py` until later phases replace each placeholder with tested behavior.                                  | yes       | 2026-06-25 |
+  | TASK-004 | Keep `InMemorySessionStorage` and fail-closed `EncryptedSQLiteSessionStorage` placeholder in `src/miniproto/session/storage.py` until Phase 2 replaces the durable implementation.                                                  | yes       | 2026-06-25 |
+  | TASK-005 | Keep the native/fallback `xor_bytes` smoke path in `src/miniproto/crypto/native.py`, `src/miniproto/_native_fallback.py`, and `rust/miniproto/src/lib.rs` until Phase 4 expands it.                                                 | yes       | 2026-06-25 |
+  | TASK-006 | Keep raw namespace placeholders in `src/miniproto/raw/__init__.py`, `src/miniproto/raw/functions.py`, and `src/miniproto/raw/types.py` until Phase 3 generates deterministic content.                                               | yes       | 2026-06-25 |
+  | TASK-007 | Keep package-boundary docs in `README.md`, `docs/index.md`, `docs/development.md`, `CHANGELOG.md`, and `plans/README.md` aligned with future `mpgram` separation.                                                                   | yes       | 2026-06-29 |
+  | TASK-008 | Keep CI workflow `.github/workflows/ci.yml` as the baseline for Python and Rust checks before adding schema, docs, wheel, and integration jobs.                                                                                     | yes       | 2026-06-25 |
 
 ### Implementation Phase 1 - Authoritative Progress Tracker And Work Rules
 
 - **GOAL-002**: Establish this root tracker as the v1 execution source of truth for future agents
-  | Task | Description | Completed | Date |
-  |------|-------------|-----------|------|
-  | TASK-009 | Add `PROGRESS.md` at the repository root with requirements, constraints, security requirements, phase gates, phased tasks, tests, dependencies, risks, and assumptions derived from `PLAN.md` and `plans/`. | yes | 2026-06-30 |
-  | TASK-010 | Add a rule to `PROGRESS.md` requiring agents to update task rows and phase state after completing implementation slices. | yes | 2026-06-30 |
-  | TASK-011 | Use `plans/2026-06-25-implementation-progress.md` and `plans/2026-06-29-package-boundary-progress.md` to mark completed baseline tasks instead of redoing them. | yes | 2026-06-30 |
-  | TASK-012 | Revisit this file after each major phase and split oversized tasks into smaller tracked rows when implementation details become concrete. | no | |
+  | Task     | Description                                                                                                                                                                                                 | Completed | Date       |
+  | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---------- |
+  | TASK-009 | Add `PROGRESS.md` at the repository root with requirements, constraints, security requirements, phase gates, phased tasks, tests, dependencies, risks, and assumptions derived from `PLAN.md` and `plans/`. | yes       | 2026-06-30 |
+  | TASK-010 | Add a rule to `PROGRESS.md` requiring agents to update task rows and phase state after completing implementation slices.                                                                                    | yes       | 2026-06-30 |
+  | TASK-011 | Use `plans/2026-06-25-implementation-progress.md` and `plans/2026-06-29-package-boundary-progress.md` to mark completed baseline tasks instead of redoing them.                                             | yes       | 2026-06-30 |
+  | TASK-012 | Revisit this file after each major phase and split oversized tasks into smaller tracked rows when implementation details become concrete.                                                                   | no        |            |
 
 ### Implementation Phase 2 - Session, Secret, And Storage Foundation
 
 - **GOAL-003**: Replace the fail-closed session placeholder with secure durable storage and redaction primitives
-  | Task | Description | Completed | Date |
-  |------|-------------|-----------|------|
-  | TASK-013 | Create `src/miniproto/session/models.py` with typed dataclasses for auth key, DC option, user identity, update state, peer cache entry, and complete session record matching REQ-005. | no | |
-  | TASK-014 | Replace mapping-only storage payloads in `src/miniproto/session/storage.py` with versioned serialization helpers that accept current mappings and future dataclass records without breaking `Client.is_authorized()`. | no | |
-  | TASK-015 | Implement encrypted SQLite durable storage in `EncryptedSQLiteSessionStorage` using a versioned envelope, per-record nonce, authenticated encryption or encrypt-then-MAC, and atomic writes satisfying SEC-002, SEC-003, and SEC-004. | no | |
-  | TASK-016 | Add `src/miniproto/security/redaction.py` with redaction helpers for values and nested mappings containing keys named `api_hash`, `phone`, `auth_key`, `session_key`, `bot_token`, `password`, `proxy`, and equivalent case-insensitive variants. | no | |
-  | TASK-017 | Update `src/miniproto/errors.py` so exceptions that include request or context data use redaction helpers before rendering or logging. | no | |
-  | TASK-018 | Add tests in `tests/test_session_storage.py` for load/save/clear/close, wrong-key rejection, corrupted-envelope rejection, environment-key loading, atomic overwrite, and in-memory storage parity. | no | |
-  | TASK-019 | Add tests in `tests/test_redaction.py` proving logs, repr-like helpers, errors, and nested structures redact every secret listed in SEC-001. | no | |
-  | TASK-020 | Document session key requirements and durable session behavior in `docs/session-security.md` and link it from `README.md` and `docs/index.md`. | no | |
+  | Task     | Description                                                                                                                                                                                                                                       | Completed | Date       |
+  | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---------- |
+  | TASK-013 | Create `src/miniproto/session/models.py` with typed dataclasses for auth key, DC option, user identity, update state, peer cache entry, and complete session record matching REQ-005.                                                             | yes       | 2026-06-30 |
+  | TASK-014 | Replace mapping-only storage payloads in `src/miniproto/session/storage.py` with versioned serialization helpers that accept current mappings and future dataclass records without breaking `Client.is_authorized()`.                             | yes       | 2026-06-30 |
+  | TASK-015 | Implement encrypted SQLite durable storage in `EncryptedSQLiteSessionStorage` using a versioned envelope, per-record nonce, authenticated encryption or encrypt-then-MAC, and atomic writes satisfying SEC-002, SEC-003, and SEC-004.             | yes       | 2026-06-30 |
+  | TASK-016 | Add `src/miniproto/security/redaction.py` with redaction helpers for values and nested mappings containing keys named `api_hash`, `phone`, `auth_key`, `session_key`, `bot_token`, `password`, `proxy`, and equivalent case-insensitive variants. | yes       | 2026-06-30 |
+  | TASK-017 | Update `src/miniproto/errors.py` so exceptions that include request or context data use redaction helpers before rendering or logging.                                                                                                            | yes       | 2026-06-30 |
+  | TASK-018 | Add tests in `tests/test_session_storage.py` for load/save/clear/close, wrong-key rejection, corrupted-envelope rejection, environment-key loading, atomic overwrite, and in-memory storage parity.                                               | yes       | 2026-06-30 |
+  | TASK-019 | Add tests in `tests/test_redaction.py` proving logs, repr-like helpers, errors, and nested structures redact every secret listed in SEC-001.                                                                                                      | yes       | 2026-06-30 |
+  | TASK-020 | Document session key requirements and durable session behavior in `docs/session-security.md` and link it from `README.md` and `docs/index.md`.                                                                                                    | yes       | 2026-06-30 |
 
 ### Implementation Phase 3 - Schema Pinning And Raw API Generation
 
 - **GOAL-004**: Build deterministic schema tooling that produces raw functions/types and fails CI on drift
-  | Task | Description | Completed | Date |
-  |------|-------------|-----------|------|
-  | TASK-021 | Add `tools/schema/schema.json` or `tools/schema/schema.tl` with pinned Telegram schema source metadata in `tools/schema/schema-metadata.json` containing layer, source URL, fetch date, SHA-256, and generator version. | no | |
-  | TASK-022 | Implement `tools/schema/parser.py` that parses TL constructors, functions, flags, vectors, bare types, namespaces, result types, and comments without executing schema contents. | no | |
-  | TASK-023 | Implement `tools/schema/generate.py` that writes deterministic Python raw classes to `src/miniproto/raw/types.py` and `src/miniproto/raw/functions.py`. | no | |
-  | TASK-024 | Add generated base protocols/helpers in `src/miniproto/raw/base.py` for constructor IDs, serialization hooks, deserialization hooks, and result type metadata. | no | |
-  | TASK-025 | Add RPC error mapping generation to `src/miniproto/errors.py` or `src/miniproto/raw/errors.py` with a stable public import path. | no | |
-  | TASK-026 | Add golden schema fixtures under `tests/fixtures/schema/` and tests in `tests/test_schema_parser.py` and `tests/test_schema_generation.py`. | no | |
-  | TASK-027 | Add a stale-generation check command to `tools/schema/README.md`, `docs/development.md`, and CI so generated files must match committed generator output. | no | |
-  | TASK-028 | Add docs stubs generated from schema metadata under `docs/raw-api.md` or `docs/raw/` without turning docs generation into a release blocker for every schema comment. | no | |
+  | Task     | Description                                                                                                                                                                                                             | Completed | Date |
+  | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---- |
+  | TASK-021 | Add `tools/schema/schema.json` or `tools/schema/schema.tl` with pinned Telegram schema source metadata in `tools/schema/schema-metadata.json` containing layer, source URL, fetch date, SHA-256, and generator version. | no        |      |
+  | TASK-022 | Implement `tools/schema/parser.py` that parses TL constructors, functions, flags, vectors, bare types, namespaces, result types, and comments without executing schema contents.                                        | no        |      |
+  | TASK-023 | Implement `tools/schema/generate.py` that writes deterministic Python raw classes to `src/miniproto/raw/types.py` and `src/miniproto/raw/functions.py`.                                                                 | no        |      |
+  | TASK-024 | Add generated base protocols/helpers in `src/miniproto/raw/base.py` for constructor IDs, serialization hooks, deserialization hooks, and result type metadata.                                                          | no        |      |
+  | TASK-025 | Add RPC error mapping generation to `src/miniproto/errors.py` or `src/miniproto/raw/errors.py` with a stable public import path.                                                                                        | no        |      |
+  | TASK-026 | Add golden schema fixtures under `tests/fixtures/schema/` and tests in `tests/test_schema_parser.py` and `tests/test_schema_generation.py`.                                                                             | no        |      |
+  | TASK-027 | Add a stale-generation check command to `tools/schema/README.md`, `docs/development.md`, and CI so generated files must match committed generator output.                                                               | no        |      |
+  | TASK-028 | Add docs stubs generated from schema metadata under `docs/raw-api.md` or `docs/raw/` without turning docs generation into a release blocker for every schema comment.                                                   | no        |      |
 
 ### Implementation Phase 4 - Native And Fallback Crypto/TL Primitives
 
 - **GOAL-005**: Implement protocol-hot primitives with native/fallback parity and test vectors
-  | Task | Description | Completed | Date |
-  |------|-------------|-----------|------|
-  | TASK-029 | Add AES-256-IGE, AES-CTR, AES-CBC, SHA-based MTProto key derivation, XOR, and `pq` factorization to `rust/miniproto/src/lib.rs` or split Rust modules under `rust/miniproto/src/crypto/`. | no | |
-  | TASK-030 | Add pure Python fallback implementations or explicit secure dependency-backed fallback paths under `src/miniproto/crypto/` for every native function exposed by TASK-029. | no | |
-  | TASK-031 | Add TL primitive encode/decode helpers for int, long, int128, int256, double, bytes, string, vector, bool, and bare object constructors in native and fallback paths. | no | |
-  | TASK-032 | Add `src/miniproto/crypto/mtproto.py` wrappers for auth-key derivation, msg_key derivation, payload encryption, payload decryption, and media crypto helpers. | no | |
-  | TASK-033 | Add vector tests in `tests/test_crypto_vectors.py` using official MTProto-compatible vectors where available and generated local round-trip vectors where official vectors are absent. | no | |
-  | TASK-034 | Add parity tests in `tests/test_native_parity.py` that force fallback behavior and compare it with the native extension for every primitive. | no | |
-  | TASK-035 | Add benchmark smoke tests or scripts under `tools/bench/` for crypto, TL primitive serialization, and fallback-vs-native deltas without making absolute timing a hard CI gate. | no | |
+  | Task     | Description                                                                                                                                                                               | Completed | Date |
+  | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---- |
+  | TASK-029 | Add AES-256-IGE, AES-CTR, AES-CBC, SHA-based MTProto key derivation, XOR, and `pq` factorization to `rust/miniproto/src/lib.rs` or split Rust modules under `rust/miniproto/src/crypto/`. | no        |      |
+  | TASK-030 | Add pure Python fallback implementations or explicit secure dependency-backed fallback paths under `src/miniproto/crypto/` for every native function exposed by TASK-029.                 | no        |      |
+  | TASK-031 | Add TL primitive encode/decode helpers for int, long, int128, int256, double, bytes, string, vector, bool, and bare object constructors in native and fallback paths.                     | no        |      |
+  | TASK-032 | Add `src/miniproto/crypto/mtproto.py` wrappers for auth-key derivation, msg_key derivation, payload encryption, payload decryption, and media crypto helpers.                             | no        |      |
+  | TASK-033 | Add vector tests in `tests/test_crypto_vectors.py` using official MTProto-compatible vectors where available and generated local round-trip vectors where official vectors are absent.    | no        |      |
+  | TASK-034 | Add parity tests in `tests/test_native_parity.py` that force fallback behavior and compare it with the native extension for every primitive.                                              | no        |      |
+  | TASK-035 | Add benchmark smoke tests or scripts under `tools/bench/` for crypto, TL primitive serialization, and fallback-vs-native deltas without making absolute timing a hard CI gate.            | no        |      |
 
 ### Implementation Phase 5 - Transport And MTProto Message Runtime
 
 - **GOAL-006**: Implement the network sender/runtime needed for encrypted MTProto requests and fake-server verification
-  | Task | Description | Completed | Date |
-  |------|-------------|-----------|------|
-  | TASK-036 | Add `src/miniproto/connection/transport.py` with transport protocol interfaces, deadline handling, bounded reads, proxy hooks, and close semantics. | no | |
-  | TASK-037 | Add TCP abridged transport in `src/miniproto/connection/tcp_abridged.py` and wire it to `TransportConfig.mode == "tcp_abridged"`. | no | |
-  | TASK-038 | Add TCP intermediate and padded intermediate transports in `src/miniproto/connection/tcp_intermediate.py` behind config. | no | |
-  | TASK-039 | Add `src/miniproto/mtproto/state.py` for msg_id monotonicity, seq_no rules, salt/session identifiers, pending ack batches, duplicate msg_id tracking, and time-offset correction. | no | |
-  | TASK-040 | Add `src/miniproto/mtproto/codec.py` for encrypted message framing, containers, gzip payloads, ping/pong, acks, bad salt, and bad message responses. | no | |
-  | TASK-041 | Add `src/miniproto/connection/sender.py` for request scheduling, correlation IDs, retry policy, reconnect locks, ping-delay-disconnect keepalive, and clean shutdown. | no | |
-  | TASK-042 | Add fake-server test utilities under `tests/support/fake_mtproto.py` for encrypted and unencrypted protocol flows. | no | |
-  | TASK-043 | Add tests in `tests/test_transport_runtime.py` for transport framing, bounded reads, deadlines, reconnect throttling, ack batching, containers, gzip, bad salt, bad msg, duplicate suppression, and shutdown. | no | |
+  | Task     | Description                                                                                                                                                                                                   | Completed | Date |
+  | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---- |
+  | TASK-036 | Add `src/miniproto/connection/transport.py` with transport protocol interfaces, deadline handling, bounded reads, proxy hooks, and close semantics.                                                           | no        |      |
+  | TASK-037 | Add TCP abridged transport in `src/miniproto/connection/tcp_abridged.py` and wire it to `TransportConfig.mode == "tcp_abridged"`.                                                                             | no        |      |
+  | TASK-038 | Add TCP intermediate and padded intermediate transports in `src/miniproto/connection/tcp_intermediate.py` behind config.                                                                                      | no        |      |
+  | TASK-039 | Add `src/miniproto/mtproto/state.py` for msg_id monotonicity, seq_no rules, salt/session identifiers, pending ack batches, duplicate msg_id tracking, and time-offset correction.                             | no        |      |
+  | TASK-040 | Add `src/miniproto/mtproto/codec.py` for encrypted message framing, containers, gzip payloads, ping/pong, acks, bad salt, and bad message responses.                                                          | no        |      |
+  | TASK-041 | Add `src/miniproto/connection/sender.py` for request scheduling, correlation IDs, retry policy, reconnect locks, ping-delay-disconnect keepalive, and clean shutdown.                                         | no        |      |
+  | TASK-042 | Add fake-server test utilities under `tests/support/fake_mtproto.py` for encrypted and unencrypted protocol flows.                                                                                            | no        |      |
+  | TASK-043 | Add tests in `tests/test_transport_runtime.py` for transport framing, bounded reads, deadlines, reconnect throttling, ack batching, containers, gzip, bad salt, bad msg, duplicate suppression, and shutdown. | no        |      |
 
 ### Implementation Phase 6 - Authorization And DC Migration
 
 - **GOAL-007**: Implement authorization flows and DC state movement required before useful raw invocation
-  | Task | Description | Completed | Date |
-  |------|-------------|-----------|------|
-  | TASK-044 | Add RSA key selection, PQ factorization, DH exchange, and auth key creation flow under `src/miniproto/auth/`. | no | |
-  | TASK-045 | Implement phone sign-in in `Client.sign_in_phone()` using callback-provided code and optional password callback, with no secret logging. | no | |
-  | TASK-046 | Implement bot token sign-in in `Client.sign_in_bot()` using generated `auth.importBotAuthorization` once raw generation exists. | no | |
-  | TASK-047 | Add DC option persistence, current DC selection, DC migration error handling, export authorization, and import authorization. | no | |
-  | TASK-048 | Implement auth-key-not-found, invalid DC, transport flood, and key regeneration behavior with clear typed exceptions. | no | |
-  | TASK-049 | Add fake-server tests in `tests/test_auth.py` for successful phone auth, successful bot auth, 2FA callback use, wrong-code failures, DC migration, and auth-key-not-found recovery. | no | |
-  | TASK-050 | Add gated live tests under `tests/integration/test_auth_live.py` for Telegram test DC sign-in, bot auth, `get_me()`, and reconnect using environment-only credentials. | no | |
+  | Task     | Description                                                                                                                                                                         | Completed | Date |
+  | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---- |
+  | TASK-044 | Add RSA key selection, PQ factorization, DH exchange, and auth key creation flow under `src/miniproto/auth/`.                                                                       | no        |      |
+  | TASK-045 | Implement phone sign-in in `Client.sign_in_phone()` using callback-provided code and optional password callback, with no secret logging.                                            | no        |      |
+  | TASK-046 | Implement bot token sign-in in `Client.sign_in_bot()` using generated `auth.importBotAuthorization` once raw generation exists.                                                     | no        |      |
+  | TASK-047 | Add DC option persistence, current DC selection, DC migration error handling, export authorization, and import authorization.                                                       | no        |      |
+  | TASK-048 | Implement auth-key-not-found, invalid DC, transport flood, and key regeneration behavior with clear typed exceptions.                                                               | no        |      |
+  | TASK-049 | Add fake-server tests in `tests/test_auth.py` for successful phone auth, successful bot auth, 2FA callback use, wrong-code failures, DC migration, and auth-key-not-found recovery. | no        |      |
+  | TASK-050 | Add gated live tests under `tests/integration/test_auth_live.py` for Telegram test DC sign-in, bot auth, `get_me()`, and reconnect using environment-only credentials.              | no        |      |
 
 ### Implementation Phase 7 - Raw Invocation, Error Handling, And Flood Waits
 
 - **GOAL-008**: Make `Client.invoke()` the reliable raw escape hatch for all generated requests
-  | Task | Description | Completed | Date |
-  |------|-------------|-----------|------|
-  | TASK-051 | Replace `Client.invoke()` placeholder with serialization, sender scheduling, response deserialization, request/result type validation, and cancellation handling. | no | |
-  | TASK-052 | Implement RPC error mapping for common errors including unauthorized, flood wait, migrate errors, bad request, forbidden, not found, internal, and timeout classes. | no | |
-  | TASK-053 | Add configurable flood-wait handling that raises `FloodWait` by default and optionally sleeps only when a caller explicitly allows bounded waits. | no | |
-  | TASK-054 | Add retry classification for retryable transport failures, bad salt, bad msg, server errors, and DC migration while preventing duplicate unsafe sends when the request cannot be retried. | no | |
-  | TASK-055 | Add cancellation and disconnect behavior that removes pending requests from correlation maps and surfaces deterministic exceptions. | no | |
-  | TASK-056 | Add tests in `tests/test_invoke.py` and `tests/test_rpc_errors.py` for successful raw calls, request/result mismatch, RPC errors, flood wait policy, cancellation, disconnect, retry, and migration behavior. | no | |
+  | Task     | Description                                                                                                                                                                                                   | Completed | Date |
+  | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---- |
+  | TASK-051 | Replace `Client.invoke()` placeholder with serialization, sender scheduling, response deserialization, request/result type validation, and cancellation handling.                                             | no        |      |
+  | TASK-052 | Implement RPC error mapping for common errors including unauthorized, flood wait, migrate errors, bad request, forbidden, not found, internal, and timeout classes.                                           | no        |      |
+  | TASK-053 | Add configurable flood-wait handling that raises `FloodWait` by default and optionally sleeps only when a caller explicitly allows bounded waits.                                                             | no        |      |
+  | TASK-054 | Add retry classification for retryable transport failures, bad salt, bad msg, server errors, and DC migration while preventing duplicate unsafe sends when the request cannot be retried.                     | no        |      |
+  | TASK-055 | Add cancellation and disconnect behavior that removes pending requests from correlation maps and surfaces deterministic exceptions.                                                                           | no        |      |
+  | TASK-056 | Add tests in `tests/test_invoke.py` and `tests/test_rpc_errors.py` for successful raw calls, request/result mismatch, RPC errors, flood wait policy, cancellation, disconnect, retry, and migration behavior. | no        |      |
 
 ### Implementation Phase 8 - Ordered Updates And Event Dispatch
 
 - **GOAL-009**: Deliver ordered, gap-safe, non-duplicate updates through iterator and handler APIs
-  | Task | Description | Completed | Date |
-  |------|-------------|-----------|------|
-  | TASK-057 | Add `src/miniproto/updates/state.py` for persisted `pts`, `qts`, `seq`, date, entity references, and duplicate tracking windows. | no | |
-  | TASK-058 | Add `src/miniproto/updates/manager.py` to normalize short updates, detect gaps, fetch differences, delay emission during recovery, and update persisted state atomically. | no | |
-  | TASK-059 | Extend `Client.connect()` and `Client.disconnect()` to start and stop update receive tasks without leaking tasks or swallowing exceptions. | no | |
-  | TASK-060 | Add configurable update queue overflow behavior to `ClientConfig` while keeping bounded queues mandatory. | no | |
-  | TASK-061 | Keep `Client.iter_updates()` and `Client.on()` stable while moving private `_emit_update()` internals to the update manager. | no | |
-  | TASK-062 | Add tests in `tests/test_updates.py` for state load/save, no duplicate emission, gap recovery, short update normalization, queue overflow behavior, reconnect recovery, and handler exception behavior. | no | |
+  | Task     | Description                                                                                                                                                                                             | Completed | Date |
+  | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---- |
+  | TASK-057 | Add `src/miniproto/updates/state.py` for persisted `pts`, `qts`, `seq`, date, entity references, and duplicate tracking windows.                                                                        | no        |      |
+  | TASK-058 | Add `src/miniproto/updates/manager.py` to normalize short updates, detect gaps, fetch differences, delay emission during recovery, and update persisted state atomically.                               | no        |      |
+  | TASK-059 | Extend `Client.connect()` and `Client.disconnect()` to start and stop update receive tasks without leaking tasks or swallowing exceptions.                                                              | no        |      |
+  | TASK-060 | Add configurable update queue overflow behavior to `ClientConfig` while keeping bounded queues mandatory.                                                                                               | no        |      |
+  | TASK-061 | Keep `Client.iter_updates()` and `Client.on()` stable while moving private `_emit_update()` internals to the update manager.                                                                            | no        |      |
+  | TASK-062 | Add tests in `tests/test_updates.py` for state load/save, no duplicate emission, gap recovery, short update normalization, queue overflow behavior, reconnect recovery, and handler exception behavior. | no        |      |
 
 ### Implementation Phase 9 - Peer Cache And Text Message Methods
 
 - **GOAL-010**: Implement common non-media methods that prove peer resolution, raw invocation, and update delivery work together
-  | Task | Description | Completed | Date |
-  |------|-------------|-----------|------|
-  | TASK-063 | Add peer cache models and storage methods for users, chats, channels, usernames, phone numbers, self, and access hashes. | no | |
-  | TASK-064 | Implement `Client.get_me()` using generated raw calls and cached self identity. | no | |
-  | TASK-065 | Implement `Client.resolve_peer()` for existing `Peer`, self aliases, numeric IDs, usernames, and cached access hashes. | no | |
-  | TASK-066 | Implement `Client.send_message()` using `messages.sendMessage`, random ID generation, entity parsing for plain text and Markdown-lite, flood-wait behavior, and result normalization to `Message`. | no | |
-  | TASK-067 | Add edit/delete text-message primitives if they are required to complete v1 docs and tests; otherwise keep them as raw API examples only. | no | |
-  | TASK-068 | Add tests in `tests/test_peers.py` and `tests/test_messages.py` for cache hits/misses, access-hash persistence, self resolution, text send, Markdown-lite entities, random IDs, and flood wait surfaces. | no | |
-  | TASK-069 | Add gated live test coverage for Saved Messages send and receive when `MINIPROTO_INTEGRATION=1`. | no | |
+  | Task     | Description                                                                                                                                                                                              | Completed | Date |
+  | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---- |
+  | TASK-063 | Add peer cache models and storage methods for users, chats, channels, usernames, phone numbers, self, and access hashes.                                                                                 | no        |      |
+  | TASK-064 | Implement `Client.get_me()` using generated raw calls and cached self identity.                                                                                                                          | no        |      |
+  | TASK-065 | Implement `Client.resolve_peer()` for existing `Peer`, self aliases, numeric IDs, usernames, and cached access hashes.                                                                                   | no        |      |
+  | TASK-066 | Implement `Client.send_message()` using `messages.sendMessage`, random ID generation, entity parsing for plain text and Markdown-lite, flood-wait behavior, and result normalization to `Message`.       | no        |      |
+  | TASK-067 | Add edit/delete text-message primitives if they are required to complete v1 docs and tests; otherwise keep them as raw API examples only.                                                                | no        |      |
+  | TASK-068 | Add tests in `tests/test_peers.py` and `tests/test_messages.py` for cache hits/misses, access-hash persistence, self resolution, text send, Markdown-lite entities, random IDs, and flood wait surfaces. | no        |      |
+  | TASK-069 | Add gated live test coverage for Saved Messages send and receive when `MINIPROTO_INTEGRATION=1`.                                                                                                         | no        |      |
 
 ### Implementation Phase 10 - Media Upload And Download Primitives
 
 - **GOAL-011**: Implement protocol-core media transfer primitives without framework-level media sugar
-  | Task | Description | Completed | Date |
-  |------|-------------|-----------|------|
-  | TASK-070 | Add `src/miniproto/media/upload.py` for small file upload, big file upload, 512 KiB default chunks, streamed unknown-size inputs, concurrency bounds, progress callbacks, and retry of missing parts. | no | |
-  | TASK-071 | Add `src/miniproto/media/download.py` for resumable download, offset/range handling, file-like destinations, path destinations, progress callbacks, and cancellation-safe cleanup. | no | |
-  | TASK-072 | Add CDN redirect, CDN token, and CDN decryption support under `src/miniproto/media/cdn.py`. | no | |
-  | TASK-073 | Implement `Client.send_file()` as a thin protocol-core convenience over upload plus generated media send requests. | no | |
-  | TASK-074 | Implement `Client.download_media()` as a thin protocol-core convenience over media location resolution plus download. | no | |
-  | TASK-075 | Add tests in `tests/test_media_upload.py` and `tests/test_media_download.py` for chunk sizing, small/big branch selection, streaming, retry, resume, CDN decrypt, progress callback ordering, cancellation, and memory ceilings. | no | |
-  | TASK-076 | Add gated live tests for upload/download to Saved Messages when `MINIPROTO_INTEGRATION=1`. | no | |
+  | Task     | Description                                                                                                                                                                                                                      | Completed | Date |
+  | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---- |
+  | TASK-070 | Add `src/miniproto/media/upload.py` for small file upload, big file upload, 512 KiB default chunks, streamed unknown-size inputs, concurrency bounds, progress callbacks, and retry of missing parts.                            | no        |      |
+  | TASK-071 | Add `src/miniproto/media/download.py` for resumable download, offset/range handling, file-like destinations, path destinations, progress callbacks, and cancellation-safe cleanup.                                               | no        |      |
+  | TASK-072 | Add CDN redirect, CDN token, and CDN decryption support under `src/miniproto/media/cdn.py`.                                                                                                                                      | no        |      |
+  | TASK-073 | Implement `Client.send_file()` as a thin protocol-core convenience over upload plus generated media send requests.                                                                                                               | no        |      |
+  | TASK-074 | Implement `Client.download_media()` as a thin protocol-core convenience over media location resolution plus download.                                                                                                            | no        |      |
+  | TASK-075 | Add tests in `tests/test_media_upload.py` and `tests/test_media_download.py` for chunk sizing, small/big branch selection, streaming, retry, resume, CDN decrypt, progress callback ordering, cancellation, and memory ceilings. | no        |      |
+  | TASK-076 | Add gated live tests for upload/download to Saved Messages when `MINIPROTO_INTEGRATION=1`.                                                                                                                                       | no        |      |
 
 ### Implementation Phase 11 - Observability, Resource Limits, And Production Hardening
 
 - **GOAL-012**: Make runtime behavior inspectable and bounded without telemetry
-  | Task | Description | Completed | Date |
-  |------|-------------|-----------|------|
-  | TASK-077 | Add `src/miniproto/observability.py` with counters/hooks for bytes sent, bytes received, RPC latency, reconnect count, flood waits, update gaps, queue depth, upload throughput, and download throughput. | no | |
-  | TASK-078 | Add structured logging calls across storage, transport, sender, auth, updates, and media using redacted `extra` payloads. | no | |
-  | TASK-079 | Add `ClientConfig` fields for request timeout, max pending RPCs, max reconnect attempts, update overflow policy, media concurrency, media memory ceiling, and flood-wait policy. | no | |
-  | TASK-080 | Add shutdown leak checks and background task supervision so disconnect waits for owned tasks and surfaces fatal runtime errors. | no | |
-  | TASK-081 | Add tests in `tests/test_observability.py` and `tests/test_resource_limits.py` for counters, hook calls, redacted logs, queue depth, pending RPC limit, media memory ceiling, and clean shutdown. | no | |
+  | Task     | Description                                                                                                                                                                                               | Completed | Date |
+  | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---- |
+  | TASK-077 | Add `src/miniproto/observability.py` with counters/hooks for bytes sent, bytes received, RPC latency, reconnect count, flood waits, update gaps, queue depth, upload throughput, and download throughput. | no        |      |
+  | TASK-078 | Add structured logging calls across storage, transport, sender, auth, updates, and media using redacted `extra` payloads.                                                                                 | no        |      |
+  | TASK-079 | Add `ClientConfig` fields for request timeout, max pending RPCs, max reconnect attempts, update overflow policy, media concurrency, media memory ceiling, and flood-wait policy.                          | no        |      |
+  | TASK-080 | Add shutdown leak checks and background task supervision so disconnect waits for owned tasks and surfaces fatal runtime errors.                                                                           | no        |      |
+  | TASK-081 | Add tests in `tests/test_observability.py` and `tests/test_resource_limits.py` for counters, hook calls, redacted logs, queue depth, pending RPC limit, media memory ceiling, and clean shutdown.         | no        |      |
 
 ### Implementation Phase 12 - Verification, Integration, Benchmarks, And CI Expansion
 
 - **GOAL-013**: Turn local and CI verification into a release-quality gate
-  | Task | Description | Completed | Date |
-  |------|-------------|-----------|------|
-  | TASK-082 | Expand `.github/workflows/ci.yml` to run Python 3.13 explicitly, add schema freshness checks, docs build, maturin wheel build, and benchmark smoke artifact upload. | no | |
-  | TASK-083 | Add `tests/integration/README.md` documenting required environment variables, Telegram test DC preference, credential handling, and skip behavior. | no | |
-  | TASK-084 | Add fake-server tests for auth, raw invoke, transport recovery, update gaps, media transfer, and DC migration before relying on live Telegram tests. | no | |
-  | TASK-085 | Add benchmark scripts under `tools/bench/` for native vs fallback crypto, TL serialization, 1k pending RPCs, update dispatch latency, media throughput, reconnect recovery, and sustained RSS. | no | |
-  | TASK-086 | Add release command aggregation in `docs/development.md` or a non-secret script under `tools/` that runs formatting, linting, type checking, tests, Rust checks, schema checks, docs build, and wheel build. | no | |
-  | TASK-087 | Run and record the full local verification suite in this file when all release-critical behavior is implemented. | no | |
+  | Task     | Description                                                                                                                                                                                                  | Completed | Date |
+  | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------- | ---- |
+  | TASK-082 | Expand `.github/workflows/ci.yml` to run Python 3.13 explicitly, add schema freshness checks, docs build, maturin wheel build, and benchmark smoke artifact upload.                                          | no        |      |
+  | TASK-083 | Add `tests/integration/README.md` documenting required environment variables, Telegram test DC preference, credential handling, and skip behavior.                                                           | no        |      |
+  | TASK-084 | Add fake-server tests for auth, raw invoke, transport recovery, update gaps, media transfer, and DC migration before relying on live Telegram tests.                                                         | no        |      |
+  | TASK-085 | Add benchmark scripts under `tools/bench/` for native vs fallback crypto, TL serialization, 1k pending RPCs, update dispatch latency, media throughput, reconnect recovery, and sustained RSS.               | no        |      |
+  | TASK-086 | Add release command aggregation in `docs/development.md` or a non-secret script under `tools/` that runs formatting, linting, type checking, tests, Rust checks, schema checks, docs build, and wheel build. | no        |      |
+  | TASK-087 | Run and record the full local verification suite in this file when all release-critical behavior is implemented.                                                                                             | no        |      |
 
 ### Implementation Phase 13 - Documentation, Packaging, And v1 Release Readiness
 
 - **GOAL-014**: Finish v1 so the package is ready for external testing and release
-  | Task | Description | Completed | Date |
-  |------|-------------|-----------|------|
-  | TASK-088 | Write or update `docs/install.md`, `docs/quickstart.md`, `docs/auth.md`, `docs/session-security.md`, `docs/raw-api.md`, `docs/updates.md`, `docs/media.md`, `docs/production.md`, `docs/native-extension.md`, and `docs/migration.md`. | no | |
-  | TASK-089 | Update `README.md` with stable v1 examples for auth, `get_me()`, `invoke()`, `send_message()`, updates, media, and explicit `mpgram` boundary notes. | no | |
-  | TASK-090 | Update `CHANGELOG.md` with v1 testing/release notes and all security-relevant behavior changes. | no | |
-  | TASK-091 | Update `SECURITY.md` with session key guidance, credential handling, supported versions, vulnerability reporting, and live-test credential warnings. | no | |
-  | TASK-092 | Build wheels with `uv run maturin build`, verify the package imports from the built wheel, and record artifact paths. | no | |
-  | TASK-093 | Verify release metadata for PyPI `miniproto`, crates.io `miniproto`, license, classifiers, project URLs, readme rendering, and source distribution contents. | no | |
-  | TASK-094 | Tag v1 only after every test in Section 6 passes, every phase gate is satisfied, and `PLAN.md`, `PROGRESS.md`, docs, and changelog agree on release status. | no | |
+  | Task     | Description                                                                                                                                                                                                                            | Completed | Date |
+  | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---- |
+  | TASK-088 | Write or update `docs/install.md`, `docs/quickstart.md`, `docs/auth.md`, `docs/session-security.md`, `docs/raw-api.md`, `docs/updates.md`, `docs/media.md`, `docs/production.md`, `docs/native-extension.md`, and `docs/migration.md`. | no        |      |
+  | TASK-089 | Update `README.md` with stable v1 examples for auth, `get_me()`, `invoke()`, `send_message()`, updates, media, and explicit `mpgram` boundary notes.                                                                                   | no        |      |
+  | TASK-090 | Update `CHANGELOG.md` with v1 testing/release notes and all security-relevant behavior changes.                                                                                                                                        | no        |      |
+  | TASK-091 | Update `SECURITY.md` with session key guidance, credential handling, supported versions, vulnerability reporting, and live-test credential warnings.                                                                                   | no        |      |
+  | TASK-092 | Build wheels with `uv run maturin build`, verify the package imports from the built wheel, and record artifact paths.                                                                                                                  | no        |      |
+  | TASK-093 | Verify release metadata for PyPI `miniproto`, crates.io `miniproto`, license, classifiers, project URLs, readme rendering, and source distribution contents.                                                                           | no        |      |
+  | TASK-094 | Tag v1 only after every test in Section 6 passes, every phase gate is satisfied, and `PLAN.md`, `PROGRESS.md`, docs, and changelog agree on release status.                                                                            | no        |      |
 
 ## 3. Alternatives
 
