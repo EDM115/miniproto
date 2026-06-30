@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterable
 from typing import Any, TypeVar, overload
 
 from miniproto.auth.service import AuthService
@@ -28,8 +28,11 @@ from miniproto.invoke import (
     wrap_raw_request,
     wrap_transport_failure,
 )
+from miniproto.messages import make_random_id, message_from_send_result, parse_message_text
+from miniproto.peers import PeerCache, input_peer_from_peer
+from miniproto.raw import functions
 from miniproto.session.storage import InMemorySessionStorage, SessionStorage
-from miniproto.types import NewMessage, Peer, Update
+from miniproto.types import Message, NewMessage, Peer, Update, User
 from miniproto.updates.manager import UpdateHandler, UpdateManager
 
 UpdateT = TypeVar("UpdateT", bound=Update)
@@ -46,6 +49,7 @@ class Client:
         self._storage: SessionStorage = config.session_storage or InMemorySessionStorage()
         self._connected = False
         self._connect_lock = asyncio.Lock()
+        self._peer_cache = PeerCache(config, self._storage, self.invoke)
         self._update_manager = UpdateManager(config, self._storage, self.invoke)
         self._sender: RawSender | None = None
         self._sender_factory: SenderFactory | None = None
@@ -100,18 +104,52 @@ class Client:
         await self.connect()
         return await AuthService(self.config, self._storage, self.invoke).sign_in_bot(token)
 
-    async def get_me(self) -> object:
+    async def get_me(self, *, refresh: bool = False) -> User:
         if not await self.is_authorized():
             raise Unauthorized("get_me requires an authorized session")
-        raise NotImplementedError("get_me requires generated users.getFullUser support")
+        return await self._peer_cache.get_me(refresh=refresh)
 
     async def resolve_peer(self, peer: Peer | str | int) -> Peer:
-        if isinstance(peer, Peer):
-            return peer
-        raise NotImplementedError("peer resolution requires contacts/users/chats raw API support")
+        return await self._peer_cache.resolve_peer(peer)
 
-    async def send_message(self, peer: Peer | str | int, text: str, **kwargs: Any) -> object:
-        raise NotImplementedError("send_message requires generated messages.sendMessage support")
+    async def send_message(
+        self,
+        peer: Peer | str | int,
+        text: str,
+        *,
+        parse_mode: str | None = None,
+        random_id: int | None = None,
+        entities: Iterable[object] | None = None,
+        request_timeout: float | None = None,
+        flood_sleep_threshold: int | None = None,
+        retry: bool | None = None,
+        **kwargs: Any,
+    ) -> Message:
+        options = _send_message_options(kwargs)
+        resolved_peer = await self._peer_cache.resolve_peer(peer)
+        parsed = (
+            parse_message_text(text, parse_mode)
+            if entities is None
+            else parse_message_text(text, None)
+        )
+        request_entities = parsed.entities if entities is None else tuple(entities)
+        request = functions.MessagesSendMessage(
+            peer=input_peer_from_peer(resolved_peer),
+            message=parsed.text,
+            random_id=make_random_id() if random_id is None else int(random_id),
+            entities=request_entities or None,
+            **options,
+        )
+        result = await self.invoke(
+            request,
+            request_timeout=request_timeout,
+            flood_sleep_threshold=flood_sleep_threshold,
+            retry=retry,
+        )
+        await self._peer_cache.remember_raw_entities(result)
+        return message_from_send_result(
+            result, peer=resolved_peer, text=parsed.text, entities=request_entities
+        )
 
     async def send_file(self, peer: Peer | str | int, file: str | bytes, **kwargs: Any) -> object:
         raise NotImplementedError("send_file requires upload and media raw API support")
@@ -235,3 +273,32 @@ class Client:
         self._sender = None
         if sender is not None:
             await sender.disconnect()
+
+
+_SEND_MESSAGE_OPTION_DEFAULTS: dict[str, object] = {
+    "no_webpage": False,
+    "silent": False,
+    "background": False,
+    "clear_draft": False,
+    "noforwards": False,
+    "update_stickersets_order": False,
+    "invert_media": False,
+    "allow_paid_floodskip": False,
+    "reply_to": None,
+    "reply_markup": None,
+    "schedule_date": None,
+    "send_as": None,
+    "quick_reply_shortcut": None,
+    "effect": None,
+    "allow_paid_stars": None,
+    "suggested_post": None,
+}
+
+
+def _send_message_options(kwargs: dict[str, Any]) -> dict[str, Any]:
+    unknown = sorted(set(kwargs) - set(_SEND_MESSAGE_OPTION_DEFAULTS))
+    if unknown:
+        raise TypeError(f"unsupported send_message options: {', '.join(unknown)}")
+    return {
+        name: kwargs.get(name, default) for name, default in _SEND_MESSAGE_OPTION_DEFAULTS.items()
+    }

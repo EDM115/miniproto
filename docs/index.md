@@ -35,3 +35,7 @@ See [Raw API](./raw-api.md) for schema source metadata, generated raw class scop
 ## Developer Commands
 
 See [Development Commands](./development.md) for install, sync, schema generation, format, lint, type-check, test, build, and publish commands.
+
+## Fake Method Ledger
+
+See [Faked And Deferred Methods](./faked-methods.md) for the running list of fake-backed Telegram RPCs, private test hooks, and public methods intentionally deferred to later phases.

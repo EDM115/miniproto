@@ -19,6 +19,25 @@ class Peer:
 
 
 @dataclass(slots=True, frozen=True)
+class User:
+    id: int
+    access_hash: int | None = None
+    is_bot: bool = False
+    username: str | None = None
+    phone: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    is_self: bool = False
+    raw: object | None = None
+
+    @property
+    def peer(self) -> Peer:
+        return Peer(
+            id=self.id, kind="self" if self.is_self else "user", access_hash=self.access_hash
+        )
+
+
+@dataclass(slots=True, frozen=True)
 class Media:
     id: int
     mime_type: str | None = None
@@ -34,6 +53,7 @@ class Message:
     text: str
     date: datetime
     media: Media | None = None
+    entities: tuple[object, ...] = ()
     raw: object | None = None
 
 

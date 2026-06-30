@@ -43,7 +43,7 @@ from miniproto.session.storage import (
     InMemorySessionStorage,
     SessionStorage,
 )
-from miniproto.types import Media, Message, NewMessage, Peer, Update
+from miniproto.types import Media, Message, NewMessage, Peer, Update, User
 
 __all__ = [
     "AuthError",
@@ -91,6 +91,7 @@ __all__ = [
     "Update",
     "UpdateQueueOverflowPolicy",
     "UpdateState",
+    "User",
     "UserIdentity",
     "event_loop",
 ]

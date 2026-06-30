@@ -13,7 +13,7 @@ tags: [implementation, mtproto, python, rust, pyo3, release]
 ![Status: In progress](https://img.shields.io/badge/status-In%20progress-yellow)  
 This file is the root implementation tracker for `miniproto` v1. It consolidates `PLAN.md`, `plans/2026-06-25-implementation-progress.md`, `plans/2026-06-26-package-boundary-and-ecosystem-intent.md`, and `plans/2026-06-29-package-boundary-progress.md` into one actionable plan that future agents must update as work progresses.  
 Tracking rules: update the relevant task row when code, docs, tests, and verification for that task are complete; keep the `Completed` column as `yes`, `in progress`, `blocked`, or `no`; record the completion date as `YYYY-MM-DD`; add new tasks only when they are required for v1 readiness; do not move framework behavior from future `mpgram` into `miniproto`.  
-Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 crate wiring, public Python API exports, client lifecycle skeleton, session storage, redaction, generated raw API, native/fallback crypto and TL primitive paths, automatic optimized event-loop installation, TCP transports, encrypted MTProto message runtime, auth-key exchange primitives, phone/bot sign-in service plumbing, auth/DC typed errors, raw invocation with typed RPC error mapping, bounded flood-wait handling, retry/cancellation/disconnect behavior, ordered update state recovery, duplicate suppression, bounded update queue policies, fake auth/invoke/update tests, live auth environment scaffolding, docs, CI workflow, and tests exist.
+Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 crate wiring, public Python API exports, client lifecycle skeleton, session storage, redaction, generated raw API, native/fallback crypto and TL primitive paths, automatic optimized event-loop installation, TCP transports, encrypted MTProto message runtime, auth-key exchange primitives, phone/bot sign-in service plumbing, auth/DC typed errors, raw invocation with typed RPC error mapping, bounded flood-wait handling, retry/cancellation/disconnect behavior, ordered update state recovery, duplicate suppression, bounded update queue policies, peer cache resolution, `get_me()`, `send_message()`, Markdown-lite entity parsing, fake auth/invoke/update/peer/message tests, fake-method ledger docs, live auth/message environment scaffolding, docs, CI workflow, and tests exist.
 
 ## 1. Requirements & Constraints
 
@@ -203,8 +203,8 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
 ### Implementation Phase 7 - Raw Invocation, Error Handling, And Flood Waits
 
 - **GOAL-008**: Make `Client.invoke()` the reliable raw escape hatch for all generated requests
-  | Task     | Description                                                                                                                                                                                                   | Completed | Date |
-  | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---- |
+  | Task     | Description                                                                                                                                                                                                   | Completed | Date       |
+  | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---------- |
   | TASK-051 | Replace `Client.invoke()` placeholder with serialization, sender scheduling, response deserialization, request/result type validation, and cancellation handling.                                             | yes       | 2026-06-30 |
   | TASK-052 | Implement RPC error mapping for common errors including unauthorized, flood wait, migrate errors, bad request, forbidden, not found, internal, and timeout classes.                                           | yes       | 2026-06-30 |
   | TASK-053 | Add configurable flood-wait handling that raises `FloodWait` by default and optionally sleeps only when a caller explicitly allows bounded waits.                                                             | yes       | 2026-06-30 |
@@ -215,8 +215,8 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
 ### Implementation Phase 8 - Ordered Updates And Event Dispatch
 
 - **GOAL-009**: Deliver ordered, gap-safe, non-duplicate updates through iterator and handler APIs
-  | Task     | Description                                                                                                                                                                                             | Completed | Date |
-  | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---- |
+  | Task     | Description                                                                                                                                                                                             | Completed | Date       |
+  | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---------- |
   | TASK-057 | Add `src/miniproto/updates/state.py` for persisted `pts`, `qts`, `seq`, date, entity references, and duplicate tracking windows.                                                                        | yes       | 2026-06-30 |
   | TASK-058 | Add `src/miniproto/updates/manager.py` to normalize short updates, detect gaps, fetch differences, delay emission during recovery, and update persisted state atomically.                               | yes       | 2026-06-30 |
   | TASK-059 | Extend `Client.connect()` and `Client.disconnect()` to start and stop update receive tasks without leaking tasks or swallowing exceptions.                                                              | yes       | 2026-06-30 |
@@ -227,15 +227,15 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
 ### Implementation Phase 9 - Peer Cache And Text Message Methods
 
 - **GOAL-010**: Implement common non-media methods that prove peer resolution, raw invocation, and update delivery work together
-  | Task     | Description                                                                                                                                                                                              | Completed | Date |
-  | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---- |
-  | TASK-063 | Add peer cache models and storage methods for users, chats, channels, usernames, phone numbers, self, and access hashes.                                                                                 | no        |      |
-  | TASK-064 | Implement `Client.get_me()` using generated raw calls and cached self identity.                                                                                                                          | no        |      |
-  | TASK-065 | Implement `Client.resolve_peer()` for existing `Peer`, self aliases, numeric IDs, usernames, and cached access hashes.                                                                                   | no        |      |
-  | TASK-066 | Implement `Client.send_message()` using `messages.sendMessage`, random ID generation, entity parsing for plain text and Markdown-lite, flood-wait behavior, and result normalization to `Message`.       | no        |      |
-  | TASK-067 | Add edit/delete text-message primitives if they are required to complete v1 docs and tests; otherwise keep them as raw API examples only.                                                                | no        |      |
-  | TASK-068 | Add tests in `tests/test_peers.py` and `tests/test_messages.py` for cache hits/misses, access-hash persistence, self resolution, text send, Markdown-lite entities, random IDs, and flood wait surfaces. | no        |      |
-  | TASK-069 | Add gated live test coverage for Saved Messages send and receive when `MINIPROTO_INTEGRATION=1`.                                                                                                         | no        |      |
+  | Task     | Description                                                                                                                                                                                              | Completed   | Date       |
+  | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ---------- |
+  | TASK-063 | Add peer cache models and storage methods for users, chats, channels, usernames, phone numbers, self, and access hashes.                                                                                 | yes         | 2026-06-30 |
+  | TASK-064 | Implement `Client.get_me()` using generated raw calls and cached self identity.                                                                                                                          | yes         | 2026-06-30 |
+  | TASK-065 | Implement `Client.resolve_peer()` for existing `Peer`, self aliases, numeric IDs, usernames, and cached access hashes.                                                                                   | yes         | 2026-06-30 |
+  | TASK-066 | Implement `Client.send_message()` using `messages.sendMessage`, random ID generation, entity parsing for plain text and Markdown-lite, flood-wait behavior, and result normalization to `Message`.       | yes         | 2026-06-30 |
+  | TASK-067 | Add edit/delete text-message primitives if they are required to complete v1 docs and tests; otherwise keep them as raw API examples only.                                                                | yes         | 2026-06-30 |
+  | TASK-068 | Add tests in `tests/test_peers.py` and `tests/test_messages.py` for cache hits/misses, access-hash persistence, self resolution, text send, Markdown-lite entities, random IDs, and flood wait surfaces. | yes         | 2026-06-30 |
+  | TASK-069 | Add gated live test coverage for Saved Messages send and receive when `MINIPROTO_INTEGRATION=1`.                                                                                                         | in progress | 2026-06-30 |
 
 ### Implementation Phase 10 - Media Upload And Download Primitives
 
@@ -325,7 +325,8 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
 - **FILE-015**: `.github/workflows/ci.yml` owns automated verification gates
 - **FILE-016**: `docs/`, `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, and `CHANGELOG.md` own user, contributor, security, and release documentation
 - **FILE-017**: `tests/` owns unit, fake-server, integration, parity, resource, and release tests
-- **FILE-018**: `src/miniproto/connection/` and `src/miniproto/mtproto/` own Phase 5 transport/runtime code; future `src/miniproto/auth/`, `src/miniproto/updates/`, and `src/miniproto/media/` packages must be added only when their owning phase starts
+- **FILE-018**: `src/miniproto/connection/` and `src/miniproto/mtproto/` own Phase 5 transport/runtime code; `src/miniproto/auth/`, `src/miniproto/updates/`, `src/miniproto/peers.py`, and `src/miniproto/messages.py` own the current auth, update, peer-cache, and text-message method services; future `src/miniproto/media/` packages must be added only when Phase 10 starts
+- **FILE-019**: `docs/faked-methods.md` owns the ledger of fake-backed Telegram RPCs, private test hooks, and intentionally deferred public methods
 
 ## 6. Testing
 
@@ -385,6 +386,7 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
 - [README.md](./README.md)
 - [docs/development.md](./docs/development.md)
 - [tools/schema/README.md](./tools/schema/README.md)
+- [docs/faked-methods.md](./docs/faked-methods.md)
 - Telegram MTProto documentation: https://core.telegram.org/mtproto
 - Telegram MTProto detailed description: https://core.telegram.org/mtproto/description
 - Telegram schema JSON: https://core.telegram.org/schema/json

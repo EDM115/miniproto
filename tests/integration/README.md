@@ -10,3 +10,8 @@ uv run pytest tests/integration/test_auth_live.py -q
 ```
 
 Phase 6 ships this harness before credentials are available. The live auth test itself still skips with a clear message until the raw invoke/real transport path is wired deeply enough to make Telegram network calls.
+Phase 9 adds a Saved Messages send scaffold in `tests/integration/test_messages_live.py`. It uses the same credential gate and intentionally skips until a maintainer enables test-DC credentials.
+
+```powershell
+uv run pytest tests/integration/test_messages_live.py -q
+```
