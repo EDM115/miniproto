@@ -44,6 +44,10 @@ class Media:
     size: int | None = None
     file_name: str | None = None
     raw: object | None = None
+    access_hash: int | None = None
+    file_reference: bytes | None = None
+    dc_id: int | None = None
+    location: object | None = None
 
 
 @dataclass(slots=True, frozen=True)

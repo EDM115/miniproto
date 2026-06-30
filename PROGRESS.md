@@ -13,7 +13,7 @@ tags: [implementation, mtproto, python, rust, pyo3, release]
 ![Status: In progress](https://img.shields.io/badge/status-In%20progress-yellow)  
 This file is the root implementation tracker for `miniproto` v1. It consolidates `PLAN.md`, `plans/2026-06-25-implementation-progress.md`, `plans/2026-06-26-package-boundary-and-ecosystem-intent.md`, and `plans/2026-06-29-package-boundary-progress.md` into one actionable plan that future agents must update as work progresses.  
 Tracking rules: update the relevant task row when code, docs, tests, and verification for that task are complete; keep the `Completed` column as `yes`, `in progress`, `blocked`, or `no`; record the completion date as `YYYY-MM-DD`; add new tasks only when they are required for v1 readiness; do not move framework behavior from future `mpgram` into `miniproto`.  
-Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 crate wiring, public Python API exports, client lifecycle skeleton, session storage, redaction, generated raw API, native/fallback crypto and TL primitive paths, automatic optimized event-loop installation, TCP transports, encrypted MTProto message runtime, auth-key exchange primitives, phone/bot sign-in service plumbing, auth/DC typed errors, raw invocation with typed RPC error mapping, bounded flood-wait handling, retry/cancellation/disconnect behavior, ordered update state recovery, duplicate suppression, bounded update queue policies, peer cache resolution, `get_me()`, `send_message()`, Markdown-lite entity parsing, fake auth/invoke/update/peer/message tests, fake-method ledger docs, live auth/message environment scaffolding, docs, CI workflow, and tests exist.
+Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 crate wiring, public Python API exports, client lifecycle skeleton, session storage, redaction, generated raw API, native/fallback crypto and TL primitive paths, automatic optimized event-loop installation, TCP transports, encrypted MTProto message runtime, auth-key exchange primitives, phone/bot sign-in service plumbing, auth/DC typed errors, raw invocation with typed RPC error mapping, bounded flood-wait handling, retry/cancellation/disconnect behavior, ordered update state recovery, duplicate suppression, bounded update queue policies, peer cache resolution, `get_me()`, `send_message()`, Markdown-lite entity parsing, media upload/download/CDN primitives, `send_file()`, `download_media()`, fake auth/invoke/update/peer/message/media tests, fake-method ledger docs, live auth/message/media environment scaffolding, docs, CI workflow, and tests exist.
 
 ## 1. Requirements & Constraints
 
@@ -240,15 +240,15 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
 ### Implementation Phase 10 - Media Upload And Download Primitives
 
 - **GOAL-011**: Implement protocol-core media transfer primitives without framework-level media sugar
-  | Task     | Description                                                                                                                                                                                                                      | Completed | Date |
-  | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---- |
-  | TASK-070 | Add `src/miniproto/media/upload.py` for small file upload, big file upload, 512 KiB default chunks, streamed unknown-size inputs, concurrency bounds, progress callbacks, and retry of missing parts.                            | no        |      |
-  | TASK-071 | Add `src/miniproto/media/download.py` for resumable download, offset/range handling, file-like destinations, path destinations, progress callbacks, and cancellation-safe cleanup.                                               | no        |      |
-  | TASK-072 | Add CDN redirect, CDN token, and CDN decryption support under `src/miniproto/media/cdn.py`.                                                                                                                                      | no        |      |
-  | TASK-073 | Implement `Client.send_file()` as a thin protocol-core convenience over upload plus generated media send requests.                                                                                                               | no        |      |
-  | TASK-074 | Implement `Client.download_media()` as a thin protocol-core convenience over media location resolution plus download.                                                                                                            | no        |      |
-  | TASK-075 | Add tests in `tests/test_media_upload.py` and `tests/test_media_download.py` for chunk sizing, small/big branch selection, streaming, retry, resume, CDN decrypt, progress callback ordering, cancellation, and memory ceilings. | no        |      |
-  | TASK-076 | Add gated live tests for upload/download to Saved Messages when `MINIPROTO_INTEGRATION=1`.                                                                                                                                       | no        |      |
+  | Task     | Description                                                                                                                                                                                                                      | Completed   | Date       |
+  | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ---------- |
+  | TASK-070 | Add `src/miniproto/media/upload.py` for small file upload, big file upload, 512 KiB default chunks, streamed unknown-size inputs, concurrency bounds, progress callbacks, and retry of missing parts.                            | yes         | 2026-06-30 |
+  | TASK-071 | Add `src/miniproto/media/download.py` for resumable download, offset/range handling, file-like destinations, path destinations, progress callbacks, and cancellation-safe cleanup.                                               | yes         | 2026-06-30 |
+  | TASK-072 | Add CDN redirect, CDN token, and CDN decryption support under `src/miniproto/media/cdn.py`.                                                                                                                                      | yes         | 2026-06-30 |
+  | TASK-073 | Implement `Client.send_file()` as a thin protocol-core convenience over upload plus generated media send requests.                                                                                                               | yes         | 2026-06-30 |
+  | TASK-074 | Implement `Client.download_media()` as a thin protocol-core convenience over media location resolution plus download.                                                                                                            | yes         | 2026-06-30 |
+  | TASK-075 | Add tests in `tests/test_media_upload.py` and `tests/test_media_download.py` for chunk sizing, small/big branch selection, streaming, retry, resume, CDN decrypt, progress callback ordering, cancellation, and memory ceilings. | yes         | 2026-06-30 |
+  | TASK-076 | Add gated live tests for upload/download to Saved Messages when `MINIPROTO_INTEGRATION=1`.                                                                                                                                       | in progress | 2026-06-30 |
 
 ### Implementation Phase 11 - Observability, Resource Limits, And Production Hardening
 
@@ -325,7 +325,7 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
 - **FILE-015**: `.github/workflows/ci.yml` owns automated verification gates
 - **FILE-016**: `docs/`, `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, and `CHANGELOG.md` own user, contributor, security, and release documentation
 - **FILE-017**: `tests/` owns unit, fake-server, integration, parity, resource, and release tests
-- **FILE-018**: `src/miniproto/connection/` and `src/miniproto/mtproto/` own Phase 5 transport/runtime code; `src/miniproto/auth/`, `src/miniproto/updates/`, `src/miniproto/peers.py`, and `src/miniproto/messages.py` own the current auth, update, peer-cache, and text-message method services; future `src/miniproto/media/` packages must be added only when Phase 10 starts
+- **FILE-018**: `src/miniproto/connection/` and `src/miniproto/mtproto/` own Phase 5 transport/runtime code; `src/miniproto/auth/`, `src/miniproto/updates/`, `src/miniproto/peers.py`, `src/miniproto/messages.py`, and `src/miniproto/media/` own the current auth, update, peer-cache, text-message, and media-transfer services
 - **FILE-019**: `docs/faked-methods.md` owns the ledger of fake-backed Telegram RPCs, private test hooks, and intentionally deferred public methods
 
 ## 6. Testing
@@ -387,6 +387,7 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
 - [docs/development.md](./docs/development.md)
 - [tools/schema/README.md](./tools/schema/README.md)
 - [docs/faked-methods.md](./docs/faked-methods.md)
+- [docs/media.md](./docs/media.md)
 - Telegram MTProto documentation: https://core.telegram.org/mtproto
 - Telegram MTProto detailed description: https://core.telegram.org/mtproto/description
 - Telegram schema JSON: https://core.telegram.org/schema/json

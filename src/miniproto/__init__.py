@@ -30,6 +30,7 @@ from miniproto.errors import (
     TransportFlood,
     Unauthorized,
 )
+from miniproto.media import MediaDownloadResult, MediaUploadResult
 from miniproto.session.models import (
     AuthKey,
     DCOption,
@@ -69,6 +70,8 @@ __all__ = [
     "InvalidDatacenter",
     "InvokeError",
     "Media",
+    "MediaDownloadResult",
+    "MediaUploadResult",
     "Message",
     "NewMessage",
     "NotFound",

@@ -15,3 +15,9 @@ Phase 9 adds a Saved Messages send scaffold in `tests/integration/test_messages_
 ```powershell
 uv run pytest tests/integration/test_messages_live.py -q
 ```
+
+Phase 10 adds a Saved Messages upload/download scaffold in `tests/integration/test_media_live.py`. It uses `MINIPROTO_TEST_UPLOAD_FILE` as the local file to upload and `MINIPROTO_TEST_DOWNLOAD_PATH` as the optional download target, then skips until a maintainer enables test-DC credentials and validates the real transport path.
+
+```powershell
+uv run pytest tests/integration/test_media_live.py -q
+```

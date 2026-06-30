@@ -5,6 +5,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Literal
 
+from miniproto.media.download import media_from_raw
 from miniproto.raw import types
 from miniproto.types import Message, Peer
 from miniproto.updates.state import coerce_update_datetime, utc_now
@@ -56,7 +57,7 @@ def message_from_send_result(
             peer=peer,
             text=text,
             date=coerce_update_datetime(result.date),
-            media=result.media,
+            media=media_from_raw(result.media),
             entities=tuple(result.entities or parsed_entities),
             raw=result,
         )
@@ -133,7 +134,7 @@ def _message_from_raw(
         peer=_peer_from_raw(raw.peer_id, fallback_peer),
         text=raw.message,
         date=coerce_update_datetime(raw.date),
-        media=raw.media,
+        media=media_from_raw(raw.media),
         entities=tuple(raw.entities or fallback_entities),
         raw=raw,
     )

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import mimetypes
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterable
 from typing import Any, TypeVar, overload
 
@@ -28,9 +29,17 @@ from miniproto.invoke import (
     wrap_raw_request,
     wrap_transport_failure,
 )
+from miniproto.media import (
+    DEFAULT_CHUNK_SIZE,
+    Destination,
+    FileSource,
+    MediaDownloadResult,
+    upload_file,
+)
+from miniproto.media import download_media as download_media_file
 from miniproto.messages import make_random_id, message_from_send_result, parse_message_text
 from miniproto.peers import PeerCache, input_peer_from_peer
-from miniproto.raw import functions
+from miniproto.raw import functions, types
 from miniproto.session.storage import InMemorySessionStorage, SessionStorage
 from miniproto.types import Message, NewMessage, Peer, Update, User
 from miniproto.updates.manager import UpdateHandler, UpdateManager
@@ -41,7 +50,7 @@ UpdateT = TypeVar("UpdateT", bound=Update)
 class Client:
     """Async client facade for MTProto operations.
 
-    This first implementation slice wires lifecycle, public API shape, update queues, and handler dispatch. Network MTProto, auth, generated raw methods, and media transfer are intentionally not implemented yet.
+    This implementation wires lifecycle, auth, raw invocation, updates, peer/message helpers, and protocol-core media transfer primitives while keeping framework-level behavior out of the SDK.
     """
 
     def __init__(self, config: ClientConfig) -> None:
@@ -151,13 +160,55 @@ class Client:
             result, peer=resolved_peer, text=parsed.text, entities=request_entities
         )
 
-    async def send_file(self, peer: Peer | str | int, file: str | bytes, **kwargs: Any) -> object:
-        raise NotImplementedError("send_file requires upload and media raw API support")
+    async def send_file(self, peer: Peer | str | int, file: FileSource, **kwargs: Any) -> Message:
+        file_options = _send_file_options(kwargs)
+        resolved_peer = await self._peer_cache.resolve_peer(peer)
+        uploaded = await upload_file(
+            self.invoke,
+            file,
+            file_name=file_options["file_name"],
+            part_size=file_options["part_size"],
+            concurrency=file_options["concurrency"],
+            progress=file_options["progress"],
+            file_id=file_options["file_id"],
+            max_retries=file_options["max_retries"],
+            max_buffer_size=file_options["max_buffer_size"],
+            request_timeout=file_options["request_timeout"],
+        )
+        parsed = (
+            parse_message_text(file_options["caption"], file_options["parse_mode"])
+            if file_options["entities"] is None
+            else parse_message_text(file_options["caption"], None)
+        )
+        request_entities = (
+            parsed.entities if file_options["entities"] is None else tuple(file_options["entities"])
+        )
+        request = functions.MessagesSendMedia(
+            peer=input_peer_from_peer(resolved_peer),
+            media=_uploaded_input_media(uploaded.input_file, file_options),
+            message=parsed.text,
+            random_id=make_random_id()
+            if file_options["random_id"] is None
+            else int(file_options["random_id"]),
+            entities=request_entities or None,
+            **file_options["send_options"],
+        )
+        result = await self.invoke(
+            request,
+            request_timeout=file_options["request_timeout"],
+            flood_sleep_threshold=file_options["flood_sleep_threshold"],
+            retry=file_options["retry"],
+        )
+        await self._peer_cache.remember_raw_entities(result)
+        return message_from_send_result(
+            result, peer=resolved_peer, text=parsed.text, entities=request_entities
+        )
 
     async def download_media(
-        self, media: object, destination: str | None = None, **kwargs: Any
-    ) -> object:
-        raise NotImplementedError("download_media requires media download support")
+        self, media: object, destination: Destination = None, **kwargs: Any
+    ) -> MediaDownloadResult:
+        options = _download_media_options(kwargs)
+        return await download_media_file(self.invoke, media, destination, **options)
 
     async def invoke(
         self,
@@ -302,3 +353,137 @@ def _send_message_options(kwargs: dict[str, Any]) -> dict[str, Any]:
     return {
         name: kwargs.get(name, default) for name, default in _SEND_MESSAGE_OPTION_DEFAULTS.items()
     }
+
+
+_SEND_MEDIA_OPTION_DEFAULTS: dict[str, object] = {
+    "silent": False,
+    "background": False,
+    "clear_draft": False,
+    "noforwards": False,
+    "update_stickersets_order": False,
+    "invert_media": False,
+    "allow_paid_floodskip": False,
+    "reply_to": None,
+    "reply_markup": None,
+    "schedule_date": None,
+    "send_as": None,
+    "quick_reply_shortcut": None,
+    "effect": None,
+    "allow_paid_stars": None,
+    "suggested_post": None,
+}
+
+_SEND_FILE_OPTION_DEFAULTS: dict[str, object] = {
+    "caption": "",
+    "parse_mode": None,
+    "random_id": None,
+    "entities": None,
+    "file_name": None,
+    "mime_type": None,
+    "as_photo": False,
+    "force_file": True,
+    "spoiler": False,
+    "ttl_seconds": None,
+    "attributes": None,
+    "thumb": None,
+    "stickers": None,
+    "video_cover": None,
+    "video_timestamp": None,
+    "nosound_video": False,
+    "part_size": DEFAULT_CHUNK_SIZE,
+    "concurrency": 1,
+    "progress": None,
+    "file_id": None,
+    "max_retries": 2,
+    "max_buffer_size": None,
+    "request_timeout": None,
+    "flood_sleep_threshold": None,
+    "retry": None,
+}
+
+_DOWNLOAD_MEDIA_OPTION_DEFAULTS: dict[str, object] = {
+    "offset": 0,
+    "limit": None,
+    "part_size": DEFAULT_CHUNK_SIZE,
+    "resume": False,
+    "progress": None,
+    "precise": False,
+    "cdn_supported": True,
+    "total_size": None,
+    "request_timeout": None,
+    "max_buffer_size": None,
+}
+
+
+def _send_file_options(kwargs: dict[str, Any]) -> dict[str, Any]:
+    known = set(_SEND_FILE_OPTION_DEFAULTS) | set(_SEND_MEDIA_OPTION_DEFAULTS)
+    unknown = sorted(set(kwargs) - known)
+    if unknown:
+        raise TypeError(f"unsupported send_file options: {', '.join(unknown)}")
+    options = {
+        name: kwargs.get(name, default) for name, default in _SEND_FILE_OPTION_DEFAULTS.items()
+    }
+    options["caption"] = str(options["caption"] or "")
+    if options["file_name"] is not None:
+        options["file_name"] = str(options["file_name"])
+    if options["mime_type"] is not None:
+        options["mime_type"] = str(options["mime_type"])
+    options["part_size"] = int(options["part_size"])
+    options["concurrency"] = int(options["concurrency"])
+    options["max_retries"] = int(options["max_retries"])
+    options["send_options"] = {
+        name: kwargs.get(name, default) for name, default in _SEND_MEDIA_OPTION_DEFAULTS.items()
+    }
+    return options
+
+
+def _download_media_options(kwargs: dict[str, Any]) -> dict[str, Any]:
+    unknown = sorted(set(kwargs) - set(_DOWNLOAD_MEDIA_OPTION_DEFAULTS))
+    if unknown:
+        raise TypeError(f"unsupported download_media options: {', '.join(unknown)}")
+    options = {
+        name: kwargs.get(name, default) for name, default in _DOWNLOAD_MEDIA_OPTION_DEFAULTS.items()
+    }
+    options["offset"] = int(options["offset"])
+    if options["limit"] is not None:
+        options["limit"] = int(options["limit"])
+    options["part_size"] = int(options["part_size"])
+    return options
+
+
+def _uploaded_input_media(input_file: object, options: dict[str, Any]) -> object:
+    if options["as_photo"]:
+        return types.InputMediaUploadedPhoto(
+            file=input_file,
+            spoiler=bool(options["spoiler"]),
+            stickers=_optional_tuple(options["stickers"]),
+            ttl_seconds=options["ttl_seconds"],
+        )
+    file_name = str(getattr(input_file, "name", None) or options["file_name"] or "file")
+    attributes = _document_attributes(options["attributes"], file_name)
+    mime_type = options["mime_type"] or mimetypes.guess_type(file_name)[0]
+    return types.InputMediaUploadedDocument(
+        nosound_video=bool(options["nosound_video"]),
+        force_file=bool(options["force_file"]),
+        spoiler=bool(options["spoiler"]),
+        file=input_file,
+        thumb=options["thumb"],
+        mime_type=str(mime_type or "application/octet-stream"),
+        attributes=attributes,
+        stickers=_optional_tuple(options["stickers"]),
+        video_cover=options["video_cover"],
+        video_timestamp=options["video_timestamp"],
+        ttl_seconds=options["ttl_seconds"],
+    )
+
+
+def _document_attributes(attributes: object, file_name: str) -> tuple[object, ...]:
+    if attributes is None:
+        return (types.DocumentAttributeFilename(file_name=file_name),)
+    return tuple(attributes) if isinstance(attributes, Iterable) else (attributes,)
+
+
+def _optional_tuple(value: object) -> tuple[object, ...] | None:
+    if value is None:
+        return None
+    return tuple(value) if isinstance(value, Iterable) else (value,)
