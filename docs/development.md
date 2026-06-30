@@ -22,34 +22,34 @@ Use `uv sync --extra dev` for normal development. Use `uv lock` after dependency
 ## Format
 
 ```powershell
-uv run --extra dev ruff format .
+uv run ruff format .
 cargo fmt
 ```
 
 ## Format Check
 
 ```powershell
-uv run --extra dev ruff format --check .
+uv run ruff format --check .
 cargo fmt --check
 ```
 
 ## Lint
 
 ```powershell
-uv run --extra dev ruff check .
+uv run ruff check .
 cargo clippy --all-targets --all-features -- -D warnings
 ```
 
 ## Type Check
 
 ```powershell
-uv run --extra dev ty check
+uv run ty check
 ```
 
 ## Test
 
 ```powershell
-uv run --extra dev pytest
+uv run pytest
 cargo test --all-features
 ```
 
@@ -57,13 +57,13 @@ Optional live Telegram integration tests must stay gated by environment variable
 
 ```powershell
 $env:MINIPROTO_INTEGRATION = "1"
-uv run --extra dev pytest tests/integration
+uv run pytest tests/integration
 ```
 
 ## Build
 
 ```powershell
-uv run --extra dev maturin build
+uv run maturin build
 cargo build --release --all-features
 ```
 
@@ -72,7 +72,7 @@ cargo build --release --all-features
 ## Local Editable Build
 
 ```powershell
-uv run --extra dev maturin develop
+uv run maturin develop
 ```
 
 Use this when you need to import the compiled native extension from the active virtual environment during manual testing.
@@ -88,7 +88,7 @@ Do not remove `.venv` unless you intentionally want to rebuild the local Python 
 ## Publish To PyPI
 
 ```powershell
-uv run --extra dev maturin build --release
+uv run maturin build --release
 uv publish dist/*
 ```
 
@@ -106,12 +106,12 @@ Only publish the Rust crate when the crates.io package contents intentionally ma
 ## Full Local Verification
 
 ```powershell
-uv run --extra dev ruff format --check .
-uv run --extra dev ruff check .
-uv run --extra dev ty check
-uv run --extra dev pytest
+uv run ruff format --check .
+uv run ruff check .
+uv run ty check
+uv run pytest
 cargo fmt --check
 cargo clippy --all-targets --all-features -- -D warnings
 cargo test --all-features
-uv run --extra dev maturin build
+uv run maturin build
 ```

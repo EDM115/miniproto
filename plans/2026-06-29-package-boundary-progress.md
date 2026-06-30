@@ -18,15 +18,15 @@ Status: package-boundary decision applied to repository structure, project docs,
 
 - `cargo check` passed and refreshed `Cargo.lock` with package `miniproto`.
 - `uv lock` passed.
-- `uv run --extra dev ruff format .` passed with 15 files left unchanged.
-- `uv run --extra dev ruff format --check .` passed with 15 files already formatted.
-- `uv run --extra dev ruff check .` passed.
-- `uv run --extra dev ty check` passed.
-- `uv run --extra dev pytest` passed with 9 tests.
+- `uv run ruff format .` passed with 15 files left unchanged.
+- `uv run ruff format --check .` passed with 15 files already formatted.
+- `uv run ruff check .` passed.
+- `uv run ty check` passed.
+- `uv run pytest` passed with 9 tests.
 - `cargo fmt --check` passed.
 - `cargo clippy --all-targets --all-features -- -D warnings` passed.
 - `cargo test --all-features` passed.
-- `uv run --extra dev maturin build` built `target/wheels/miniproto-0.1.0-cp314-cp314-win_amd64.whl`.
+- `uv run maturin build` built `target/wheels/miniproto-0.1.0-cp314-cp314-win_amd64.whl`.
 
 ## Left To Do
 

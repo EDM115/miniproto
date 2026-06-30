@@ -23,7 +23,7 @@ Status: first implementation slice completed on branch `codex/v1`.
 - `cargo fmt --check` passed after applying `cargo fmt`.
 - `cargo clippy --all-targets --all-features -- -D warnings` passed.
 - `cargo test --all-features` passed.
-- `uv run --extra dev maturin build` built `target/wheels/miniproto-0.1.0-cp314-cp314-win_amd64.whl`.
+- `uv run maturin build` built `target/wheels/miniproto-0.1.0-cp314-cp314-win_amd64.whl`.
 
 ## Notes
 

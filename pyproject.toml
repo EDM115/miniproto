@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "miniproto"
-version = "0.1.0"
+version = "0.0.1"
 description = "Async-first MTProto client core for Python with bundled Rust acceleration"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -21,17 +21,17 @@ classifiers = [
   "Programming Language :: Rust",
   "Typing :: Typed",
 ]
-dependencies = []
+dependencies = [
+  "uvloop==0.22.1; (sys_platform == 'linux' or sys_platform == 'darwin') and implementation_name == 'cpython'",
+  "winloop==0.6.3; (sys_platform == 'win32' or sys_platform == 'cygwin' or sys_platform == 'cli') and implementation_name == 'cpython'",
+]
 
 [project.optional-dependencies]
 dev = [
   "maturin==1.14.1,<2.0",
   "pytest==9.1.1",
-  "ruff==0.15.19",
-  "ty==0.0.53",
-]
-uvloop = [
-  "uvloop==0.22.1; (sys_platform == 'linux' or sys_platform == 'darwin') and implementation_name == 'cpython'",
+  "ruff==0.15.20",
+  "ty==0.0.55",
 ]
 
 [project.urls]
@@ -81,4 +81,3 @@ link-mode = "copy"
 compile-bytecode = true
 generate-hashes = true
 link-mode = "copy"
-
