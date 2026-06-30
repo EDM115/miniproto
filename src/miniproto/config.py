@@ -13,9 +13,27 @@ class TransportConfig:
     mode: TransportMode = "tcp_abridged"
     connect_timeout: float = 10.0
     read_timeout: float = 30.0
+    write_timeout: float = 30.0
     reconnect_backoff_initial: float = 0.25
     reconnect_backoff_max: float = 5.0
+    max_payload_size: int = 16 * 1024 * 1024
     proxy: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.connect_timeout <= 0:
+            raise ValueError("connect_timeout must be positive")
+        if self.read_timeout <= 0:
+            raise ValueError("read_timeout must be positive")
+        if self.write_timeout <= 0:
+            raise ValueError("write_timeout must be positive")
+        if self.reconnect_backoff_initial < 0:
+            raise ValueError("reconnect_backoff_initial must not be negative")
+        if self.reconnect_backoff_max < self.reconnect_backoff_initial:
+            raise ValueError(
+                "reconnect_backoff_max must be greater than or equal to reconnect_backoff_initial"
+            )
+        if self.max_payload_size <= 0:
+            raise ValueError("max_payload_size must be positive")
 
 
 @dataclass(slots=True, frozen=True)

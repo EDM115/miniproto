@@ -13,7 +13,7 @@ tags: [implementation, mtproto, python, rust, pyo3, release]
 ![Status: In progress](https://img.shields.io/badge/status-In%20progress-yellow)  
 This file is the root implementation tracker for `miniproto` v1. It consolidates `PLAN.md`, `plans/2026-06-25-implementation-progress.md`, `plans/2026-06-26-package-boundary-and-ecosystem-intent.md`, and `plans/2026-06-29-package-boundary-progress.md` into one actionable plan that future agents must update as work progresses.  
 Tracking rules: update the relevant task row when code, docs, tests, and verification for that task are complete; keep the `Completed` column as `yes`, `in progress`, `blocked`, or `no`; record the completion date as `YYYY-MM-DD`; add new tasks only when they are required for v1 readiness; do not move framework behavior from future `mpgram` into `miniproto`.  
-Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 crate wiring, public Python API exports, client lifecycle skeleton, in-memory session storage, fail-closed encrypted storage placeholder, raw namespace placeholders, native/fallback crypto and TL primitive paths, generated raw serialization hooks, docs, CI workflow, and tests exist.
+Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 crate wiring, public Python API exports, client lifecycle skeleton, session storage, redaction, generated raw API, native/fallback crypto and TL primitive paths, automatic optimized event-loop installation, TCP transports, encrypted MTProto message runtime, fake-server support, docs, CI workflow, and tests exist.
 
 ## 1. Requirements & Constraints
 
@@ -77,6 +77,7 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
 - **GUD-007**: Preserve free-threaded Python readiness by avoiding hidden mutable native globals
 - **GUD-008**: Update this file before ending any implementation slice that changes phase status
 - **GUD-009**: Verify the Rust performance using benchmarks against both the Python fallback and other concurrent implementations
+- **GUD-010**: Importing `miniproto` should automatically install `winloop` on Windows or `uvloop` elsewhere when available, while silently falling back to the stdlib asyncio loop
 
 ### Patterns
 
@@ -148,22 +149,22 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
 ### Implementation Phase 3 - Schema Pinning And Raw API Generation
 
 - **GOAL-004**: Build deterministic schema tooling that produces raw functions/types and fails CI on drift
-  | Task     | Description                                                                                                                                                                                                             | Completed | Date |
-  | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---- |
-  | TASK-021 | Add `tools/schema/schema.json` or `tools/schema/schema.tl` with pinned Telegram schema source metadata in `tools/schema/schema-metadata.json` containing layer, source URL, fetch date, SHA-256, and generator version. | yes        |       2026-06-30 |
-  | TASK-022 | Implement `tools/schema/parser.py` that parses TL constructors, functions, flags, vectors, bare types, namespaces, result types, and comments without executing schema contents.                                        | yes        |       2026-06-30 |
-  | TASK-023 | Implement `tools/schema/generate.py` that writes deterministic Python raw classes to `src/miniproto/raw/types.py` and `src/miniproto/raw/functions.py`.                                                                 | yes        |       2026-06-30 |
-  | TASK-024 | Add generated base protocols/helpers in `src/miniproto/raw/base.py` for constructor IDs, serialization hooks, deserialization hooks, and result type metadata.                                                          | yes        |       2026-06-30 |
-  | TASK-025 | Add RPC error mapping generation to `src/miniproto/errors.py` or `src/miniproto/raw/errors.py` with a stable public import path.                                                                                        | yes        |       2026-06-30 |
-  | TASK-026 | Add golden schema fixtures under `tests/fixtures/schema/` and tests in `tests/test_schema_parser.py` and `tests/test_schema_generation.py`.                                                                             | yes        |       2026-06-30 |
-  | TASK-027 | Add a stale-generation check command to `tools/schema/README.md`, `docs/development.md`, and CI so generated files must match committed generator output.                                                               | yes        |       2026-06-30 |
-  | TASK-028 | Add docs stubs generated from schema metadata under `docs/raw-api.md` or `docs/raw/` without turning docs generation into a release blocker for every schema comment.                                                   | yes        |       2026-06-30 |
+  | Task     | Description                                                                                                                                                                                                             | Completed | Date       |
+  | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---------- |
+  | TASK-021 | Add `tools/schema/schema.json` or `tools/schema/schema.tl` with pinned Telegram schema source metadata in `tools/schema/schema-metadata.json` containing layer, source URL, fetch date, SHA-256, and generator version. | yes       | 2026-06-30 |
+  | TASK-022 | Implement `tools/schema/parser.py` that parses TL constructors, functions, flags, vectors, bare types, namespaces, result types, and comments without executing schema contents.                                        | yes       | 2026-06-30 |
+  | TASK-023 | Implement `tools/schema/generate.py` that writes deterministic Python raw classes to `src/miniproto/raw/types.py` and `src/miniproto/raw/functions.py`.                                                                 | yes       | 2026-06-30 |
+  | TASK-024 | Add generated base protocols/helpers in `src/miniproto/raw/base.py` for constructor IDs, serialization hooks, deserialization hooks, and result type metadata.                                                          | yes       | 2026-06-30 |
+  | TASK-025 | Add RPC error mapping generation to `src/miniproto/errors.py` or `src/miniproto/raw/errors.py` with a stable public import path.                                                                                        | yes       | 2026-06-30 |
+  | TASK-026 | Add golden schema fixtures under `tests/fixtures/schema/` and tests in `tests/test_schema_parser.py` and `tests/test_schema_generation.py`.                                                                             | yes       | 2026-06-30 |
+  | TASK-027 | Add a stale-generation check command to `tools/schema/README.md`, `docs/development.md`, and CI so generated files must match committed generator output.                                                               | yes       | 2026-06-30 |
+  | TASK-028 | Add docs stubs generated from schema metadata under `docs/raw-api.md` or `docs/raw/` without turning docs generation into a release blocker for every schema comment.                                                   | yes       | 2026-06-30 |
 
 ### Implementation Phase 4 - Native And Fallback Crypto/TL Primitives
 
 - **GOAL-005**: Implement protocol-hot primitives with native/fallback parity and test vectors
-  | Task     | Description                                                                                                                                                                               | Completed | Date |
-  | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---- |
+  | Task     | Description                                                                                                                                                                               | Completed | Date       |
+  | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---------- |
   | TASK-029 | Add AES-256-IGE, AES-CTR, AES-CBC, SHA-based MTProto key derivation, XOR, and `pq` factorization to `rust/miniproto/src/lib.rs` or split Rust modules under `rust/miniproto/src/crypto/`. | yes       | 2026-06-30 |
   | TASK-030 | Add pure Python fallback implementations or explicit secure dependency-backed fallback paths under `src/miniproto/crypto/` for every native function exposed by TASK-029.                 | yes       | 2026-06-30 |
   | TASK-031 | Add TL primitive encode/decode helpers for int, long, int128, int256, double, bytes, string, vector, bool, and bare object constructors in native and fallback paths.                     | yes       | 2026-06-30 |
@@ -175,16 +176,16 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
 ### Implementation Phase 5 - Transport And MTProto Message Runtime
 
 - **GOAL-006**: Implement the network sender/runtime needed for encrypted MTProto requests and fake-server verification
-  | Task     | Description                                                                                                                                                                                                   | Completed | Date |
-  | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---- |
-  | TASK-036 | Add `src/miniproto/connection/transport.py` with transport protocol interfaces, deadline handling, bounded reads, proxy hooks, and close semantics.                                                           | no        |      |
-  | TASK-037 | Add TCP abridged transport in `src/miniproto/connection/tcp_abridged.py` and wire it to `TransportConfig.mode == "tcp_abridged"`.                                                                             | no        |      |
-  | TASK-038 | Add TCP intermediate and padded intermediate transports in `src/miniproto/connection/tcp_intermediate.py` behind config.                                                                                      | no        |      |
-  | TASK-039 | Add `src/miniproto/mtproto/state.py` for msg_id monotonicity, seq_no rules, salt/session identifiers, pending ack batches, duplicate msg_id tracking, and time-offset correction.                             | no        |      |
-  | TASK-040 | Add `src/miniproto/mtproto/codec.py` for encrypted message framing, containers, gzip payloads, ping/pong, acks, bad salt, and bad message responses.                                                          | no        |      |
-  | TASK-041 | Add `src/miniproto/connection/sender.py` for request scheduling, correlation IDs, retry policy, reconnect locks, ping-delay-disconnect keepalive, and clean shutdown.                                         | no        |      |
-  | TASK-042 | Add fake-server test utilities under `tests/support/fake_mtproto.py` for encrypted and unencrypted protocol flows.                                                                                            | no        |      |
-  | TASK-043 | Add tests in `tests/test_transport_runtime.py` for transport framing, bounded reads, deadlines, reconnect throttling, ack batching, containers, gzip, bad salt, bad msg, duplicate suppression, and shutdown. | no        |      |
+  | Task     | Description                                                                                                                                                                                                   | Completed | Date       |
+  | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---------- |
+  | TASK-036 | Add `src/miniproto/connection/transport.py` with transport protocol interfaces, deadline handling, bounded reads, proxy hooks, and close semantics.                                                           | yes       | 2026-06-30 |
+  | TASK-037 | Add TCP abridged transport in `src/miniproto/connection/tcp_abridged.py` and wire it to `TransportConfig.mode == "tcp_abridged"`.                                                                             | yes       | 2026-06-30 |
+  | TASK-038 | Add TCP intermediate and padded intermediate transports in `src/miniproto/connection/tcp_intermediate.py` behind config.                                                                                      | yes       | 2026-06-30 |
+  | TASK-039 | Add `src/miniproto/mtproto/state.py` for msg_id monotonicity, seq_no rules, salt/session identifiers, pending ack batches, duplicate msg_id tracking, and time-offset correction.                             | yes       | 2026-06-30 |
+  | TASK-040 | Add `src/miniproto/mtproto/codec.py` for encrypted message framing, containers, gzip payloads, ping/pong, acks, bad salt, and bad message responses.                                                          | yes       | 2026-06-30 |
+  | TASK-041 | Add `src/miniproto/connection/sender.py` for request scheduling, correlation IDs, retry policy, reconnect locks, ping-delay-disconnect keepalive, and clean shutdown.                                         | yes       | 2026-06-30 |
+  | TASK-042 | Add fake-server test utilities under `tests/support/fake_mtproto.py` for encrypted and unencrypted protocol flows.                                                                                            | yes       | 2026-06-30 |
+  | TASK-043 | Add tests in `tests/test_transport_runtime.py` for transport framing, bounded reads, deadlines, reconnect throttling, ack batching, containers, gzip, bad salt, bad msg, duplicate suppression, and shutdown. | yes       | 2026-06-30 |
 
 ### Implementation Phase 6 - Authorization And DC Migration
 
@@ -324,7 +325,7 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
 - **FILE-015**: `.github/workflows/ci.yml` owns automated verification gates
 - **FILE-016**: `docs/`, `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, and `CHANGELOG.md` own user, contributor, security, and release documentation
 - **FILE-017**: `tests/` owns unit, fake-server, integration, parity, resource, and release tests
-- **FILE-018**: Future `src/miniproto/connection/`, `src/miniproto/mtproto/`, `src/miniproto/auth/`, `src/miniproto/updates/`, `src/miniproto/media/`, and `src/miniproto/security/` packages must be added only when their owning phase starts
+- **FILE-018**: `src/miniproto/connection/` and `src/miniproto/mtproto/` own Phase 5 transport/runtime code; future `src/miniproto/auth/`, `src/miniproto/updates/`, and `src/miniproto/media/` packages must be added only when their owning phase starts
 
 ## 6. Testing
 

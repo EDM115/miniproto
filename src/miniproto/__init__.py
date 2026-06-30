@@ -1,5 +1,6 @@
 """Public API for miniproto."""
 
+from miniproto import event_loop
 from miniproto.client import Client
 from miniproto.config import ClientConfig, DeviceInfo, TransportConfig
 from miniproto.errors import (
@@ -48,4 +49,5 @@ __all__ = [
     "Update",
     "UpdateState",
     "UserIdentity",
+    "event_loop",
 ]
