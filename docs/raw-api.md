@@ -25,7 +25,7 @@ request = functions.help.GetConfig()
 
 ## Current Limits
 
-Phase 3 generated classes expose constructor IDs, result types, field metadata, and namespace aliases. Binary TL serialization and deserialization hooks intentionally raise `NotImplementedError` until Phase 4 implements TL primitive encoding, flags, vectors, gzip payloads, containers, and RPC response decoding.
+Phase 4 implements binary TL primitive encoding, generated object serialization/deserialization, flags, vectors, boxed constructors, and RPC error metadata. Gzip payload handling, message containers, transport framing, and RPC response correlation land in later runtime phases.
 
 ## Samples
 

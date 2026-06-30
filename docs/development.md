@@ -69,6 +69,14 @@ uv run pytest
 cargo test --all-features
 ```
 
+## Benchmark Smoke
+
+```powershell
+uv run python tools/bench/benchmark_native_fallback_crypto.py
+```
+
+This compares native-extension timings with the pure Python fallback for crypto and TL primitive paths, and verifies both implementations return matching outputs before reporting comparable best and median timings. The command is a smoke check, not an absolute timing gate.
+
 Optional live Telegram integration tests must stay gated by environment variables once they exist:
 
 ```powershell
@@ -127,6 +135,7 @@ uv run ruff check .
 uv run ty check
 uv run python -m tools.schema.generate --check
 uv run pytest
+uv run python tools/bench/benchmark_native_fallback_crypto.py
 cargo fmt --check
 cargo clippy --all-targets --all-features -- -D warnings
 cargo test --all-features

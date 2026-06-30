@@ -13,7 +13,7 @@ tags: [implementation, mtproto, python, rust, pyo3, release]
 ![Status: In progress](https://img.shields.io/badge/status-In%20progress-yellow)  
 This file is the root implementation tracker for `miniproto` v1. It consolidates `PLAN.md`, `plans/2026-06-25-implementation-progress.md`, `plans/2026-06-26-package-boundary-and-ecosystem-intent.md`, and `plans/2026-06-29-package-boundary-progress.md` into one actionable plan that future agents must update as work progresses.  
 Tracking rules: update the relevant task row when code, docs, tests, and verification for that task are complete; keep the `Completed` column as `yes`, `in progress`, `blocked`, or `no`; record the completion date as `YYYY-MM-DD`; add new tasks only when they are required for v1 readiness; do not move framework behavior from future `mpgram` into `miniproto`.  
-Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 crate wiring, public Python API exports, client lifecycle skeleton, in-memory session storage, fail-closed encrypted storage placeholder, raw namespace placeholders, native/fallback `xor_bytes`, docs, CI workflow, and initial tests exist.
+Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 crate wiring, public Python API exports, client lifecycle skeleton, in-memory session storage, fail-closed encrypted storage placeholder, raw namespace placeholders, native/fallback crypto and TL primitive paths, generated raw serialization hooks, docs, CI workflow, and tests exist.
 
 ## 1. Requirements & Constraints
 
@@ -164,13 +164,13 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
 - **GOAL-005**: Implement protocol-hot primitives with native/fallback parity and test vectors
   | Task     | Description                                                                                                                                                                               | Completed | Date |
   | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---- |
-  | TASK-029 | Add AES-256-IGE, AES-CTR, AES-CBC, SHA-based MTProto key derivation, XOR, and `pq` factorization to `rust/miniproto/src/lib.rs` or split Rust modules under `rust/miniproto/src/crypto/`. | no        |      |
-  | TASK-030 | Add pure Python fallback implementations or explicit secure dependency-backed fallback paths under `src/miniproto/crypto/` for every native function exposed by TASK-029.                 | no        |      |
-  | TASK-031 | Add TL primitive encode/decode helpers for int, long, int128, int256, double, bytes, string, vector, bool, and bare object constructors in native and fallback paths.                     | no        |      |
-  | TASK-032 | Add `src/miniproto/crypto/mtproto.py` wrappers for auth-key derivation, msg_key derivation, payload encryption, payload decryption, and media crypto helpers.                             | no        |      |
-  | TASK-033 | Add vector tests in `tests/test_crypto_vectors.py` using official MTProto-compatible vectors where available and generated local round-trip vectors where official vectors are absent.    | no        |      |
-  | TASK-034 | Add parity tests in `tests/test_native_parity.py` that force fallback behavior and compare it with the native extension for every primitive.                                              | no        |      |
-  | TASK-035 | Add benchmark smoke tests or scripts under `tools/bench/` for crypto, TL primitive serialization, and fallback-vs-native deltas without making absolute timing a hard CI gate.            | no        |      |
+  | TASK-029 | Add AES-256-IGE, AES-CTR, AES-CBC, SHA-based MTProto key derivation, XOR, and `pq` factorization to `rust/miniproto/src/lib.rs` or split Rust modules under `rust/miniproto/src/crypto/`. | yes       | 2026-06-30 |
+  | TASK-030 | Add pure Python fallback implementations or explicit secure dependency-backed fallback paths under `src/miniproto/crypto/` for every native function exposed by TASK-029.                 | yes       | 2026-06-30 |
+  | TASK-031 | Add TL primitive encode/decode helpers for int, long, int128, int256, double, bytes, string, vector, bool, and bare object constructors in native and fallback paths.                     | yes       | 2026-06-30 |
+  | TASK-032 | Add `src/miniproto/crypto/mtproto.py` wrappers for auth-key derivation, msg_key derivation, payload encryption, payload decryption, and media crypto helpers.                             | yes       | 2026-06-30 |
+  | TASK-033 | Add vector tests in `tests/test_crypto_vectors.py` using official MTProto-compatible vectors where available and generated local round-trip vectors where official vectors are absent.    | yes       | 2026-06-30 |
+  | TASK-034 | Add parity tests in `tests/test_native_parity.py` that force fallback behavior and compare it with the native extension for every primitive.                                              | yes       | 2026-06-30 |
+  | TASK-035 | Add benchmark smoke tests or scripts under `tools/bench/` for crypto, TL primitive serialization, and fallback-vs-native deltas without making absolute timing a hard CI gate.            | yes       | 2026-06-30 |
 
 ### Implementation Phase 5 - Transport And MTProto Message Runtime
 

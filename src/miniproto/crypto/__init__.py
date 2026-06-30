@@ -1,3 +1,45 @@
-from miniproto.crypto.native import native_available, xor_bytes
+from miniproto.crypto.mtproto import (
+    EncryptedPayload,
+    auth_key_id,
+    decrypt_payload,
+    derive_aes_key_iv,
+    encrypt_payload,
+    media_cbc_decrypt,
+    media_cbc_encrypt,
+    media_ctr_crypt,
+    message_key,
+)
+from miniproto.crypto.native import (
+    aes_256_cbc_decrypt,
+    aes_256_cbc_encrypt,
+    aes_256_ctr_crypt,
+    aes_256_ige_decrypt,
+    aes_256_ige_encrypt,
+    native_available,
+    pq_factorize,
+    sha1_digest,
+    sha256_digest,
+    xor_bytes,
+)
 
-__all__ = ["native_available", "xor_bytes"]
+__all__ = [
+    "EncryptedPayload",
+    "aes_256_cbc_decrypt",
+    "aes_256_cbc_encrypt",
+    "aes_256_ctr_crypt",
+    "aes_256_ige_decrypt",
+    "aes_256_ige_encrypt",
+    "auth_key_id",
+    "decrypt_payload",
+    "derive_aes_key_iv",
+    "encrypt_payload",
+    "media_cbc_decrypt",
+    "media_cbc_encrypt",
+    "media_ctr_crypt",
+    "message_key",
+    "native_available",
+    "pq_factorize",
+    "sha1_digest",
+    "sha256_digest",
+    "xor_bytes",
+]

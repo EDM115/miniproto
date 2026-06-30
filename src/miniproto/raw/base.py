@@ -20,18 +20,33 @@ class TLField:
     vector_item_type: str | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class TLFlagGroup:
+    name: str
+    python_name: str
+    before_field_index: int
+
+
 class TLObject:
     CONSTRUCTOR_ID: ClassVar[int]
     QUALNAME: ClassVar[str]
     RESULT_TYPE: ClassVar[str]
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
     def serialize(self) -> bytes:
-        raise NotImplementedError("TL binary serialization lands in Phase 4")
+        from miniproto.tl.codec import serialize_object
+
+        return serialize_object(self)
 
     @classmethod
     def deserialize(cls, data: bytes | memoryview) -> Self:
-        raise NotImplementedError("TL binary deserialization lands in Phase 4")
+        from miniproto.tl.codec import TLCodecError, deserialize_object
+
+        obj, offset = deserialize_object(cls, data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
 
     def to_raw_dict(self) -> dict[str, Any]:
         return {field.name: getattr(self, field.python_name) for field in self.TL_FIELDS}

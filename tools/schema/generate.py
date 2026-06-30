@@ -173,18 +173,33 @@ class TLField:
     vector_item_type: str | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class TLFlagGroup:
+    name: str
+    python_name: str
+    before_field_index: int
+
+
 class TLObject:
     CONSTRUCTOR_ID: ClassVar[int]
     QUALNAME: ClassVar[str]
     RESULT_TYPE: ClassVar[str]
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
     def serialize(self) -> bytes:
-        raise NotImplementedError("TL binary serialization lands in Phase 4")
+        from miniproto.tl.codec import serialize_object
+
+        return serialize_object(self)
 
     @classmethod
     def deserialize(cls, data: bytes | memoryview) -> Self:
-        raise NotImplementedError("TL binary deserialization lands in Phase 4")
+        from miniproto.tl.codec import TLCodecError, deserialize_object
+
+        obj, offset = deserialize_object(cls, data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
 
     def to_raw_dict(self) -> dict[str, Any]:
         return {field.name: getattr(self, field.python_name) for field in self.TL_FIELDS}
@@ -207,7 +222,9 @@ def constructor_id_map(entries: tuple[type[TLObject], ...]) -> Mapping[int, type
 def _render_entries_module(entries: Sequence[Any], *, module_kind: str) -> str:
     base_class = "TLConstructor" if module_kind == "types" else "TLRequest"
     base_import = (
-        "TLConstructor, TLField" if base_class == "TLConstructor" else f"TLField, {base_class}"
+        "TLConstructor, TLField, TLFlagGroup"
+        if base_class == "TLConstructor"
+        else f"TLField, TLFlagGroup, {base_class}"
     )
     ruff_noqa = (
         "# ruff: noqa: N801,N815,RUF022" if module_kind == "types" else "# ruff: noqa: N801,RUF022"
@@ -243,6 +260,7 @@ def _render_entries_module(entries: Sequence[Any], *, module_kind: str) -> str:
                 f"    QUALNAME: ClassVar[str] = {entry.name!r}",
                 f"    RESULT_TYPE: ClassVar[str] = {entry.result_type!r}",
                 f"    TL_FIELDS: ClassVar[tuple[TLField, ...]] = {_fields_tuple(fields)}",
+                f"    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = {_flag_groups_tuple(entry.params)}",
                 "",
                 "",
             ]
@@ -317,6 +335,31 @@ def _fields_tuple(fields: Sequence[TLParameter]) -> str:
                 f"        is_true_flag={field.is_true_flag!r},",
                 f"        is_vector={field.is_vector!r},",
                 f"        vector_item_type={field.vector_item_type!r},",
+                "    ),",
+            ]
+        )
+    lines.append(")")
+    return "\n".join(lines)
+
+
+def _flag_groups_tuple(params: Sequence[TLParameter]) -> str:
+    groups: list[tuple[str, str, int]] = []
+    public_index = 0
+    for param in params:
+        if param.is_flags_marker:
+            groups.append((param.name, param.python_name, public_index))
+        elif not param.is_template and not param.is_bare:
+            public_index += 1
+    if not groups:
+        return "()"
+    lines = ["("]
+    for name, python_name, before_field_index in groups:
+        lines.extend(
+            [
+                "    TLFlagGroup(",
+                f"        name={name!r},",
+                f"        python_name={python_name!r},",
+                f"        before_field_index={before_field_index!r},",
                 "    ),",
             ]
         )
@@ -478,7 +521,7 @@ request = functions.help.GetConfig()
 
 ## Current Limits
 
-Phase 3 generated classes expose constructor IDs, result types, field metadata, and namespace aliases. Binary TL serialization and deserialization hooks intentionally raise `NotImplementedError` until Phase 4 implements TL primitive encoding, flags, vectors, gzip payloads, containers, and RPC response decoding.
+Phase 4 implements binary TL primitive encoding, generated object serialization/deserialization, flags, vectors, boxed constructors, and RPC error metadata. Gzip payload handling, message containers, transport framing, and RPC response correlation land in later runtime phases.
 
 ## Samples
 

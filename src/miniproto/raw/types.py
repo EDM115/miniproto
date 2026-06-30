@@ -6,7 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, ClassVar
 
-from miniproto.raw.base import TLConstructor, TLField
+from miniproto.raw.base import TLConstructor, TLField, TLFlagGroup
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -16,6 +16,7 @@ class BoolFalse(TLConstructor):
     QUALNAME: ClassVar[str] = "boolFalse"
     RESULT_TYPE: ClassVar[str] = "Bool"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -25,6 +26,7 @@ class BoolTrue(TLConstructor):
     QUALNAME: ClassVar[str] = "boolTrue"
     RESULT_TYPE: ClassVar[str] = "Bool"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -34,6 +36,7 @@ class TrueValue(TLConstructor):
     QUALNAME: ClassVar[str] = "true"
     RESULT_TYPE: ClassVar[str] = "True"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -43,6 +46,7 @@ class Vector(TLConstructor):
     QUALNAME: ClassVar[str] = "vector"
     RESULT_TYPE: ClassVar[str] = "Vector t"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -76,6 +80,7 @@ class Error(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -85,6 +90,7 @@ class Null(TLConstructor):
     QUALNAME: ClassVar[str] = "null"
     RESULT_TYPE: ClassVar[str] = "Null"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -94,6 +100,7 @@ class InputPeerEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "inputPeerEmpty"
     RESULT_TYPE: ClassVar[str] = "InputPeer"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -103,6 +110,7 @@ class InputPeerSelf(TLConstructor):
     QUALNAME: ClassVar[str] = "inputPeerSelf"
     RESULT_TYPE: ClassVar[str] = "InputPeer"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -124,6 +132,7 @@ class InputPeerChat(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -157,6 +166,7 @@ class InputPeerUser(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -190,6 +200,7 @@ class InputPeerChannel(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -235,6 +246,7 @@ class InputPeerUserFromMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -280,6 +292,7 @@ class InputPeerChannelFromMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -289,6 +302,7 @@ class InputUserEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "inputUserEmpty"
     RESULT_TYPE: ClassVar[str] = "InputUser"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -298,6 +312,7 @@ class InputUserSelf(TLConstructor):
     QUALNAME: ClassVar[str] = "inputUserSelf"
     RESULT_TYPE: ClassVar[str] = "InputUser"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -331,6 +346,7 @@ class InputUser(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -376,6 +392,7 @@ class InputUserFromMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -433,6 +450,7 @@ class InputPhoneContact(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -490,6 +508,7 @@ class InputFile(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -535,6 +554,7 @@ class InputFileBig(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -556,6 +576,7 @@ class InputFileStoryDocument(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -565,6 +586,7 @@ class InputMediaEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "inputMediaEmpty"
     RESULT_TYPE: ClassVar[str] = "InputMedia"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -622,6 +644,9 @@ class InputMediaUploadedPhoto(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -667,6 +692,9 @@ class InputMediaPhoto(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -688,6 +716,7 @@ class InputMediaGeoPoint(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -745,6 +774,7 @@ class InputMediaContact(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -886,6 +916,9 @@ class InputMediaUploadedDocument(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -966,6 +999,9 @@ class InputMediaDocument(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -1048,6 +1084,7 @@ class InputMediaVenue(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -1092,6 +1129,9 @@ class InputMediaPhotoExternal(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -1162,6 +1202,9 @@ class InputMediaDocumentExternal(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -1183,6 +1226,7 @@ class InputMediaGame(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -1300,6 +1344,9 @@ class InputMediaInvoice(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -1369,6 +1416,9 @@ class InputMediaGeoLive(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -1426,6 +1476,9 @@ class InputMediaPoll(TLConstructor):
             vector_item_type="MessageEntity",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -1447,6 +1500,7 @@ class InputMediaDice(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -1480,6 +1534,7 @@ class InputMediaStory(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -1537,6 +1592,9 @@ class InputMediaWebPage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -1582,6 +1640,9 @@ class InputMediaPaidMedia(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -1603,6 +1664,7 @@ class InputMediaTodo(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -1612,6 +1674,7 @@ class InputChatPhotoEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "inputChatPhotoEmpty"
     RESULT_TYPE: ClassVar[str] = "InputChatPhoto"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -1669,6 +1732,9 @@ class InputChatUploadedPhoto(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -1690,6 +1756,7 @@ class InputChatPhoto(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -1699,6 +1766,7 @@ class InputGeoPointEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "inputGeoPointEmpty"
     RESULT_TYPE: ClassVar[str] = "InputGeoPoint"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -1744,6 +1812,9 @@ class InputGeoPoint(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -1753,6 +1824,7 @@ class InputPhotoEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "inputPhotoEmpty"
     RESULT_TYPE: ClassVar[str] = "InputPhoto"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -1798,6 +1870,7 @@ class InputPhoto(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -1855,6 +1928,7 @@ class InputFileLocation(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -1888,6 +1962,7 @@ class InputEncryptedFileLocation(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -1945,6 +2020,7 @@ class InputDocumentFileLocation(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -1978,6 +2054,7 @@ class InputSecureFileLocation(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -1987,6 +2064,7 @@ class InputTakeoutFileLocation(TLConstructor):
     QUALNAME: ClassVar[str] = "inputTakeoutFileLocation"
     RESULT_TYPE: ClassVar[str] = "InputFileLocation"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -2044,6 +2122,7 @@ class InputPhotoFileLocation(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -2125,6 +2204,7 @@ class InputPhotoLegacyFileLocation(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -2170,6 +2250,9 @@ class InputPeerPhotoFileLocation(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -2203,6 +2286,7 @@ class InputStickerSetThumb(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -2272,6 +2356,9 @@ class InputGroupCallStream(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -2293,6 +2380,7 @@ class PeerUser(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -2314,6 +2402,7 @@ class PeerChat(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -2335,6 +2424,7 @@ class PeerChannel(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -2344,6 +2434,7 @@ class StorageFileUnknown(TLConstructor):
     QUALNAME: ClassVar[str] = "storage.fileUnknown"
     RESULT_TYPE: ClassVar[str] = "storage.FileType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -2353,6 +2444,7 @@ class StorageFilePartial(TLConstructor):
     QUALNAME: ClassVar[str] = "storage.filePartial"
     RESULT_TYPE: ClassVar[str] = "storage.FileType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -2362,6 +2454,7 @@ class StorageFileJpeg(TLConstructor):
     QUALNAME: ClassVar[str] = "storage.fileJpeg"
     RESULT_TYPE: ClassVar[str] = "storage.FileType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -2371,6 +2464,7 @@ class StorageFileGif(TLConstructor):
     QUALNAME: ClassVar[str] = "storage.fileGif"
     RESULT_TYPE: ClassVar[str] = "storage.FileType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -2380,6 +2474,7 @@ class StorageFilePng(TLConstructor):
     QUALNAME: ClassVar[str] = "storage.filePng"
     RESULT_TYPE: ClassVar[str] = "storage.FileType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -2389,6 +2484,7 @@ class StorageFilePdf(TLConstructor):
     QUALNAME: ClassVar[str] = "storage.filePdf"
     RESULT_TYPE: ClassVar[str] = "storage.FileType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -2398,6 +2494,7 @@ class StorageFileMp3(TLConstructor):
     QUALNAME: ClassVar[str] = "storage.fileMp3"
     RESULT_TYPE: ClassVar[str] = "storage.FileType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -2407,6 +2504,7 @@ class StorageFileMov(TLConstructor):
     QUALNAME: ClassVar[str] = "storage.fileMov"
     RESULT_TYPE: ClassVar[str] = "storage.FileType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -2416,6 +2514,7 @@ class StorageFileMp4(TLConstructor):
     QUALNAME: ClassVar[str] = "storage.fileMp4"
     RESULT_TYPE: ClassVar[str] = "storage.FileType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -2425,6 +2524,7 @@ class StorageFileWebp(TLConstructor):
     QUALNAME: ClassVar[str] = "storage.fileWebp"
     RESULT_TYPE: ClassVar[str] = "storage.FileType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -2446,6 +2546,7 @@ class UserEmpty(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -2995,6 +3096,10 @@ class User(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+        TLFlagGroup(name="flags2", python_name="flags2", before_field_index=18),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -3004,6 +3109,7 @@ class UserProfilePhotoEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "userProfilePhotoEmpty"
     RESULT_TYPE: ClassVar[str] = "UserProfilePhoto"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -3073,6 +3179,9 @@ class UserProfilePhoto(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -3082,6 +3191,7 @@ class UserStatusEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "userStatusEmpty"
     RESULT_TYPE: ClassVar[str] = "UserStatus"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -3103,6 +3213,7 @@ class UserStatusOnline(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -3124,6 +3235,7 @@ class UserStatusOffline(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -3144,6 +3256,9 @@ class UserStatusRecently(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -3166,6 +3281,9 @@ class UserStatusLastWeek(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -3186,6 +3304,9 @@ class UserStatusLastMonth(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -3208,6 +3329,7 @@ class ChatEmpty(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -3397,6 +3519,9 @@ class Chat(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -3430,6 +3555,7 @@ class ChatForbidden(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -4027,6 +4153,10 @@ class Channel(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+        TLFlagGroup(name="flags2", python_name="flags2", before_field_index=20),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -4107,6 +4237,9 @@ class ChannelForbidden(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -4356,6 +4489,9 @@ class ChatFull(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -5158,6 +5294,10 @@ class ChannelFull(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+        TLFlagGroup(name="flags2", python_name="flags2", before_field_index=8),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -5203,6 +5343,7 @@ class ChatParticipant(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -5224,6 +5365,7 @@ class ChatParticipantCreator(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -5269,6 +5411,7 @@ class ChatParticipantAdmin(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -5301,6 +5444,9 @@ class ChatParticipantsForbidden(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -5347,6 +5493,7 @@ class ChatParticipants(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -5356,6 +5503,7 @@ class ChatPhotoEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "chatPhotoEmpty"
     RESULT_TYPE: ClassVar[str] = "ChatPhoto"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -5413,6 +5561,9 @@ class ChatPhoto(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -5445,6 +5596,9 @@ class MessageEmpty(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -5983,6 +6137,10 @@ class Message(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+        TLFlagGroup(name="flags2", python_name="flags2", before_field_index=11),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -6184,6 +6342,9 @@ class MessageService(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -6193,6 +6354,7 @@ class MessageMediaEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "messageMediaEmpty"
     RESULT_TYPE: ClassVar[str] = "MessageMedia"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -6238,6 +6400,9 @@ class MessageMediaPhoto(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -6259,6 +6424,7 @@ class MessageMediaGeo(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -6328,6 +6494,7 @@ class MessageMediaContact(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -6337,6 +6504,7 @@ class MessageMediaUnsupported(TLConstructor):
     QUALNAME: ClassVar[str] = "messageMediaUnsupported"
     RESULT_TYPE: ClassVar[str] = "MessageMedia"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -6466,6 +6634,9 @@ class MessageMediaDocument(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -6534,6 +6705,9 @@ class MessageMediaWebPage(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -6616,6 +6790,7 @@ class MessageMediaVenue(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -6637,6 +6812,7 @@ class MessageMediaGame(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -6766,6 +6942,9 @@ class MessageMediaInvoice(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -6823,6 +7002,9 @@ class MessageMediaGeoLive(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -6856,6 +7038,7 @@ class MessageMediaPoll(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -6889,6 +7072,7 @@ class MessageMediaDice(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -6945,6 +7129,9 @@ class MessageMediaStory(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -7062,6 +7249,9 @@ class MessageMediaGiveaway(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -7216,6 +7406,9 @@ class MessageMediaGiveawayResults(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -7249,6 +7442,7 @@ class MessageMediaPaidMedia(TLConstructor):
             vector_item_type="MessageExtendedMedia",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -7282,6 +7476,9 @@ class MessageMediaToDo(TLConstructor):
             vector_item_type="TodoCompletion",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -7291,6 +7488,7 @@ class MessageActionEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "messageActionEmpty"
     RESULT_TYPE: ClassVar[str] = "MessageAction"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -7324,6 +7522,7 @@ class MessageActionChatCreate(TLConstructor):
             vector_item_type="long",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -7345,6 +7544,7 @@ class MessageActionChatEditTitle(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -7366,6 +7566,7 @@ class MessageActionChatEditPhoto(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -7375,6 +7576,7 @@ class MessageActionChatDeletePhoto(TLConstructor):
     QUALNAME: ClassVar[str] = "messageActionChatDeletePhoto"
     RESULT_TYPE: ClassVar[str] = "MessageAction"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -7396,6 +7598,7 @@ class MessageActionChatAddUser(TLConstructor):
             vector_item_type="long",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -7417,6 +7620,7 @@ class MessageActionChatDeleteUser(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -7438,6 +7642,7 @@ class MessageActionChatJoinedByLink(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -7459,6 +7664,7 @@ class MessageActionChannelCreate(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -7480,6 +7686,7 @@ class MessageActionChatMigrateTo(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -7513,6 +7720,7 @@ class MessageActionChannelMigrateFrom(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -7522,6 +7730,7 @@ class MessageActionPinMessage(TLConstructor):
     QUALNAME: ClassVar[str] = "messageActionPinMessage"
     RESULT_TYPE: ClassVar[str] = "MessageAction"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -7531,6 +7740,7 @@ class MessageActionHistoryClear(TLConstructor):
     QUALNAME: ClassVar[str] = "messageActionHistoryClear"
     RESULT_TYPE: ClassVar[str] = "MessageAction"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -7564,6 +7774,7 @@ class MessageActionGameScore(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -7681,6 +7892,9 @@ class MessageActionPaymentSentMe(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -7762,6 +7976,9 @@ class MessageActionPaymentSent(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -7819,6 +8036,9 @@ class MessageActionPhoneCall(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -7828,6 +8048,7 @@ class MessageActionScreenshotTaken(TLConstructor):
     QUALNAME: ClassVar[str] = "messageActionScreenshotTaken"
     RESULT_TYPE: ClassVar[str] = "MessageAction"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -7849,6 +8070,7 @@ class MessageActionCustomAction(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -7906,6 +8128,9 @@ class MessageActionBotAllowed(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -7939,6 +8164,7 @@ class MessageActionSecureValuesSentMe(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -7960,6 +8186,7 @@ class MessageActionSecureValuesSent(TLConstructor):
             vector_item_type="SecureValueType",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -7969,6 +8196,7 @@ class MessageActionContactSignUp(TLConstructor):
     QUALNAME: ClassVar[str] = "messageActionContactSignUp"
     RESULT_TYPE: ClassVar[str] = "MessageAction"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -8014,6 +8242,7 @@ class MessageActionGeoProximityReached(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -8046,6 +8275,9 @@ class MessageActionGroupCall(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -8080,6 +8312,7 @@ class MessageActionInviteToGroupCall(TLConstructor):
             vector_item_type="long",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -8112,6 +8345,9 @@ class MessageActionSetMessagesTTL(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -8146,6 +8382,7 @@ class MessageActionGroupCallScheduled(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -8167,6 +8404,7 @@ class MessageActionSetChatTheme(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -8176,6 +8414,7 @@ class MessageActionChatJoinedByRequest(TLConstructor):
     QUALNAME: ClassVar[str] = "messageActionChatJoinedByRequest"
     RESULT_TYPE: ClassVar[str] = "MessageAction"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -8209,6 +8448,7 @@ class MessageActionWebViewDataSentMe(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -8230,6 +8470,7 @@ class MessageActionWebViewDataSent(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -8311,6 +8552,9 @@ class MessageActionGiftPremium(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -8355,6 +8599,9 @@ class MessageActionTopicCreate(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -8413,6 +8660,9 @@ class MessageActionTopicEdit(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -8434,6 +8684,7 @@ class MessageActionSuggestProfilePhoto(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -8467,6 +8718,7 @@ class MessageActionRequestedPeer(TLConstructor):
             vector_item_type="Peer",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -8511,6 +8763,9 @@ class MessageActionSetChatWallPaper(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -8641,6 +8896,9 @@ class MessageActionGiftCode(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -8661,6 +8919,9 @@ class MessageActionGiveawayLaunch(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -8707,6 +8968,9 @@ class MessageActionGiveawayResults(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -8728,6 +8992,7 @@ class MessageActionBoostApply(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -8761,6 +9026,7 @@ class MessageActionRequestedPeerSentMe(TLConstructor):
             vector_item_type="RequestedPeer",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -8829,6 +9095,9 @@ class MessageActionPaymentRefunded(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -8911,6 +9180,9 @@ class MessageActionGiftStars(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -8979,6 +9251,9 @@ class MessageActionPrizeStars(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -9205,6 +9480,9 @@ class MessageActionStarGift(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -9382,6 +9660,9 @@ class MessageActionStarGiftUnique(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -9415,6 +9696,7 @@ class MessageActionPaidMessagesRefunded(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -9447,6 +9729,9 @@ class MessageActionPaidMessagesPrice(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -9529,6 +9814,9 @@ class MessageActionConferenceCall(TLConstructor):
             vector_item_type="Peer",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -9562,6 +9850,7 @@ class MessageActionTodoCompletions(TLConstructor):
             vector_item_type="int",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -9583,6 +9872,7 @@ class MessageActionTodoAppendTasks(TLConstructor):
             vector_item_type="TodoItem",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -9652,6 +9942,9 @@ class MessageActionSuggestedPostApproval(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -9673,6 +9966,7 @@ class MessageActionSuggestedPostSuccess(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -9693,6 +9987,9 @@ class MessageActionSuggestedPostRefund(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -9762,6 +10059,9 @@ class MessageActionGiftTon(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -9952,6 +10252,9 @@ class Dialog(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -10057,6 +10360,9 @@ class DialogFolder(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -10078,6 +10384,7 @@ class PhotoEmpty(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -10183,6 +10490,9 @@ class Photo(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -10204,6 +10514,7 @@ class PhotoSizeEmpty(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -10261,6 +10572,7 @@ class PhotoSize(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -10318,6 +10630,7 @@ class PhotoCachedSize(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -10351,6 +10664,7 @@ class PhotoStrippedSize(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -10408,6 +10722,7 @@ class PhotoSizeProgressive(TLConstructor):
             vector_item_type="int",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -10441,6 +10756,7 @@ class PhotoPathSize(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -10450,6 +10766,7 @@ class GeoPointEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "geoPointEmpty"
     RESULT_TYPE: ClassVar[str] = "GeoPoint"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -10506,6 +10823,9 @@ class GeoPoint(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -10564,6 +10884,9 @@ class AuthSentCode(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -10585,6 +10908,7 @@ class AuthSentCodeSuccess(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -10642,6 +10966,7 @@ class AuthSentCodePaymentRequired(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -10711,6 +11036,9 @@ class AuthAuthorization(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -10731,6 +11059,9 @@ class AuthAuthorizationSignUpRequired(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -10765,6 +11096,7 @@ class AuthExportedAuthorization(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -10786,6 +11118,7 @@ class InputNotifyPeer(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -10795,6 +11128,7 @@ class InputNotifyUsers(TLConstructor):
     QUALNAME: ClassVar[str] = "inputNotifyUsers"
     RESULT_TYPE: ClassVar[str] = "InputNotifyPeer"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -10804,6 +11138,7 @@ class InputNotifyChats(TLConstructor):
     QUALNAME: ClassVar[str] = "inputNotifyChats"
     RESULT_TYPE: ClassVar[str] = "InputNotifyPeer"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -10813,6 +11148,7 @@ class InputNotifyBroadcasts(TLConstructor):
     QUALNAME: ClassVar[str] = "inputNotifyBroadcasts"
     RESULT_TYPE: ClassVar[str] = "InputNotifyPeer"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -10846,6 +11182,7 @@ class InputNotifyForumTopic(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -10938,6 +11275,9 @@ class InputPeerNotifySettings(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -11079,6 +11419,9 @@ class PeerNotifySettings(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -11341,6 +11684,9 @@ class PeerSettings(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -11458,6 +11804,9 @@ class WallPaper(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=1),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -11515,6 +11864,9 @@ class WallPaperNoFile(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=1),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -11524,6 +11876,7 @@ class InputReportReasonSpam(TLConstructor):
     QUALNAME: ClassVar[str] = "inputReportReasonSpam"
     RESULT_TYPE: ClassVar[str] = "ReportReason"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -11533,6 +11886,7 @@ class InputReportReasonViolence(TLConstructor):
     QUALNAME: ClassVar[str] = "inputReportReasonViolence"
     RESULT_TYPE: ClassVar[str] = "ReportReason"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -11542,6 +11896,7 @@ class InputReportReasonPornography(TLConstructor):
     QUALNAME: ClassVar[str] = "inputReportReasonPornography"
     RESULT_TYPE: ClassVar[str] = "ReportReason"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -11551,6 +11906,7 @@ class InputReportReasonChildAbuse(TLConstructor):
     QUALNAME: ClassVar[str] = "inputReportReasonChildAbuse"
     RESULT_TYPE: ClassVar[str] = "ReportReason"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -11560,6 +11916,7 @@ class InputReportReasonOther(TLConstructor):
     QUALNAME: ClassVar[str] = "inputReportReasonOther"
     RESULT_TYPE: ClassVar[str] = "ReportReason"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -11569,6 +11926,7 @@ class InputReportReasonCopyright(TLConstructor):
     QUALNAME: ClassVar[str] = "inputReportReasonCopyright"
     RESULT_TYPE: ClassVar[str] = "ReportReason"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -11578,6 +11936,7 @@ class InputReportReasonGeoIrrelevant(TLConstructor):
     QUALNAME: ClassVar[str] = "inputReportReasonGeoIrrelevant"
     RESULT_TYPE: ClassVar[str] = "ReportReason"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -11587,6 +11946,7 @@ class InputReportReasonFake(TLConstructor):
     QUALNAME: ClassVar[str] = "inputReportReasonFake"
     RESULT_TYPE: ClassVar[str] = "ReportReason"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -11596,6 +11956,7 @@ class InputReportReasonIllegalDrugs(TLConstructor):
     QUALNAME: ClassVar[str] = "inputReportReasonIllegalDrugs"
     RESULT_TYPE: ClassVar[str] = "ReportReason"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -11605,6 +11966,7 @@ class InputReportReasonPersonalDetails(TLConstructor):
     QUALNAME: ClassVar[str] = "inputReportReasonPersonalDetails"
     RESULT_TYPE: ClassVar[str] = "ReportReason"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -12250,6 +12612,10 @@ class UserFull(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+        TLFlagGroup(name="flags2", python_name="flags2", before_field_index=13),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -12283,6 +12649,7 @@ class Contact(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -12316,6 +12683,7 @@ class ImportedContact(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -12349,6 +12717,7 @@ class ContactStatus(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -12358,6 +12727,7 @@ class ContactsContactsNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "contacts.contactsNotModified"
     RESULT_TYPE: ClassVar[str] = "contacts.Contacts"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -12403,6 +12773,7 @@ class ContactsContacts(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -12460,6 +12831,7 @@ class ContactsImportedContacts(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -12505,6 +12877,7 @@ class ContactsBlocked(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -12562,6 +12935,7 @@ class ContactsBlockedSlice(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -12619,6 +12993,7 @@ class MessagesDialogs(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -12688,6 +13063,7 @@ class MessagesDialogsSlice(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -12709,6 +13085,7 @@ class MessagesDialogsNotModified(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -12754,6 +13131,7 @@ class MessagesMessages(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -12858,6 +13236,9 @@ class MessagesMessagesSlice(TLConstructor):
             is_vector=True,
             vector_item_type="User",
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -12964,6 +13345,9 @@ class MessagesChannelMessages(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -12985,6 +13369,7 @@ class MessagesMessagesNotModified(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13006,6 +13391,7 @@ class MessagesChats(TLConstructor):
             vector_item_type="Chat",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13039,6 +13425,7 @@ class MessagesChatsSlice(TLConstructor):
             vector_item_type="Chat",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13084,6 +13471,7 @@ class MessagesChatFull(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13129,6 +13517,7 @@ class MessagesAffectedHistory(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13138,6 +13527,7 @@ class InputMessagesFilterEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "inputMessagesFilterEmpty"
     RESULT_TYPE: ClassVar[str] = "MessagesFilter"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13147,6 +13537,7 @@ class InputMessagesFilterPhotos(TLConstructor):
     QUALNAME: ClassVar[str] = "inputMessagesFilterPhotos"
     RESULT_TYPE: ClassVar[str] = "MessagesFilter"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13156,6 +13547,7 @@ class InputMessagesFilterVideo(TLConstructor):
     QUALNAME: ClassVar[str] = "inputMessagesFilterVideo"
     RESULT_TYPE: ClassVar[str] = "MessagesFilter"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13165,6 +13557,7 @@ class InputMessagesFilterPhotoVideo(TLConstructor):
     QUALNAME: ClassVar[str] = "inputMessagesFilterPhotoVideo"
     RESULT_TYPE: ClassVar[str] = "MessagesFilter"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13174,6 +13567,7 @@ class InputMessagesFilterDocument(TLConstructor):
     QUALNAME: ClassVar[str] = "inputMessagesFilterDocument"
     RESULT_TYPE: ClassVar[str] = "MessagesFilter"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13183,6 +13577,7 @@ class InputMessagesFilterUrl(TLConstructor):
     QUALNAME: ClassVar[str] = "inputMessagesFilterUrl"
     RESULT_TYPE: ClassVar[str] = "MessagesFilter"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13192,6 +13587,7 @@ class InputMessagesFilterGif(TLConstructor):
     QUALNAME: ClassVar[str] = "inputMessagesFilterGif"
     RESULT_TYPE: ClassVar[str] = "MessagesFilter"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13201,6 +13597,7 @@ class InputMessagesFilterVoice(TLConstructor):
     QUALNAME: ClassVar[str] = "inputMessagesFilterVoice"
     RESULT_TYPE: ClassVar[str] = "MessagesFilter"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13210,6 +13607,7 @@ class InputMessagesFilterMusic(TLConstructor):
     QUALNAME: ClassVar[str] = "inputMessagesFilterMusic"
     RESULT_TYPE: ClassVar[str] = "MessagesFilter"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13219,6 +13617,7 @@ class InputMessagesFilterChatPhotos(TLConstructor):
     QUALNAME: ClassVar[str] = "inputMessagesFilterChatPhotos"
     RESULT_TYPE: ClassVar[str] = "MessagesFilter"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13240,6 +13639,9 @@ class InputMessagesFilterPhoneCalls(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13249,6 +13651,7 @@ class InputMessagesFilterRoundVoice(TLConstructor):
     QUALNAME: ClassVar[str] = "inputMessagesFilterRoundVoice"
     RESULT_TYPE: ClassVar[str] = "MessagesFilter"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13258,6 +13661,7 @@ class InputMessagesFilterRoundVideo(TLConstructor):
     QUALNAME: ClassVar[str] = "inputMessagesFilterRoundVideo"
     RESULT_TYPE: ClassVar[str] = "MessagesFilter"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13267,6 +13671,7 @@ class InputMessagesFilterMyMentions(TLConstructor):
     QUALNAME: ClassVar[str] = "inputMessagesFilterMyMentions"
     RESULT_TYPE: ClassVar[str] = "MessagesFilter"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13276,6 +13681,7 @@ class InputMessagesFilterGeo(TLConstructor):
     QUALNAME: ClassVar[str] = "inputMessagesFilterGeo"
     RESULT_TYPE: ClassVar[str] = "MessagesFilter"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13285,6 +13691,7 @@ class InputMessagesFilterContacts(TLConstructor):
     QUALNAME: ClassVar[str] = "inputMessagesFilterContacts"
     RESULT_TYPE: ClassVar[str] = "MessagesFilter"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13294,6 +13701,7 @@ class InputMessagesFilterPinned(TLConstructor):
     QUALNAME: ClassVar[str] = "inputMessagesFilterPinned"
     RESULT_TYPE: ClassVar[str] = "MessagesFilter"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13339,6 +13747,7 @@ class UpdateNewMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13372,6 +13781,7 @@ class UpdateMessageID(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13417,6 +13827,7 @@ class UpdateDeleteMessages(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13450,6 +13861,7 @@ class UpdateUserTyping(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13495,6 +13907,7 @@ class UpdateChatUserTyping(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13516,6 +13929,7 @@ class UpdateChatParticipants(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13549,6 +13963,7 @@ class UpdateUserStatus(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13606,6 +14021,7 @@ class UpdateUserName(TLConstructor):
             vector_item_type="Username",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13675,6 +14091,9 @@ class UpdateNewAuthorization(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13708,6 +14127,7 @@ class UpdateNewEncryptedMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13729,6 +14149,7 @@ class UpdateEncryptedChatTyping(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13762,6 +14183,7 @@ class UpdateEncryption(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13807,6 +14229,7 @@ class UpdateEncryptedMessagesRead(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13876,6 +14299,7 @@ class UpdateChatParticipantAdd(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13921,6 +14345,7 @@ class UpdateChatParticipantDelete(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13942,6 +14367,7 @@ class UpdateDcOptions(TLConstructor):
             vector_item_type="DcOption",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -13975,6 +14401,7 @@ class UpdateNotifySettings(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -14068,6 +14495,9 @@ class UpdateServiceNotification(TLConstructor):
             vector_item_type="MessageEntity",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -14101,6 +14531,7 @@ class UpdatePrivacy(TLConstructor):
             vector_item_type="PrivacyRule",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -14134,6 +14565,7 @@ class UpdateUserPhone(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -14215,6 +14647,9 @@ class UpdateReadHistoryInbox(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -14272,6 +14707,7 @@ class UpdateReadHistoryOutbox(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -14317,6 +14753,7 @@ class UpdateWebPage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -14374,6 +14811,9 @@ class UpdateReadMessagesContents(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -14407,6 +14847,9 @@ class UpdateChannelTooLong(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -14428,6 +14871,7 @@ class UpdateChannel(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -14473,6 +14917,7 @@ class UpdateNewChannelMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -14542,6 +14987,9 @@ class UpdateReadChannelInbox(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -14599,6 +15047,7 @@ class UpdateDeleteChannelMessages(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -14644,6 +15093,7 @@ class UpdateChannelMessageViews(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -14701,6 +15151,7 @@ class UpdateChatParticipantAdmin(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -14722,6 +15173,7 @@ class UpdateNewStickerSet(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -14767,6 +15219,9 @@ class UpdateStickerSetsOrder(TLConstructor):
             vector_item_type="long",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -14800,6 +15255,9 @@ class UpdateStickerSets(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -14809,6 +15267,7 @@ class UpdateSavedGifs(TLConstructor):
     QUALNAME: ClassVar[str] = "updateSavedGifs"
     RESULT_TYPE: ClassVar[str] = "Update"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -14890,6 +15349,9 @@ class UpdateBotInlineQuery(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -14959,6 +15421,9 @@ class UpdateBotInlineSend(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -15004,6 +15469,7 @@ class UpdateEditChannelMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -15097,6 +15563,9 @@ class UpdateBotCallbackQuery(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -15142,6 +15611,7 @@ class UpdateEditMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -15223,6 +15693,9 @@ class UpdateInlineBotCallbackQuery(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -15256,6 +15729,7 @@ class UpdateReadChannelOutbox(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -15313,6 +15787,9 @@ class UpdateDraftMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -15322,6 +15799,7 @@ class UpdateReadFeaturedStickers(TLConstructor):
     QUALNAME: ClassVar[str] = "updateReadFeaturedStickers"
     RESULT_TYPE: ClassVar[str] = "Update"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -15331,6 +15809,7 @@ class UpdateRecentStickers(TLConstructor):
     QUALNAME: ClassVar[str] = "updateRecentStickers"
     RESULT_TYPE: ClassVar[str] = "Update"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -15340,6 +15819,7 @@ class UpdateConfig(TLConstructor):
     QUALNAME: ClassVar[str] = "updateConfig"
     RESULT_TYPE: ClassVar[str] = "Update"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -15349,6 +15829,7 @@ class UpdatePtsChanged(TLConstructor):
     QUALNAME: ClassVar[str] = "updatePtsChanged"
     RESULT_TYPE: ClassVar[str] = "Update"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -15406,6 +15887,7 @@ class UpdateChannelWebPage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -15451,6 +15933,9 @@ class UpdateDialogPinned(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -15484,6 +15969,9 @@ class UpdatePinnedDialogs(TLConstructor):
             vector_item_type="DialogPeer",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -15505,6 +15993,7 @@ class UpdateBotWebhookJSON(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -15550,6 +16039,7 @@ class UpdateBotWebhookJSONQuery(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -15607,6 +16097,7 @@ class UpdateBotShippingQuery(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -15700,6 +16191,9 @@ class UpdateBotPrecheckoutQuery(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -15721,6 +16215,7 @@ class UpdatePhoneCall(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -15742,6 +16237,7 @@ class UpdateLangPackTooLong(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -15763,6 +16259,7 @@ class UpdateLangPack(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -15772,6 +16269,7 @@ class UpdateFavedStickers(TLConstructor):
     QUALNAME: ClassVar[str] = "updateFavedStickers"
     RESULT_TYPE: ClassVar[str] = "Update"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -15829,6 +16327,9 @@ class UpdateChannelReadMessagesContents(TLConstructor):
             vector_item_type="int",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -15838,6 +16339,7 @@ class UpdateContactsReset(TLConstructor):
     QUALNAME: ClassVar[str] = "updateContactsReset"
     RESULT_TYPE: ClassVar[str] = "Update"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -15871,6 +16373,7 @@ class UpdateChannelAvailableMessages(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -15915,6 +16418,9 @@ class UpdateDialogUnreadMark(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -15961,6 +16467,9 @@ class UpdateMessagePoll(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -16006,6 +16515,7 @@ class UpdateChatDefaultBannedRights(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -16051,6 +16561,7 @@ class UpdateFolderPeers(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -16084,6 +16595,7 @@ class UpdatePeerSettings(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -16105,6 +16617,7 @@ class UpdatePeerLocated(TLConstructor):
             vector_item_type="PeerLocated",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -16126,6 +16639,7 @@ class UpdateNewScheduledMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -16171,6 +16685,9 @@ class UpdateDeleteScheduledMessages(TLConstructor):
             vector_item_type="int",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -16192,6 +16709,7 @@ class UpdateTheme(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -16225,6 +16743,7 @@ class UpdateGeoLiveViewed(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -16234,6 +16753,7 @@ class UpdateLoginToken(TLConstructor):
     QUALNAME: ClassVar[str] = "updateLoginToken"
     RESULT_TYPE: ClassVar[str] = "Update"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -16291,6 +16811,7 @@ class UpdateMessagePollVote(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -16324,6 +16845,9 @@ class UpdateDialogFilter(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -16345,6 +16869,7 @@ class UpdateDialogFilterOrder(TLConstructor):
             vector_item_type="int",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -16354,6 +16879,7 @@ class UpdateDialogFilters(TLConstructor):
     QUALNAME: ClassVar[str] = "updateDialogFilters"
     RESULT_TYPE: ClassVar[str] = "Update"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -16387,6 +16913,7 @@ class UpdatePhoneCallSignalingData(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -16432,6 +16959,7 @@ class UpdateChannelMessageForwards(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -16501,6 +17029,9 @@ class UpdateReadChannelDiscussionInbox(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -16546,6 +17077,7 @@ class UpdateReadChannelDiscussionOutbox(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -16590,6 +17122,9 @@ class UpdatePeerBlocked(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -16647,6 +17182,9 @@ class UpdateChannelUserTyping(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -16717,6 +17255,9 @@ class UpdatePinnedMessages(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -16786,6 +17327,9 @@ class UpdatePinnedChannelMessages(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -16807,6 +17351,7 @@ class UpdateChat(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -16852,6 +17397,7 @@ class UpdateGroupCallParticipants(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -16885,6 +17431,9 @@ class UpdateGroupCall(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -16917,6 +17466,9 @@ class UpdatePeerHistoryTTL(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -17022,6 +17574,9 @@ class UpdateChatParticipant(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -17140,6 +17695,9 @@ class UpdateChannelParticipant(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -17197,6 +17755,7 @@ class UpdateBotStopped(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -17229,6 +17788,9 @@ class UpdateGroupCallConnection(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -17275,6 +17837,7 @@ class UpdateBotCommands(TLConstructor):
             vector_item_type="BotCommand",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -17320,6 +17883,7 @@ class UpdatePendingJoinRequests(TLConstructor):
             vector_item_type="long",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -17401,6 +17965,7 @@ class UpdateBotChatInviteRequester(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -17470,6 +18035,9 @@ class UpdateMessageReactions(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -17479,6 +18047,7 @@ class UpdateAttachMenuBots(TLConstructor):
     QUALNAME: ClassVar[str] = "updateAttachMenuBots"
     RESULT_TYPE: ClassVar[str] = "Update"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -17500,6 +18069,7 @@ class UpdateWebViewResultSent(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -17533,6 +18103,7 @@ class UpdateBotMenuButton(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -17542,6 +18113,7 @@ class UpdateSavedRingtones(TLConstructor):
     QUALNAME: ClassVar[str] = "updateSavedRingtones"
     RESULT_TYPE: ClassVar[str] = "Update"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -17611,6 +18183,9 @@ class UpdateTranscribedAudio(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -17620,6 +18195,7 @@ class UpdateReadFeaturedEmojiStickers(TLConstructor):
     QUALNAME: ClassVar[str] = "updateReadFeaturedEmojiStickers"
     RESULT_TYPE: ClassVar[str] = "Update"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -17653,6 +18229,7 @@ class UpdateUserEmojiStatus(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -17662,6 +18239,7 @@ class UpdateRecentEmojiStatuses(TLConstructor):
     QUALNAME: ClassVar[str] = "updateRecentEmojiStatuses"
     RESULT_TYPE: ClassVar[str] = "Update"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -17671,6 +18249,7 @@ class UpdateRecentReactions(TLConstructor):
     QUALNAME: ClassVar[str] = "updateRecentReactions"
     RESULT_TYPE: ClassVar[str] = "Update"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -17715,6 +18294,9 @@ class UpdateMoveStickerSetToTop(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -17761,6 +18343,7 @@ class UpdateMessageExtendedMedia(TLConstructor):
             vector_item_type="MessageExtendedMedia",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -17806,6 +18389,9 @@ class UpdateChannelPinnedTopic(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -17839,6 +18425,9 @@ class UpdateChannelPinnedTopics(TLConstructor):
             vector_item_type="int",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -17860,6 +18449,7 @@ class UpdateUser(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -17869,6 +18459,7 @@ class UpdateAutoSaveSettings(TLConstructor):
     QUALNAME: ClassVar[str] = "updateAutoSaveSettings"
     RESULT_TYPE: ClassVar[str] = "Update"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -17902,6 +18493,7 @@ class UpdateStory(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -17935,6 +18527,7 @@ class UpdateReadStories(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -17968,6 +18561,7 @@ class UpdateStoryID(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -17989,6 +18583,7 @@ class UpdateStoriesStealthMode(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -18034,6 +18629,7 @@ class UpdateSentStoryReaction(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -18079,6 +18675,7 @@ class UpdateBotChatBoost(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -18112,6 +18709,7 @@ class UpdateChannelViewForumAsMessages(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -18156,6 +18754,9 @@ class UpdatePeerWallpaper(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -18250,6 +18851,7 @@ class UpdateBotMessageReaction(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -18319,6 +18921,7 @@ class UpdateBotMessageReactions(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -18352,6 +18955,9 @@ class UpdateSavedDialogPinned(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -18373,6 +18979,9 @@ class UpdatePinnedSavedDialogs(TLConstructor):
             vector_item_type="DialogPeer",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -18382,6 +18991,7 @@ class UpdateSavedReactionTags(TLConstructor):
     QUALNAME: ClassVar[str] = "updateSavedReactionTags"
     RESULT_TYPE: ClassVar[str] = "Update"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -18403,6 +19013,7 @@ class UpdateSmsJob(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -18424,6 +19035,7 @@ class UpdateQuickReplies(TLConstructor):
             vector_item_type="QuickReply",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -18445,6 +19057,7 @@ class UpdateNewQuickReply(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -18466,6 +19079,7 @@ class UpdateDeleteQuickReply(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -18487,6 +19101,7 @@ class UpdateQuickReplyMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -18520,6 +19135,7 @@ class UpdateDeleteQuickReplyMessages(TLConstructor):
             vector_item_type="int",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -18553,6 +19169,7 @@ class UpdateBotBusinessConnect(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -18609,6 +19226,9 @@ class UpdateBotNewBusinessMessage(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -18667,6 +19287,9 @@ class UpdateBotEditBusinessMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -18724,6 +19347,7 @@ class UpdateBotDeleteBusinessMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -18769,6 +19393,7 @@ class UpdateNewStoryReaction(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -18790,6 +19415,7 @@ class UpdateStarsBalance(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -18883,6 +19509,9 @@ class UpdateBusinessBotCallbackQuery(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -18916,6 +19545,7 @@ class UpdateStarsRevenueStatus(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -18961,6 +19591,7 @@ class UpdateBotPurchasedPaidMedia(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -18982,6 +19613,7 @@ class UpdatePaidReactionPrivacy(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -19003,6 +19635,7 @@ class UpdateSentPhoneCode(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -19060,6 +19693,7 @@ class UpdateGroupCallChainBlocks(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -19105,6 +19739,7 @@ class UpdateReadMonoForumInbox(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -19150,6 +19785,7 @@ class UpdateReadMonoForumOutbox(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -19194,6 +19830,9 @@ class UpdateMonoForumNoPaidException(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -19264,6 +19903,7 @@ class UpdatesState(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -19297,6 +19937,7 @@ class UpdatesDifferenceEmpty(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -19378,6 +20019,7 @@ class UpdatesDifference(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -19459,6 +20101,7 @@ class UpdatesDifferenceSlice(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -19480,6 +20123,7 @@ class UpdatesDifferenceTooLong(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -19489,6 +20133,7 @@ class UpdatesTooLong(TLConstructor):
     QUALNAME: ClassVar[str] = "updatesTooLong"
     RESULT_TYPE: ClassVar[str] = "Updates"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -19677,6 +20322,9 @@ class UpdateShortMessage(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -19879,6 +20527,9 @@ class UpdateShortChatMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -19912,6 +20563,7 @@ class UpdateShort(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -19993,6 +20645,7 @@ class UpdatesCombined(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -20062,6 +20715,7 @@ class Updates(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -20167,6 +20821,9 @@ class UpdateShortSentMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -20200,6 +20857,7 @@ class PhotosPhotos(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -20245,6 +20903,7 @@ class PhotosPhotosSlice(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -20278,6 +20937,7 @@ class PhotosPhoto(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -20323,6 +20983,7 @@ class UploadFile(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -20392,6 +21053,7 @@ class UploadFileCdnRedirect(TLConstructor):
             vector_item_type="FileHash",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -20520,6 +21182,9 @@ class DcOption(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -21094,6 +21759,9 @@ class Config(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -21139,6 +21807,7 @@ class NearestDc(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -21244,6 +21913,9 @@ class HelpAppUpdate(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -21253,6 +21925,7 @@ class HelpNoAppUpdate(TLConstructor):
     QUALNAME: ClassVar[str] = "help.noAppUpdate"
     RESULT_TYPE: ClassVar[str] = "help.AppUpdate"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -21274,6 +21947,7 @@ class HelpInviteText(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -21295,6 +21969,7 @@ class EncryptedChatEmpty(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -21364,6 +22039,7 @@ class EncryptedChatWaiting(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -21456,6 +22132,9 @@ class EncryptedChatRequested(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -21550,6 +22229,7 @@ class EncryptedChat(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -21582,6 +22262,9 @@ class EncryptedChatDiscarded(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -21616,6 +22299,7 @@ class InputEncryptedChat(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -21625,6 +22309,7 @@ class EncryptedFileEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "encryptedFileEmpty"
     RESULT_TYPE: ClassVar[str] = "EncryptedFile"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -21694,6 +22379,7 @@ class EncryptedFile(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -21703,6 +22389,7 @@ class InputEncryptedFileEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "inputEncryptedFileEmpty"
     RESULT_TYPE: ClassVar[str] = "InputEncryptedFile"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -21760,6 +22447,7 @@ class InputEncryptedFileUploaded(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -21793,6 +22481,7 @@ class InputEncryptedFile(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -21838,6 +22527,7 @@ class InputEncryptedFileBigUploaded(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -21907,6 +22597,7 @@ class EncryptedMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -21964,6 +22655,7 @@ class EncryptedMessageService(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -21985,6 +22677,7 @@ class MessagesDhConfigNotModified(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22042,6 +22735,7 @@ class MessagesDhConfig(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22063,6 +22757,7 @@ class MessagesSentEncryptedMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22096,6 +22791,7 @@ class MessagesSentEncryptedFile(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22105,6 +22801,7 @@ class InputDocumentEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "inputDocumentEmpty"
     RESULT_TYPE: ClassVar[str] = "InputDocument"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22150,6 +22847,7 @@ class InputDocument(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22171,6 +22869,7 @@ class DocumentEmpty(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22300,6 +22999,9 @@ class Document(TLConstructor):
             vector_item_type="DocumentAttribute",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22333,6 +23035,7 @@ class HelpSupport(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22354,6 +23057,7 @@ class NotifyPeer(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22363,6 +23067,7 @@ class NotifyUsers(TLConstructor):
     QUALNAME: ClassVar[str] = "notifyUsers"
     RESULT_TYPE: ClassVar[str] = "NotifyPeer"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22372,6 +23077,7 @@ class NotifyChats(TLConstructor):
     QUALNAME: ClassVar[str] = "notifyChats"
     RESULT_TYPE: ClassVar[str] = "NotifyPeer"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22381,6 +23087,7 @@ class NotifyBroadcasts(TLConstructor):
     QUALNAME: ClassVar[str] = "notifyBroadcasts"
     RESULT_TYPE: ClassVar[str] = "NotifyPeer"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22414,6 +23121,7 @@ class NotifyForumTopic(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22423,6 +23131,7 @@ class SendMessageTypingAction(TLConstructor):
     QUALNAME: ClassVar[str] = "sendMessageTypingAction"
     RESULT_TYPE: ClassVar[str] = "SendMessageAction"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22432,6 +23141,7 @@ class SendMessageCancelAction(TLConstructor):
     QUALNAME: ClassVar[str] = "sendMessageCancelAction"
     RESULT_TYPE: ClassVar[str] = "SendMessageAction"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22441,6 +23151,7 @@ class SendMessageRecordVideoAction(TLConstructor):
     QUALNAME: ClassVar[str] = "sendMessageRecordVideoAction"
     RESULT_TYPE: ClassVar[str] = "SendMessageAction"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22462,6 +23173,7 @@ class SendMessageUploadVideoAction(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22471,6 +23183,7 @@ class SendMessageRecordAudioAction(TLConstructor):
     QUALNAME: ClassVar[str] = "sendMessageRecordAudioAction"
     RESULT_TYPE: ClassVar[str] = "SendMessageAction"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22492,6 +23205,7 @@ class SendMessageUploadAudioAction(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22513,6 +23227,7 @@ class SendMessageUploadPhotoAction(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22534,6 +23249,7 @@ class SendMessageUploadDocumentAction(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22543,6 +23259,7 @@ class SendMessageGeoLocationAction(TLConstructor):
     QUALNAME: ClassVar[str] = "sendMessageGeoLocationAction"
     RESULT_TYPE: ClassVar[str] = "SendMessageAction"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22552,6 +23269,7 @@ class SendMessageChooseContactAction(TLConstructor):
     QUALNAME: ClassVar[str] = "sendMessageChooseContactAction"
     RESULT_TYPE: ClassVar[str] = "SendMessageAction"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22561,6 +23279,7 @@ class SendMessageGamePlayAction(TLConstructor):
     QUALNAME: ClassVar[str] = "sendMessageGamePlayAction"
     RESULT_TYPE: ClassVar[str] = "SendMessageAction"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22570,6 +23289,7 @@ class SendMessageRecordRoundAction(TLConstructor):
     QUALNAME: ClassVar[str] = "sendMessageRecordRoundAction"
     RESULT_TYPE: ClassVar[str] = "SendMessageAction"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22591,6 +23311,7 @@ class SendMessageUploadRoundAction(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22600,6 +23321,7 @@ class SpeakingInGroupCallAction(TLConstructor):
     QUALNAME: ClassVar[str] = "speakingInGroupCallAction"
     RESULT_TYPE: ClassVar[str] = "SendMessageAction"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22621,6 +23343,7 @@ class SendMessageHistoryImportAction(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22630,6 +23353,7 @@ class SendMessageChooseStickerAction(TLConstructor):
     QUALNAME: ClassVar[str] = "sendMessageChooseStickerAction"
     RESULT_TYPE: ClassVar[str] = "SendMessageAction"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22675,6 +23399,7 @@ class SendMessageEmojiInteraction(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22696,6 +23421,7 @@ class SendMessageEmojiInteractionSeen(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22753,6 +23479,7 @@ class ContactsFound(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22762,6 +23489,7 @@ class InputPrivacyKeyStatusTimestamp(TLConstructor):
     QUALNAME: ClassVar[str] = "inputPrivacyKeyStatusTimestamp"
     RESULT_TYPE: ClassVar[str] = "InputPrivacyKey"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22771,6 +23499,7 @@ class InputPrivacyKeyChatInvite(TLConstructor):
     QUALNAME: ClassVar[str] = "inputPrivacyKeyChatInvite"
     RESULT_TYPE: ClassVar[str] = "InputPrivacyKey"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22780,6 +23509,7 @@ class InputPrivacyKeyPhoneCall(TLConstructor):
     QUALNAME: ClassVar[str] = "inputPrivacyKeyPhoneCall"
     RESULT_TYPE: ClassVar[str] = "InputPrivacyKey"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22789,6 +23519,7 @@ class InputPrivacyKeyPhoneP2P(TLConstructor):
     QUALNAME: ClassVar[str] = "inputPrivacyKeyPhoneP2P"
     RESULT_TYPE: ClassVar[str] = "InputPrivacyKey"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22798,6 +23529,7 @@ class InputPrivacyKeyForwards(TLConstructor):
     QUALNAME: ClassVar[str] = "inputPrivacyKeyForwards"
     RESULT_TYPE: ClassVar[str] = "InputPrivacyKey"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22807,6 +23539,7 @@ class InputPrivacyKeyProfilePhoto(TLConstructor):
     QUALNAME: ClassVar[str] = "inputPrivacyKeyProfilePhoto"
     RESULT_TYPE: ClassVar[str] = "InputPrivacyKey"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22816,6 +23549,7 @@ class InputPrivacyKeyPhoneNumber(TLConstructor):
     QUALNAME: ClassVar[str] = "inputPrivacyKeyPhoneNumber"
     RESULT_TYPE: ClassVar[str] = "InputPrivacyKey"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22825,6 +23559,7 @@ class InputPrivacyKeyAddedByPhone(TLConstructor):
     QUALNAME: ClassVar[str] = "inputPrivacyKeyAddedByPhone"
     RESULT_TYPE: ClassVar[str] = "InputPrivacyKey"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22834,6 +23569,7 @@ class InputPrivacyKeyVoiceMessages(TLConstructor):
     QUALNAME: ClassVar[str] = "inputPrivacyKeyVoiceMessages"
     RESULT_TYPE: ClassVar[str] = "InputPrivacyKey"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22843,6 +23579,7 @@ class InputPrivacyKeyAbout(TLConstructor):
     QUALNAME: ClassVar[str] = "inputPrivacyKeyAbout"
     RESULT_TYPE: ClassVar[str] = "InputPrivacyKey"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22852,6 +23589,7 @@ class InputPrivacyKeyBirthday(TLConstructor):
     QUALNAME: ClassVar[str] = "inputPrivacyKeyBirthday"
     RESULT_TYPE: ClassVar[str] = "InputPrivacyKey"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22861,6 +23599,7 @@ class InputPrivacyKeyStarGiftsAutoSave(TLConstructor):
     QUALNAME: ClassVar[str] = "inputPrivacyKeyStarGiftsAutoSave"
     RESULT_TYPE: ClassVar[str] = "InputPrivacyKey"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22870,6 +23609,7 @@ class InputPrivacyKeyNoPaidMessages(TLConstructor):
     QUALNAME: ClassVar[str] = "inputPrivacyKeyNoPaidMessages"
     RESULT_TYPE: ClassVar[str] = "InputPrivacyKey"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22879,6 +23619,7 @@ class PrivacyKeyStatusTimestamp(TLConstructor):
     QUALNAME: ClassVar[str] = "privacyKeyStatusTimestamp"
     RESULT_TYPE: ClassVar[str] = "PrivacyKey"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22888,6 +23629,7 @@ class PrivacyKeyChatInvite(TLConstructor):
     QUALNAME: ClassVar[str] = "privacyKeyChatInvite"
     RESULT_TYPE: ClassVar[str] = "PrivacyKey"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22897,6 +23639,7 @@ class PrivacyKeyPhoneCall(TLConstructor):
     QUALNAME: ClassVar[str] = "privacyKeyPhoneCall"
     RESULT_TYPE: ClassVar[str] = "PrivacyKey"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22906,6 +23649,7 @@ class PrivacyKeyPhoneP2P(TLConstructor):
     QUALNAME: ClassVar[str] = "privacyKeyPhoneP2P"
     RESULT_TYPE: ClassVar[str] = "PrivacyKey"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22915,6 +23659,7 @@ class PrivacyKeyForwards(TLConstructor):
     QUALNAME: ClassVar[str] = "privacyKeyForwards"
     RESULT_TYPE: ClassVar[str] = "PrivacyKey"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22924,6 +23669,7 @@ class PrivacyKeyProfilePhoto(TLConstructor):
     QUALNAME: ClassVar[str] = "privacyKeyProfilePhoto"
     RESULT_TYPE: ClassVar[str] = "PrivacyKey"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22933,6 +23679,7 @@ class PrivacyKeyPhoneNumber(TLConstructor):
     QUALNAME: ClassVar[str] = "privacyKeyPhoneNumber"
     RESULT_TYPE: ClassVar[str] = "PrivacyKey"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22942,6 +23689,7 @@ class PrivacyKeyAddedByPhone(TLConstructor):
     QUALNAME: ClassVar[str] = "privacyKeyAddedByPhone"
     RESULT_TYPE: ClassVar[str] = "PrivacyKey"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22951,6 +23699,7 @@ class PrivacyKeyVoiceMessages(TLConstructor):
     QUALNAME: ClassVar[str] = "privacyKeyVoiceMessages"
     RESULT_TYPE: ClassVar[str] = "PrivacyKey"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22960,6 +23709,7 @@ class PrivacyKeyAbout(TLConstructor):
     QUALNAME: ClassVar[str] = "privacyKeyAbout"
     RESULT_TYPE: ClassVar[str] = "PrivacyKey"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22969,6 +23719,7 @@ class PrivacyKeyBirthday(TLConstructor):
     QUALNAME: ClassVar[str] = "privacyKeyBirthday"
     RESULT_TYPE: ClassVar[str] = "PrivacyKey"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22978,6 +23729,7 @@ class PrivacyKeyStarGiftsAutoSave(TLConstructor):
     QUALNAME: ClassVar[str] = "privacyKeyStarGiftsAutoSave"
     RESULT_TYPE: ClassVar[str] = "PrivacyKey"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22987,6 +23739,7 @@ class PrivacyKeyNoPaidMessages(TLConstructor):
     QUALNAME: ClassVar[str] = "privacyKeyNoPaidMessages"
     RESULT_TYPE: ClassVar[str] = "PrivacyKey"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -22996,6 +23749,7 @@ class InputPrivacyValueAllowContacts(TLConstructor):
     QUALNAME: ClassVar[str] = "inputPrivacyValueAllowContacts"
     RESULT_TYPE: ClassVar[str] = "InputPrivacyRule"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23005,6 +23759,7 @@ class InputPrivacyValueAllowAll(TLConstructor):
     QUALNAME: ClassVar[str] = "inputPrivacyValueAllowAll"
     RESULT_TYPE: ClassVar[str] = "InputPrivacyRule"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23026,6 +23781,7 @@ class InputPrivacyValueAllowUsers(TLConstructor):
             vector_item_type="InputUser",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23035,6 +23791,7 @@ class InputPrivacyValueDisallowContacts(TLConstructor):
     QUALNAME: ClassVar[str] = "inputPrivacyValueDisallowContacts"
     RESULT_TYPE: ClassVar[str] = "InputPrivacyRule"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23044,6 +23801,7 @@ class InputPrivacyValueDisallowAll(TLConstructor):
     QUALNAME: ClassVar[str] = "inputPrivacyValueDisallowAll"
     RESULT_TYPE: ClassVar[str] = "InputPrivacyRule"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23065,6 +23823,7 @@ class InputPrivacyValueDisallowUsers(TLConstructor):
             vector_item_type="InputUser",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23086,6 +23845,7 @@ class InputPrivacyValueAllowChatParticipants(TLConstructor):
             vector_item_type="long",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23107,6 +23867,7 @@ class InputPrivacyValueDisallowChatParticipants(TLConstructor):
             vector_item_type="long",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23116,6 +23877,7 @@ class InputPrivacyValueAllowCloseFriends(TLConstructor):
     QUALNAME: ClassVar[str] = "inputPrivacyValueAllowCloseFriends"
     RESULT_TYPE: ClassVar[str] = "InputPrivacyRule"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23125,6 +23887,7 @@ class InputPrivacyValueAllowPremium(TLConstructor):
     QUALNAME: ClassVar[str] = "inputPrivacyValueAllowPremium"
     RESULT_TYPE: ClassVar[str] = "InputPrivacyRule"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23134,6 +23897,7 @@ class InputPrivacyValueAllowBots(TLConstructor):
     QUALNAME: ClassVar[str] = "inputPrivacyValueAllowBots"
     RESULT_TYPE: ClassVar[str] = "InputPrivacyRule"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23143,6 +23907,7 @@ class InputPrivacyValueDisallowBots(TLConstructor):
     QUALNAME: ClassVar[str] = "inputPrivacyValueDisallowBots"
     RESULT_TYPE: ClassVar[str] = "InputPrivacyRule"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23152,6 +23917,7 @@ class PrivacyValueAllowContacts(TLConstructor):
     QUALNAME: ClassVar[str] = "privacyValueAllowContacts"
     RESULT_TYPE: ClassVar[str] = "PrivacyRule"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23161,6 +23927,7 @@ class PrivacyValueAllowAll(TLConstructor):
     QUALNAME: ClassVar[str] = "privacyValueAllowAll"
     RESULT_TYPE: ClassVar[str] = "PrivacyRule"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23182,6 +23949,7 @@ class PrivacyValueAllowUsers(TLConstructor):
             vector_item_type="long",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23191,6 +23959,7 @@ class PrivacyValueDisallowContacts(TLConstructor):
     QUALNAME: ClassVar[str] = "privacyValueDisallowContacts"
     RESULT_TYPE: ClassVar[str] = "PrivacyRule"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23200,6 +23969,7 @@ class PrivacyValueDisallowAll(TLConstructor):
     QUALNAME: ClassVar[str] = "privacyValueDisallowAll"
     RESULT_TYPE: ClassVar[str] = "PrivacyRule"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23221,6 +23991,7 @@ class PrivacyValueDisallowUsers(TLConstructor):
             vector_item_type="long",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23242,6 +24013,7 @@ class PrivacyValueAllowChatParticipants(TLConstructor):
             vector_item_type="long",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23263,6 +24035,7 @@ class PrivacyValueDisallowChatParticipants(TLConstructor):
             vector_item_type="long",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23272,6 +24045,7 @@ class PrivacyValueAllowCloseFriends(TLConstructor):
     QUALNAME: ClassVar[str] = "privacyValueAllowCloseFriends"
     RESULT_TYPE: ClassVar[str] = "PrivacyRule"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23281,6 +24055,7 @@ class PrivacyValueAllowPremium(TLConstructor):
     QUALNAME: ClassVar[str] = "privacyValueAllowPremium"
     RESULT_TYPE: ClassVar[str] = "PrivacyRule"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23290,6 +24065,7 @@ class PrivacyValueAllowBots(TLConstructor):
     QUALNAME: ClassVar[str] = "privacyValueAllowBots"
     RESULT_TYPE: ClassVar[str] = "PrivacyRule"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23299,6 +24075,7 @@ class PrivacyValueDisallowBots(TLConstructor):
     QUALNAME: ClassVar[str] = "privacyValueDisallowBots"
     RESULT_TYPE: ClassVar[str] = "PrivacyRule"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23344,6 +24121,7 @@ class AccountPrivacyRules(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23365,6 +24143,7 @@ class AccountDaysTTL(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23398,6 +24177,7 @@ class DocumentAttributeImageSize(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23407,6 +24187,7 @@ class DocumentAttributeAnimated(TLConstructor):
     QUALNAME: ClassVar[str] = "documentAttributeAnimated"
     RESULT_TYPE: ClassVar[str] = "DocumentAttribute"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23463,6 +24244,9 @@ class DocumentAttributeSticker(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -23581,6 +24365,9 @@ class DocumentAttributeVideo(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23650,6 +24437,9 @@ class DocumentAttributeAudio(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23671,6 +24461,7 @@ class DocumentAttributeFilename(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23680,6 +24471,7 @@ class DocumentAttributeHasStickers(TLConstructor):
     QUALNAME: ClassVar[str] = "documentAttributeHasStickers"
     RESULT_TYPE: ClassVar[str] = "DocumentAttribute"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23737,6 +24529,9 @@ class DocumentAttributeCustomEmoji(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23746,6 +24541,7 @@ class MessagesStickersNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "messages.stickersNotModified"
     RESULT_TYPE: ClassVar[str] = "messages.Stickers"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23779,6 +24575,7 @@ class MessagesStickers(TLConstructor):
             vector_item_type="Document",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23812,6 +24609,7 @@ class StickerPack(TLConstructor):
             vector_item_type="long",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23821,6 +24619,7 @@ class MessagesAllStickersNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "messages.allStickersNotModified"
     RESULT_TYPE: ClassVar[str] = "messages.AllStickers"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23854,6 +24653,7 @@ class MessagesAllStickers(TLConstructor):
             vector_item_type="StickerSet",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23887,6 +24687,7 @@ class MessagesAffectedMessages(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -23919,6 +24720,9 @@ class WebPageEmpty(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -23964,6 +24768,9 @@ class WebPagePending(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -24214,6 +25021,9 @@ class WebPage(TLConstructor):
             vector_item_type="WebPageAttribute",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -24234,6 +25044,9 @@ class WebPageNotModified(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -24460,6 +25273,9 @@ class Authorization(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -24493,6 +25309,7 @@ class AccountAuthorizations(TLConstructor):
             vector_item_type="Authorization",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -24658,6 +25475,9 @@ class AccountPassword(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -24690,6 +25510,9 @@ class AccountPasswordSettings(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -24760,6 +25583,9 @@ class AccountPasswordInputSettings(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -24781,6 +25607,7 @@ class AuthPasswordRecovery(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -24814,6 +25641,7 @@ class ReceivedNotifyMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -24991,6 +25819,9 @@ class ChatInviteExported(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -25000,6 +25831,7 @@ class ChatInvitePublicJoinRequests(TLConstructor):
     QUALNAME: ClassVar[str] = "chatInvitePublicJoinRequests"
     RESULT_TYPE: ClassVar[str] = "ExportedChatInvite"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -25021,6 +25853,7 @@ class ChatInviteAlready(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -25246,6 +26079,9 @@ class ChatInvite(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -25279,6 +26115,7 @@ class ChatInvitePeek(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -25288,6 +26125,7 @@ class InputStickerSetEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "inputStickerSetEmpty"
     RESULT_TYPE: ClassVar[str] = "InputStickerSet"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -25321,6 +26159,7 @@ class InputStickerSetID(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -25342,6 +26181,7 @@ class InputStickerSetShortName(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -25351,6 +26191,7 @@ class InputStickerSetAnimatedEmoji(TLConstructor):
     QUALNAME: ClassVar[str] = "inputStickerSetAnimatedEmoji"
     RESULT_TYPE: ClassVar[str] = "InputStickerSet"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -25372,6 +26213,7 @@ class InputStickerSetDice(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -25381,6 +26223,7 @@ class InputStickerSetAnimatedEmojiAnimations(TLConstructor):
     QUALNAME: ClassVar[str] = "inputStickerSetAnimatedEmojiAnimations"
     RESULT_TYPE: ClassVar[str] = "InputStickerSet"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -25390,6 +26233,7 @@ class InputStickerSetPremiumGifts(TLConstructor):
     QUALNAME: ClassVar[str] = "inputStickerSetPremiumGifts"
     RESULT_TYPE: ClassVar[str] = "InputStickerSet"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -25399,6 +26243,7 @@ class InputStickerSetEmojiGenericAnimations(TLConstructor):
     QUALNAME: ClassVar[str] = "inputStickerSetEmojiGenericAnimations"
     RESULT_TYPE: ClassVar[str] = "InputStickerSet"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -25408,6 +26253,7 @@ class InputStickerSetEmojiDefaultStatuses(TLConstructor):
     QUALNAME: ClassVar[str] = "inputStickerSetEmojiDefaultStatuses"
     RESULT_TYPE: ClassVar[str] = "InputStickerSet"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -25417,6 +26263,7 @@ class InputStickerSetEmojiDefaultTopicIcons(TLConstructor):
     QUALNAME: ClassVar[str] = "inputStickerSetEmojiDefaultTopicIcons"
     RESULT_TYPE: ClassVar[str] = "InputStickerSet"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -25426,6 +26273,7 @@ class InputStickerSetEmojiChannelDefaultStatuses(TLConstructor):
     QUALNAME: ClassVar[str] = "inputStickerSetEmojiChannelDefaultStatuses"
     RESULT_TYPE: ClassVar[str] = "InputStickerSet"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -25435,6 +26283,7 @@ class InputStickerSetTonGifts(TLConstructor):
     QUALNAME: ClassVar[str] = "inputStickerSetTonGifts"
     RESULT_TYPE: ClassVar[str] = "InputStickerSet"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -25660,6 +26509,9 @@ class StickerSet(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -25717,6 +26569,7 @@ class MessagesStickerSet(TLConstructor):
             vector_item_type="Document",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -25726,6 +26579,7 @@ class MessagesStickerSetNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "messages.stickerSetNotModified"
     RESULT_TYPE: ClassVar[str] = "messages.StickerSet"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -25759,6 +26613,7 @@ class BotCommand(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -25888,6 +26743,9 @@ class BotInfo(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -25909,6 +26767,7 @@ class KeyboardButton(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -25942,6 +26801,7 @@ class KeyboardButtonUrl(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -25987,6 +26847,9 @@ class KeyboardButtonCallback(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -26008,6 +26871,7 @@ class KeyboardButtonRequestPhone(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -26029,6 +26893,7 @@ class KeyboardButtonRequestGeoLocation(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -26086,6 +26951,9 @@ class KeyboardButtonSwitchInline(TLConstructor):
             vector_item_type="InlineQueryPeerType",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -26107,6 +26975,7 @@ class KeyboardButtonGame(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -26128,6 +26997,7 @@ class KeyboardButtonBuy(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -26184,6 +27054,9 @@ class KeyboardButtonUrlAuth(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -26254,6 +27127,9 @@ class InputKeyboardButtonUrlAuth(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -26286,6 +27162,9 @@ class KeyboardButtonRequestPoll(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -26320,6 +27199,7 @@ class InputKeyboardButtonUserProfile(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -26353,6 +27233,7 @@ class KeyboardButtonUserProfile(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -26386,6 +27267,7 @@ class KeyboardButtonWebView(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -26419,6 +27301,7 @@ class KeyboardButtonSimpleWebView(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -26476,6 +27359,7 @@ class KeyboardButtonRequestPeer(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -26569,6 +27453,9 @@ class InputKeyboardButtonRequestPeer(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -26602,6 +27489,7 @@ class KeyboardButtonCopy(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -26623,6 +27511,7 @@ class KeyboardButtonRow(TLConstructor):
             vector_item_type="KeyboardButton",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -26643,6 +27532,9 @@ class ReplyKeyboardHide(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -26688,6 +27580,9 @@ class ReplyKeyboardForceReply(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -26770,6 +27665,9 @@ class ReplyKeyboardMarkup(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -26791,6 +27689,7 @@ class ReplyInlineMarkup(TLConstructor):
             vector_item_type="KeyboardButtonRow",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -26824,6 +27723,7 @@ class MessageEntityUnknown(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -26857,6 +27757,7 @@ class MessageEntityMention(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -26890,6 +27791,7 @@ class MessageEntityHashtag(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -26923,6 +27825,7 @@ class MessageEntityBotCommand(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -26956,6 +27859,7 @@ class MessageEntityUrl(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -26989,6 +27893,7 @@ class MessageEntityEmail(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -27022,6 +27927,7 @@ class MessageEntityBold(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -27055,6 +27961,7 @@ class MessageEntityItalic(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -27088,6 +27995,7 @@ class MessageEntityCode(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -27133,6 +28041,7 @@ class MessageEntityPre(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -27178,6 +28087,7 @@ class MessageEntityTextUrl(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -27223,6 +28133,7 @@ class MessageEntityMentionName(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -27268,6 +28179,7 @@ class InputMessageEntityMentionName(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -27301,6 +28213,7 @@ class MessageEntityPhone(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -27334,6 +28247,7 @@ class MessageEntityCashtag(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -27367,6 +28281,7 @@ class MessageEntityUnderline(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -27400,6 +28315,7 @@ class MessageEntityStrike(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -27433,6 +28349,7 @@ class MessageEntityBankCard(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -27466,6 +28383,7 @@ class MessageEntitySpoiler(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -27511,6 +28429,7 @@ class MessageEntityCustomEmoji(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -27556,6 +28475,9 @@ class MessageEntityBlockquote(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -27565,6 +28487,7 @@ class InputChannelEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "inputChannelEmpty"
     RESULT_TYPE: ClassVar[str] = "InputChannel"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -27598,6 +28521,7 @@ class InputChannel(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -27643,6 +28567,7 @@ class InputChannelFromMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -27688,6 +28613,7 @@ class ContactsResolvedPeer(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -27721,6 +28647,7 @@ class MessageRange(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -27765,6 +28692,9 @@ class UpdatesChannelDifferenceEmpty(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -27846,6 +28776,9 @@ class UpdatesChannelDifferenceTooLong(TLConstructor):
             is_vector=True,
             vector_item_type="User",
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -27940,6 +28873,9 @@ class UpdatesChannelDifference(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -27949,6 +28885,7 @@ class ChannelMessagesFilterEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "channelMessagesFilterEmpty"
     RESULT_TYPE: ClassVar[str] = "ChannelMessagesFilter"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -27981,6 +28918,9 @@ class ChannelMessagesFilter(TLConstructor):
             is_vector=True,
             vector_item_type="MessageRange",
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -28026,6 +28966,9 @@ class ChannelParticipant(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -28096,6 +29039,9 @@ class ChannelParticipantSelf(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -28140,6 +29086,9 @@ class ChannelParticipantCreator(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -28246,6 +29195,9 @@ class ChannelParticipantAdmin(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -28315,6 +29267,9 @@ class ChannelParticipantBanned(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -28336,6 +29291,7 @@ class ChannelParticipantLeft(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -28345,6 +29301,7 @@ class ChannelParticipantsRecent(TLConstructor):
     QUALNAME: ClassVar[str] = "channelParticipantsRecent"
     RESULT_TYPE: ClassVar[str] = "ChannelParticipantsFilter"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -28354,6 +29311,7 @@ class ChannelParticipantsAdmins(TLConstructor):
     QUALNAME: ClassVar[str] = "channelParticipantsAdmins"
     RESULT_TYPE: ClassVar[str] = "ChannelParticipantsFilter"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -28375,6 +29333,7 @@ class ChannelParticipantsKicked(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -28384,6 +29343,7 @@ class ChannelParticipantsBots(TLConstructor):
     QUALNAME: ClassVar[str] = "channelParticipantsBots"
     RESULT_TYPE: ClassVar[str] = "ChannelParticipantsFilter"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -28405,6 +29365,7 @@ class ChannelParticipantsBanned(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -28426,6 +29387,7 @@ class ChannelParticipantsSearch(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -28447,6 +29409,7 @@ class ChannelParticipantsContacts(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -28479,6 +29442,9 @@ class ChannelParticipantsMentions(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -28537,6 +29503,7 @@ class ChannelsChannelParticipants(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -28546,6 +29513,7 @@ class ChannelsChannelParticipantsNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "channels.channelParticipantsNotModified"
     RESULT_TYPE: ClassVar[str] = "channels.ChannelParticipants"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -28591,6 +29559,7 @@ class ChannelsChannelParticipant(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -28660,6 +29629,9 @@ class HelpTermsOfService(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -28669,6 +29641,7 @@ class MessagesSavedGifsNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "messages.savedGifsNotModified"
     RESULT_TYPE: ClassVar[str] = "messages.SavedGifs"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -28702,6 +29675,7 @@ class MessagesSavedGifs(TLConstructor):
             vector_item_type="Document",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -28758,6 +29732,9 @@ class InputBotInlineMessageMediaAuto(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -28828,6 +29805,9 @@ class InputBotInlineMessageText(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -28896,6 +29876,9 @@ class InputBotInlineMessageMediaGeo(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -28990,6 +29973,9 @@ class InputBotInlineMessageMediaVenue(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -29059,6 +30045,9 @@ class InputBotInlineMessageMediaContact(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -29079,6 +30068,9 @@ class InputBotInlineMessageGame(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -29185,6 +30177,9 @@ class InputBotInlineMessageMediaInvoice(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -29289,6 +30284,9 @@ class InputBotInlineMessageMediaWebPage(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -29395,6 +30393,9 @@ class InputBotInlineResult(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -29452,6 +30453,7 @@ class InputBotInlineResultPhoto(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -29533,6 +30535,9 @@ class InputBotInlineResultDocument(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -29578,6 +30583,7 @@ class InputBotInlineResultGame(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -29634,6 +30640,9 @@ class BotInlineMessageMediaAuto(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -29704,6 +30713,9 @@ class BotInlineMessageText(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -29772,6 +30784,9 @@ class BotInlineMessageMediaGeo(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -29866,6 +30881,9 @@ class BotInlineMessageMediaVenue(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -29934,6 +30952,9 @@ class BotInlineMessageMediaContact(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -30039,6 +31060,9 @@ class BotInlineMessageMediaInvoice(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -30157,6 +31181,9 @@ class BotInlineMessageMediaWebPage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -30262,6 +31289,9 @@ class BotInlineResult(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -30354,6 +31384,9 @@ class BotInlineMediaResult(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -30460,6 +31493,9 @@ class MessagesBotResults(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -30493,6 +31529,7 @@ class ExportedMessageLink(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -30658,6 +31695,9 @@ class MessageFwdHeader(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -30667,6 +31707,7 @@ class AuthCodeTypeSms(TLConstructor):
     QUALNAME: ClassVar[str] = "auth.codeTypeSms"
     RESULT_TYPE: ClassVar[str] = "auth.CodeType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -30676,6 +31717,7 @@ class AuthCodeTypeCall(TLConstructor):
     QUALNAME: ClassVar[str] = "auth.codeTypeCall"
     RESULT_TYPE: ClassVar[str] = "auth.CodeType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -30685,6 +31727,7 @@ class AuthCodeTypeFlashCall(TLConstructor):
     QUALNAME: ClassVar[str] = "auth.codeTypeFlashCall"
     RESULT_TYPE: ClassVar[str] = "auth.CodeType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -30694,6 +31737,7 @@ class AuthCodeTypeMissedCall(TLConstructor):
     QUALNAME: ClassVar[str] = "auth.codeTypeMissedCall"
     RESULT_TYPE: ClassVar[str] = "auth.CodeType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -30703,6 +31747,7 @@ class AuthCodeTypeFragmentSms(TLConstructor):
     QUALNAME: ClassVar[str] = "auth.codeTypeFragmentSms"
     RESULT_TYPE: ClassVar[str] = "auth.CodeType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -30724,6 +31769,7 @@ class AuthSentCodeTypeApp(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -30745,6 +31791,7 @@ class AuthSentCodeTypeSms(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -30766,6 +31813,7 @@ class AuthSentCodeTypeCall(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -30787,6 +31835,7 @@ class AuthSentCodeTypeFlashCall(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -30820,6 +31869,7 @@ class AuthSentCodeTypeMissedCall(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -30901,6 +31951,9 @@ class AuthSentCodeTypeEmailCode(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -30933,6 +31986,9 @@ class AuthSentCodeTypeSetUpEmailRequired(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -30967,6 +32023,7 @@ class AuthSentCodeTypeFragmentSms(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -31048,6 +32105,9 @@ class AuthSentCodeTypeFirebaseSms(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -31069,6 +32129,9 @@ class AuthSentCodeTypeSmsWord(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -31089,6 +32152,9 @@ class AuthSentCodeTypeSmsPhrase(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -31171,6 +32237,9 @@ class MessagesBotCallbackAnswer(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -31191,6 +32260,9 @@ class MessagesMessageEditData(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -31237,6 +32309,7 @@ class InputBotInlineMessageID(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -31294,6 +32367,7 @@ class InputBotInlineMessageID64(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -31327,6 +32401,7 @@ class InlineBotSwitchPM(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -31396,6 +32471,7 @@ class MessagesPeerDialogs(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -31429,6 +32505,7 @@ class TopPeer(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -31438,6 +32515,7 @@ class TopPeerCategoryBotsPM(TLConstructor):
     QUALNAME: ClassVar[str] = "topPeerCategoryBotsPM"
     RESULT_TYPE: ClassVar[str] = "TopPeerCategory"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -31447,6 +32525,7 @@ class TopPeerCategoryBotsInline(TLConstructor):
     QUALNAME: ClassVar[str] = "topPeerCategoryBotsInline"
     RESULT_TYPE: ClassVar[str] = "TopPeerCategory"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -31456,6 +32535,7 @@ class TopPeerCategoryCorrespondents(TLConstructor):
     QUALNAME: ClassVar[str] = "topPeerCategoryCorrespondents"
     RESULT_TYPE: ClassVar[str] = "TopPeerCategory"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -31465,6 +32545,7 @@ class TopPeerCategoryGroups(TLConstructor):
     QUALNAME: ClassVar[str] = "topPeerCategoryGroups"
     RESULT_TYPE: ClassVar[str] = "TopPeerCategory"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -31474,6 +32555,7 @@ class TopPeerCategoryChannels(TLConstructor):
     QUALNAME: ClassVar[str] = "topPeerCategoryChannels"
     RESULT_TYPE: ClassVar[str] = "TopPeerCategory"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -31483,6 +32565,7 @@ class TopPeerCategoryPhoneCalls(TLConstructor):
     QUALNAME: ClassVar[str] = "topPeerCategoryPhoneCalls"
     RESULT_TYPE: ClassVar[str] = "TopPeerCategory"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -31492,6 +32575,7 @@ class TopPeerCategoryForwardUsers(TLConstructor):
     QUALNAME: ClassVar[str] = "topPeerCategoryForwardUsers"
     RESULT_TYPE: ClassVar[str] = "TopPeerCategory"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -31501,6 +32585,7 @@ class TopPeerCategoryForwardChats(TLConstructor):
     QUALNAME: ClassVar[str] = "topPeerCategoryForwardChats"
     RESULT_TYPE: ClassVar[str] = "TopPeerCategory"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -31510,6 +32595,7 @@ class TopPeerCategoryBotsApp(TLConstructor):
     QUALNAME: ClassVar[str] = "topPeerCategoryBotsApp"
     RESULT_TYPE: ClassVar[str] = "TopPeerCategory"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -31555,6 +32641,7 @@ class TopPeerCategoryPeers(TLConstructor):
             vector_item_type="TopPeer",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -31564,6 +32651,7 @@ class ContactsTopPeersNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "contacts.topPeersNotModified"
     RESULT_TYPE: ClassVar[str] = "contacts.TopPeers"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -31609,6 +32697,7 @@ class ContactsTopPeers(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -31618,6 +32707,7 @@ class ContactsTopPeersDisabled(TLConstructor):
     QUALNAME: ClassVar[str] = "contacts.topPeersDisabled"
     RESULT_TYPE: ClassVar[str] = "contacts.TopPeers"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -31638,6 +32728,9 @@ class DraftMessageEmpty(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -31756,6 +32849,9 @@ class DraftMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -31777,6 +32873,7 @@ class MessagesFeaturedStickersNotModified(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -31846,6 +32943,9 @@ class MessagesFeaturedStickers(TLConstructor):
             vector_item_type="long",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -31855,6 +32955,7 @@ class MessagesRecentStickersNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "messages.recentStickersNotModified"
     RESULT_TYPE: ClassVar[str] = "messages.RecentStickers"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -31912,6 +33013,7 @@ class MessagesRecentStickers(TLConstructor):
             vector_item_type="int",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -31945,6 +33047,7 @@ class MessagesArchivedStickers(TLConstructor):
             vector_item_type="StickerSetCovered",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -31954,6 +33057,7 @@ class MessagesStickerSetInstallResultSuccess(TLConstructor):
     QUALNAME: ClassVar[str] = "messages.stickerSetInstallResultSuccess"
     RESULT_TYPE: ClassVar[str] = "messages.StickerSetInstallResult"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -31975,6 +33079,7 @@ class MessagesStickerSetInstallResultArchive(TLConstructor):
             vector_item_type="StickerSetCovered",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32008,6 +33113,7 @@ class StickerSetCovered(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32041,6 +33147,7 @@ class StickerSetMultiCovered(TLConstructor):
             vector_item_type="Document",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32098,6 +33205,7 @@ class StickerSetFullCovered(TLConstructor):
             vector_item_type="Document",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32119,6 +33227,7 @@ class StickerSetNoCovered(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32176,6 +33285,7 @@ class MaskCoords(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32197,6 +33307,7 @@ class InputStickeredMediaPhoto(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32218,6 +33329,7 @@ class InputStickeredMediaDocument(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32311,6 +33423,9 @@ class Game(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32344,6 +33459,7 @@ class InputGameID(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32377,6 +33493,7 @@ class InputGameShortName(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32422,6 +33539,7 @@ class HighScore(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32455,6 +33573,7 @@ class MessagesHighScores(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32464,6 +33583,7 @@ class TextEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "textEmpty"
     RESULT_TYPE: ClassVar[str] = "RichText"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32485,6 +33605,7 @@ class TextPlain(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32506,6 +33627,7 @@ class TextBold(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32527,6 +33649,7 @@ class TextItalic(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32548,6 +33671,7 @@ class TextUnderline(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32569,6 +33693,7 @@ class TextStrike(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32590,6 +33715,7 @@ class TextFixed(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32635,6 +33761,7 @@ class TextUrl(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32668,6 +33795,7 @@ class TextEmail(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32689,6 +33817,7 @@ class TextConcat(TLConstructor):
             vector_item_type="RichText",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32710,6 +33839,7 @@ class TextSubscript(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32731,6 +33861,7 @@ class TextSuperscript(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32752,6 +33883,7 @@ class TextMarked(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32785,6 +33917,7 @@ class TextPhone(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32830,6 +33963,7 @@ class TextImage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32863,6 +33997,7 @@ class TextAnchor(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32872,6 +34007,7 @@ class PageBlockUnsupported(TLConstructor):
     QUALNAME: ClassVar[str] = "pageBlockUnsupported"
     RESULT_TYPE: ClassVar[str] = "PageBlock"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32893,6 +34029,7 @@ class PageBlockTitle(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32914,6 +34051,7 @@ class PageBlockSubtitle(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32947,6 +34085,7 @@ class PageBlockAuthorDate(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32968,6 +34107,7 @@ class PageBlockHeader(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -32989,6 +34129,7 @@ class PageBlockSubheader(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -33010,6 +34151,7 @@ class PageBlockParagraph(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -33043,6 +34185,7 @@ class PageBlockPreformatted(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -33064,6 +34207,7 @@ class PageBlockFooter(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -33073,6 +34217,7 @@ class PageBlockDivider(TLConstructor):
     QUALNAME: ClassVar[str] = "pageBlockDivider"
     RESULT_TYPE: ClassVar[str] = "PageBlock"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -33094,6 +34239,7 @@ class PageBlockAnchor(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -33115,6 +34261,7 @@ class PageBlockList(TLConstructor):
             vector_item_type="PageListItem",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -33148,6 +34295,7 @@ class PageBlockBlockquote(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -33181,6 +34329,7 @@ class PageBlockPullquote(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -33237,6 +34386,9 @@ class PageBlockPhoto(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -33295,6 +34447,9 @@ class PageBlockVideo(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -33316,6 +34471,7 @@ class PageBlockCover(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -33421,6 +34577,9 @@ class PageBlockEmbed(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -33514,6 +34673,7 @@ class PageBlockEmbedPost(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -33547,6 +34707,7 @@ class PageBlockCollage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -33580,6 +34741,7 @@ class PageBlockSlideshow(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -33601,6 +34763,7 @@ class PageBlockChannel(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -33634,6 +34797,7 @@ class PageBlockAudio(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -33655,6 +34819,7 @@ class PageBlockKicker(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -33712,6 +34877,9 @@ class PageBlockTable(TLConstructor):
             vector_item_type="PageTableRow",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -33733,6 +34901,7 @@ class PageBlockOrderedList(TLConstructor):
             vector_item_type="PageListOrderedItem",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -33778,6 +34947,9 @@ class PageBlockDetails(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -33811,6 +34983,7 @@ class PageBlockRelatedArticles(TLConstructor):
             vector_item_type="PageRelatedArticle",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -33880,6 +35053,7 @@ class PageBlockMap(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -33889,6 +35063,7 @@ class PhoneCallDiscardReasonMissed(TLConstructor):
     QUALNAME: ClassVar[str] = "phoneCallDiscardReasonMissed"
     RESULT_TYPE: ClassVar[str] = "PhoneCallDiscardReason"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -33898,6 +35073,7 @@ class PhoneCallDiscardReasonDisconnect(TLConstructor):
     QUALNAME: ClassVar[str] = "phoneCallDiscardReasonDisconnect"
     RESULT_TYPE: ClassVar[str] = "PhoneCallDiscardReason"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -33907,6 +35083,7 @@ class PhoneCallDiscardReasonHangup(TLConstructor):
     QUALNAME: ClassVar[str] = "phoneCallDiscardReasonHangup"
     RESULT_TYPE: ClassVar[str] = "PhoneCallDiscardReason"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -33916,6 +35093,7 @@ class PhoneCallDiscardReasonBusy(TLConstructor):
     QUALNAME: ClassVar[str] = "phoneCallDiscardReasonBusy"
     RESULT_TYPE: ClassVar[str] = "PhoneCallDiscardReason"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -33937,6 +35115,7 @@ class PhoneCallDiscardReasonMigrateConferenceCall(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -33958,6 +35137,7 @@ class DataJSON(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -33991,6 +35171,7 @@ class LabeledPrice(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -34180,6 +35361,9 @@ class Invoice(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -34213,6 +35397,7 @@ class PaymentCharge(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -34294,6 +35479,7 @@ class PostAddress(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -34351,6 +35537,9 @@ class PaymentRequestedInfo(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -34384,6 +35573,7 @@ class PaymentSavedCredentialsCard(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -34453,6 +35643,7 @@ class WebDocument(TLConstructor):
             vector_item_type="DocumentAttribute",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -34510,6 +35701,7 @@ class WebDocumentNoProxy(TLConstructor):
             vector_item_type="DocumentAttribute",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -34567,6 +35759,7 @@ class InputWebDocument(TLConstructor):
             vector_item_type="DocumentAttribute",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -34600,6 +35793,7 @@ class InputWebFileLocation(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -34681,6 +35875,7 @@ class InputWebFileGeoPointLocation(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -34737,6 +35932,9 @@ class InputWebFileAudioAlbumThumbLocation(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -34807,6 +36005,7 @@ class UploadWebFile(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -35008,6 +36207,9 @@ class PaymentsPaymentForm(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -35101,6 +36303,9 @@ class PaymentsPaymentFormStars(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -35134,6 +36339,7 @@ class PaymentsPaymentFormStarGift(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -35167,6 +36373,9 @@ class PaymentsValidatedRequestedInfo(TLConstructor):
             vector_item_type="ShippingOption",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -35188,6 +36397,7 @@ class PaymentsPaymentResult(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -35209,6 +36419,7 @@ class PaymentsPaymentVerificationNeeded(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -35386,6 +36597,9 @@ class PaymentsPaymentReceipt(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -35515,6 +36729,9 @@ class PaymentsPaymentReceiptStars(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -35547,6 +36764,9 @@ class PaymentsSavedInfo(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -35581,6 +36801,7 @@ class InputPaymentCredentialsSaved(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -35614,6 +36835,9 @@ class InputPaymentCredentials(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -35635,6 +36859,7 @@ class InputPaymentCredentialsApplePay(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -35656,6 +36881,7 @@ class InputPaymentCredentialsGooglePay(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -35689,6 +36915,7 @@ class AccountTmpPassword(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -35734,6 +36961,7 @@ class ShippingOption(TLConstructor):
             vector_item_type="LabeledPrice",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -35791,6 +37019,9 @@ class InputStickerSetItem(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -35824,6 +37055,7 @@ class InputPhoneCall(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -35845,6 +37077,7 @@ class PhoneCallEmpty(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -35949,6 +37182,9 @@ class PhoneCallWaiting(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -36055,6 +37291,9 @@ class PhoneCallRequested(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -36159,6 +37398,9 @@ class PhoneCallAccepted(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -36337,6 +37579,9 @@ class PhoneCall(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -36418,6 +37663,9 @@ class PhoneCallDiscarded(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -36498,6 +37746,9 @@ class PhoneConnection(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -36604,6 +37855,9 @@ class PhoneConnectionWebrtc(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -36673,6 +37927,9 @@ class PhoneCallProtocol(TLConstructor):
             vector_item_type="string",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -36706,6 +37963,7 @@ class PhonePhoneCall(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -36727,6 +37985,7 @@ class UploadCdnFileReuploadNeeded(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -36748,6 +38007,7 @@ class UploadCdnFile(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -36781,6 +38041,7 @@ class CdnPublicKey(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -36802,6 +38063,7 @@ class CdnConfig(TLConstructor):
             vector_item_type="CdnPublicKey",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -36835,6 +38097,7 @@ class LangPackString(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -36928,6 +38191,9 @@ class LangPackStringPluralized(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -36949,6 +38215,7 @@ class LangPackStringDeleted(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37006,6 +38273,7 @@ class LangPackDifference(TLConstructor):
             vector_item_type="LangPackString",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37147,6 +38415,9 @@ class LangPackLanguage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37180,6 +38451,7 @@ class ChannelAdminLogEventActionChangeTitle(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37213,6 +38485,7 @@ class ChannelAdminLogEventActionChangeAbout(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37246,6 +38519,7 @@ class ChannelAdminLogEventActionChangeUsername(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37279,6 +38553,7 @@ class ChannelAdminLogEventActionChangePhoto(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37300,6 +38575,7 @@ class ChannelAdminLogEventActionToggleInvites(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37321,6 +38597,7 @@ class ChannelAdminLogEventActionToggleSignatures(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37342,6 +38619,7 @@ class ChannelAdminLogEventActionUpdatePinned(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37375,6 +38653,7 @@ class ChannelAdminLogEventActionEditMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37396,6 +38675,7 @@ class ChannelAdminLogEventActionDeleteMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37405,6 +38685,7 @@ class ChannelAdminLogEventActionParticipantJoin(TLConstructor):
     QUALNAME: ClassVar[str] = "channelAdminLogEventActionParticipantJoin"
     RESULT_TYPE: ClassVar[str] = "ChannelAdminLogEventAction"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37414,6 +38695,7 @@ class ChannelAdminLogEventActionParticipantLeave(TLConstructor):
     QUALNAME: ClassVar[str] = "channelAdminLogEventActionParticipantLeave"
     RESULT_TYPE: ClassVar[str] = "ChannelAdminLogEventAction"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37435,6 +38717,7 @@ class ChannelAdminLogEventActionParticipantInvite(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37468,6 +38751,7 @@ class ChannelAdminLogEventActionParticipantToggleBan(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37501,6 +38785,7 @@ class ChannelAdminLogEventActionParticipantToggleAdmin(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37534,6 +38819,7 @@ class ChannelAdminLogEventActionChangeStickerSet(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37555,6 +38841,7 @@ class ChannelAdminLogEventActionTogglePreHistoryHidden(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37588,6 +38875,7 @@ class ChannelAdminLogEventActionDefaultBannedRights(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37609,6 +38897,7 @@ class ChannelAdminLogEventActionStopPoll(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37642,6 +38931,7 @@ class ChannelAdminLogEventActionChangeLinkedChat(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37675,6 +38965,7 @@ class ChannelAdminLogEventActionChangeLocation(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37708,6 +38999,7 @@ class ChannelAdminLogEventActionToggleSlowMode(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37729,6 +39021,7 @@ class ChannelAdminLogEventActionStartGroupCall(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37750,6 +39043,7 @@ class ChannelAdminLogEventActionDiscardGroupCall(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37771,6 +39065,7 @@ class ChannelAdminLogEventActionParticipantMute(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37792,6 +39087,7 @@ class ChannelAdminLogEventActionParticipantUnmute(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37813,6 +39109,7 @@ class ChannelAdminLogEventActionToggleGroupCallSetting(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37846,6 +39143,9 @@ class ChannelAdminLogEventActionParticipantJoinByInvite(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37867,6 +39167,7 @@ class ChannelAdminLogEventActionExportedInviteDelete(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37888,6 +39189,7 @@ class ChannelAdminLogEventActionExportedInviteRevoke(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37921,6 +39223,7 @@ class ChannelAdminLogEventActionExportedInviteEdit(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37942,6 +39245,7 @@ class ChannelAdminLogEventActionParticipantVolume(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -37975,6 +39279,7 @@ class ChannelAdminLogEventActionChangeHistoryTTL(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -38008,6 +39313,7 @@ class ChannelAdminLogEventActionParticipantJoinByRequest(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -38029,6 +39335,7 @@ class ChannelAdminLogEventActionToggleNoForwards(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -38050,6 +39357,7 @@ class ChannelAdminLogEventActionSendMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -38083,6 +39391,7 @@ class ChannelAdminLogEventActionChangeAvailableReactions(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -38116,6 +39425,7 @@ class ChannelAdminLogEventActionChangeUsernames(TLConstructor):
             vector_item_type="string",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -38137,6 +39447,7 @@ class ChannelAdminLogEventActionToggleForum(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -38158,6 +39469,7 @@ class ChannelAdminLogEventActionCreateTopic(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -38191,6 +39503,7 @@ class ChannelAdminLogEventActionEditTopic(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -38212,6 +39525,7 @@ class ChannelAdminLogEventActionDeleteTopic(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -38245,6 +39559,9 @@ class ChannelAdminLogEventActionPinTopic(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -38266,6 +39583,7 @@ class ChannelAdminLogEventActionToggleAntiSpam(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -38299,6 +39617,7 @@ class ChannelAdminLogEventActionChangePeerColor(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -38332,6 +39651,7 @@ class ChannelAdminLogEventActionChangeProfilePeerColor(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -38365,6 +39685,7 @@ class ChannelAdminLogEventActionChangeWallpaper(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -38398,6 +39719,7 @@ class ChannelAdminLogEventActionChangeEmojiStatus(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -38431,6 +39753,7 @@ class ChannelAdminLogEventActionChangeEmojiStickerSet(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -38452,6 +39775,7 @@ class ChannelAdminLogEventActionToggleSignatureProfiles(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -38485,6 +39809,7 @@ class ChannelAdminLogEventActionParticipantSubExtend(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -38506,6 +39831,7 @@ class ChannelAdminLogEventActionToggleAutotranslation(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -38563,6 +39889,7 @@ class ChannelAdminLogEvent(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -38608,6 +39935,7 @@ class ChannelsAdminLogResults(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -38845,6 +40173,9 @@ class ChannelAdminLogEventsFilter(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -38878,6 +40209,7 @@ class PopularContact(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -38887,6 +40219,7 @@ class MessagesFavedStickersNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "messages.favedStickersNotModified"
     RESULT_TYPE: ClassVar[str] = "messages.FavedStickers"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -38932,6 +40265,7 @@ class MessagesFavedStickers(TLConstructor):
             vector_item_type="Document",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -38953,6 +40287,7 @@ class RecentMeUrlUnknown(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -38986,6 +40321,7 @@ class RecentMeUrlUser(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39019,6 +40355,7 @@ class RecentMeUrlChat(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39052,6 +40389,7 @@ class RecentMeUrlChatInvite(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39085,6 +40423,7 @@ class RecentMeUrlStickerSet(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39130,6 +40469,7 @@ class HelpRecentMeUrls(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39186,6 +40526,9 @@ class InputSingleMedia(TLConstructor):
             is_vector=True,
             vector_item_type="MessageEntity",
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -39304,6 +40647,7 @@ class WebAuthorization(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39337,6 +40681,7 @@ class AccountWebAuthorizations(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39358,6 +40703,7 @@ class InputMessageID(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39379,6 +40725,7 @@ class InputMessageReplyTo(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39388,6 +40735,7 @@ class InputMessagePinned(TLConstructor):
     QUALNAME: ClassVar[str] = "inputMessagePinned"
     RESULT_TYPE: ClassVar[str] = "InputMessage"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39421,6 +40769,7 @@ class InputMessageCallbackQuery(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39442,6 +40791,7 @@ class InputDialogPeer(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39463,6 +40813,7 @@ class InputDialogPeerFolder(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39484,6 +40835,7 @@ class DialogPeer(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39505,6 +40857,7 @@ class DialogPeerFolder(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39514,6 +40867,7 @@ class MessagesFoundStickerSetsNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "messages.foundStickerSetsNotModified"
     RESULT_TYPE: ClassVar[str] = "messages.FoundStickerSets"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39547,6 +40901,7 @@ class MessagesFoundStickerSets(TLConstructor):
             vector_item_type="StickerSetCovered",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39592,6 +40947,7 @@ class FileHash(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39625,6 +40981,7 @@ class InputClientProxy(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39646,6 +41003,7 @@ class HelpTermsOfServiceUpdateEmpty(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39679,6 +41037,7 @@ class HelpTermsOfServiceUpdate(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39748,6 +41107,7 @@ class InputSecureFileUploaded(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39781,6 +41141,7 @@ class InputSecureFile(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39790,6 +41151,7 @@ class SecureFileEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "secureFileEmpty"
     RESULT_TYPE: ClassVar[str] = "SecureFile"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39883,6 +41245,7 @@ class SecureFile(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39928,6 +41291,7 @@ class SecureData(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39949,6 +41313,7 @@ class SecurePlainPhone(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39970,6 +41335,7 @@ class SecurePlainEmail(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39979,6 +41345,7 @@ class SecureValueTypePersonalDetails(TLConstructor):
     QUALNAME: ClassVar[str] = "secureValueTypePersonalDetails"
     RESULT_TYPE: ClassVar[str] = "SecureValueType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39988,6 +41355,7 @@ class SecureValueTypePassport(TLConstructor):
     QUALNAME: ClassVar[str] = "secureValueTypePassport"
     RESULT_TYPE: ClassVar[str] = "SecureValueType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -39997,6 +41365,7 @@ class SecureValueTypeDriverLicense(TLConstructor):
     QUALNAME: ClassVar[str] = "secureValueTypeDriverLicense"
     RESULT_TYPE: ClassVar[str] = "SecureValueType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -40006,6 +41375,7 @@ class SecureValueTypeIdentityCard(TLConstructor):
     QUALNAME: ClassVar[str] = "secureValueTypeIdentityCard"
     RESULT_TYPE: ClassVar[str] = "SecureValueType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -40015,6 +41385,7 @@ class SecureValueTypeInternalPassport(TLConstructor):
     QUALNAME: ClassVar[str] = "secureValueTypeInternalPassport"
     RESULT_TYPE: ClassVar[str] = "SecureValueType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -40024,6 +41395,7 @@ class SecureValueTypeAddress(TLConstructor):
     QUALNAME: ClassVar[str] = "secureValueTypeAddress"
     RESULT_TYPE: ClassVar[str] = "SecureValueType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -40033,6 +41405,7 @@ class SecureValueTypeUtilityBill(TLConstructor):
     QUALNAME: ClassVar[str] = "secureValueTypeUtilityBill"
     RESULT_TYPE: ClassVar[str] = "SecureValueType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -40042,6 +41415,7 @@ class SecureValueTypeBankStatement(TLConstructor):
     QUALNAME: ClassVar[str] = "secureValueTypeBankStatement"
     RESULT_TYPE: ClassVar[str] = "SecureValueType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -40051,6 +41425,7 @@ class SecureValueTypeRentalAgreement(TLConstructor):
     QUALNAME: ClassVar[str] = "secureValueTypeRentalAgreement"
     RESULT_TYPE: ClassVar[str] = "SecureValueType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -40060,6 +41435,7 @@ class SecureValueTypePassportRegistration(TLConstructor):
     QUALNAME: ClassVar[str] = "secureValueTypePassportRegistration"
     RESULT_TYPE: ClassVar[str] = "SecureValueType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -40069,6 +41445,7 @@ class SecureValueTypeTemporaryRegistration(TLConstructor):
     QUALNAME: ClassVar[str] = "secureValueTypeTemporaryRegistration"
     RESULT_TYPE: ClassVar[str] = "SecureValueType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -40078,6 +41455,7 @@ class SecureValueTypePhone(TLConstructor):
     QUALNAME: ClassVar[str] = "secureValueTypePhone"
     RESULT_TYPE: ClassVar[str] = "SecureValueType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -40087,6 +41465,7 @@ class SecureValueTypeEmail(TLConstructor):
     QUALNAME: ClassVar[str] = "secureValueTypeEmail"
     RESULT_TYPE: ClassVar[str] = "SecureValueType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -40204,6 +41583,9 @@ class SecureValue(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -40309,6 +41691,9 @@ class InputSecureValue(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -40342,6 +41727,7 @@ class SecureValueHash(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -40399,6 +41785,7 @@ class SecureValueErrorData(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -40444,6 +41831,7 @@ class SecureValueErrorFrontSide(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -40489,6 +41877,7 @@ class SecureValueErrorReverseSide(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -40534,6 +41923,7 @@ class SecureValueErrorSelfie(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -40579,6 +41969,7 @@ class SecureValueErrorFile(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -40624,6 +42015,7 @@ class SecureValueErrorFiles(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -40669,6 +42061,7 @@ class SecureValueError(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -40714,6 +42107,7 @@ class SecureValueErrorTranslationFile(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -40759,6 +42153,7 @@ class SecureValueErrorTranslationFiles(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -40804,6 +42199,7 @@ class SecureCredentialsEncrypted(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -40873,6 +42269,9 @@ class AccountAuthorizationForm(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -40906,6 +42305,7 @@ class AccountSentEmailCode(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -40915,6 +42315,7 @@ class HelpDeepLinkInfoEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "help.deepLinkInfoEmpty"
     RESULT_TYPE: ClassVar[str] = "help.DeepLinkInfo"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -40959,6 +42360,9 @@ class HelpDeepLinkInfo(TLConstructor):
             is_vector=True,
             vector_item_type="MessageEntity",
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -41017,6 +42421,7 @@ class SavedPhoneContact(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -41038,6 +42443,7 @@ class AccountTakeout(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -41047,6 +42453,7 @@ class PasswordKdfAlgoUnknown(TLConstructor):
     QUALNAME: ClassVar[str] = "passwordKdfAlgoUnknown"
     RESULT_TYPE: ClassVar[str] = "PasswordKdfAlgo"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -41104,6 +42511,7 @@ class PasswordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000SHA256ModPow(TLConstr
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -41113,6 +42521,7 @@ class SecurePasswordKdfAlgoUnknown(TLConstructor):
     QUALNAME: ClassVar[str] = "securePasswordKdfAlgoUnknown"
     RESULT_TYPE: ClassVar[str] = "SecurePasswordKdfAlgo"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -41134,6 +42543,7 @@ class SecurePasswordKdfAlgoPBKDF2HMACSHA512iter100000(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -41155,6 +42565,7 @@ class SecurePasswordKdfAlgoSHA512(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -41200,6 +42611,7 @@ class SecureSecretSettings(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -41209,6 +42621,7 @@ class InputCheckPasswordEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "inputCheckPasswordEmpty"
     RESULT_TYPE: ClassVar[str] = "InputCheckPasswordSRP"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -41254,6 +42667,7 @@ class InputCheckPasswordSRP(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -41311,6 +42725,9 @@ class SecureRequiredType(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -41332,6 +42749,7 @@ class SecureRequiredTypeOneOf(TLConstructor):
             vector_item_type="SecureRequiredType",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -41341,6 +42759,7 @@ class HelpPassportConfigNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "help.passportConfigNotModified"
     RESULT_TYPE: ClassVar[str] = "help.PassportConfig"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -41374,6 +42793,7 @@ class HelpPassportConfig(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -41431,6 +42851,7 @@ class InputAppEvent(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -41464,6 +42885,7 @@ class JsonObjectValue(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -41473,6 +42895,7 @@ class JsonNull(TLConstructor):
     QUALNAME: ClassVar[str] = "jsonNull"
     RESULT_TYPE: ClassVar[str] = "JSONValue"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -41494,6 +42917,7 @@ class JsonBool(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -41515,6 +42939,7 @@ class JsonNumber(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -41536,6 +42961,7 @@ class JsonString(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -41557,6 +42983,7 @@ class JsonArray(TLConstructor):
             vector_item_type="JSONValue",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -41578,6 +43005,7 @@ class JsonObject(TLConstructor):
             vector_item_type="JSONObjectValue",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -41683,6 +43111,9 @@ class PageTableCell(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -41704,6 +43135,7 @@ class PageTableRow(TLConstructor):
             vector_item_type="PageTableCell",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -41737,6 +43169,7 @@ class PageCaption(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -41758,6 +43191,7 @@ class PageListItemText(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -41779,6 +43213,7 @@ class PageListItemBlocks(TLConstructor):
             vector_item_type="PageBlock",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -41812,6 +43247,7 @@ class PageListOrderedItemText(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -41845,6 +43281,7 @@ class PageListOrderedItemBlocks(TLConstructor):
             vector_item_type="PageBlock",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -41937,6 +43374,9 @@ class PageRelatedArticle(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -42043,6 +43483,9 @@ class Page(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -42064,6 +43507,7 @@ class HelpSupportName(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -42073,6 +43517,7 @@ class HelpUserInfoEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "help.userInfoEmpty"
     RESULT_TYPE: ClassVar[str] = "help.UserInfo"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -42130,6 +43575,7 @@ class HelpUserInfo(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -42163,6 +43609,7 @@ class PollAnswer(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -42280,6 +43727,9 @@ class Poll(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=1),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -42336,6 +43786,9 @@ class PollAnswerVoters(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -42418,6 +43871,9 @@ class PollResults(TLConstructor):
             vector_item_type="MessageEntity",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -42439,6 +43895,7 @@ class ChatOnlines(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -42460,6 +43917,7 @@ class StatsURL(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -42660,6 +44118,9 @@ class ChatAdminRights(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -42922,6 +44383,9 @@ class ChatBannedRights(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -42955,6 +44419,7 @@ class InputWallPaper(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -42976,6 +44441,7 @@ class InputWallPaperSlug(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -42997,6 +44463,7 @@ class InputWallPaperNoFile(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -43006,6 +44473,7 @@ class AccountWallPapersNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "account.wallPapersNotModified"
     RESULT_TYPE: ClassVar[str] = "account.WallPapers"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -43039,6 +44507,7 @@ class AccountWallPapers(TLConstructor):
             vector_item_type="WallPaper",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -43156,6 +44625,9 @@ class CodeSettings(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -43272,6 +44744,9 @@ class WallPaperSettings(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -43414,6 +44889,9 @@ class AutoDownloadSettings(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -43459,6 +44937,7 @@ class AccountAutoDownloadSettings(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -43492,6 +44971,7 @@ class EmojiKeyword(TLConstructor):
             vector_item_type="string",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -43525,6 +45005,7 @@ class EmojiKeywordDeleted(TLConstructor):
             vector_item_type="string",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -43582,6 +45063,7 @@ class EmojiKeywordsDifference(TLConstructor):
             vector_item_type="EmojiKeyword",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -43603,6 +45085,7 @@ class EmojiURL(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -43624,6 +45107,7 @@ class EmojiLanguage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -43705,6 +45189,9 @@ class Folder(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -43738,6 +45225,7 @@ class InputFolderPeer(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -43771,6 +45259,7 @@ class FolderPeer(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -43815,6 +45304,9 @@ class MessagesSearchCounter(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -43861,6 +45353,9 @@ class UrlAuthResultRequest(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -43882,6 +45377,7 @@ class UrlAuthResultAccepted(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -43891,6 +45387,7 @@ class UrlAuthResultDefault(TLConstructor):
     QUALNAME: ClassVar[str] = "urlAuthResultDefault"
     RESULT_TYPE: ClassVar[str] = "UrlAuthResult"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -43900,6 +45397,7 @@ class ChannelLocationEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "channelLocationEmpty"
     RESULT_TYPE: ClassVar[str] = "ChannelLocation"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -43933,6 +45431,7 @@ class ChannelLocation(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -43978,6 +45477,7 @@ class PeerLocated(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -43999,6 +45499,7 @@ class PeerSelfLocated(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -44044,6 +45545,7 @@ class RestrictionReason(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -44077,6 +45579,7 @@ class InputTheme(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -44098,6 +45601,7 @@ class InputThemeSlug(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -44239,6 +45743,9 @@ class Theme(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -44248,6 +45755,7 @@ class AccountThemesNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "account.themesNotModified"
     RESULT_TYPE: ClassVar[str] = "account.Themes"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -44281,6 +45789,7 @@ class AccountThemes(TLConstructor):
             vector_item_type="Theme",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -44314,6 +45823,7 @@ class AuthLoginToken(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -44347,6 +45857,7 @@ class AuthLoginTokenMigrateTo(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -44368,6 +45879,7 @@ class AuthLoginTokenSuccess(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -44400,6 +45912,9 @@ class AccountContentSettings(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -44446,6 +45961,7 @@ class MessagesInactiveChats(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -44455,6 +45971,7 @@ class BaseThemeClassic(TLConstructor):
     QUALNAME: ClassVar[str] = "baseThemeClassic"
     RESULT_TYPE: ClassVar[str] = "BaseTheme"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -44464,6 +45981,7 @@ class BaseThemeDay(TLConstructor):
     QUALNAME: ClassVar[str] = "baseThemeDay"
     RESULT_TYPE: ClassVar[str] = "BaseTheme"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -44473,6 +45991,7 @@ class BaseThemeNight(TLConstructor):
     QUALNAME: ClassVar[str] = "baseThemeNight"
     RESULT_TYPE: ClassVar[str] = "BaseTheme"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -44482,6 +46001,7 @@ class BaseThemeTinted(TLConstructor):
     QUALNAME: ClassVar[str] = "baseThemeTinted"
     RESULT_TYPE: ClassVar[str] = "BaseTheme"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -44491,6 +46011,7 @@ class BaseThemeArctic(TLConstructor):
     QUALNAME: ClassVar[str] = "baseThemeArctic"
     RESULT_TYPE: ClassVar[str] = "BaseTheme"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -44584,6 +46105,9 @@ class InputThemeSettings(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -44665,6 +46189,9 @@ class ThemeSettings(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -44697,6 +46224,9 @@ class WebPageAttributeTheme(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -44743,6 +46273,9 @@ class WebPageAttributeStory(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -44788,6 +46321,9 @@ class WebPageAttributeStickerSet(TLConstructor):
             vector_item_type="Document",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -44809,6 +46345,7 @@ class WebPageAttributeUniqueStarGift(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -44830,6 +46367,7 @@ class WebPageAttributeStarGiftCollection(TLConstructor):
             vector_item_type="Document",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -44899,6 +46437,9 @@ class MessagesVotesList(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -44932,6 +46473,7 @@ class BankCardOpenUrl(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -44965,6 +46507,7 @@ class PaymentsBankCardData(TLConstructor):
             vector_item_type="BankCardOpenUrl",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -45166,6 +46709,9 @@ class DialogFilter(TLConstructor):
             vector_item_type="InputPeer",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -45175,6 +46721,7 @@ class DialogFilterDefault(TLConstructor):
     QUALNAME: ClassVar[str] = "dialogFilterDefault"
     RESULT_TYPE: ClassVar[str] = "DialogFilter"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -45280,6 +46827,9 @@ class DialogFilterChatlist(TLConstructor):
             vector_item_type="InputPeer",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -45313,6 +46863,7 @@ class DialogFilterSuggested(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -45346,6 +46897,7 @@ class StatsDateRangeDays(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -45379,6 +46931,7 @@ class StatsAbsValueAndPrev(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -45412,6 +46965,7 @@ class StatsPercentValue(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -45433,6 +46987,7 @@ class StatsGraphAsync(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -45454,6 +47009,7 @@ class StatsGraphError(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -45486,6 +47042,9 @@ class StatsGraph(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -45760,6 +47319,7 @@ class StatsBroadcastStats(TLConstructor):
             vector_item_type="PostInteractionCounters",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -45781,6 +47341,7 @@ class HelpPromoDataEmpty(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -45910,6 +47471,9 @@ class HelpPromoData(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -45979,6 +47543,9 @@ class VideoSize(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -46012,6 +47579,7 @@ class VideoSizeEmojiMarkup(TLConstructor):
             vector_item_type="int",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -46057,6 +47625,7 @@ class VideoSizeStickerMarkup(TLConstructor):
             vector_item_type="int",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -46102,6 +47671,7 @@ class StatsGroupTopPoster(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -46159,6 +47729,7 @@ class StatsGroupTopAdmin(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -46192,6 +47763,7 @@ class StatsGroupTopInviter(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -46405,6 +47977,7 @@ class StatsMegagroupStats(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -46510,6 +48083,9 @@ class GlobalPrivacySettings(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -46554,6 +48130,9 @@ class HelpCountryCode(TLConstructor):
             is_vector=True,
             vector_item_type="string",
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -46624,6 +48203,9 @@ class HelpCountry(TLConstructor):
             vector_item_type="help.CountryCode",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -46633,6 +48215,7 @@ class HelpCountriesListNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "help.countriesListNotModified"
     RESULT_TYPE: ClassVar[str] = "help.CountriesList"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -46666,6 +48249,7 @@ class HelpCountriesList(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -46710,6 +48294,9 @@ class MessageViews(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -46756,6 +48343,7 @@ class MessagesMessageViews(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -46848,6 +48436,9 @@ class MessagesDiscussionMessage(TLConstructor):
             is_vector=True,
             vector_item_type="User",
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -47002,6 +48593,9 @@ class MessageReplyHeader(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -47035,6 +48629,7 @@ class MessageReplyStoryHeader(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -47128,6 +48723,9 @@ class MessageReplies(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -47161,6 +48759,7 @@ class PeerBlocked(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -47194,6 +48793,7 @@ class StatsMessageStats(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -47239,6 +48839,7 @@ class GroupCallDiscarded(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -47500,6 +49101,9 @@ class GroupCall(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -47533,6 +49137,7 @@ class InputGroupCall(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -47554,6 +49159,7 @@ class InputGroupCallSlug(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -47575,6 +49181,7 @@ class InputGroupCallInviteMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -47812,6 +49419,9 @@ class GroupCallParticipant(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -47881,6 +49491,7 @@ class PhoneGroupCall(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -47962,6 +49573,7 @@ class PhoneGroupParticipants(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -47971,6 +49583,7 @@ class InlineQueryPeerTypeSameBotPM(TLConstructor):
     QUALNAME: ClassVar[str] = "inlineQueryPeerTypeSameBotPM"
     RESULT_TYPE: ClassVar[str] = "InlineQueryPeerType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -47980,6 +49593,7 @@ class InlineQueryPeerTypePM(TLConstructor):
     QUALNAME: ClassVar[str] = "inlineQueryPeerTypePM"
     RESULT_TYPE: ClassVar[str] = "InlineQueryPeerType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -47989,6 +49603,7 @@ class InlineQueryPeerTypeChat(TLConstructor):
     QUALNAME: ClassVar[str] = "inlineQueryPeerTypeChat"
     RESULT_TYPE: ClassVar[str] = "InlineQueryPeerType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -47998,6 +49613,7 @@ class InlineQueryPeerTypeMegagroup(TLConstructor):
     QUALNAME: ClassVar[str] = "inlineQueryPeerTypeMegagroup"
     RESULT_TYPE: ClassVar[str] = "InlineQueryPeerType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48007,6 +49623,7 @@ class InlineQueryPeerTypeBroadcast(TLConstructor):
     QUALNAME: ClassVar[str] = "inlineQueryPeerTypeBroadcast"
     RESULT_TYPE: ClassVar[str] = "InlineQueryPeerType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48016,6 +49633,7 @@ class InlineQueryPeerTypeBotPM(TLConstructor):
     QUALNAME: ClassVar[str] = "inlineQueryPeerTypeBotPM"
     RESULT_TYPE: ClassVar[str] = "InlineQueryPeerType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48037,6 +49655,7 @@ class MessagesHistoryImport(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48081,6 +49700,9 @@ class MessagesHistoryImportParsed(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -48139,6 +49761,7 @@ class MessagesAffectedFoundMessages(TLConstructor):
             vector_item_type="int",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48220,6 +49843,9 @@ class ChatInviteImporter(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48265,6 +49891,7 @@ class MessagesExportedChatInvites(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48298,6 +49925,7 @@ class MessagesExportedChatInvite(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48343,6 +49971,7 @@ class MessagesExportedChatInviteReplaced(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48388,6 +50017,7 @@ class MessagesChatInviteImporters(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48433,6 +50063,7 @@ class ChatAdminWithInvites(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48466,6 +50097,7 @@ class MessagesChatAdminsWithInvites(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48487,6 +50119,7 @@ class MessagesCheckedHistoryImportPeer(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48532,6 +50165,7 @@ class PhoneJoinAsPeers(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48553,6 +50187,7 @@ class PhoneExportedGroupCallInvite(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48586,6 +50221,7 @@ class GroupCallParticipantVideoSourceGroup(TLConstructor):
             vector_item_type="int",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48643,6 +50279,9 @@ class GroupCallParticipantVideo(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48664,6 +50303,7 @@ class StickersSuggestedShortName(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48673,6 +50313,7 @@ class BotCommandScopeDefault(TLConstructor):
     QUALNAME: ClassVar[str] = "botCommandScopeDefault"
     RESULT_TYPE: ClassVar[str] = "BotCommandScope"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48682,6 +50323,7 @@ class BotCommandScopeUsers(TLConstructor):
     QUALNAME: ClassVar[str] = "botCommandScopeUsers"
     RESULT_TYPE: ClassVar[str] = "BotCommandScope"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48691,6 +50333,7 @@ class BotCommandScopeChats(TLConstructor):
     QUALNAME: ClassVar[str] = "botCommandScopeChats"
     RESULT_TYPE: ClassVar[str] = "BotCommandScope"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48700,6 +50343,7 @@ class BotCommandScopeChatAdmins(TLConstructor):
     QUALNAME: ClassVar[str] = "botCommandScopeChatAdmins"
     RESULT_TYPE: ClassVar[str] = "BotCommandScope"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48721,6 +50365,7 @@ class BotCommandScopePeer(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48742,6 +50387,7 @@ class BotCommandScopePeerAdmins(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48775,6 +50421,7 @@ class BotCommandScopePeerUser(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48796,6 +50443,7 @@ class AccountResetPasswordFailedWait(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48817,6 +50465,7 @@ class AccountResetPasswordRequestedWait(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48826,6 +50475,7 @@ class AccountResetPasswordOk(TLConstructor):
     QUALNAME: ClassVar[str] = "account.resetPasswordOk"
     RESULT_TYPE: ClassVar[str] = "account.ResetPasswordResult"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48847,6 +50497,7 @@ class ChatTheme(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48880,6 +50531,7 @@ class ChatThemeUniqueGift(TLConstructor):
             vector_item_type="ThemeSettings",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48889,6 +50541,7 @@ class AccountChatThemesNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "account.chatThemesNotModified"
     RESULT_TYPE: ClassVar[str] = "account.ChatThemes"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -48957,6 +50610,9 @@ class AccountChatThemes(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -49147,6 +50803,9 @@ class SponsoredMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -49228,6 +50887,9 @@ class MessagesSponsoredMessages(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -49237,6 +50899,7 @@ class MessagesSponsoredMessagesEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "messages.sponsoredMessagesEmpty"
     RESULT_TYPE: ClassVar[str] = "messages.SponsoredMessages"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -49294,6 +50957,7 @@ class SearchResultsCalendarPeriod(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -49411,6 +51075,9 @@ class MessagesSearchResultsCalendar(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -49456,6 +51123,7 @@ class SearchResultPosition(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -49489,6 +51157,7 @@ class MessagesSearchResultsPositions(TLConstructor):
             vector_item_type="SearchResultsPosition",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -49534,6 +51203,7 @@ class ChannelsSendAsPeers(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -49579,6 +51249,7 @@ class UsersUserFull(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -49624,6 +51295,7 @@ class MessagesPeerSettings(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -49644,6 +51316,9 @@ class AuthLoggedOut(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -49689,6 +51364,9 @@ class ReactionCount(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -49771,6 +51449,9 @@ class MessageReactions(TLConstructor):
             vector_item_type="MessageReactor",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -49839,6 +51520,9 @@ class MessagesMessageReactionsList(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -49981,6 +51665,9 @@ class AvailableReaction(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -49990,6 +51677,7 @@ class MessagesAvailableReactionsNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "messages.availableReactionsNotModified"
     RESULT_TYPE: ClassVar[str] = "messages.AvailableReactions"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50023,6 +51711,7 @@ class MessagesAvailableReactions(TLConstructor):
             vector_item_type="AvailableReaction",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50104,6 +51793,9 @@ class MessagePeerReaction(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50149,6 +51841,7 @@ class GroupCallStreamChannel(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50170,6 +51863,7 @@ class PhoneGroupCallStreamChannels(TLConstructor):
             vector_item_type="GroupCallStreamChannel",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50203,6 +51897,7 @@ class PhoneGroupCallStreamRtmpUrl(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50236,6 +51931,7 @@ class AttachMenuBotIconColor(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50280,6 +51976,9 @@ class AttachMenuBotIcon(TLConstructor):
             is_vector=True,
             vector_item_type="AttachMenuBotIconColor",
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -50410,6 +52109,9 @@ class AttachMenuBot(TLConstructor):
             vector_item_type="AttachMenuBotIcon",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50419,6 +52121,7 @@ class AttachMenuBotsNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "attachMenuBotsNotModified"
     RESULT_TYPE: ClassVar[str] = "AttachMenuBots"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50464,6 +52167,7 @@ class AttachMenuBots(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50497,6 +52201,7 @@ class AttachMenuBotsBot(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50554,6 +52259,9 @@ class WebViewResultUrl(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50575,6 +52283,9 @@ class WebViewMessageSent(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50584,6 +52295,7 @@ class BotMenuButtonDefault(TLConstructor):
     QUALNAME: ClassVar[str] = "botMenuButtonDefault"
     RESULT_TYPE: ClassVar[str] = "BotMenuButton"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50593,6 +52305,7 @@ class BotMenuButtonCommands(TLConstructor):
     QUALNAME: ClassVar[str] = "botMenuButtonCommands"
     RESULT_TYPE: ClassVar[str] = "BotMenuButton"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50626,6 +52339,7 @@ class BotMenuButton(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50635,6 +52349,7 @@ class AccountSavedRingtonesNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "account.savedRingtonesNotModified"
     RESULT_TYPE: ClassVar[str] = "account.SavedRingtones"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50668,6 +52383,7 @@ class AccountSavedRingtones(TLConstructor):
             vector_item_type="Document",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50677,6 +52393,7 @@ class NotificationSoundDefault(TLConstructor):
     QUALNAME: ClassVar[str] = "notificationSoundDefault"
     RESULT_TYPE: ClassVar[str] = "NotificationSound"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50686,6 +52403,7 @@ class NotificationSoundNone(TLConstructor):
     QUALNAME: ClassVar[str] = "notificationSoundNone"
     RESULT_TYPE: ClassVar[str] = "NotificationSound"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50719,6 +52437,7 @@ class NotificationSoundLocal(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50740,6 +52459,7 @@ class NotificationSoundRingtone(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50749,6 +52469,7 @@ class AccountSavedRingtone(TLConstructor):
     QUALNAME: ClassVar[str] = "account.savedRingtone"
     RESULT_TYPE: ClassVar[str] = "account.SavedRingtone"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50770,6 +52491,7 @@ class AccountSavedRingtoneConverted(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50779,6 +52501,7 @@ class AttachMenuPeerTypeSameBotPM(TLConstructor):
     QUALNAME: ClassVar[str] = "attachMenuPeerTypeSameBotPM"
     RESULT_TYPE: ClassVar[str] = "AttachMenuPeerType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50788,6 +52511,7 @@ class AttachMenuPeerTypeBotPM(TLConstructor):
     QUALNAME: ClassVar[str] = "attachMenuPeerTypeBotPM"
     RESULT_TYPE: ClassVar[str] = "AttachMenuPeerType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50797,6 +52521,7 @@ class AttachMenuPeerTypePM(TLConstructor):
     QUALNAME: ClassVar[str] = "attachMenuPeerTypePM"
     RESULT_TYPE: ClassVar[str] = "AttachMenuPeerType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50806,6 +52531,7 @@ class AttachMenuPeerTypeChat(TLConstructor):
     QUALNAME: ClassVar[str] = "attachMenuPeerTypeChat"
     RESULT_TYPE: ClassVar[str] = "AttachMenuPeerType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50815,6 +52541,7 @@ class AttachMenuPeerTypeBroadcast(TLConstructor):
     QUALNAME: ClassVar[str] = "attachMenuPeerTypeBroadcast"
     RESULT_TYPE: ClassVar[str] = "AttachMenuPeerType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50848,6 +52575,7 @@ class InputInvoiceMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50869,6 +52597,7 @@ class InputInvoiceSlug(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50902,6 +52631,7 @@ class InputInvoicePremiumGiftCode(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50923,6 +52653,7 @@ class InputInvoiceStars(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -50944,6 +52675,7 @@ class InputInvoiceChatInviteSubscription(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -51013,6 +52745,9 @@ class InputInvoiceStarGift(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -51045,6 +52780,9 @@ class InputInvoiceStarGiftUpgrade(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -51079,6 +52817,7 @@ class InputInvoiceStarGiftTransfer(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -51124,6 +52863,9 @@ class InputInvoicePremiumGiftStars(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -51157,6 +52899,7 @@ class InputInvoiceBusinessBotTransferStars(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -51202,6 +52945,9 @@ class InputInvoiceStarGiftResale(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -51235,6 +52981,7 @@ class InputInvoiceStarGiftPrepaidUpgrade(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -51256,6 +53003,7 @@ class PaymentsExportedInvoice(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -51324,6 +53072,9 @@ class MessagesTranscribedAudio(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -51406,6 +53157,7 @@ class HelpPremiumPromo(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -51438,6 +53190,9 @@ class InputStorePaymentPremiumSubscription(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -51484,6 +53239,7 @@ class InputStorePaymentGiftPremium(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -51552,6 +53308,9 @@ class InputStorePaymentPremiumGiftCode(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -51682,6 +53441,9 @@ class InputStorePaymentPremiumGiveaway(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -51738,6 +53500,9 @@ class InputStorePaymentStarsTopup(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -51796,6 +53561,7 @@ class InputStorePaymentStarsGift(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -51949,6 +53715,9 @@ class InputStorePaymentStarsGiveaway(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52018,6 +53787,9 @@ class InputStorePaymentAuthCode(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52051,6 +53823,7 @@ class PaymentFormMethod(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52060,6 +53833,7 @@ class EmojiStatusEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "emojiStatusEmpty"
     RESULT_TYPE: ClassVar[str] = "EmojiStatus"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52092,6 +53866,9 @@ class EmojiStatus(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -52222,6 +53999,9 @@ class EmojiStatusCollectible(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52255,6 +54035,9 @@ class InputEmojiStatusCollectible(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52264,6 +54047,7 @@ class AccountEmojiStatusesNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "account.emojiStatusesNotModified"
     RESULT_TYPE: ClassVar[str] = "account.EmojiStatuses"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52297,6 +54081,7 @@ class AccountEmojiStatuses(TLConstructor):
             vector_item_type="EmojiStatus",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52306,6 +54091,7 @@ class ReactionEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "reactionEmpty"
     RESULT_TYPE: ClassVar[str] = "Reaction"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52327,6 +54113,7 @@ class ReactionEmoji(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52348,6 +54135,7 @@ class ReactionCustomEmoji(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52357,6 +54145,7 @@ class ReactionPaid(TLConstructor):
     QUALNAME: ClassVar[str] = "reactionPaid"
     RESULT_TYPE: ClassVar[str] = "Reaction"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52366,6 +54155,7 @@ class ChatReactionsNone(TLConstructor):
     QUALNAME: ClassVar[str] = "chatReactionsNone"
     RESULT_TYPE: ClassVar[str] = "ChatReactions"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52386,6 +54176,9 @@ class ChatReactionsAll(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -52408,6 +54201,7 @@ class ChatReactionsSome(TLConstructor):
             vector_item_type="Reaction",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52417,6 +54211,7 @@ class MessagesReactionsNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "messages.reactionsNotModified"
     RESULT_TYPE: ClassVar[str] = "messages.Reactions"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52450,6 +54245,7 @@ class MessagesReactions(TLConstructor):
             vector_item_type="Reaction",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52483,6 +54279,7 @@ class EmailVerifyPurposeLoginSetup(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52492,6 +54289,7 @@ class EmailVerifyPurposeLoginChange(TLConstructor):
     QUALNAME: ClassVar[str] = "emailVerifyPurposeLoginChange"
     RESULT_TYPE: ClassVar[str] = "EmailVerifyPurpose"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52501,6 +54299,7 @@ class EmailVerifyPurposePassport(TLConstructor):
     QUALNAME: ClassVar[str] = "emailVerifyPurposePassport"
     RESULT_TYPE: ClassVar[str] = "EmailVerifyPurpose"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52522,6 +54321,7 @@ class EmailVerificationCode(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52543,6 +54343,7 @@ class EmailVerificationGoogle(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52564,6 +54365,7 @@ class EmailVerificationApple(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52585,6 +54387,7 @@ class AccountEmailVerified(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52618,6 +54421,7 @@ class AccountEmailVerifiedLogin(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52723,6 +54527,9 @@ class PremiumSubscriptionOption(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52755,6 +54562,9 @@ class SendAsPeer(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -52813,6 +54623,9 @@ class MessageExtendedMediaPreview(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52834,6 +54647,7 @@ class MessageExtendedMedia(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52867,6 +54681,7 @@ class StickerKeyword(TLConstructor):
             vector_item_type="string",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52912,6 +54727,9 @@ class Username(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52933,6 +54751,7 @@ class ForumTopicDeleted(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -53170,6 +54989,9 @@ class ForumTopic(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -53263,6 +55085,9 @@ class MessagesForumTopics(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -53284,6 +55109,7 @@ class DefaultHistoryTTL(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -53317,6 +55143,7 @@ class ExportedContactToken(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -53349,6 +55176,9 @@ class RequestPeerTypeUser(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -53431,6 +55261,9 @@ class RequestPeerTypeChat(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -53488,6 +55321,9 @@ class RequestPeerTypeBroadcast(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -53497,6 +55333,7 @@ class EmojiListNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "emojiListNotModified"
     RESULT_TYPE: ClassVar[str] = "EmojiList"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -53530,6 +55367,7 @@ class EmojiList(TLConstructor):
             vector_item_type="long",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -53575,6 +55413,7 @@ class EmojiGroup(TLConstructor):
             vector_item_type="string",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -53620,6 +55459,7 @@ class EmojiGroupGreeting(TLConstructor):
             vector_item_type="string",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -53653,6 +55493,7 @@ class EmojiGroupPremium(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -53662,6 +55503,7 @@ class MessagesEmojiGroupsNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "messages.emojiGroupsNotModified"
     RESULT_TYPE: ClassVar[str] = "messages.EmojiGroups"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -53695,6 +55537,7 @@ class MessagesEmojiGroups(TLConstructor):
             vector_item_type="EmojiGroup",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -53728,6 +55571,7 @@ class TextWithEntities(TLConstructor):
             vector_item_type="MessageEntity",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -53749,6 +55593,7 @@ class MessagesTranslateResult(TLConstructor):
             vector_item_type="TextWithEntities",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -53794,6 +55639,9 @@ class AutoSaveSettings(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -53827,6 +55675,7 @@ class AutoSaveException(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -53908,6 +55757,7 @@ class AccountAutoSaveSettings(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -53917,6 +55767,7 @@ class HelpAppConfigNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "help.appConfigNotModified"
     RESULT_TYPE: ClassVar[str] = "help.AppConfig"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -53950,6 +55801,7 @@ class HelpAppConfig(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -53983,6 +55835,7 @@ class InputBotAppID(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -54016,6 +55869,7 @@ class InputBotAppShortName(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -54025,6 +55879,7 @@ class BotAppNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "botAppNotModified"
     RESULT_TYPE: ClassVar[str] = "BotApp"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -54130,6 +55985,9 @@ class BotApp(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -54187,6 +56045,9 @@ class MessagesBotApp(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -54220,6 +56081,7 @@ class InlineBotWebView(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -54253,6 +56115,7 @@ class ReadParticipantDate(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -54274,6 +56137,7 @@ class InputChatlistDialogFilter(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -54319,6 +56183,9 @@ class ExportedChatlistInvite(TLConstructor):
             vector_item_type="Peer",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -54352,6 +56219,7 @@ class ChatlistsExportedChatlistInvite(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -54397,6 +56265,7 @@ class ChatlistsExportedInvites(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -54466,6 +56335,7 @@ class ChatlistsChatlistInviteAlready(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -54547,6 +56417,9 @@ class ChatlistsChatlistInvite(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -54592,6 +56465,7 @@ class ChatlistsChatlistUpdates(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -54637,6 +56511,7 @@ class BotsBotInfo(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -54682,6 +56557,7 @@ class MessagePeerVote(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -54715,6 +56591,7 @@ class MessagePeerVoteInputOption(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -54760,6 +56637,7 @@ class MessagePeerVoteMultiple(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -54841,6 +56719,9 @@ class StoryViews(TLConstructor):
             vector_item_type="long",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -54862,6 +56743,7 @@ class StoryItemDeleted(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -54918,6 +56800,9 @@ class StoryItemSkipped(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -55192,6 +57077,9 @@ class StoryItem(TLConstructor):
             vector_item_type="int",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -55224,6 +57112,9 @@ class StoriesAllStoriesNotModified(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -55318,6 +57209,9 @@ class StoriesAllStories(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -55386,6 +57280,9 @@ class StoriesStories(TLConstructor):
             is_vector=True,
             vector_item_type="User",
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -55456,6 +57353,9 @@ class StoryView(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -55500,6 +57400,9 @@ class StoryViewPublicForward(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -55557,6 +57460,9 @@ class StoryViewPublicRepost(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -55663,6 +57569,9 @@ class StoriesStoryViewsList(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -55696,6 +57605,7 @@ class StoriesStoryViews(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -55801,6 +57711,9 @@ class InputReplyToMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -55834,6 +57747,7 @@ class InputReplyToStory(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -55855,6 +57769,7 @@ class InputReplyToMonoForum(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -55876,6 +57791,7 @@ class ExportedStoryLink(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -55908,6 +57824,9 @@ class StoriesStealthMode(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -55989,6 +57908,9 @@ class MediaAreaCoordinates(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -56083,6 +58005,7 @@ class MediaAreaVenue(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -56128,6 +58051,7 @@ class InputMediaAreaVenue(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -56172,6 +58096,9 @@ class MediaAreaGeoPoint(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -56230,6 +58157,9 @@ class MediaAreaSuggestedReaction(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -56275,6 +58205,7 @@ class MediaAreaChannelPost(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -56320,6 +58251,7 @@ class InputMediaAreaChannelPost(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -56353,6 +58285,7 @@ class MediaAreaUrl(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -56410,6 +58343,7 @@ class MediaAreaWeather(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -56443,6 +58377,7 @@ class MediaAreaStarGift(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -56487,6 +58422,9 @@ class PeerStories(TLConstructor):
             is_vector=True,
             vector_item_type="StoryItem",
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -56533,6 +58471,7 @@ class StoriesPeerStories(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -56578,6 +58517,7 @@ class MessagesWebPage(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -56658,6 +58598,9 @@ class PremiumGiftCodeOption(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -56776,6 +58719,9 @@ class PaymentsCheckedGiftCode(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -56856,6 +58802,9 @@ class PaymentsGiveawayInfo(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -56962,6 +58911,9 @@ class PaymentsGiveawayInfoResults(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -57019,6 +58971,7 @@ class PrepaidGiveaway(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -57088,6 +59041,7 @@ class PrepaidStarsGiveaway(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -57229,6 +59183,9 @@ class Boost(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -57285,6 +59242,9 @@ class PremiumBoostsList(TLConstructor):
             is_vector=True,
             vector_item_type="User",
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -57355,6 +59315,9 @@ class MyBoost(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -57400,6 +59363,7 @@ class PremiumMyBoosts(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -57529,6 +59493,9 @@ class PremiumBoostsStatus(TLConstructor):
             vector_item_type="int",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -57585,6 +59552,9 @@ class StoryFwdHeader(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -57643,6 +59613,7 @@ class PostInteractionCountersMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -57700,6 +59671,7 @@ class PostInteractionCountersStory(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -57733,6 +59705,7 @@ class StatsStoryStats(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -57754,6 +59727,7 @@ class PublicForwardMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -57787,6 +59761,7 @@ class PublicForwardStory(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -57856,6 +59831,9 @@ class StatsPublicForwards(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -57889,6 +59867,9 @@ class PeerColor(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -57910,6 +59891,7 @@ class HelpPeerColorSet(TLConstructor):
             vector_item_type="int",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -57955,6 +59937,7 @@ class HelpPeerColorProfileSet(TLConstructor):
             vector_item_type="int",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -58036,6 +60019,9 @@ class HelpPeerColorOption(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -58045,6 +60031,7 @@ class HelpPeerColorsNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "help.peerColorsNotModified"
     RESULT_TYPE: ClassVar[str] = "help.PeerColors"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -58078,6 +60065,7 @@ class HelpPeerColors(TLConstructor):
             vector_item_type="help.PeerColorOption",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -58123,6 +60111,7 @@ class StoryReaction(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -58144,6 +60133,7 @@ class StoryReactionPublicForward(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -58177,6 +60167,7 @@ class StoryReactionPublicRepost(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -58246,6 +60237,9 @@ class StoriesStoryReactionsList(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -58290,6 +60284,9 @@ class SavedDialog(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -58408,6 +60405,9 @@ class MonoForumDialog(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -58465,6 +60465,7 @@ class MessagesSavedDialogs(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -58534,6 +60535,7 @@ class MessagesSavedDialogsSlice(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -58555,6 +60557,7 @@ class MessagesSavedDialogsNotModified(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -58600,6 +60603,9 @@ class SavedReactionTag(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -58609,6 +60615,7 @@ class MessagesSavedReactionTagsNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "messages.savedReactionTagsNotModified"
     RESULT_TYPE: ClassVar[str] = "messages.SavedReactionTags"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -58642,6 +60649,7 @@ class MessagesSavedReactionTags(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -58663,6 +60671,7 @@ class OutboxReadDate(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -58696,6 +60705,7 @@ class SmsjobsEligibleToJoin(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -58801,6 +60811,9 @@ class SmsjobsStatus(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -58846,6 +60859,7 @@ class SmsJob(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -58879,6 +60893,7 @@ class BusinessWeeklyOpen(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -58924,6 +60939,9 @@ class BusinessWorkHours(TLConstructor):
             vector_item_type="BusinessWeeklyOpen",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -58956,6 +60974,9 @@ class BusinessLocation(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -59038,6 +61059,9 @@ class InputBusinessRecipients(TLConstructor):
             vector_item_type="InputUser",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -59119,6 +61143,9 @@ class BusinessRecipients(TLConstructor):
             vector_item_type="long",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -59128,6 +61155,7 @@ class BusinessAwayMessageScheduleAlways(TLConstructor):
     QUALNAME: ClassVar[str] = "businessAwayMessageScheduleAlways"
     RESULT_TYPE: ClassVar[str] = "BusinessAwayMessageSchedule"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -59137,6 +61165,7 @@ class BusinessAwayMessageScheduleOutsideWorkHours(TLConstructor):
     QUALNAME: ClassVar[str] = "businessAwayMessageScheduleOutsideWorkHours"
     RESULT_TYPE: ClassVar[str] = "BusinessAwayMessageSchedule"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -59170,6 +61199,7 @@ class BusinessAwayMessageScheduleCustom(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -59215,6 +61245,7 @@ class InputBusinessGreetingMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -59260,6 +61291,7 @@ class BusinessGreetingMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -59316,6 +61348,9 @@ class InputBusinessAwayMessage(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -59374,6 +61409,9 @@ class BusinessAwayMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -59419,6 +61457,7 @@ class Timezone(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -59428,6 +61467,7 @@ class HelpTimezonesListNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "help.timezonesListNotModified"
     RESULT_TYPE: ClassVar[str] = "help.TimezonesList"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -59461,6 +61501,7 @@ class HelpTimezonesList(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -59518,6 +61559,7 @@ class QuickReply(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -59539,6 +61581,7 @@ class InputQuickReplyShortcut(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -59560,6 +61603,7 @@ class InputQuickReplyShortcutId(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -59617,6 +61661,7 @@ class MessagesQuickReplies(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -59626,6 +61671,7 @@ class MessagesQuickRepliesNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "messages.quickRepliesNotModified"
     RESULT_TYPE: ClassVar[str] = "messages.QuickReplies"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -59671,6 +61717,9 @@ class ConnectedBot(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -59704,6 +61753,7 @@ class AccountConnectedBots(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -59736,6 +61786,9 @@ class MessagesDialogFilters(TLConstructor):
             is_vector=True,
             vector_item_type="DialogFilter",
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -59781,6 +61834,9 @@ class Birthday(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -59863,6 +61919,9 @@ class BotBusinessConnection(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -59907,6 +61966,9 @@ class InputBusinessIntro(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -59953,6 +62015,9 @@ class BusinessIntro(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -59986,6 +62051,7 @@ class MessagesMyStickers(TLConstructor):
             vector_item_type="StickerSetCovered",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -60007,6 +62073,7 @@ class InputCollectibleUsername(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -60028,6 +62095,7 @@ class InputCollectiblePhone(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -60109,6 +62177,7 @@ class FragmentCollectibleInfo(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -60201,6 +62270,9 @@ class InputBusinessBotRecipients(TLConstructor):
             is_vector=True,
             vector_item_type="InputUser",
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -60295,6 +62367,9 @@ class BusinessBotRecipients(TLConstructor):
             vector_item_type="long",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -60328,6 +62403,7 @@ class ContactBirthday(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -60361,6 +62437,7 @@ class ContactsContactBirthdays(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -60406,6 +62483,9 @@ class MissingInvitee(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -60439,6 +62519,7 @@ class MessagesInvitedUsers(TLConstructor):
             vector_item_type="MissingInvitee",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -60483,6 +62564,9 @@ class InputBusinessChatLink(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -60553,6 +62637,9 @@ class BusinessChatLink(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -60598,6 +62685,7 @@ class AccountBusinessChatLinks(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -60666,6 +62754,9 @@ class AccountResolvedBusinessChatLinks(TLConstructor):
             is_vector=True,
             vector_item_type="User",
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -60736,6 +62827,9 @@ class RequestedPeerUser(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -60780,6 +62874,9 @@ class RequestedPeerChat(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -60838,6 +62935,9 @@ class RequestedPeerChannel(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -60871,6 +62971,7 @@ class SponsoredMessageReportOption(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -60904,6 +63005,7 @@ class ChannelsSponsoredMessageReportResultChooseOption(TLConstructor):
             vector_item_type="SponsoredMessageReportOption",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -60913,6 +63015,7 @@ class ChannelsSponsoredMessageReportResultAdsHidden(TLConstructor):
     QUALNAME: ClassVar[str] = "channels.sponsoredMessageReportResultAdsHidden"
     RESULT_TYPE: ClassVar[str] = "channels.SponsoredMessageReportResult"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -60922,6 +63025,7 @@ class ChannelsSponsoredMessageReportResultReported(TLConstructor):
     QUALNAME: ClassVar[str] = "channels.sponsoredMessageReportResultReported"
     RESULT_TYPE: ClassVar[str] = "channels.SponsoredMessageReportResult"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -60931,6 +63035,7 @@ class ReactionNotificationsFromContacts(TLConstructor):
     QUALNAME: ClassVar[str] = "reactionNotificationsFromContacts"
     RESULT_TYPE: ClassVar[str] = "ReactionNotificationsFrom"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -60940,6 +63045,7 @@ class ReactionNotificationsFromAll(TLConstructor):
     QUALNAME: ClassVar[str] = "reactionNotificationsFromAll"
     RESULT_TYPE: ClassVar[str] = "ReactionNotificationsFrom"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -60996,6 +63102,9 @@ class ReactionsNotifySettings(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -61078,6 +63187,9 @@ class AvailableEffect(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -61087,6 +63199,7 @@ class MessagesAvailableEffectsNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "messages.availableEffectsNotModified"
     RESULT_TYPE: ClassVar[str] = "messages.AvailableEffects"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -61132,6 +63245,7 @@ class MessagesAvailableEffects(TLConstructor):
             vector_item_type="Document",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -61189,6 +63303,9 @@ class FactCheck(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -61198,6 +63315,7 @@ class StarsTransactionPeerUnsupported(TLConstructor):
     QUALNAME: ClassVar[str] = "starsTransactionPeerUnsupported"
     RESULT_TYPE: ClassVar[str] = "StarsTransactionPeer"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -61207,6 +63325,7 @@ class StarsTransactionPeerAppStore(TLConstructor):
     QUALNAME: ClassVar[str] = "starsTransactionPeerAppStore"
     RESULT_TYPE: ClassVar[str] = "StarsTransactionPeer"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -61216,6 +63335,7 @@ class StarsTransactionPeerPlayMarket(TLConstructor):
     QUALNAME: ClassVar[str] = "starsTransactionPeerPlayMarket"
     RESULT_TYPE: ClassVar[str] = "StarsTransactionPeer"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -61225,6 +63345,7 @@ class StarsTransactionPeerPremiumBot(TLConstructor):
     QUALNAME: ClassVar[str] = "starsTransactionPeerPremiumBot"
     RESULT_TYPE: ClassVar[str] = "StarsTransactionPeer"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -61234,6 +63355,7 @@ class StarsTransactionPeerFragment(TLConstructor):
     QUALNAME: ClassVar[str] = "starsTransactionPeerFragment"
     RESULT_TYPE: ClassVar[str] = "StarsTransactionPeer"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -61255,6 +63377,7 @@ class StarsTransactionPeer(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -61264,6 +63387,7 @@ class StarsTransactionPeerAds(TLConstructor):
     QUALNAME: ClassVar[str] = "starsTransactionPeerAds"
     RESULT_TYPE: ClassVar[str] = "StarsTransactionPeer"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -61273,6 +63397,7 @@ class StarsTransactionPeerAPI(TLConstructor):
     QUALNAME: ClassVar[str] = "starsTransactionPeerAPI"
     RESULT_TYPE: ClassVar[str] = "StarsTransactionPeer"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -61341,6 +63466,9 @@ class StarsTopupOption(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -61747,6 +63875,9 @@ class StarsTransaction(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -61852,6 +63983,9 @@ class PaymentsStarsStatus(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -61885,6 +64019,7 @@ class FoundStory(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -61954,6 +64089,9 @@ class StoriesFoundStories(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -62010,6 +64148,9 @@ class GeoPointAddress(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -62080,6 +64221,9 @@ class StarsRevenueStatus(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -62137,6 +64281,9 @@ class PaymentsStarsRevenueStats(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -62158,6 +64305,7 @@ class PaymentsStarsRevenueWithdrawalUrl(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -62179,6 +64327,7 @@ class PaymentsStarsRevenueAdsAccountUrl(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -62211,6 +64360,9 @@ class InputStarsTransaction(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -62281,6 +64433,9 @@ class StarsGiftOption(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -62313,6 +64468,9 @@ class BotsPopularAppBots(TLConstructor):
             is_vector=True,
             vector_item_type="User",
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -62347,6 +64505,7 @@ class BotPreviewMedia(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -62380,6 +64539,7 @@ class BotsPreviewInfo(TLConstructor):
             vector_item_type="string",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -62413,6 +64573,7 @@ class StarsSubscriptionPricing(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -62566,6 +64727,9 @@ class StarsSubscription(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -62634,6 +64798,9 @@ class MessageReactor(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -62740,6 +64907,9 @@ class StarsGiveawayOption(TLConstructor):
             vector_item_type="StarsGiveawayWinnersOption",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -62784,6 +64954,9 @@ class StarsGiveawayWinnersOption(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -63046,6 +65219,9 @@ class StarGift(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -63295,6 +65471,9 @@ class StarGiftUnique(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -63304,6 +65483,7 @@ class PaymentsStarGiftsNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "payments.starGiftsNotModified"
     RESULT_TYPE: ClassVar[str] = "payments.StarGifts"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -63361,6 +65541,7 @@ class PaymentsStarGifts(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -63394,6 +65575,7 @@ class MessageReportOption(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -63427,6 +65609,7 @@ class ReportResultChooseOption(TLConstructor):
             vector_item_type="MessageReportOption",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -63460,6 +65643,9 @@ class ReportResultAddComment(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -63469,6 +65655,7 @@ class ReportResultReported(TLConstructor):
     QUALNAME: ClassVar[str] = "reportResultReported"
     RESULT_TYPE: ClassVar[str] = "ReportResult"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -63502,6 +65689,7 @@ class MessagesBotPreparedInlineMessage(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -63571,6 +65759,7 @@ class MessagesPreparedInlineMessage(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -63640,6 +65829,9 @@ class BotAppSettings(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -63708,6 +65900,9 @@ class StarRefProgram(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -63814,6 +66009,9 @@ class ConnectedBotStarRef(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -63859,6 +66057,7 @@ class PaymentsConnectedStarRefBots(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -63916,6 +66115,9 @@ class PaymentsSuggestedStarRefBots(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -63949,6 +66151,7 @@ class StarsAmount(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -63970,6 +66173,7 @@ class StarsTonAmount(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -63990,6 +66194,9 @@ class MessagesFoundStickersNotModified(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -64035,6 +66242,9 @@ class MessagesFoundStickers(TLConstructor):
             is_vector=True,
             vector_item_type="Document",
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -64093,6 +66303,9 @@ class BotVerifierSettings(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -64138,6 +66351,7 @@ class BotVerification(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -64183,6 +66397,7 @@ class StarGiftAttributeModel(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -64228,6 +66443,7 @@ class StarGiftAttributePattern(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -64321,6 +66537,7 @@ class StarGiftAttributeBackdrop(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -64378,6 +66595,9 @@ class StarGiftAttributeOriginalDetails(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -64399,6 +66619,7 @@ class PaymentsStarGiftUpgradePreview(TLConstructor):
             vector_item_type="StarGiftAttribute",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -64420,6 +66641,7 @@ class UsersUsers(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -64453,6 +66675,7 @@ class UsersUsersSlice(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -64498,6 +66721,7 @@ class PaymentsUniqueStarGift(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -64543,6 +66767,7 @@ class MessagesWebPagePreview(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -64792,6 +67017,9 @@ class SavedStarGift(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -64873,6 +67101,9 @@ class PaymentsSavedStarGifts(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -64894,6 +67125,7 @@ class InputSavedStarGiftUser(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -64927,6 +67159,7 @@ class InputSavedStarGiftChat(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -64948,6 +67181,7 @@ class InputSavedStarGiftSlug(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -64969,6 +67203,7 @@ class PaymentsStarGiftWithdrawalUrl(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -64978,6 +67213,7 @@ class PaidReactionPrivacyDefault(TLConstructor):
     QUALNAME: ClassVar[str] = "paidReactionPrivacyDefault"
     RESULT_TYPE: ClassVar[str] = "PaidReactionPrivacy"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -64987,6 +67223,7 @@ class PaidReactionPrivacyAnonymous(TLConstructor):
     QUALNAME: ClassVar[str] = "paidReactionPrivacyAnonymous"
     RESULT_TYPE: ClassVar[str] = "PaidReactionPrivacy"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -65008,6 +67245,7 @@ class PaidReactionPrivacyPeer(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -65029,6 +67267,7 @@ class AccountPaidMessagesRevenue(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -65038,6 +67277,7 @@ class RequirementToContactEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "requirementToContactEmpty"
     RESULT_TYPE: ClassVar[str] = "RequirementToContact"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -65047,6 +67287,7 @@ class RequirementToContactPremium(TLConstructor):
     QUALNAME: ClassVar[str] = "requirementToContactPremium"
     RESULT_TYPE: ClassVar[str] = "RequirementToContact"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -65068,6 +67309,7 @@ class RequirementToContactPaidMessages(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -65245,6 +67487,9 @@ class BusinessBotRights(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -65301,6 +67546,9 @@ class DisallowedGiftsSettings(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -65359,6 +67607,9 @@ class SponsoredPeer(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -65368,6 +67619,7 @@ class ContactsSponsoredPeersEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "contacts.sponsoredPeersEmpty"
     RESULT_TYPE: ClassVar[str] = "contacts.SponsoredPeers"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -65413,6 +67665,7 @@ class ContactsSponsoredPeers(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -65434,6 +67687,7 @@ class StarGiftAttributeIdModel(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -65455,6 +67709,7 @@ class StarGiftAttributeIdPattern(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -65476,6 +67731,7 @@ class StarGiftAttributeIdBackdrop(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -65509,6 +67765,7 @@ class StarGiftAttributeCounter(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -65614,6 +67871,9 @@ class PaymentsResaleStarGifts(TLConstructor):
             vector_item_type="User",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -65635,6 +67895,7 @@ class StoriesCanSendStoryCount(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -65692,6 +67953,7 @@ class PendingSuggestion(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -65725,6 +67987,7 @@ class TodoItem(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -65782,6 +68045,9 @@ class TodoList(TLConstructor):
             vector_item_type="TodoItem",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -65827,6 +68093,7 @@ class TodoCompletion(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -65884,6 +68151,9 @@ class SuggestedPost(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -65940,6 +68210,9 @@ class StarsRating(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -66010,6 +68283,9 @@ class StarGiftCollection(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -66019,6 +68295,7 @@ class PaymentsStarGiftCollectionsNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "payments.starGiftCollectionsNotModified"
     RESULT_TYPE: ClassVar[str] = "payments.StarGiftCollections"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -66040,6 +68317,7 @@ class PaymentsStarGiftCollections(TLConstructor):
             vector_item_type="StarGiftCollection",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -66097,6 +68375,9 @@ class StoryAlbum(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -66106,6 +68387,7 @@ class StoriesAlbumsNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "stories.albumsNotModified"
     RESULT_TYPE: ClassVar[str] = "stories.Albums"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -66139,6 +68421,7 @@ class StoriesAlbums(TLConstructor):
             vector_item_type="StoryAlbum",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -66207,6 +68490,9 @@ class SearchPostsFlood(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
     )
 
 
@@ -66385,6 +68671,9 @@ class PaymentsUniqueStarGiftValueInfo(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -66394,6 +68683,7 @@ class ProfileTabPosts(TLConstructor):
     QUALNAME: ClassVar[str] = "profileTabPosts"
     RESULT_TYPE: ClassVar[str] = "ProfileTab"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -66403,6 +68693,7 @@ class ProfileTabGifts(TLConstructor):
     QUALNAME: ClassVar[str] = "profileTabGifts"
     RESULT_TYPE: ClassVar[str] = "ProfileTab"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -66412,6 +68703,7 @@ class ProfileTabMedia(TLConstructor):
     QUALNAME: ClassVar[str] = "profileTabMedia"
     RESULT_TYPE: ClassVar[str] = "ProfileTab"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -66421,6 +68713,7 @@ class ProfileTabFiles(TLConstructor):
     QUALNAME: ClassVar[str] = "profileTabFiles"
     RESULT_TYPE: ClassVar[str] = "ProfileTab"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -66430,6 +68723,7 @@ class ProfileTabMusic(TLConstructor):
     QUALNAME: ClassVar[str] = "profileTabMusic"
     RESULT_TYPE: ClassVar[str] = "ProfileTab"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -66439,6 +68733,7 @@ class ProfileTabVoice(TLConstructor):
     QUALNAME: ClassVar[str] = "profileTabVoice"
     RESULT_TYPE: ClassVar[str] = "ProfileTab"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -66448,6 +68743,7 @@ class ProfileTabLinks(TLConstructor):
     QUALNAME: ClassVar[str] = "profileTabLinks"
     RESULT_TYPE: ClassVar[str] = "ProfileTab"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -66457,6 +68753,7 @@ class ProfileTabGifs(TLConstructor):
     QUALNAME: ClassVar[str] = "profileTabGifs"
     RESULT_TYPE: ClassVar[str] = "ProfileTab"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -66478,6 +68775,7 @@ class UsersSavedMusicNotModified(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -66511,6 +68809,7 @@ class UsersSavedMusic(TLConstructor):
             vector_item_type="Document",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -66520,6 +68819,7 @@ class AccountSavedMusicIdsNotModified(TLConstructor):
     QUALNAME: ClassVar[str] = "account.savedMusicIdsNotModified"
     RESULT_TYPE: ClassVar[str] = "account.SavedMusicIds"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -66541,6 +68841,7 @@ class AccountSavedMusicIds(TLConstructor):
             vector_item_type="long",
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -66550,6 +68851,7 @@ class PaymentsCheckCanSendGiftResultOk(TLConstructor):
     QUALNAME: ClassVar[str] = "payments.checkCanSendGiftResultOk"
     RESULT_TYPE: ClassVar[str] = "payments.CheckCanSendGiftResult"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -66571,6 +68873,7 @@ class PaymentsCheckCanSendGiftResultFail(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -66580,6 +68883,7 @@ class InputChatThemeEmpty(TLConstructor):
     QUALNAME: ClassVar[str] = "inputChatThemeEmpty"
     RESULT_TYPE: ClassVar[str] = "InputChatTheme"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -66601,6 +68905,7 @@ class InputChatTheme(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -66622,6 +68927,7 @@ class InputChatThemeUniqueGift(TLConstructor):
             vector_item_type=None,
         ),
     )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
 
 class account:
