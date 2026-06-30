@@ -30,9 +30,9 @@ from miniproto.invoke import (
 )
 from miniproto.session.storage import InMemorySessionStorage, SessionStorage
 from miniproto.types import NewMessage, Peer, Update
+from miniproto.updates.manager import UpdateHandler, UpdateManager
 
 UpdateT = TypeVar("UpdateT", bound=Update)
-UpdateHandler = Callable[[UpdateT], Awaitable[None] | None]
 
 
 class Client:
@@ -46,8 +46,7 @@ class Client:
         self._storage: SessionStorage = config.session_storage or InMemorySessionStorage()
         self._connected = False
         self._connect_lock = asyncio.Lock()
-        self._updates: asyncio.Queue[Update] = asyncio.Queue(maxsize=config.update_queue_size)
-        self._handlers: dict[type[Update], list[UpdateHandler[Any]]] = {}
+        self._update_manager = UpdateManager(config, self._storage, self.invoke)
         self._sender: RawSender | None = None
         self._sender_factory: SenderFactory | None = None
 
@@ -67,12 +66,20 @@ class Client:
     async def connect(self) -> None:
         async with self._connect_lock:
             self._connected = True
+            await self._update_manager.start()
 
     async def disconnect(self) -> None:
         async with self._connect_lock:
             self._connected = False
+            update_error: BaseException | None = None
+            try:
+                await self._update_manager.stop()
+            except BaseException as exc:
+                update_error = exc
             await self._drop_sender()
             await self._storage.close()
+            if update_error is not None:
+                raise update_error
 
     async def is_authorized(self) -> bool:
         state = await self._storage.load()
@@ -184,8 +191,8 @@ class Client:
                 raise typed from exc
 
     async def iter_updates(self) -> AsyncIterator[Update]:
-        while True:
-            yield await self._updates.get()
+        async for update in self._update_manager.iter_updates():
+            yield update
 
     @overload
     def on(
@@ -200,25 +207,21 @@ class Client:
     def on(
         self, update_type: type[UpdateT], handler: UpdateHandler[UpdateT] | None = None
     ) -> UpdateHandler[UpdateT] | Callable[[UpdateHandler[UpdateT]], UpdateHandler[UpdateT]]:
-        def register(candidate: UpdateHandler[UpdateT]) -> UpdateHandler[UpdateT]:
-            self._handlers.setdefault(update_type, []).append(candidate)
-            return candidate
-
         if handler is None:
-            return register
-        return register(handler)
+            return self._update_manager.on(update_type)
+        return self._update_manager.on(update_type, handler)
 
     async def _emit_update(self, update: Update) -> None:
-        self._updates.put_nowait(update)
-        for update_type, handlers in self._handlers.items():
-            if isinstance(update, update_type):
-                for handler in handlers:
-                    result = handler(update)
-                    if result is not None:
-                        await result
+        await self._update_manager.emit_update(update)
 
     async def _emit_new_message(self, update: NewMessage) -> None:
         await self._emit_update(update)
+
+    async def _handle_raw_update(self, raw_update: object) -> None:
+        await self._update_manager.handle_raw_update(raw_update)
+
+    async def _feed_raw_update(self, raw_update: object) -> None:
+        await self._update_manager.feed_raw_update(raw_update)
 
     async def _ensure_sender(self) -> RawSender:
         if self._sender is None:

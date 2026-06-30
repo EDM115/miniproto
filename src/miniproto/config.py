@@ -6,6 +6,7 @@ from typing import Literal
 from miniproto.session.storage import SessionStorage
 
 TransportMode = Literal["tcp_abridged", "tcp_intermediate", "tcp_padded_intermediate"]
+UpdateQueueOverflowPolicy = Literal["raise", "drop_oldest", "drop_newest"]
 
 
 @dataclass(slots=True, frozen=True)
@@ -53,6 +54,8 @@ class ClientConfig:
     transport: TransportConfig = field(default_factory=TransportConfig)
     device: DeviceInfo = field(default_factory=DeviceInfo)
     update_queue_size: int = 1000
+    update_queue_overflow: UpdateQueueOverflowPolicy = "raise"
+    update_duplicate_window: int = 2048
     dc_id: int = 2
     test_mode: bool = False
     request_timeout: float = 30.0
@@ -66,6 +69,10 @@ class ClientConfig:
             raise ValueError("api_hash must not be empty")
         if self.update_queue_size <= 0:
             raise ValueError("update_queue_size must be positive")
+        if self.update_queue_overflow not in {"raise", "drop_oldest", "drop_newest"}:
+            raise ValueError("update_queue_overflow must be raise, drop_oldest, or drop_newest")
+        if self.update_duplicate_window <= 0:
+            raise ValueError("update_duplicate_window must be positive")
         if self.dc_id <= 0:
             raise ValueError("dc_id must be a positive integer")
         if self.request_timeout <= 0:

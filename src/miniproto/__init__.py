@@ -3,7 +3,7 @@
 from miniproto import event_loop
 from miniproto.auth import AuthKeyExchange, AuthKeyExchangeResult, AuthService
 from miniproto.client import Client
-from miniproto.config import ClientConfig, DeviceInfo, TransportConfig
+from miniproto.config import ClientConfig, DeviceInfo, TransportConfig, UpdateQueueOverflowPolicy
 from miniproto.errors import (
     AuthError,
     AuthKeyNotFound,
@@ -89,6 +89,7 @@ __all__ = [
     "TransportFlood",
     "Unauthorized",
     "Update",
+    "UpdateQueueOverflowPolicy",
     "UpdateState",
     "UserIdentity",
     "event_loop",
