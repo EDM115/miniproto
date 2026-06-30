@@ -8,9 +8,11 @@ from miniproto.tl import (
     decode_bytes,
     decode_constructor_id,
     decode_int,
+    decode_string,
     encode_bytes,
     encode_constructor_id,
     encode_int,
+    encode_string,
     encode_vector,
 )
 
@@ -24,6 +26,7 @@ _BAD_MSG_NOTIFICATION_ID = 0xA7EFF811
 _BAD_SERVER_SALT_ID = 0xEDAB447B
 _NEW_SESSION_CREATED_ID = 0x9EC20908
 _RPC_RESULT_ID = 0xF35C6D01
+_RPC_ERROR_ID = 0x2144CA19
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,6 +97,12 @@ class NewSessionCreated:
     first_msg_id: int
     unique_id: int
     server_salt: int
+
+
+@dataclass(frozen=True, slots=True)
+class RpcErrorBody:
+    error_code: int
+    error_message: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -229,6 +238,12 @@ def encode_message_body(body: bytes | object) -> bytes:
                 + _pack_i64(unique_id)
                 + _pack_u64(server_salt)
             )
+        case RpcErrorBody(error_code=error_code, error_message=error_message):
+            return (
+                encode_constructor_id(_RPC_ERROR_ID)
+                + encode_int(error_code)
+                + encode_string(error_message)
+            )
         case RpcResult(req_msg_id=req_msg_id, result=result):
             return (
                 encode_constructor_id(_RPC_RESULT_ID)
@@ -312,6 +327,11 @@ def decode_message_body(data: bytes) -> bytes | object:
         return NewSessionCreated(
             first_msg_id=first_msg_id, unique_id=unique_id, server_salt=server_salt
         )
+    if constructor_id == _RPC_ERROR_ID:
+        error_code, offset = decode_int(data, offset)
+        error_message, offset = decode_string(data, offset)
+        _require_consumed(data, offset)
+        return RpcErrorBody(error_code=error_code, error_message=error_message)
     if constructor_id == _RPC_RESULT_ID:
         req_msg_id = _unpack_i64(data, offset)
         return RpcResult(req_msg_id=req_msg_id, result=data[offset + 8 :])

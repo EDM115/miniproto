@@ -125,6 +125,11 @@ class MTProtoSender:
         )
         try:
             return await asyncio.wait_for(future, timeout=request_timeout)
+        except asyncio.CancelledError:
+            self._pending.pop(msg_id, None)
+            if not future.done():
+                future.cancel()
+            raise
         except TimeoutError:
             self._pending.pop(msg_id, None)
             raise

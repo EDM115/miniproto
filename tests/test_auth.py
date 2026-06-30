@@ -54,7 +54,14 @@ class FakeAuthClient(Client):
         self.requests: list[object] = []
         self._handler = handler
 
-    async def invoke(self, raw_request: object) -> object:
+    async def invoke(
+        self,
+        raw_request: object,
+        *,
+        request_timeout: float | None = None,
+        flood_sleep_threshold: int | None = None,
+        retry: bool | None = None,
+    ) -> object:
         self.requests.append(raw_request)
         result = self._handler(raw_request)
         return await result if inspect.isawaitable(result) else result

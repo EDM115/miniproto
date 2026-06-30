@@ -55,6 +55,9 @@ class ClientConfig:
     update_queue_size: int = 1000
     dc_id: int = 2
     test_mode: bool = False
+    request_timeout: float = 30.0
+    max_request_retries: int = 2
+    flood_sleep_threshold: int | None = None
 
     def __post_init__(self) -> None:
         if self.api_id <= 0:
@@ -65,3 +68,9 @@ class ClientConfig:
             raise ValueError("update_queue_size must be positive")
         if self.dc_id <= 0:
             raise ValueError("dc_id must be a positive integer")
+        if self.request_timeout <= 0:
+            raise ValueError("request_timeout must be positive")
+        if self.max_request_retries < 0:
+            raise ValueError("max_request_retries must not be negative")
+        if self.flood_sleep_threshold is not None and self.flood_sleep_threshold < 0:
+            raise ValueError("flood_sleep_threshold must not be negative")
