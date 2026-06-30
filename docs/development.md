@@ -141,3 +141,41 @@ cargo clippy --all-targets --all-features -- -D warnings
 cargo test --all-features
 uv run maturin build
 ```
+
+## Live Telegram Auth Test Environment
+
+Copy `.env.example` to `.env` for local live-test runs and keep `.env` uncommitted. The gated auth integration harness reads only environment variables; it never reads credentials from repository files by default.
+
+For test DC work, set:
+
+```powershell
+$env:MINIPROTO_INTEGRATION = "1"
+$env:MINIPROTO_LIVE_MODE = "test"
+$env:MINIPROTO_API_ID = "..."
+$env:MINIPROTO_API_HASH = "..."
+$env:MINIPROTO_SESSION_KEY = "replace-with-at-least-16-random-bytes"
+$env:MINIPROTO_TEST_DC_ID = "2"
+$env:MINIPROTO_TEST_DC1 = "host:port"
+$env:MINIPROTO_TEST_DC2 = "host:port"
+$env:MINIPROTO_TEST_DC3 = "host:port"
+$env:MINIPROTO_TEST_DC4 = "host:port"
+$env:MINIPROTO_TEST_DC5 = "host:port"
+$env:MINIPROTO_TEST_PHONE = "99966XYYYY"
+$env:MINIPROTO_TEST_CODE = "XXXXX"
+$env:MINIPROTO_BOT_TOKEN = "..."
+uv run pytest tests/integration/test_auth_live.py -q
+```
+
+`MINIPROTO_TEST_DC1` through `MINIPROTO_TEST_DC5` use `host:port` or `[ipv6]:port` values from Telegram API development tools for the selected API ID. `MINIPROTO_TEST_PHONE` follows Telegram's reserved test-account phone pattern for test DC authorization; fill the exact phone/code pair you intend to exercise.
+
+Production DC checks must also set `MINIPROTO_REAL_INTEGRATION=1` and should only be run after test DC auth is green:
+
+```powershell
+$env:MINIPROTO_REAL_INTEGRATION = "1"
+$env:MINIPROTO_REAL_PHONE = "..."
+$env:MINIPROTO_REAL_CODE = "..."
+$env:MINIPROTO_REAL_PASSWORD = "..."
+uv run pytest tests/integration/test_auth_live.py -q
+```
+
+The Phase 6 harness currently verifies the environment contract and skips actual Telegram calls until the raw invoke transport path is complete.

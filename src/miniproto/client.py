@@ -4,6 +4,7 @@ import asyncio
 from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any, TypeVar, overload
 
+from miniproto.auth.service import AuthService
 from miniproto.config import ClientConfig
 from miniproto.errors import Unauthorized
 from miniproto.session.storage import InMemorySessionStorage, SessionStorage
@@ -51,22 +52,22 @@ class Client:
 
     async def is_authorized(self) -> bool:
         state = await self._storage.load()
-        return bool(state and state.get("auth_key"))
+        return bool(state and (state.get("auth_key") or state.get("user")))
 
     async def sign_in_phone(
         self,
         phone: str,
         code_callback: Callable[[], Awaitable[str] | str],
         password_callback: Callable[[], Awaitable[str] | str] | None = None,
-    ) -> None:
-        raise NotImplementedError(
-            "phone sign-in requires the MTProto auth handshake implementation"
+    ) -> object:
+        await self.connect()
+        return await AuthService(self.config, self._storage, self.invoke).sign_in_phone(
+            phone, code_callback, password_callback
         )
 
-    async def sign_in_bot(self, token: str) -> None:
-        raise NotImplementedError(
-            "bot sign-in requires the generated auth.importBotAuthorization raw call"
-        )
+    async def sign_in_bot(self, token: str) -> object:
+        await self.connect()
+        return await AuthService(self.config, self._storage, self.invoke).sign_in_bot(token)
 
     async def get_me(self) -> object:
         if not await self.is_authorized():

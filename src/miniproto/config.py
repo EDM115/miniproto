@@ -53,6 +53,8 @@ class ClientConfig:
     transport: TransportConfig = field(default_factory=TransportConfig)
     device: DeviceInfo = field(default_factory=DeviceInfo)
     update_queue_size: int = 1000
+    dc_id: int = 2
+    test_mode: bool = False
 
     def __post_init__(self) -> None:
         if self.api_id <= 0:
@@ -61,3 +63,5 @@ class ClientConfig:
             raise ValueError("api_hash must not be empty")
         if self.update_queue_size <= 0:
             raise ValueError("update_queue_size must be positive")
+        if self.dc_id <= 0:
+            raise ValueError("dc_id must be a positive integer")

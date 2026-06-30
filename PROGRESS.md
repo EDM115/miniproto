@@ -13,7 +13,7 @@ tags: [implementation, mtproto, python, rust, pyo3, release]
 ![Status: In progress](https://img.shields.io/badge/status-In%20progress-yellow)  
 This file is the root implementation tracker for `miniproto` v1. It consolidates `PLAN.md`, `plans/2026-06-25-implementation-progress.md`, `plans/2026-06-26-package-boundary-and-ecosystem-intent.md`, and `plans/2026-06-29-package-boundary-progress.md` into one actionable plan that future agents must update as work progresses.  
 Tracking rules: update the relevant task row when code, docs, tests, and verification for that task are complete; keep the `Completed` column as `yes`, `in progress`, `blocked`, or `no`; record the completion date as `YYYY-MM-DD`; add new tasks only when they are required for v1 readiness; do not move framework behavior from future `mpgram` into `miniproto`.  
-Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 crate wiring, public Python API exports, client lifecycle skeleton, session storage, redaction, generated raw API, native/fallback crypto and TL primitive paths, automatic optimized event-loop installation, TCP transports, encrypted MTProto message runtime, fake-server support, docs, CI workflow, and tests exist.
+Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 crate wiring, public Python API exports, client lifecycle skeleton, session storage, redaction, generated raw API, native/fallback crypto and TL primitive paths, automatic optimized event-loop installation, TCP transports, encrypted MTProto message runtime, auth-key exchange primitives, phone/bot sign-in service plumbing, auth/DC typed errors, fake auth tests, live auth environment scaffolding, docs, CI workflow, and tests exist.
 
 ## 1. Requirements & Constraints
 
@@ -190,15 +190,15 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
 ### Implementation Phase 6 - Authorization And DC Migration
 
 - **GOAL-007**: Implement authorization flows and DC state movement required before useful raw invocation
-  | Task     | Description                                                                                                                                                                         | Completed | Date |
-  | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---- |
-  | TASK-044 | Add RSA key selection, PQ factorization, DH exchange, and auth key creation flow under `src/miniproto/auth/`.                                                                       | no        |      |
-  | TASK-045 | Implement phone sign-in in `Client.sign_in_phone()` using callback-provided code and optional password callback, with no secret logging.                                            | no        |      |
-  | TASK-046 | Implement bot token sign-in in `Client.sign_in_bot()` using generated `auth.importBotAuthorization` once raw generation exists.                                                     | no        |      |
-  | TASK-047 | Add DC option persistence, current DC selection, DC migration error handling, export authorization, and import authorization.                                                       | no        |      |
-  | TASK-048 | Implement auth-key-not-found, invalid DC, transport flood, and key regeneration behavior with clear typed exceptions.                                                               | no        |      |
-  | TASK-049 | Add fake-server tests in `tests/test_auth.py` for successful phone auth, successful bot auth, 2FA callback use, wrong-code failures, DC migration, and auth-key-not-found recovery. | no        |      |
-  | TASK-050 | Add gated live tests under `tests/integration/test_auth_live.py` for Telegram test DC sign-in, bot auth, `get_me()`, and reconnect using environment-only credentials.              | no        |      |
+  | Task     | Description                                                                                                                                                                         | Completed   | Date       |
+  | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ---------- |
+  | TASK-044 | Add RSA key selection, PQ factorization, DH exchange, and auth key creation flow under `src/miniproto/auth/`.                                                                       | yes         | 2026-06-30 |
+  | TASK-045 | Implement phone sign-in in `Client.sign_in_phone()` using callback-provided code and optional password callback, with no secret logging.                                            | yes         | 2026-06-30 |
+  | TASK-046 | Implement bot token sign-in in `Client.sign_in_bot()` using generated `auth.importBotAuthorization` once raw generation exists.                                                     | yes         | 2026-06-30 |
+  | TASK-047 | Add DC option persistence, current DC selection, DC migration error handling, export authorization, and import authorization.                                                       | yes         | 2026-06-30 |
+  | TASK-048 | Implement auth-key-not-found, invalid DC, transport flood, and key regeneration behavior with clear typed exceptions.                                                               | yes         | 2026-06-30 |
+  | TASK-049 | Add fake-server tests in `tests/test_auth.py` for successful phone auth, successful bot auth, 2FA callback use, wrong-code failures, DC migration, and auth-key-not-found recovery. | in progress | 2026-06-30 |
+  | TASK-050 | Add gated live tests under `tests/integration/test_auth_live.py` for Telegram test DC sign-in, bot auth, `get_me()`, and reconnect using environment-only credentials.              | in progress | 2026-06-30 |
 
 ### Implementation Phase 7 - Raw Invocation, Error Handling, And Flood Waits
 
