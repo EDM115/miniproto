@@ -16,6 +16,10 @@ The Rust crate lives in `rust/miniproto/` and is named `miniproto` for crates.io
 
 Encrypted durable session storage is implemented through `EncryptedSQLiteSessionStorage`, which requires an explicit key or `MINIPROTO_SESSION_KEY`. See [Session Security](docs/session-security.md) for key handling, envelope behavior, persisted session data, and redaction rules.
 
+## Raw API
+
+The generated raw API is pinned to Telegram Layer 214 from the official schema page. See [Raw API](docs/raw-api.md) for source metadata, generated file scope, RPC error database details, and current serialization limits.
+
 ## Non-Goals For v1
 
 `miniproto` v1 will not implement a full Pyrogram-compatible framework API, smart plugins, complex filters, middleware, conversation FSM, broad admin helpers, stars/payments helpers, web app helpers, stories helpers, business helper layers, calls, or secret chats unless a later roadmap explicitly makes them protocol-core requirements. Raw schema compatibility is different from high-level helper ownership.

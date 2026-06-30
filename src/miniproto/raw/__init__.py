@@ -1,4 +1,6 @@
-"""Generated raw Telegram API namespace.
+"""Generated raw Telegram API namespace."""
 
-The concrete functions and types modules are placeholders until schema pinning and code generation land.
-"""
+from miniproto.raw import errors, functions, types
+from miniproto.raw.base import TLConstructor, TLField, TLObject, TLRequest
+
+__all__ = ["TLConstructor", "TLField", "TLObject", "TLRequest", "errors", "functions", "types"]

@@ -22,12 +22,16 @@ async with Client(ClientConfig(api_id=12345, api_hash="...")) as client:
 
 ## Current Scope
 
-The current implementation exposes the public API shape, lifecycle scaffold, storage protocols, typed session models, encrypted SQLite persistence, redaction helpers, error types, update queue dispatch, and native-extension fallback loading. MTProto auth, transport, generated raw API, media transfer, and live Telegram integration are still pending.
+The current implementation exposes the public API shape, lifecycle scaffold, storage protocols, typed session models, encrypted SQLite persistence, redaction helpers, generated Layer 214 raw API metadata classes, generated RPC error mappings, error types, update queue dispatch, and native-extension fallback loading. MTProto auth, transport, binary TL serialization, media transfer, and live Telegram integration are still pending.
 
 ## Session Security
 
 See [Session Security](./session-security.md) for durable session key requirements, encrypted envelope behavior, persisted session data, and redaction rules.
 
+## Raw API
+
+See [Raw API](./raw-api.md) for schema source metadata, generated raw class scope, and current serialization limits.
+
 ## Developer Commands
 
-See [Development Commands](./development.md) for install, sync, format, lint, type-check, test, build, and publish commands.
+See [Development Commands](./development.md) for install, sync, schema generation, format, lint, type-check, test, build, and publish commands.

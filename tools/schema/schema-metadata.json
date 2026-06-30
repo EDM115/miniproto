@@ -1,0 +1,22 @@
+{
+  "constructor_count": 1479,
+  "fetch_date": "2026-06-30",
+  "function_count": 727,
+  "generated_file_manifest": [
+    "src/miniproto/raw/base.py",
+    "src/miniproto/raw/types.py",
+    "src/miniproto/raw/functions.py",
+    "src/miniproto/raw/errors.py",
+    "docs/raw-api.md"
+  ],
+  "generator_version": "1",
+  "layer": 214,
+  "rpc_error_count": 753,
+  "rpc_error_download_url": "https://core.telegram.org/file/400780400111/3/RF-b0LDHWpc.202549.json/9b83afb26f1ba2f8aa",
+  "rpc_error_sha256": "de6aa3cbdb92f1bda9562964ff1312abce0b3db7f966b7e03440193b569f0e0f",
+  "rpc_error_source_url": "https://core.telegram.org/api/errors",
+  "schema_format": "tl",
+  "sha256": "74c5d1aea2997b179283e4069a0019f4c09f5cffda665b3a7083a8bf0d071517",
+  "source_note": "Official Telegram TL schema fetched from core.telegram.org/schema and pinned in tools/schema/schema.tl.",
+  "source_url": "https://core.telegram.org/schema"
+}

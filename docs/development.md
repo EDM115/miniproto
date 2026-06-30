@@ -19,6 +19,22 @@ cargo check
 
 Use `uv sync --extra dev` for normal development. Use `uv lock` after dependency metadata changes. Use `cargo check` after Rust crate metadata changes to refresh `Cargo.lock` and validate the workspace.
 
+## Generate Schema Outputs
+
+```powershell
+uv run python -m tools.schema.generate
+```
+
+Run this after changing `tools/schema/schema.tl`, `tools/schema/rpc-errors.json`, `tools/schema/generate.py`, or `tools/schema/parser.py`.
+
+## Schema Freshness Check
+
+```powershell
+uv run python -m tools.schema.generate --check
+```
+
+This fails when committed raw API files or schema metadata drift from the pinned schema inputs.
+
 ## Format
 
 ```powershell
@@ -109,6 +125,7 @@ Only publish the Rust crate when the crates.io package contents intentionally ma
 uv run ruff format --check .
 uv run ruff check .
 uv run ty check
+uv run python -m tools.schema.generate --check
 uv run pytest
 cargo fmt --check
 cargo clippy --all-targets --all-features -- -D warnings

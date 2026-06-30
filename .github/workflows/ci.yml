@@ -22,6 +22,8 @@ jobs:
         run: uv run ruff check .
       - name: Type check
         run: uv run ty check
+      - name: Schema freshness
+        run: uv run python -m tools.schema.generate --check
       - name: Tests
         run: uv run pytest
   rust:
