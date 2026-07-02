@@ -73,9 +73,19 @@ cargo test --all-features
 
 ```powershell
 uv run python tools/bench/benchmark_native_fallback_crypto.py
+uv run python tools/bench/benchmark_runtime_paths.py
 ```
 
-This compares native-extension timings with the pure Python fallback for crypto and TL primitive paths, and verifies both implementations return matching outputs before reporting comparable best and median timings. The command is a smoke check, not an absolute timing gate.
+These compare native-extension timings with the pure Python fallback for crypto and TL primitive paths, then benchmark async runtime paths such as update dispatch, media transfer, and synthetic concurrent request scheduling. The commands are smoke checks, not absolute timing gates.
+
+## Stress Tests
+
+```powershell
+$env:MINIPROTO_STRESS = "1"
+uv run pytest tests/stress -q
+```
+
+Stress tests cover larger media buffers, many update emissions, repeated message sends through a cached peer, and repeated client lifecycle. Keep them opt-in so routine `uv run pytest` remains fast.
 
 Optional live Telegram integration tests are gated by environment variables:
 
@@ -136,6 +146,7 @@ uv run ty check
 uv run python -m tools.schema.generate --check
 uv run pytest
 uv run python tools/bench/benchmark_native_fallback_crypto.py
+uv run python tools/bench/benchmark_runtime_paths.py
 cargo fmt --check
 cargo clippy --all-targets --all-features -- -D warnings
 cargo test --all-features

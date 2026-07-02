@@ -7,6 +7,9 @@ use sha1::Sha1;
 use sha2::{Digest, Sha256};
 
 const AES_BLOCK_SIZE: usize = 16;
+const MT_PROTO_AUTH_KEY_SIZE: usize = 256;
+const MT_PROTO_MSG_KEY_SIZE: usize = 16;
+const TL_VECTOR_CONSTRUCTOR_ID: u32 = 0x1CB5C415;
 
 #[pyfunction]
 fn native_available() -> bool {
@@ -21,6 +24,77 @@ fn sha1_digest(data: &[u8]) -> Vec<u8> {
 #[pyfunction]
 fn sha256_digest(data: &[u8]) -> Vec<u8> {
     Sha256::digest(data).to_vec()
+}
+
+#[pyfunction]
+fn mtproto_auth_key_id(auth_key: &[u8]) -> PyResult<Vec<u8>> {
+    validate_auth_key(auth_key)?;
+    let digest = Sha1::digest(auth_key);
+    Ok(digest[12..20].to_vec())
+}
+
+#[pyfunction]
+fn mtproto_message_key(
+    auth_key: &[u8],
+    plaintext_with_padding: &[u8],
+    client_to_server: bool,
+) -> PyResult<Vec<u8>> {
+    validate_auth_key(auth_key)?;
+    Ok(mtproto_message_key_raw(
+        auth_key,
+        plaintext_with_padding,
+        client_to_server,
+    ))
+}
+
+#[pyfunction]
+fn mtproto_derive_aes_key_iv(
+    auth_key: &[u8],
+    msg_key: &[u8],
+    client_to_server: bool,
+) -> PyResult<(Vec<u8>, Vec<u8>)> {
+    validate_auth_key(auth_key)?;
+    validate_msg_key(msg_key)?;
+    Ok(mtproto_derive_aes_key_iv_raw(
+        auth_key,
+        msg_key,
+        client_to_server,
+    ))
+}
+
+#[pyfunction]
+fn mtproto_encrypt_payload(
+    auth_key: &[u8],
+    plaintext_with_padding: &[u8],
+    client_to_server: bool,
+) -> PyResult<(Vec<u8>, Vec<u8>, Vec<u8>)> {
+    validate_auth_key(auth_key)?;
+    validate_block_multiple(plaintext_with_padding)?;
+    let auth_key_id = mtproto_auth_key_id(auth_key)?;
+    let msg_key = mtproto_message_key_raw(auth_key, plaintext_with_padding, client_to_server);
+    let (aes_key, aes_iv) = mtproto_derive_aes_key_iv_raw(auth_key, &msg_key, client_to_server);
+    let ciphertext = aes_256_ige_encrypt(plaintext_with_padding, &aes_key, &aes_iv)?;
+    Ok((auth_key_id, msg_key, ciphertext))
+}
+
+#[pyfunction]
+fn mtproto_decrypt_payload(
+    auth_key: &[u8],
+    msg_key: &[u8],
+    ciphertext: &[u8],
+    client_to_server: bool,
+) -> PyResult<Vec<u8>> {
+    validate_auth_key(auth_key)?;
+    validate_msg_key(msg_key)?;
+    validate_block_multiple(ciphertext)?;
+    let (aes_key, aes_iv) = mtproto_derive_aes_key_iv_raw(auth_key, msg_key, client_to_server);
+    let plaintext_with_padding = aes_256_ige_decrypt(ciphertext, &aes_key, &aes_iv)?;
+    let expected_msg_key =
+        mtproto_message_key_raw(auth_key, &plaintext_with_padding, client_to_server);
+    if expected_msg_key.as_slice() != msg_key {
+        return Err(PyValueError::new_err("MTProto msg_key verification failed"));
+    }
+    Ok(plaintext_with_padding)
 }
 
 #[pyfunction]
@@ -247,6 +321,125 @@ fn tl_decode_string(data: &[u8], offset: usize) -> PyResult<(String, usize)> {
         .map_err(|_| PyValueError::new_err("TL string payload is not valid UTF-8"))
 }
 
+#[pyfunction]
+fn tl_encode_int_vector(values: Vec<i32>) -> Vec<u8> {
+    let mut output = Vec::with_capacity(8 + values.len() * 4);
+    output.extend_from_slice(&TL_VECTOR_CONSTRUCTOR_ID.to_le_bytes());
+    output.extend_from_slice(&(values.len() as i32).to_le_bytes());
+    for value in values {
+        output.extend_from_slice(&value.to_le_bytes());
+    }
+    output
+}
+
+#[pyfunction]
+fn tl_decode_int_vector(data: &[u8], offset: usize) -> PyResult<(Vec<i32>, usize)> {
+    validate_vector_constructor(data, offset)?;
+    let count_bytes = read_fixed::<4>(data, offset + 4)?;
+    let count = i32::from_le_bytes(count_bytes);
+    if count < 0 {
+        return Err(PyValueError::new_err("TL vector count cannot be negative"));
+    }
+    let count = count as usize;
+    let mut next_offset = offset + 8;
+    let mut values = Vec::with_capacity(count);
+    for _ in 0..count {
+        let bytes = read_fixed::<4>(data, next_offset)?;
+        values.push(i32::from_le_bytes(bytes));
+        next_offset += 4;
+    }
+    Ok((values, next_offset))
+}
+
+#[pyfunction]
+fn tl_encode_long_vector(values: Vec<i64>) -> Vec<u8> {
+    let mut output = Vec::with_capacity(8 + values.len() * 8);
+    output.extend_from_slice(&TL_VECTOR_CONSTRUCTOR_ID.to_le_bytes());
+    output.extend_from_slice(&(values.len() as i32).to_le_bytes());
+    for value in values {
+        output.extend_from_slice(&value.to_le_bytes());
+    }
+    output
+}
+
+#[pyfunction]
+fn tl_decode_long_vector(data: &[u8], offset: usize) -> PyResult<(Vec<i64>, usize)> {
+    validate_vector_constructor(data, offset)?;
+    let count_bytes = read_fixed::<4>(data, offset + 4)?;
+    let count = i32::from_le_bytes(count_bytes);
+    if count < 0 {
+        return Err(PyValueError::new_err("TL vector count cannot be negative"));
+    }
+    let count = count as usize;
+    let mut next_offset = offset + 8;
+    let mut values = Vec::with_capacity(count);
+    for _ in 0..count {
+        let bytes = read_fixed::<8>(data, next_offset)?;
+        values.push(i64::from_le_bytes(bytes));
+        next_offset += 8;
+    }
+    Ok((values, next_offset))
+}
+
+fn validate_auth_key(auth_key: &[u8]) -> PyResult<()> {
+    if auth_key.len() != MT_PROTO_AUTH_KEY_SIZE {
+        return Err(PyValueError::new_err("MTProto auth_key must be 256 bytes"));
+    }
+    Ok(())
+}
+
+fn validate_msg_key(msg_key: &[u8]) -> PyResult<()> {
+    if msg_key.len() != MT_PROTO_MSG_KEY_SIZE {
+        return Err(PyValueError::new_err("MTProto msg_key must be 16 bytes"));
+    }
+    Ok(())
+}
+
+fn direction_offset(client_to_server: bool) -> usize {
+    if client_to_server { 0 } else { 8 }
+}
+
+fn mtproto_message_key_raw(
+    auth_key: &[u8],
+    plaintext_with_padding: &[u8],
+    client_to_server: bool,
+) -> Vec<u8> {
+    let x = direction_offset(client_to_server);
+    let mut hasher = Sha256::new();
+    hasher.update(&auth_key[88 + x..120 + x]);
+    hasher.update(plaintext_with_padding);
+    let digest = hasher.finalize();
+    digest[8..24].to_vec()
+}
+
+fn mtproto_derive_aes_key_iv_raw(
+    auth_key: &[u8],
+    msg_key: &[u8],
+    client_to_server: bool,
+) -> (Vec<u8>, Vec<u8>) {
+    let x = direction_offset(client_to_server);
+    let mut hasher_a = Sha256::new();
+    hasher_a.update(msg_key);
+    hasher_a.update(&auth_key[x..x + 36]);
+    let sha256_a = hasher_a.finalize();
+
+    let mut hasher_b = Sha256::new();
+    hasher_b.update(&auth_key[40 + x..76 + x]);
+    hasher_b.update(msg_key);
+    let sha256_b = hasher_b.finalize();
+
+    let mut aes_key = Vec::with_capacity(32);
+    aes_key.extend_from_slice(&sha256_a[..8]);
+    aes_key.extend_from_slice(&sha256_b[8..24]);
+    aes_key.extend_from_slice(&sha256_a[24..32]);
+
+    let mut aes_iv = Vec::with_capacity(32);
+    aes_iv.extend_from_slice(&sha256_b[..8]);
+    aes_iv.extend_from_slice(&sha256_a[8..24]);
+    aes_iv.extend_from_slice(&sha256_b[24..32]);
+    (aes_key, aes_iv)
+}
+
 fn validate_aes_key(key: &[u8]) -> PyResult<()> {
     if key.len() != 32 {
         return Err(PyValueError::new_err("AES-256 key must be 32 bytes"));
@@ -460,11 +653,27 @@ fn decode_tl_bytes(data: &[u8], offset: usize) -> PyResult<(Vec<u8>, usize)> {
     Ok((payload, next_offset))
 }
 
+fn validate_vector_constructor(data: &[u8], offset: usize) -> PyResult<()> {
+    let bytes = read_fixed::<4>(data, offset)?;
+    let constructor_id = u32::from_le_bytes(bytes);
+    if constructor_id != TL_VECTOR_CONSTRUCTOR_ID {
+        return Err(PyValueError::new_err(format!(
+            "expected Vector constructor, got 0x{constructor_id:08x}",
+        )));
+    }
+    Ok(())
+}
+
 #[pymodule]
 fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(native_available, m)?)?;
     m.add_function(wrap_pyfunction!(sha1_digest, m)?)?;
     m.add_function(wrap_pyfunction!(sha256_digest, m)?)?;
+    m.add_function(wrap_pyfunction!(mtproto_auth_key_id, m)?)?;
+    m.add_function(wrap_pyfunction!(mtproto_message_key, m)?)?;
+    m.add_function(wrap_pyfunction!(mtproto_derive_aes_key_iv, m)?)?;
+    m.add_function(wrap_pyfunction!(mtproto_encrypt_payload, m)?)?;
+    m.add_function(wrap_pyfunction!(mtproto_decrypt_payload, m)?)?;
     m.add_function(wrap_pyfunction!(xor_bytes, m)?)?;
     m.add_function(wrap_pyfunction!(aes_256_ige_encrypt, m)?)?;
     m.add_function(wrap_pyfunction!(aes_256_ige_decrypt, m)?)?;
@@ -488,5 +697,9 @@ fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(tl_decode_bytes, m)?)?;
     m.add_function(wrap_pyfunction!(tl_encode_string, m)?)?;
     m.add_function(wrap_pyfunction!(tl_decode_string, m)?)?;
+    m.add_function(wrap_pyfunction!(tl_encode_int_vector, m)?)?;
+    m.add_function(wrap_pyfunction!(tl_decode_int_vector, m)?)?;
+    m.add_function(wrap_pyfunction!(tl_encode_long_vector, m)?)?;
+    m.add_function(wrap_pyfunction!(tl_decode_long_vector, m)?)?;
     Ok(())
 }

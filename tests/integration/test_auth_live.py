@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import asyncio
-
 from live_helpers import authorized_user_client, live_client, require_bot_token, stored_user
+
+from miniproto import event_loop
 
 
 def run(coro):
-    return asyncio.run(coro)
+    return event_loop.run(coro)
 
 
 def test_live_bot_auth_get_me() -> None:

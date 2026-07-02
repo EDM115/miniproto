@@ -170,6 +170,12 @@ def input_user_from_peer(peer: Peer) -> object:
     return types.InputUser(user_id=peer.id, access_hash=peer.access_hash)
 
 
+def input_channel_from_peer(peer: Peer) -> object:
+    if peer.kind != "channel" or peer.access_hash is None:
+        raise NotFound("input channels require a cached channel access hash")
+    return types.InputChannel(channel_id=peer.id, access_hash=peer.access_hash)
+
+
 def _entries_from_raw(raw: object) -> Iterable[PeerCacheEntry]:
     if isinstance(raw, types.User):
         yield _entry_from_user(raw)
@@ -447,4 +453,4 @@ def _optional_str(value: object) -> str | None:
     return None if value is None else str(value)
 
 
-__all__ = ["PeerCache", "input_peer_from_peer", "input_user_from_peer"]
+__all__ = ["PeerCache", "input_channel_from_peer", "input_peer_from_peer", "input_user_from_peer"]

@@ -67,6 +67,38 @@ def message_from_send_result(
     return Message(id=0, peer=peer, text=text, date=utc_now(), entities=parsed_entities, raw=result)
 
 
+def message_from_raw(raw: types.Message, *, fallback_peer: Peer) -> Message:
+    return _message_from_raw(raw, fallback_peer=fallback_peer, fallback_entities=())
+
+
+def message_from_update_result(
+    result: object, *, fallback_peer: Peer, fallback_text: str, entities: Iterable[object] = ()
+) -> Message:
+    parsed_entities = tuple(entities)
+    raw_message = _find_message_result(result)
+    if raw_message is None:
+        return Message(
+            id=0,
+            peer=fallback_peer,
+            text=fallback_text,
+            date=utc_now(),
+            entities=parsed_entities,
+            raw=result,
+        )
+    return _message_from_raw(
+        raw_message, fallback_peer=fallback_peer, fallback_entities=parsed_entities
+    )
+
+
+def messages_from_history_result(result: object, *, fallback_peer: Peer) -> tuple[Message, ...]:
+    raw_messages = tuple(getattr(result, "messages", ()) or ())
+    return tuple(
+        _message_from_raw(raw, fallback_peer=fallback_peer, fallback_entities=())
+        for raw in raw_messages
+        if isinstance(raw, types.Message)
+    )
+
+
 def _parse_delimited_entity(
     text: str, index: int, output: list[str]
 ) -> tuple[int, object | None] | None:
@@ -111,6 +143,10 @@ def _find_message_result(result: object) -> types.Message | None:
     if isinstance(result, types.Message):
         return result
     if isinstance(result, types.UpdateNewMessage | types.UpdateNewChannelMessage) and isinstance(
+        result.message, types.Message
+    ):
+        return result.message
+    if isinstance(result, types.UpdateEditMessage | types.UpdateEditChannelMessage) and isinstance(
         result.message, types.Message
     ):
         return result.message
@@ -164,6 +200,9 @@ __all__ = [
     "MessageParseMode",
     "ParsedMessageText",
     "make_random_id",
+    "message_from_raw",
     "message_from_send_result",
+    "message_from_update_result",
+    "messages_from_history_result",
     "parse_message_text",
 ]

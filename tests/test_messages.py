@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass, field
 
 import pytest
@@ -11,8 +10,10 @@ from miniproto import (
     ClientConfig,
     DCOption,
     InMemorySessionStorage,
+    Message,
     Peer,
     SessionRecord,
+    event_loop,
 )
 from miniproto.errors import TransportFlood
 from miniproto.mtproto.codec import RpcErrorBody, encode_message_body
@@ -45,7 +46,7 @@ class FakeSender:
 
 
 def run(coro):
-    return asyncio.run(coro)
+    return event_loop.run(coro)
 
 
 def storage_with_auth(
@@ -188,6 +189,129 @@ def test_send_message_surfaces_flood_wait_errors_from_raw_invoke() -> None:
         with pytest.raises(TransportFlood) as exc_info:
             await client.send_message("me", "hello")
         assert exc_info.value.seconds == 5
+
+    run(scenario())
+
+
+def test_get_history_returns_normalized_messages_and_remembers_entities() -> None:
+    async def scenario() -> None:
+        storage = storage_with_auth(
+            peers=(PeerCacheEntry(id=7, kind="user", access_hash=77, username="alice"),)
+        )
+        raw_message = types.Message(
+            id=77, peer_id=types.PeerUser(user_id=7), date=1_700_000_001, message="history text"
+        )
+        sender = FakeSender(
+            [
+                types.MessagesMessages(
+                    messages=(raw_message,),
+                    chats=(),
+                    users=(types.User(id=7, access_hash=99, username="alice2"),),
+                )
+            ]
+        )
+        client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage))
+        client._sender = sender
+        await client.connect()
+        messages = await client.get_history("@alice", limit=10, offset_id=5)
+        request = inner_request(sender.requests[0])
+        assert isinstance(request, functions.MessagesGetHistory)
+        assert isinstance(request.peer, types.InputPeerUser)
+        assert request.limit == 10
+        assert request.offset_id == 5
+        assert messages == (
+            Message(
+                id=77,
+                peer=Peer(id=7, kind="user", access_hash=77),
+                text="history text",
+                date=messages[0].date,
+                raw=raw_message,
+            ),
+        )
+        loaded = await storage.load()
+        assert loaded is not None
+        record = session_record_from_mapping(loaded)
+        assert record.peers[0].username == "alice2"
+        assert record.peers[0].access_hash == 99
+
+    run(scenario())
+
+
+def test_edit_message_sends_generated_edit_request_and_normalizes_result() -> None:
+    async def scenario() -> None:
+        storage = storage_with_auth(
+            peers=(PeerCacheEntry(id=7, kind="user", access_hash=77, username="alice"),)
+        )
+        raw_message = types.Message(
+            id=77,
+            peer_id=types.PeerUser(user_id=7),
+            date=1_700_000_002,
+            message="edited bold",
+            entities=(types.MessageEntityBold(offset=7, length=4),),
+        )
+        sender = FakeSender(
+            [
+                types.Updates(
+                    updates=(types.UpdateEditMessage(message=raw_message, pts=2, pts_count=1),),
+                    users=(),
+                    chats=(),
+                    date=1_700_000_002,
+                    seq=1,
+                )
+            ]
+        )
+        client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage))
+        client._sender = sender
+        await client.connect()
+        message = await client.edit_message("@alice", 77, "edited **bold**", parse_mode="md")
+        request = inner_request(sender.requests[0])
+        assert isinstance(request, functions.MessagesEditMessage)
+        assert request.id == 77
+        assert request.message == "edited bold"
+        assert request.entities == (types.MessageEntityBold(offset=7, length=4),)
+        assert message.id == 77
+        assert message.text == "edited bold"
+        assert message.entities == request.entities
+
+    run(scenario())
+
+
+def test_delete_messages_uses_messages_delete_for_non_channels() -> None:
+    async def scenario() -> None:
+        storage = storage_with_auth(
+            peers=(PeerCacheEntry(id=7, kind="user", access_hash=77, username="alice"),)
+        )
+        sender = FakeSender([types.MessagesAffectedMessages(pts=2, pts_count=2)])
+        client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage))
+        client._sender = sender
+        await client.connect()
+        result = await client.delete_messages("@alice", [77, 78], revoke=False)
+        request = inner_request(sender.requests[0])
+        assert isinstance(request, functions.MessagesDeleteMessages)
+        assert request.revoke is False
+        assert request.id == (77, 78)
+        assert isinstance(result, types.MessagesAffectedMessages)
+        assert result.pts_count == 2
+
+    run(scenario())
+
+
+def test_delete_messages_uses_channels_delete_for_channels() -> None:
+    async def scenario() -> None:
+        storage = storage_with_auth(
+            peers=(PeerCacheEntry(id=8, kind="channel", access_hash=88, username="channel"),)
+        )
+        sender = FakeSender([types.MessagesAffectedMessages(pts=3, pts_count=1)])
+        client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage))
+        client._sender = sender
+        await client.connect()
+        await client.delete_messages("@channel", 99)
+        request = inner_request(sender.requests[0])
+        assert isinstance(request, functions.ChannelsDeleteMessages)
+        assert isinstance(request.channel, types.InputChannel)
+        assert request.channel.channel_id == 8
+        assert request.channel.access_hash == 88
+        assert request.id == (99,)
 
     run(scenario())
 

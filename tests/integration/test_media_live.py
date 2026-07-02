@@ -5,13 +5,14 @@ import time
 
 from live_helpers import authorized_user_client, download_path, upload_file_path
 
+from miniproto import event_loop
 from miniproto.media import media_from_raw
 from miniproto.raw import functions, types
 from miniproto.types import Media
 
 
 def run(coro):
-    return asyncio.run(coro)
+    return event_loop.run(coro)
 
 
 def test_live_saved_messages_media_upload_download() -> None:

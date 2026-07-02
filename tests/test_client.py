@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from datetime import UTC, datetime
 
 import pytest
@@ -13,6 +12,7 @@ from miniproto import (
     NewMessage,
     Peer,
     Unauthorized,
+    event_loop,
 )
 
 
@@ -33,7 +33,7 @@ def test_client_lifecycle() -> None:
             assert client.is_connected
         assert not client.is_connected
 
-    asyncio.run(run())
+    event_loop.run(run())
 
 
 def test_authorization_uses_session_state() -> None:
@@ -42,7 +42,7 @@ def test_authorization_uses_session_state() -> None:
         client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage))
         assert await client.is_authorized()
 
-    asyncio.run(run())
+    event_loop.run(run())
 
 
 def test_get_me_requires_authorized_session() -> None:
@@ -51,7 +51,7 @@ def test_get_me_requires_authorized_session() -> None:
         with pytest.raises(Unauthorized):
             await client.get_me()
 
-    asyncio.run(run())
+    event_loop.run(run())
 
 
 def test_update_dispatch_and_iteration() -> None:
@@ -72,4 +72,4 @@ def test_update_dispatch_and_iteration() -> None:
         assert queued == update
         assert seen == [update]
 
-    asyncio.run(run())
+    event_loop.run(run())

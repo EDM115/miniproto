@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import sqlite3
 from datetime import UTC, datetime
 
@@ -15,6 +14,7 @@ from miniproto import (
     SessionRecord,
     UpdateState,
     UserIdentity,
+    event_loop,
 )
 from miniproto.errors import SessionEnvelopeError
 from miniproto.session.models import session_record_from_mapping
@@ -22,7 +22,7 @@ from miniproto.session.storage import deserialize_session_data, serialize_sessio
 
 
 def run(coro):
-    return asyncio.run(coro)
+    return event_loop.run(coro)
 
 
 def sample_record() -> SessionRecord:

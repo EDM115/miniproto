@@ -116,6 +116,11 @@ def decode_bool(data: bytes | memoryview, offset: int = 0) -> tuple[bool, int]:
 
 def encode_vector(values: Iterable[Any], item_type: str) -> bytes:
     items = tuple(values)
+    clean_item_type = _clean_type(item_type)
+    if clean_item_type in {"int", "#"}:
+        return _native.tl_encode_int_vector(int(item) for item in items)
+    if clean_item_type == "long":
+        return _native.tl_encode_long_vector(int(item) for item in items)
     output = bytearray(encode_constructor_id(VECTOR_CONSTRUCTOR_ID))
     output.extend(encode_int(len(items)))
     for item in items:
@@ -126,6 +131,11 @@ def encode_vector(values: Iterable[Any], item_type: str) -> bytes:
 def decode_vector(
     data: bytes | memoryview, offset: int, item_type: str
 ) -> tuple[tuple[Any, ...], int]:
+    clean_item_type = _clean_type(item_type)
+    if clean_item_type in {"int", "#"}:
+        return _native.tl_decode_int_vector(bytes(data), offset)
+    if clean_item_type == "long":
+        return _native.tl_decode_long_vector(bytes(data), offset)
     constructor_id, offset = decode_constructor_id(data, offset)
     if constructor_id != VECTOR_CONSTRUCTOR_ID:
         raise TLCodecError(f"expected Vector constructor, got 0x{constructor_id:08x}")

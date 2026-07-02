@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import hashlib
 from dataclasses import dataclass, field
 from typing import Any
@@ -15,6 +14,7 @@ from miniproto import (
     InMemorySessionStorage,
     Peer,
     SessionRecord,
+    event_loop,
 )
 from miniproto.media import BIG_FILE_THRESHOLD, DEFAULT_CHUNK_SIZE, MediaUploadError, upload_file
 from miniproto.raw import functions, types
@@ -58,7 +58,7 @@ class FakeSender:
 
 
 def run(coro):
-    return asyncio.run(coro)
+    return event_loop.run(coro)
 
 
 def storage_with_auth() -> InMemorySessionStorage:

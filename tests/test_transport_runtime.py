@@ -5,6 +5,7 @@ import asyncio
 import pytest
 from tests.support.fake_mtproto import FakeMTProtoServer
 
+from miniproto import event_loop
 from miniproto.config import TransportConfig, TransportMode
 from miniproto.connection.sender import MTProtoSender
 from miniproto.connection.tcp_abridged import TcpAbridgedTransport
@@ -76,7 +77,7 @@ def test_intermediate_bounded_read_rejects_oversized_frame() -> None:
         with pytest.raises(TransportError, match="exceeds"):
             await transport.read_packet(reader)
 
-    asyncio.run(run())
+    event_loop.run(run())
 
 
 def test_transport_read_deadline_is_enforced() -> None:
@@ -101,7 +102,7 @@ def test_transport_read_deadline_is_enforced() -> None:
             server.close()
             await server.wait_closed()
 
-    asyncio.run(run())
+    event_loop.run(run())
 
 
 def test_mtproto_state_msg_id_seq_no_ack_and_duplicate_tracking() -> None:
@@ -183,7 +184,7 @@ def test_sender_ping_works_against_fake_server_for_each_transport_mode() -> None
         "tcp_padded_intermediate",
     )
     for mode in modes:
-        asyncio.run(run(mode))
+        event_loop.run(run(mode))
 
 
 def test_sender_handles_container_ack_and_rpc_result() -> None:
@@ -214,7 +215,7 @@ def test_sender_handles_container_ack_and_rpc_result() -> None:
             assert sender.sender_state.pending_count == 0
             await sender.disconnect()
 
-    asyncio.run(run())
+    event_loop.run(run())
 
 
 def test_sender_flushes_pending_acks_without_leaking_pending_request() -> None:
@@ -243,7 +244,7 @@ def test_sender_flushes_pending_acks_without_leaking_pending_request() -> None:
             assert sender.sender_state.pending_count == 0
             await sender.disconnect()
 
-    asyncio.run(run())
+    event_loop.run(run())
 
 
 def test_sender_reconnect_retries_connector_with_backoff() -> None:
@@ -285,7 +286,7 @@ def test_sender_reconnect_retries_connector_with_backoff() -> None:
             server.close()
             await server.wait_closed()
 
-    asyncio.run(run())
+    event_loop.run(run())
 
 
 def test_sender_retries_bad_server_salt() -> None:
@@ -314,7 +315,7 @@ def test_sender_retries_bad_server_salt() -> None:
             assert seen == [SERVER_SALT, new_salt]
             await sender.disconnect()
 
-    asyncio.run(run())
+    event_loop.run(run())
 
 
 def test_sender_retries_bad_msg_time_errors() -> None:
@@ -338,4 +339,4 @@ def test_sender_retries_bad_msg_time_errors() -> None:
             assert attempts == 2
             await sender.disconnect()
 
-    asyncio.run(run())
+    event_loop.run(run())

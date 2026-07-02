@@ -47,6 +47,7 @@
 - Media tests: chunk sizing, small vs big file paths, streamed uploads, retrying missing parts, download resume, CDN redirect/decryption, progress callback ordering, and memory ceiling checks.
 - Integration tests: optional Telegram test DC/live tests gated by `MINIPROTO_INTEGRATION=1`, credentials in environment only, covering sign-in, `get_me`, Saved Messages send, update receive, file upload/download, bot token auth, and reconnect.
 - Performance acceptance: benchmark native vs fallback crypto, TL serialization, 1k pending RPCs, update dispatch latency, upload/download throughput, reconnect recovery, and sustained RSS; publish baseline numbers in CI artifacts.
+- Later performance acceptance: run common-task benchmark suites against well-known MTProto libraries, including Python libraries such as Telethon/Pyrogram/Hydrogram and at least one non-Python client implementation, so miniproto performance claims are backed by external comparisons instead of only native-vs-fallback deltas.
 - Release acceptance: `uv run ruff format --check .`, `uv run ruff check .`, `uv run ty check`, `uv run pytest`, `cargo fmt --check`, `cargo clippy --all-targets --all-features -- -D warnings`, `cargo test --all-features`, `uv run maturin build`, docs build, wheels build, and schema freshness check pass.
 
 ## Assumptions

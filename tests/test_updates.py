@@ -6,14 +6,21 @@ from typing import Any
 
 import pytest
 
-from miniproto import Client, ClientConfig, InMemorySessionStorage, NewMessage, SessionRecord
+from miniproto import (
+    Client,
+    ClientConfig,
+    InMemorySessionStorage,
+    NewMessage,
+    SessionRecord,
+    event_loop,
+)
 from miniproto.raw import functions, types
 from miniproto.session.models import UpdateState, session_record_from_mapping
 from miniproto.types import Message, Peer
 
 
 def run(coro):
-    return asyncio.run(coro)
+    return event_loop.run(coro)
 
 
 class FakeUpdateClient(Client):

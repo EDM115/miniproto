@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-import asyncio
 import time
 
 from live_helpers import authorized_user_client
 from live_helpers import test_text as live_test_text
 
+from miniproto import event_loop
 from miniproto.raw import functions, types
 
 
 def run(coro):
-    return asyncio.run(coro)
+    return event_loop.run(coro)
 
 
 def test_live_saved_messages_send_and_history_read() -> None:

@@ -14,6 +14,7 @@ from miniproto import (
     InMemorySessionStorage,
     Media,
     SessionRecord,
+    event_loop,
 )
 from miniproto.media import MediaDownloadError, decrypt_cdn_chunk, download_file, download_media
 from miniproto.raw import functions, types
@@ -62,7 +63,7 @@ class FakeSender:
 
 
 def run(coro):
-    return asyncio.run(coro)
+    return event_loop.run(coro)
 
 
 def storage_with_auth() -> InMemorySessionStorage:

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass, field
 
 import pytest
@@ -14,6 +13,7 @@ from miniproto import (
     Peer,
     SessionRecord,
     UserIdentity,
+    event_loop,
 )
 from miniproto.raw import functions, types
 from miniproto.session.models import PeerCacheEntry, session_record_from_mapping
@@ -44,7 +44,7 @@ class FakeSender:
 
 
 def run(coro):
-    return asyncio.run(coro)
+    return event_loop.run(coro)
 
 
 def storage_with_record() -> InMemorySessionStorage:

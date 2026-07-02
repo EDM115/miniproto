@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import inspect
 from collections.abc import Awaitable, Callable
 
@@ -18,6 +17,7 @@ from miniproto import (
     SessionRecord,
     TransportFlood,
     UserIdentity,
+    event_loop,
 )
 from miniproto.auth import (
     AuthService,
@@ -44,7 +44,7 @@ from miniproto.session.models import session_record_from_mapping
 
 
 def run(coro):
-    return asyncio.run(coro)
+    return event_loop.run(coro)
 
 
 class FakeAuthClient(Client):

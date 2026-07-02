@@ -38,8 +38,14 @@ from miniproto.media import (
     upload_file,
 )
 from miniproto.media import download_media as download_media_file
-from miniproto.messages import make_random_id, message_from_send_result, parse_message_text
-from miniproto.peers import PeerCache, input_peer_from_peer
+from miniproto.messages import (
+    make_random_id,
+    message_from_send_result,
+    message_from_update_result,
+    messages_from_history_result,
+    parse_message_text,
+)
+from miniproto.peers import PeerCache, input_channel_from_peer, input_peer_from_peer
 from miniproto.raw import functions, types
 from miniproto.session.storage import InMemorySessionStorage, SessionStorage
 from miniproto.types import Message, NewMessage, Peer, Update, User
@@ -163,6 +169,119 @@ class Client:
         await self._peer_cache.remember_raw_entities(result)
         return message_from_send_result(
             result, peer=resolved_peer, text=parsed.text, entities=request_entities
+        )
+
+    async def get_history(
+        self,
+        peer: Peer | str | int,
+        *,
+        limit: int = 100,
+        offset_id: int = 0,
+        offset_date: int = 0,
+        add_offset: int = 0,
+        max_id: int = 0,
+        min_id: int = 0,
+        hash: int = 0,
+        request_timeout: float | None = None,
+        flood_sleep_threshold: int | None = None,
+        retry: bool | None = None,
+    ) -> tuple[Message, ...]:
+        if limit < 0:
+            raise ValueError("history limit must not be negative")
+        resolved_peer = await self._peer_cache.resolve_peer(peer)
+        request = functions.MessagesGetHistory(
+            peer=input_peer_from_peer(resolved_peer),
+            offset_id=int(offset_id),
+            offset_date=int(offset_date),
+            add_offset=int(add_offset),
+            limit=int(limit),
+            max_id=int(max_id),
+            min_id=int(min_id),
+            hash=int(hash),
+        )
+        result = await self.invoke(
+            request,
+            request_timeout=request_timeout,
+            flood_sleep_threshold=flood_sleep_threshold,
+            retry=retry,
+        )
+        await self._peer_cache.remember_raw_entities(result)
+        return messages_from_history_result(result, fallback_peer=resolved_peer)
+
+    async def edit_message(
+        self,
+        peer: Peer | str | int,
+        message_id: int,
+        text: str,
+        *,
+        parse_mode: str | None = None,
+        entities: Iterable[object] | None = None,
+        no_webpage: bool = False,
+        invert_media: bool = False,
+        media: object | None = None,
+        reply_markup: object | None = None,
+        schedule_date: int | None = None,
+        quick_reply_shortcut_id: int | None = None,
+        request_timeout: float | None = None,
+        flood_sleep_threshold: int | None = None,
+        retry: bool | None = None,
+    ) -> Message:
+        resolved_peer = await self._peer_cache.resolve_peer(peer)
+        parsed = (
+            parse_message_text(text, parse_mode)
+            if entities is None
+            else parse_message_text(text, None)
+        )
+        request_entities = parsed.entities if entities is None else tuple(entities)
+        request = functions.MessagesEditMessage(
+            no_webpage=bool(no_webpage),
+            invert_media=bool(invert_media),
+            peer=input_peer_from_peer(resolved_peer),
+            id=int(message_id),
+            message=parsed.text,
+            media=media,
+            reply_markup=reply_markup,
+            entities=request_entities or None,
+            schedule_date=schedule_date,
+            quick_reply_shortcut_id=quick_reply_shortcut_id,
+        )
+        result = await self.invoke(
+            request,
+            request_timeout=request_timeout,
+            flood_sleep_threshold=flood_sleep_threshold,
+            retry=retry,
+        )
+        await self._peer_cache.remember_raw_entities(result)
+        return message_from_update_result(
+            result,
+            fallback_peer=resolved_peer,
+            fallback_text=parsed.text,
+            entities=request_entities,
+        )
+
+    async def delete_messages(
+        self,
+        peer: Peer | str | int,
+        message_ids: int | Iterable[int],
+        *,
+        revoke: bool = True,
+        request_timeout: float | None = None,
+        flood_sleep_threshold: int | None = None,
+        retry: bool | None = None,
+    ) -> object:
+        ids = _message_id_tuple(message_ids)
+        resolved_peer = await self._peer_cache.resolve_peer(peer)
+        if resolved_peer.kind == "channel":
+            request = functions.ChannelsDeleteMessages(
+                channel=input_channel_from_peer(resolved_peer), id=ids
+            )
+        else:
+            request = functions.MessagesDeleteMessages(revoke=bool(revoke), id=ids)
+        return await self.invoke(
+            request,
+            request_timeout=request_timeout,
+            flood_sleep_threshold=flood_sleep_threshold,
+            retry=retry,
         )
 
     async def send_file(self, peer: Peer | str | int, file: FileSource, **kwargs: Any) -> Message:
@@ -460,6 +579,16 @@ def _download_media_options(kwargs: dict[str, Any]) -> dict[str, Any]:
         options["limit"] = int(options["limit"])
     options["part_size"] = int(options["part_size"])
     return options
+
+
+def _message_id_tuple(message_ids: int | Iterable[int]) -> tuple[int, ...]:
+    if isinstance(message_ids, int):
+        ids = (int(message_ids),)
+    else:
+        ids = tuple(int(message_id) for message_id in message_ids)
+    if not ids:
+        raise ValueError("message_ids must not be empty")
+    return ids
 
 
 def _uploaded_input_media(input_file: object, options: dict[str, Any]) -> object:

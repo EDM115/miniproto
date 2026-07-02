@@ -13,6 +13,7 @@ from miniproto import (
     InMemorySessionStorage,
     SessionRecord,
     UserIdentity,
+    event_loop,
 )
 from miniproto.connection.transport import TransportClosed, TransportError
 from miniproto.errors import (
@@ -33,7 +34,7 @@ AUTH_KEY = b"k" * 256
 
 
 def run(coro):
-    return asyncio.run(coro)
+    return event_loop.run(coro)
 
 
 @dataclass(slots=True)

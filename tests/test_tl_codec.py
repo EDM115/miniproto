@@ -1,7 +1,13 @@
 from __future__ import annotations
 
 from miniproto.raw import functions, types
-from miniproto.tl import decode_object, deserialize_object, serialize_object
+from miniproto.tl import (
+    decode_object,
+    decode_vector,
+    deserialize_object,
+    encode_vector,
+    serialize_object,
+)
 
 
 def test_generated_empty_constructor_serializes_constructor_id() -> None:
@@ -79,3 +85,17 @@ def test_deserialize_object_can_decode_unboxed_payload_for_known_class() -> None
     )
     assert decoded == peer
     assert offset == 16
+
+
+def test_public_vector_codec_fast_paths_int_and_long_vectors() -> None:
+    int_values = tuple(range(-50, 50))
+    encoded_ints = encode_vector(int_values, "int")
+    decoded_ints, int_offset = decode_vector(encoded_ints, 0, "int")
+    assert decoded_ints == int_values
+    assert int_offset == len(encoded_ints)
+
+    long_values = (-1, 0, 1, 2**40, -(2**40))
+    encoded_longs = encode_vector(long_values, "long")
+    decoded_longs, long_offset = decode_vector(encoded_longs, 0, "long")
+    assert decoded_longs == long_values
+    assert long_offset == len(encoded_longs)

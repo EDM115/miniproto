@@ -5,10 +5,14 @@ from __future__ import annotations
 import hashlib
 import math
 import struct
+from hmac import compare_digest
 
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 _AES_BLOCK_SIZE = 16
+_MT_PROTO_AUTH_KEY_SIZE = 256
+_MT_PROTO_MSG_KEY_SIZE = 16
+_TL_VECTOR_CONSTRUCTOR_ID = 0x1CB5C415
 
 
 def native_available() -> bool:
@@ -21,6 +25,61 @@ def sha1_digest(data: bytes) -> bytes:
 
 def sha256_digest(data: bytes) -> bytes:
     return hashlib.sha256(data).digest()
+
+
+def mtproto_auth_key_id(auth_key: bytes) -> bytes:
+    _validate_auth_key(auth_key)
+    return sha1_digest(auth_key)[-8:]
+
+
+def mtproto_message_key(
+    auth_key: bytes, plaintext_with_padding: bytes, client_to_server: bool
+) -> bytes:
+    _validate_auth_key(auth_key)
+    x = _direction_offset(client_to_server)
+    msg_key_large = sha256_digest(auth_key[88 + x : 120 + x] + plaintext_with_padding)
+    return msg_key_large[8:24]
+
+
+def mtproto_derive_aes_key_iv(
+    auth_key: bytes, msg_key: bytes, client_to_server: bool
+) -> tuple[bytes, bytes]:
+    _validate_auth_key(auth_key)
+    _validate_msg_key(msg_key)
+    x = _direction_offset(client_to_server)
+    sha256_a = sha256_digest(msg_key + auth_key[x : x + 36])
+    sha256_b = sha256_digest(auth_key[40 + x : 76 + x] + msg_key)
+    aes_key = sha256_a[:8] + sha256_b[8:24] + sha256_a[24:32]
+    aes_iv = sha256_b[:8] + sha256_a[8:24] + sha256_b[24:32]
+    return aes_key, aes_iv
+
+
+def mtproto_encrypt_payload(
+    auth_key: bytes, plaintext_with_padding: bytes, client_to_server: bool
+) -> tuple[bytes, bytes, bytes]:
+    _validate_auth_key(auth_key)
+    _validate_block_multiple(plaintext_with_padding)
+    msg_key = mtproto_message_key(auth_key, plaintext_with_padding, client_to_server)
+    aes_key, aes_iv = mtproto_derive_aes_key_iv(auth_key, msg_key, client_to_server)
+    return (
+        mtproto_auth_key_id(auth_key),
+        msg_key,
+        aes_256_ige_encrypt(plaintext_with_padding, aes_key, aes_iv),
+    )
+
+
+def mtproto_decrypt_payload(
+    auth_key: bytes, msg_key: bytes, ciphertext: bytes, client_to_server: bool
+) -> bytes:
+    _validate_auth_key(auth_key)
+    _validate_msg_key(msg_key)
+    _validate_block_multiple(ciphertext)
+    aes_key, aes_iv = mtproto_derive_aes_key_iv(auth_key, msg_key, client_to_server)
+    plaintext_with_padding = aes_256_ige_decrypt(ciphertext, aes_key, aes_iv)
+    expected_msg_key = mtproto_message_key(auth_key, plaintext_with_padding, client_to_server)
+    if not compare_digest(expected_msg_key, msg_key):
+        raise ValueError("MTProto msg_key verification failed")
+    return plaintext_with_padding
 
 
 def xor_bytes(left: bytes, right: bytes) -> bytes:
@@ -183,6 +242,64 @@ def tl_encode_string(value: str) -> bytes:
 def tl_decode_string(data: bytes, offset: int) -> tuple[str, int]:
     payload, next_offset = tl_decode_bytes(data, offset)
     return payload.decode("utf-8"), next_offset
+
+
+def tl_encode_int_vector(values: tuple[int, ...]) -> bytes:
+    encoded = bytearray(tl_encode_uint(_TL_VECTOR_CONSTRUCTOR_ID))
+    encoded.extend(tl_encode_int(len(values)))
+    for value in values:
+        encoded.extend(tl_encode_int(value))
+    return bytes(encoded)
+
+
+def tl_decode_int_vector(data: bytes, offset: int) -> tuple[tuple[int, ...], int]:
+    constructor_id, offset = tl_decode_uint(data, offset)
+    if constructor_id != _TL_VECTOR_CONSTRUCTOR_ID:
+        raise ValueError(f"expected Vector constructor, got 0x{constructor_id:08x}")
+    count, offset = tl_decode_int(data, offset)
+    if count < 0:
+        raise ValueError("TL vector count cannot be negative")
+    values: list[int] = []
+    for _ in range(count):
+        value, offset = tl_decode_int(data, offset)
+        values.append(value)
+    return tuple(values), offset
+
+
+def tl_encode_long_vector(values: tuple[int, ...]) -> bytes:
+    encoded = bytearray(tl_encode_uint(_TL_VECTOR_CONSTRUCTOR_ID))
+    encoded.extend(tl_encode_int(len(values)))
+    for value in values:
+        encoded.extend(tl_encode_long(value))
+    return bytes(encoded)
+
+
+def tl_decode_long_vector(data: bytes, offset: int) -> tuple[tuple[int, ...], int]:
+    constructor_id, offset = tl_decode_uint(data, offset)
+    if constructor_id != _TL_VECTOR_CONSTRUCTOR_ID:
+        raise ValueError(f"expected Vector constructor, got 0x{constructor_id:08x}")
+    count, offset = tl_decode_int(data, offset)
+    if count < 0:
+        raise ValueError("TL vector count cannot be negative")
+    values: list[int] = []
+    for _ in range(count):
+        value, offset = tl_decode_long(data, offset)
+        values.append(value)
+    return tuple(values), offset
+
+
+def _validate_auth_key(auth_key: bytes) -> None:
+    if len(auth_key) != _MT_PROTO_AUTH_KEY_SIZE:
+        raise ValueError("MTProto auth_key must be 256 bytes")
+
+
+def _validate_msg_key(msg_key: bytes) -> None:
+    if len(msg_key) != _MT_PROTO_MSG_KEY_SIZE:
+        raise ValueError("MTProto msg_key must be 16 bytes")
+
+
+def _direction_offset(client_to_server: bool) -> int:
+    return 0 if client_to_server else 8
 
 
 def _validate_aes_key(key: bytes) -> None:
