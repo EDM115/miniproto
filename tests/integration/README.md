@@ -12,3 +12,15 @@ uv run pytest tests/integration/test_auth_live.py tests/integration/test_message
 ```
 
 The checks cover bot authorization plus `get_me()`, phone authorization plus `get_me()` and reconnect from persisted session, Saved Messages send plus `messages.getHistory`, and Saved Messages file upload plus download byte comparison.
+
+The heavy live media-limit benchmark is not part of pytest. Run it only when you intentionally want to create and transfer the default Telegram MTProto media-limit payload:
+
+```powershell
+$env:MINIPROTO_INTEGRATION = "1"
+$env:MINIPROTO_REAL_INTEGRATION = "1"
+$env:MINIPROTO_LIVE_BENCH = "1"
+$env:MINIPROTO_LIVE_BENCH_DC_ID = "4"
+uv run python tools/bench/benchmark_live_media_limit.py --actor both
+```
+
+It writes the deterministic payload and downloads under `.tmp/`, uses separate encrypted benchmark sessions, prints progress every 5 seconds by default, and reports throughput percentiles for user and bot transfers. Set `MINIPROTO_LIVE_BENCH_BOT_PEER` to a real chat/user/channel if the bot cannot send to `self`.
