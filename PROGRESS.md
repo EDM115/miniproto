@@ -198,7 +198,7 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
   | TASK-047 | Add DC option persistence, current DC selection, DC migration error handling, export authorization, and import authorization.                                                       | yes         | 2026-06-30 |
   | TASK-048 | Implement auth-key-not-found, invalid DC, transport flood, and key regeneration behavior with clear typed exceptions.                                                               | yes         | 2026-06-30 |
   | TASK-049 | Add fake-server tests in `tests/test_auth.py` for successful phone auth, successful bot auth, 2FA callback use, wrong-code failures, DC migration, and auth-key-not-found recovery. | in progress | 2026-06-30 |
-  | TASK-050 | Add gated live tests under `tests/integration/test_auth_live.py` for Telegram test DC sign-in, bot auth, `get_me()`, and reconnect using environment-only credentials.              | in progress | 2026-06-30 |
+  | TASK-050 | Add gated live tests under `tests/integration/test_auth_live.py` for production/test DC sign-in, bot auth, `get_me()`, and reconnect using environment-only credentials.            | in progress | 2026-07-02 |
 
 ### Implementation Phase 7 - Raw Invocation, Error Handling, And Flood Waits
 
@@ -235,7 +235,7 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
   | TASK-066 | Implement `Client.send_message()` using `messages.sendMessage`, random ID generation, entity parsing for plain text and Markdown-lite, flood-wait behavior, and result normalization to `Message`.       | yes         | 2026-06-30 |
   | TASK-067 | Add edit/delete text-message primitives if they are required to complete v1 docs and tests; otherwise keep them as raw API examples only.                                                                | yes         | 2026-06-30 |
   | TASK-068 | Add tests in `tests/test_peers.py` and `tests/test_messages.py` for cache hits/misses, access-hash persistence, self resolution, text send, Markdown-lite entities, random IDs, and flood wait surfaces. | yes         | 2026-06-30 |
-  | TASK-069 | Add gated live test coverage for Saved Messages send and receive when `MINIPROTO_INTEGRATION=1`.                                                                                                         | in progress | 2026-06-30 |
+  | TASK-069 | Add gated live test coverage for Saved Messages send and history read when `MINIPROTO_INTEGRATION=1`.                                                                                                    | in progress | 2026-07-02 |
 
 ### Implementation Phase 10 - Media Upload And Download Primitives
 
@@ -248,7 +248,7 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
   | TASK-073 | Implement `Client.send_file()` as a thin protocol-core convenience over upload plus generated media send requests.                                                                                                               | yes         | 2026-06-30 |
   | TASK-074 | Implement `Client.download_media()` as a thin protocol-core convenience over media location resolution plus download.                                                                                                            | yes         | 2026-06-30 |
   | TASK-075 | Add tests in `tests/test_media_upload.py` and `tests/test_media_download.py` for chunk sizing, small/big branch selection, streaming, retry, resume, CDN decrypt, progress callback ordering, cancellation, and memory ceilings. | yes         | 2026-06-30 |
-  | TASK-076 | Add gated live tests for upload/download to Saved Messages when `MINIPROTO_INTEGRATION=1`.                                                                                                                                       | in progress | 2026-06-30 |
+  | TASK-076 | Add gated live tests for upload/download to Saved Messages when `MINIPROTO_INTEGRATION=1`.                                                                                                                                       | in progress | 2026-07-02 |
 
 ### Implementation Phase 11 - Observability, Resource Limits, And Production Hardening
 
@@ -267,7 +267,7 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
   | Task     | Description                                                                                                                                                                                                  | Completed | Date |
   | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------- | ---- |
   | TASK-082 | Expand `.github/workflows/ci.yml` to run Python 3.13 explicitly, add schema freshness checks, docs build, maturin wheel build, and benchmark smoke artifact upload.                                          | no        |      |
-  | TASK-083 | Add `tests/integration/README.md` documenting required environment variables, Telegram test DC preference, credential handling, and skip behavior.                                                           | no        |      |
+  | TASK-083 | Add `tests/integration/README.md` documenting required environment variables, Telegram test DC preference, credential handling, and skip behavior.                                                           | yes       | 2026-07-02 |
   | TASK-084 | Add fake-server tests for auth, raw invoke, transport recovery, update gaps, media transfer, and DC migration before relying on live Telegram tests.                                                         | no        |      |
   | TASK-085 | Add benchmark scripts under `tools/bench/` for native vs fallback crypto, TL serialization, 1k pending RPCs, update dispatch latency, media throughput, reconnect recovery, and sustained RSS.               | no        |      |
   | TASK-086 | Add release command aggregation in `docs/development.md` or a non-secret script under `tools/` that runs formatting, linting, type checking, tests, Rust checks, schema checks, docs build, and wheel build. | no        |      |

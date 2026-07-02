@@ -51,7 +51,7 @@ testpaths = ["tests"]
 pythonpath = ["."]
 
 [tool.ruff]
-exclude = [".venv"]
+exclude = [".venv", ".tmp"]
 target-version = "py313"
 line-length = 100
 src = ["src", "tests"]
@@ -73,7 +73,7 @@ split-on-trailing-comma = false
 python-version = "3.13"
 
 [tool.ty.src]
-exclude = [".venv"]
+exclude = [".venv", ".tmp"]
 
 [tool.uv]
 compile-bytecode = true

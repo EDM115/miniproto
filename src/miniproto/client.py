@@ -5,6 +5,7 @@ import mimetypes
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterable
 from typing import Any, TypeVar, overload
 
+from miniproto.auth.bootstrap import ensure_auth_key
 from miniproto.auth.service import AuthService
 from miniproto.config import ClientConfig
 from miniproto.connection.transport import TransportError
@@ -105,13 +106,17 @@ class Client:
         password_callback: Callable[[], Awaitable[str] | str] | None = None,
     ) -> object:
         await self.connect()
-        return await AuthService(self.config, self._storage, self.invoke).sign_in_phone(
-            phone, code_callback, password_callback
-        )
+        await self._ensure_authorization_key()
+        return await AuthService(
+            self.config, self._storage, self._invoke_auth_request
+        ).sign_in_phone(phone, code_callback, password_callback)
 
     async def sign_in_bot(self, token: str) -> object:
         await self.connect()
-        return await AuthService(self.config, self._storage, self.invoke).sign_in_bot(token)
+        await self._ensure_authorization_key()
+        return await AuthService(self.config, self._storage, self._invoke_auth_request).sign_in_bot(
+            token
+        )
 
     async def get_me(self, *, refresh: bool = False) -> User:
         if not await self.is_authorized():
@@ -318,6 +323,12 @@ class Client:
                 self.config, self._storage, self._sender_factory
             )
         return self._sender
+
+    async def _ensure_authorization_key(self) -> None:
+        await ensure_auth_key(self.config, self._storage)
+
+    async def _invoke_auth_request(self, raw_request: object) -> object:
+        return await self.invoke(raw_request, retry=True)
 
     async def _drop_sender(self) -> None:
         sender = self._sender

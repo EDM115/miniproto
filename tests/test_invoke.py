@@ -24,7 +24,7 @@ from miniproto.errors import (
     RpcError,
     TransportFlood,
 )
-from miniproto.invoke import RawSender
+from miniproto.invoke import RawSender, decode_result_payload
 from miniproto.mtproto.codec import RpcErrorBody, encode_message_body
 from miniproto.raw import functions, types
 from miniproto.session.models import session_record_from_mapping
@@ -172,6 +172,12 @@ def test_invoke_wraps_request_with_layer_and_init_connection_then_decodes_result
         assert isinstance(wrapped.query.query, functions.HelpGetNearestDc)
 
     run(scenario())
+
+
+def test_decode_result_payload_accepts_namespaced_abstract_result_type() -> None:
+    user = types.User(id=42, access_hash=99, first_name="miniproto test")
+    authorization = types.AuthAuthorization(user=user)
+    assert decode_result_payload(authorization.serialize(), "auth.Authorization") == authorization
 
 
 def test_invoke_rejects_decoded_result_that_does_not_match_request_result_type() -> None:

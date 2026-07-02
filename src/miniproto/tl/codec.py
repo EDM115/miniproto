@@ -334,9 +334,10 @@ def _clean_type(type_name: str) -> str:
 
 def _is_bare_type(type_name: str) -> bool:
     clean = type_name.removeprefix("!").strip()
-    return clean.startswith("%") or (
-        clean[:1].islower() and clean not in _PRIMITIVES and _vector_item_type(clean) is None
-    )
+    if clean.startswith("%"):
+        return True
+    name = clean.rsplit(".", 1)[-1]
+    return name[:1].islower() and clean not in _PRIMITIVES and _vector_item_type(clean) is None
 
 
 def _vector_item_type(type_name: str) -> str | None:

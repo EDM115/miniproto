@@ -1,23 +1,14 @@
-# Integration Auth Tests
+# Integration Tests
 
-Live Telegram tests are opt-in and skipped unless `MINIPROTO_INTEGRATION=1` is set in the environment. Keep credentials in `.env` or CI secrets only; `.env.example` documents the expected variable names and `.env` is ignored by git.
-Required for test-DC auth later: `MINIPROTO_API_ID`, `MINIPROTO_API_HASH`, `MINIPROTO_SESSION_KEY`, at least one `MINIPROTO_TEST_DC1` through `MINIPROTO_TEST_DC5` endpoint in `host:port` or `[ipv6]:port` form, `MINIPROTO_TEST_DC_ID`, and either `MINIPROTO_TEST_PHONE` plus `MINIPROTO_TEST_CODE` or `MINIPROTO_BOT_TOKEN` for bot auth.
-Production DC checks must stay disabled unless `MINIPROTO_REAL_INTEGRATION=1` is also set. Use `MINIPROTO_REAL_PHONE`, `MINIPROTO_REAL_CODE`, `MINIPROTO_REAL_PASSWORD`, and `MINIPROTO_REAL_DC_ID` only for explicit real-account experiments.
-Run later with:
+Live Telegram tests are opt-in and skipped unless `MINIPROTO_INTEGRATION=1` is set. Keep credentials in `.env` or CI secrets only; `.env.example` documents the expected variable names and `.env` is ignored by git.
+The current live path targets production Telegram DCs by default. Test DC support remains documented and configurable, but it is not the default path because current desktop/web test-account login was not reliable enough for local validation.
+Production DC tests also require `MINIPROTO_REAL_INTEGRATION=1`. Bot auth can run non-interactively with `MINIPROTO_BOT_TOKEN`. Phone auth uses `MINIPROTO_REAL_PHONE` and prompts for the current one-time login code only when `MINIPROTO_LIVE_PROMPT_CODE=1` and pytest is running interactively. Do not store phone login codes in `.env`; they change on every login attempt.
+Live sessions are stored under `.tmp/miniproto-*.sqlite` using `MINIPROTO_SESSION_KEY`, so the phone prompt is only needed when there is no valid persisted user session yet.
 
-```powershell
-uv run pytest tests/integration/test_auth_live.py -q
-```
-
-Phase 6 ships this harness before credentials are available. The live auth test itself still skips with a clear message until the raw invoke/real transport path is wired deeply enough to make Telegram network calls.
-Phase 9 adds a Saved Messages send scaffold in `tests/integration/test_messages_live.py`. It uses the same credential gate and intentionally skips until a maintainer enables test-DC credentials.
+Run the five current smoke checks with:
 
 ```powershell
-uv run pytest tests/integration/test_messages_live.py -q
+uv run pytest tests/integration/test_auth_live.py tests/integration/test_messages_live.py tests/integration/test_media_live.py -q
 ```
 
-Phase 10 adds a Saved Messages upload/download scaffold in `tests/integration/test_media_live.py`. It uses `MINIPROTO_TEST_UPLOAD_FILE` as the local file to upload and `MINIPROTO_TEST_DOWNLOAD_PATH` as the optional download target, then skips until a maintainer enables test-DC credentials and validates the real transport path.
-
-```powershell
-uv run pytest tests/integration/test_media_live.py -q
-```
+The checks cover bot authorization plus `get_me()`, phone authorization plus `get_me()` and reconnect from persisted session, Saved Messages send plus `messages.getHistory`, and Saved Messages file upload plus download byte comparison.

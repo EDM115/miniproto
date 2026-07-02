@@ -1,25 +1,52 @@
 from __future__ import annotations
 
-import os
+import asyncio
 
-import pytest
-
-from miniproto.auth import dc_options_from_env
-
-pytestmark = pytest.mark.skipif(
-    os.environ.get("MINIPROTO_INTEGRATION") != "1",
-    reason="set MINIPROTO_INTEGRATION=1 to run live Telegram integration tests",
-)
+from live_helpers import authorized_user_client, live_client, require_bot_token, stored_user
 
 
-def test_live_auth_environment_contract() -> None:
-    required = ("MINIPROTO_API_ID", "MINIPROTO_API_HASH", "MINIPROTO_SESSION_KEY")
-    missing = [name for name in required if not os.environ.get(name)]
-    if missing:
-        pytest.skip(f"missing live auth environment variables: {', '.join(missing)}")
-    dc_options = dc_options_from_env()
-    if not dc_options:
-        pytest.skip("set at least one MINIPROTO_TEST_DC1..MINIPROTO_TEST_DC5 endpoint")
-    if not (os.environ.get("MINIPROTO_TEST_PHONE") or os.environ.get("MINIPROTO_BOT_TOKEN")):
-        pytest.skip("set MINIPROTO_TEST_PHONE or MINIPROTO_BOT_TOKEN")
-    pytest.skip("live Telegram auth waits for the Phase 7 raw invoke transport path")
+def run(coro):
+    return asyncio.run(coro)
+
+
+def test_live_bot_auth_get_me() -> None:
+    async def scenario() -> None:
+        token = require_bot_token()
+        client = live_client("live-bot")
+        try:
+            await client.connect()
+            user = await stored_user(client)
+            if user is None or not user.is_bot:
+                await client.sign_in_bot(token)
+            me = await client.get_me(refresh=True)
+            assert me.is_bot is True
+            assert me.id > 0
+        finally:
+            await client.disconnect()
+
+    run(scenario())
+
+
+def test_live_phone_auth_get_me_and_reconnect() -> None:
+    async def scenario() -> None:
+        client = await authorized_user_client("live-user")
+        try:
+            me = await client.get_me(refresh=True)
+            assert me.is_bot is False
+            assert me.is_self is True
+            assert me.id > 0
+        finally:
+            await client.disconnect()
+
+        reconnected = live_client("live-user")
+        try:
+            await reconnected.connect()
+            user = await stored_user(reconnected)
+            assert user is not None
+            assert user.is_bot is False
+            me = await reconnected.get_me(refresh=True)
+            assert me.id == user.id
+        finally:
+            await reconnected.disconnect()
+
+    run(scenario())

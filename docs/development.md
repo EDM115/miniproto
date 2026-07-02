@@ -77,7 +77,7 @@ uv run python tools/bench/benchmark_native_fallback_crypto.py
 
 This compares native-extension timings with the pure Python fallback for crypto and TL primitive paths, and verifies both implementations return matching outputs before reporting comparable best and median timings. The command is a smoke check, not an absolute timing gate.
 
-Optional live Telegram integration tests must stay gated by environment variables once they exist:
+Optional live Telegram integration tests are gated by environment variables:
 
 ```powershell
 $env:MINIPROTO_INTEGRATION = "1"
@@ -142,40 +142,25 @@ cargo test --all-features
 uv run maturin build
 ```
 
-## Live Telegram Auth Test Environment
+## Live Telegram Integration Test Environment
 
-Copy `.env.example` to `.env` for local live-test runs and keep `.env` uncommitted. The gated auth integration harness reads only environment variables; it never reads credentials from repository files by default.
+Copy `.env.example` to `.env` for local live-test runs and keep `.env` uncommitted. The gated integration harness loads `.env` for local convenience without overriding real environment variables.
 
-For test DC work, set:
+For the current production-DC smoke path, set:
 
 ```powershell
 $env:MINIPROTO_INTEGRATION = "1"
-$env:MINIPROTO_LIVE_MODE = "test"
+$env:MINIPROTO_REAL_INTEGRATION = "1"
 $env:MINIPROTO_API_ID = "..."
 $env:MINIPROTO_API_HASH = "..."
 $env:MINIPROTO_SESSION_KEY = "replace-with-at-least-16-random-bytes"
-$env:MINIPROTO_TEST_DC_ID = "2"
-$env:MINIPROTO_TEST_DC1 = "host:port"
-$env:MINIPROTO_TEST_DC2 = "host:port"
-$env:MINIPROTO_TEST_DC3 = "host:port"
-$env:MINIPROTO_TEST_DC4 = "host:port"
-$env:MINIPROTO_TEST_DC5 = "host:port"
-$env:MINIPROTO_TEST_PHONE = "99966XYYYY"
-$env:MINIPROTO_TEST_CODE = "XXXXX"
 $env:MINIPROTO_BOT_TOKEN = "..."
-uv run pytest tests/integration/test_auth_live.py -q
-```
-
-`MINIPROTO_TEST_DC1` through `MINIPROTO_TEST_DC5` use `host:port` or `[ipv6]:port` values from Telegram API development tools for the selected API ID. `MINIPROTO_TEST_PHONE` follows Telegram's reserved test-account phone pattern for test DC authorization; fill the exact phone/code pair you intend to exercise.
-
-Production DC checks must also set `MINIPROTO_REAL_INTEGRATION=1` and should only be run after test DC auth is green:
-
-```powershell
-$env:MINIPROTO_REAL_INTEGRATION = "1"
+$env:MINIPROTO_REAL_DC_ID = "2"
 $env:MINIPROTO_REAL_PHONE = "..."
-$env:MINIPROTO_REAL_CODE = "..."
-$env:MINIPROTO_REAL_PASSWORD = "..."
-uv run pytest tests/integration/test_auth_live.py -q
+$env:MINIPROTO_LIVE_PROMPT_CODE = "1"
+uv run pytest tests/integration/test_auth_live.py tests/integration/test_messages_live.py tests/integration/test_media_live.py -q
 ```
 
-The Phase 6 harness currently verifies the environment contract and skips actual Telegram calls until the raw invoke transport path is complete.
+Bot auth can run non-interactively with `MINIPROTO_BOT_TOKEN`. Phone auth prompts for the current one-time code only when `MINIPROTO_LIVE_PROMPT_CODE=1` and pytest has an interactive stdin. Do not put phone login codes in `.env`; Telegram changes them on every login attempt. If the account has 2FA enabled, set `MINIPROTO_REAL_PASSWORD` or keep the prompt flag enabled so the test can ask for it.
+The live tests persist encrypted sessions under `.tmp/miniproto-*.sqlite`, so repeated phone-auth runs should reuse the stored user session until the session is deleted or invalidated.
+For test DC work, keep `MINIPROTO_LIVE_MODE=test`, `MINIPROTO_TEST_DC_ID`, `MINIPROTO_TEST_DC1` through `MINIPROTO_TEST_DC5`, and `MINIPROTO_TEST_PHONE` configured from Telegram API development tools. Test DC login remains a secondary path because current Telegram Desktop/Web test-account login was not reliable in local validation.
