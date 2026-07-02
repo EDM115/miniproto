@@ -5,9 +5,11 @@ import base64
 import hashlib
 import hmac
 import json
+import logging
 import os
 import secrets
 import sqlite3
+import time
 from collections.abc import Mapping
 from dataclasses import fields, is_dataclass
 from datetime import UTC, datetime
@@ -15,6 +17,7 @@ from pathlib import Path
 from typing import Any, Protocol, cast, runtime_checkable
 
 from miniproto.errors import SessionEnvelopeError, SessionStorageError
+from miniproto.observability import emit_event, get_logger, record_metric
 from miniproto.session.models import SessionRecord, session_record_to_mapping
 
 type SessionPayload = Mapping[str, Any] | SessionRecord
@@ -34,6 +37,7 @@ CREATE TABLE IF NOT EXISTS session_records (
     updated_at TEXT NOT NULL
 )
 """
+_LOGGER = get_logger("session.storage")
 
 
 @runtime_checkable
@@ -54,13 +58,22 @@ class InMemorySessionStorage:
         )
 
     async def load(self) -> Mapping[str, Any] | None:
-        return _copy_session_data(self._data) if self._data is not None else None
+        started = time.perf_counter()
+        result = _copy_session_data(self._data) if self._data is not None else None
+        _emit_storage_event(
+            "session.load", started, outcome="success", backend="memory", found=result is not None
+        )
+        return result
 
     async def save(self, data: SessionPayload) -> None:
+        started = time.perf_counter()
         self._data = _copy_session_data(data)
+        _emit_storage_event("session.save", started, outcome="success", backend="memory")
 
     async def clear(self) -> None:
+        started = time.perf_counter()
         self._data = None
+        _emit_storage_event("session.clear", started, outcome="success", backend="memory")
 
     async def close(self) -> None:
         return None
@@ -84,14 +97,53 @@ class EncryptedSQLiteSessionStorage:
         self._encryption_key, self._mac_key = _derive_keys(key_material)
 
     async def load(self) -> Mapping[str, Any] | None:
-        return await asyncio.to_thread(self._load_sync)
+        started = time.perf_counter()
+        try:
+            result = await asyncio.to_thread(self._load_sync)
+        except BaseException as exc:
+            _emit_storage_event(
+                "session.load",
+                started,
+                outcome="error",
+                backend="sqlite",
+                error_type=type(exc).__name__,
+            )
+            raise
+        _emit_storage_event(
+            "session.load", started, outcome="success", backend="sqlite", found=result is not None
+        )
+        return result
 
     async def save(self, data: SessionPayload) -> None:
+        started = time.perf_counter()
         envelope = self._encrypt(serialize_session_data(data))
-        await asyncio.to_thread(self._save_sync, envelope)
+        try:
+            await asyncio.to_thread(self._save_sync, envelope)
+        except BaseException as exc:
+            _emit_storage_event(
+                "session.save",
+                started,
+                outcome="error",
+                backend="sqlite",
+                error_type=type(exc).__name__,
+            )
+            raise
+        _emit_storage_event("session.save", started, outcome="success", backend="sqlite")
 
     async def clear(self) -> None:
-        await asyncio.to_thread(self._clear_sync)
+        started = time.perf_counter()
+        try:
+            await asyncio.to_thread(self._clear_sync)
+        except BaseException as exc:
+            _emit_storage_event(
+                "session.clear",
+                started,
+                outcome="error",
+                backend="sqlite",
+                error_type=type(exc).__name__,
+            )
+            raise
+        _emit_storage_event("session.clear", started, outcome="success", backend="sqlite")
 
     async def close(self) -> None:
         return None
@@ -309,3 +361,16 @@ def _b64decode(value: str, field_name: str) -> bytes:
 def _parse_datetime(value: str) -> datetime:
     parsed = datetime.fromisoformat(value)
     return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
+
+
+def _emit_storage_event(event: str, started: float, *, outcome: str, **fields: object) -> None:
+    duration_ms = (time.perf_counter() - started) * 1000
+    record_metric(f"{event}.duration", duration_ms, unit="ms", attributes={"outcome": outcome})
+    emit_event(
+        _LOGGER,
+        logging.ERROR if outcome == "error" else logging.DEBUG,
+        event,
+        outcome=outcome,
+        duration_ms=duration_ms,
+        **fields,
+    )

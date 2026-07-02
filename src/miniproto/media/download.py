@@ -4,6 +4,7 @@ import asyncio
 import inspect
 import io
 import os
+import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -11,6 +12,7 @@ from typing import Any, BinaryIO, cast
 
 from miniproto.media.cdn import cdn_redirect_from_raw, get_cdn_file_part
 from miniproto.media.upload import DEFAULT_CHUNK_SIZE, ProgressCallback
+from miniproto.observability import emit_event, get_logger, record_metric
 from miniproto.raw import functions, types
 from miniproto.types import Media
 
@@ -22,6 +24,7 @@ class MediaDownloadError(RuntimeError):
 
 
 type RawInvoker = Callable[..., Awaitable[object]]
+_LOGGER = get_logger("media.download")
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,13 +61,118 @@ async def download_file(
     total_size: int | None = None,
     request_timeout: float | None = None,
     max_buffer_size: int | None = None,
+    concurrency: int = 1,
 ) -> MediaDownloadResult:
-    _validate_download_options(offset, limit, part_size, max_buffer_size)
+    _validate_download_options(offset, limit, part_size, max_buffer_size, concurrency)
+    if limit is None and concurrency > 1 and total_size is not None:
+        limit = max(0, total_size - offset)
+    started = time.perf_counter()
+    try:
+        if concurrency > 1 and limit is not None:
+            result = await _download_file_concurrent(
+                invoke,
+                location,
+                destination,
+                offset=offset,
+                limit=limit,
+                part_size=part_size,
+                resume=resume,
+                progress=progress,
+                precise=precise,
+                cdn_supported=cdn_supported,
+                total_size=total_size,
+                request_timeout=request_timeout,
+                concurrency=concurrency,
+            )
+        else:
+            result = await _download_file_sequential(
+                invoke,
+                location,
+                destination,
+                offset=offset,
+                limit=limit,
+                part_size=part_size,
+                resume=resume,
+                progress=progress,
+                precise=precise,
+                cdn_supported=cdn_supported,
+                total_size=total_size,
+                request_timeout=request_timeout,
+            )
+    except BaseException:
+        duration_ms = (time.perf_counter() - started) * 1000
+        record_metric(
+            "media.download.errors", 1, attributes={"concurrency": concurrency, "limit": limit}
+        )
+        emit_event(
+            _LOGGER,
+            40,
+            "media.download",
+            outcome="error",
+            offset=offset,
+            limit=limit,
+            part_size=part_size,
+            concurrency=concurrency,
+            duration_ms=duration_ms,
+        )
+        raise
+    duration_ms = (time.perf_counter() - started) * 1000
+    throughput_bytes_s = result.bytes_downloaded / max(duration_ms / 1000, 1e-9)
+    record_metric(
+        "media.download.bytes",
+        result.bytes_downloaded,
+        unit="bytes",
+        attributes={"concurrency": concurrency, "limit": limit},
+    )
+    record_metric(
+        "media.download.duration",
+        duration_ms,
+        unit="ms",
+        attributes={"concurrency": concurrency, "limit": limit},
+    )
+    record_metric(
+        "media.download.throughput",
+        throughput_bytes_s,
+        unit="bytes/s",
+        attributes={"concurrency": concurrency, "limit": limit},
+    )
+    emit_event(
+        _LOGGER,
+        20,
+        "media.download",
+        outcome="success",
+        bytes_downloaded=result.bytes_downloaded,
+        offset=offset,
+        limit=limit,
+        part_size=part_size,
+        concurrency=concurrency,
+        duration_ms=duration_ms,
+        throughput_bytes_s=throughput_bytes_s,
+    )
+    return result
+
+
+async def _download_file_sequential(
+    invoke: RawInvoker,
+    location: object,
+    destination: Destination = None,
+    *,
+    offset: int,
+    limit: int | None,
+    part_size: int,
+    resume: bool,
+    progress: ProgressCallback | None,
+    precise: bool,
+    cdn_supported: bool,
+    total_size: int | None,
+    request_timeout: float | None,
+) -> MediaDownloadResult:
     destination_handle = _open_destination(destination, resume=resume)
     current_offset = offset + destination_handle.existing_bytes
     downloaded = destination_handle.existing_bytes
     remaining = None if limit is None else max(0, limit - destination_handle.existing_bytes)
-    callback_total = limit if limit is not None else total_size
+    del total_size
+    callback_total = limit
     try:
         while remaining is None or remaining > 0:
             request_limit = part_size if remaining is None else min(part_size, remaining)
@@ -114,6 +222,104 @@ async def download_file(
             destination_handle.path.unlink(missing_ok=True)
         raise
     except BaseException:
+        if destination_handle.should_close:
+            destination_handle.handle.close()
+        raise
+
+
+async def _download_file_concurrent(
+    invoke: RawInvoker,
+    location: object,
+    destination: Destination = None,
+    *,
+    offset: int,
+    limit: int,
+    part_size: int,
+    resume: bool,
+    progress: ProgressCallback | None,
+    precise: bool,
+    cdn_supported: bool,
+    total_size: int | None,
+    request_timeout: float | None,
+    concurrency: int,
+) -> MediaDownloadResult:
+    destination_handle = _open_destination(destination, resume=resume)
+    downloaded = destination_handle.existing_bytes
+    remaining = max(0, limit - destination_handle.existing_bytes)
+    callback_total = limit if limit is not None else total_size
+    start_offset = offset + destination_handle.existing_bytes
+    next_offset = start_offset
+    end_offset = start_offset + remaining
+    pending: set[asyncio.Task[tuple[int, bytes, int]]] = set()
+    stopped = False
+
+    async def fetch(request_offset: int, request_limit: int) -> tuple[int, bytes, int]:
+        result = await invoke(
+            functions.UploadGetFile(
+                precise=precise,
+                cdn_supported=cdn_supported,
+                location=location,
+                offset=request_offset,
+                limit=request_limit,
+            ),
+            request_timeout=request_timeout,
+        )
+        payload = await _payload_from_get_file_result(
+            invoke,
+            result,
+            offset=request_offset,
+            limit=request_limit,
+            request_timeout=request_timeout,
+        )
+        if len(payload) > request_limit:
+            payload = payload[:request_limit]
+        return request_offset, payload, request_limit
+
+    def fill_window() -> None:
+        nonlocal next_offset
+        while len(pending) < concurrency and next_offset < end_offset and not stopped:
+            request_limit = min(part_size, end_offset - next_offset)
+            pending.add(asyncio.create_task(fetch(next_offset, request_limit)))
+            next_offset += request_limit
+
+    try:
+        fill_window()
+        while pending:
+            done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+            for task in done:
+                request_offset, payload, request_limit = await task
+                if not payload:
+                    stopped = True
+                    continue
+                output_offset = request_offset - offset
+                destination_handle.handle.seek(output_offset)
+                destination_handle.handle.write(payload)
+                downloaded += len(payload)
+                await _call_progress(progress, downloaded, callback_total)
+                if len(payload) < request_limit:
+                    stopped = True
+            fill_window()
+        if stopped:
+            await _cancel_tasks(pending)
+        if destination_handle.should_close:
+            destination_handle.handle.close()
+        data = destination_handle.get_data()
+        return MediaDownloadResult(
+            bytes_downloaded=downloaded,
+            offset=offset,
+            destination=destination_handle.path or destination_handle.handle,
+            data=data,
+            raw_location=location,
+        )
+    except asyncio.CancelledError:
+        await _cancel_tasks(pending)
+        if destination_handle.should_close:
+            destination_handle.handle.close()
+        if destination_handle.remove_on_cancel and destination_handle.path is not None:
+            destination_handle.path.unlink(missing_ok=True)
+        raise
+    except BaseException:
+        await _cancel_tasks(pending)
         if destination_handle.should_close:
             destination_handle.handle.close()
         raise
@@ -272,7 +478,7 @@ def _is_input_file_location(value: object) -> bool:
 
 
 def _validate_download_options(
-    offset: int, limit: int | None, part_size: int, max_buffer_size: int | None
+    offset: int, limit: int | None, part_size: int, max_buffer_size: int | None, concurrency: int
 ) -> None:
     if offset < 0:
         raise ValueError("offset must not be negative")
@@ -282,9 +488,12 @@ def _validate_download_options(
         raise ValueError("part_size must be positive")
     if part_size > DEFAULT_CHUNK_SIZE:
         raise ValueError("part_size must not exceed 512 KiB")
-    ceiling = part_size if max_buffer_size is None else max_buffer_size
-    if ceiling < part_size:
-        raise ValueError("max_buffer_size is lower than the configured download chunk size")
+    if concurrency <= 0:
+        raise ValueError("concurrency must be positive")
+    window = part_size * concurrency
+    ceiling = window if max_buffer_size is None else max_buffer_size
+    if ceiling < window:
+        raise ValueError("max_buffer_size is lower than the configured download concurrency window")
 
 
 def _open_destination(destination: Destination, *, resume: bool) -> _DestinationHandle:
@@ -302,7 +511,8 @@ def _open_destination(destination: Destination, *, resume: bool) -> _Destination
         path = Path(cast(str | os.PathLike[str], destination))
         path.parent.mkdir(parents=True, exist_ok=True)
         existing = path.stat().st_size if resume and path.exists() else 0
-        handle = path.open("ab" if resume else "wb")
+        handle = path.open("r+b" if resume and path.exists() else "w+b")
+        handle.seek(existing)
         return _DestinationHandle(
             handle=handle,
             path=path,
@@ -319,6 +529,14 @@ def _open_destination(destination: Destination, *, resume: bool) -> _Destination
         existing_bytes=0,
         get_data=lambda: None,
     )
+
+
+async def _cancel_tasks(pending: set[asyncio.Task[Any]]) -> None:
+    if not pending:
+        return
+    for task in pending:
+        task.cancel()
+    await asyncio.gather(*pending, return_exceptions=True)
 
 
 async def _call_progress(

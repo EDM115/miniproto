@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import asyncio
+import logging
+import time
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterable
 from contextlib import suppress
 from dataclasses import dataclass
 from typing import Any, Literal, TypeVar, cast, overload
 
 from miniproto.config import ClientConfig
+from miniproto.observability import emit_event, get_logger, record_metric
 from miniproto.raw import functions, types
 from miniproto.session.models import SessionRecord, session_record_from_mapping
 from miniproto.session.storage import SessionStorage
@@ -25,6 +28,7 @@ UpdateT = TypeVar("UpdateT", bound=Update)
 UpdateHandler = Callable[[UpdateT], Awaitable[None] | None]
 UpdateInvoker = Callable[[object], Awaitable[object]]
 _MAX_DIFFERENCE_ROUNDS = 10
+_LOGGER = get_logger("updates")
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,38 +57,70 @@ class UpdateManager:
         return self._handlers
 
     async def start(self) -> None:
+        started = time.perf_counter()
         await self._ensure_loaded()
         if self._task is None or self._task.done():
             self._task = asyncio.create_task(self._drain_raw_updates())
+        _emit_update_event(
+            "updates.start",
+            started,
+            outcome="success",
+            queue_size=self._config.update_queue_size,
+            overflow=self._config.update_queue_overflow,
+        )
 
     async def stop(self) -> None:
+        started = time.perf_counter()
         task = self._task
         self._task = None
         if task is None:
+            _emit_update_event("updates.stop", started, outcome="success", had_task=False)
             return
         if task.done():
             exc = task.exception()
             if exc is not None:
+                _emit_update_event(
+                    "updates.stop",
+                    started,
+                    outcome="error",
+                    error_type=type(exc).__name__,
+                    had_task=True,
+                )
                 raise exc
+            _emit_update_event("updates.stop", started, outcome="success", had_task=True)
             return
         task.cancel()
         with suppress(asyncio.CancelledError):
             await task
+        _emit_update_event("updates.stop", started, outcome="success", had_task=True)
 
     async def feed_raw_update(self, raw_update: object) -> None:
         if not self._offer_queue(self._raw_updates, raw_update):
             return
 
     async def handle_raw_update(self, raw_update: object) -> None:
+        started = time.perf_counter()
         async with self._state_lock:
             await self._ensure_loaded()
             events = await self._process_raw_update(raw_update)
             await self._persist_cursor()
         for event in events:
             await self.emit_update(event)
+        _emit_update_event(
+            "updates.handle_raw",
+            started,
+            outcome="success",
+            raw_type=type(raw_update).__name__,
+            emitted=len(events),
+        )
 
     async def emit_update(self, update: Update) -> None:
         if not self._offer_queue(self._updates, update):
+            record_metric(
+                "updates.queue_dropped",
+                1,
+                attributes={"queue": "public", "policy": self._config.update_queue_overflow},
+            )
             return
         await self._dispatch_handlers(update)
 
@@ -184,6 +220,8 @@ class UpdateManager:
         return events
 
     async def _recover_gap(self) -> list[Update]:
+        started = time.perf_counter()
+        record_metric("updates.gaps", 1)
         recovered: list[Update] = []
         for _ in range(_MAX_DIFFERENCE_ROUNDS):
             cursor = self._current_cursor()
@@ -202,7 +240,18 @@ class UpdateManager:
                 raise TypeError("updates.getDifference returned a non-updates.Difference result")
             recovered.extend(self._apply_difference(difference))
             if not isinstance(difference, types.UpdatesDifferenceSlice):
-                return _ordered_events(recovered)
+                events = _ordered_events(recovered)
+                _emit_update_event(
+                    "updates.recover_gap",
+                    started,
+                    outcome="success",
+                    rounds=_ + 1,
+                    emitted=len(events),
+                )
+                return events
+        _emit_update_event(
+            "updates.recover_gap", started, outcome="error", error_type="NoConvergence"
+        )
         raise RuntimeError("updates.getDifference did not converge")
 
     def _apply_difference(self, difference: object) -> list[Update]:
@@ -302,15 +351,28 @@ class UpdateManager:
     def _offer_queue(self, queue: asyncio.Queue[Any], item: Any) -> bool:
         try:
             queue.put_nowait(item)
+            record_metric(
+                "updates.queue_depth", queue.qsize(), attributes={"max_size": queue.maxsize}
+            )
             return True
         except asyncio.QueueFull:
             policy = self._config.update_queue_overflow
             if policy == "drop_newest":
+                record_metric(
+                    "updates.queue_dropped",
+                    1,
+                    attributes={"policy": policy, "item_type": type(item).__name__},
+                )
                 return False
             if policy == "drop_oldest":
                 with suppress(asyncio.QueueEmpty):
                     queue.get_nowait()
                 queue.put_nowait(item)
+                record_metric(
+                    "updates.queue_dropped",
+                    1,
+                    attributes={"policy": policy, "item_type": type(item).__name__},
+                )
                 return True
             raise
 
@@ -475,3 +537,16 @@ def _optional_int_attr(raw: object, attr: str) -> int | None:
     if value is None:
         return None
     return int(value)
+
+
+def _emit_update_event(event: str, started: float, *, outcome: str, **fields: object) -> None:
+    duration_ms = (time.perf_counter() - started) * 1000
+    record_metric(f"{event}.duration", duration_ms, unit="ms", attributes={"outcome": outcome})
+    emit_event(
+        _LOGGER,
+        logging.ERROR if outcome == "error" else logging.DEBUG,
+        event,
+        outcome=outcome,
+        duration_ms=duration_ms,
+        **fields,
+    )

@@ -15,7 +15,14 @@ from getpass import getpass
 from pathlib import Path
 from typing import Any, Literal
 
-from miniproto import Client, ClientConfig, EncryptedSQLiteSessionStorage, event_loop
+from miniproto import (
+    Client,
+    ClientConfig,
+    EncryptedSQLiteSessionStorage,
+    MemoryMonitor,
+    configure_logging,
+    event_loop,
+)
 from miniproto.invoke import load_session_record
 from miniproto.media import DEFAULT_CHUNK_SIZE
 
@@ -58,13 +65,28 @@ class TransferSummary:
 
 
 @dataclass(frozen=True, slots=True)
+class MemorySummary:
+    rss_start_bytes: int | None
+    rss_end_bytes: int | None
+    rss_peak_bytes: int | None
+    rss_delta_bytes: int | None
+    traced_current_delta_bytes: int | None
+    traced_peak_bytes: int | None
+    gc_objects_delta: int
+    leak_suspected: bool
+
+
+@dataclass(frozen=True, slots=True)
 class BenchmarkSummary:
     generated_file: str
     generated_file_bytes: int
     chunk_size: int
     upload_limit_parts: int
+    upload_concurrency: int
+    download_concurrency: int
     event_loop_backend: str
     results: tuple[TransferSummary, ...]
+    memory: MemorySummary | None = None
 
 
 @dataclass(slots=True)
@@ -72,21 +94,26 @@ class TransferRecorder:
     total: int | None
     label: str
     progress_interval_s: float
+    sample_interval_s: float = 5.0
     start: float = 0.0
-    last_time: float = 0.0
+    last_sample_time: float = 0.0
     last_report_time: float = 0.0
+    last_sample_bytes: int = 0
     last_bytes: int = 0
     samples_mib_s: list[float] | None = None
 
     def __post_init__(self) -> None:
         self.samples_mib_s = []
 
-    def begin(self) -> None:
-        now = time.perf_counter()
+    def begin(self, *, now: float | None = None) -> None:
+        now = time.perf_counter() if now is None else now
         self.start = now
-        self.last_time = now
+        self.last_sample_time = now
         self.last_report_time = now
+        self.last_sample_bytes = 0
         self.last_bytes = 0
+        assert self.samples_mib_s is not None
+        self.samples_mib_s.clear()
 
     async def progress(self, current: int, total: int | None) -> None:
         self.record(current, total)
@@ -97,27 +124,36 @@ class TransferRecorder:
         sampled_at = time.perf_counter() if now is None else now
         if self.start <= 0:
             self.start = sampled_at
-            self.last_time = sampled_at
-        elapsed = sampled_at - self.last_time
-        delta = current - self.last_bytes
-        if elapsed > 0 and delta > 0:
-            assert self.samples_mib_s is not None
-            instant_mib_s = _mib(delta) / elapsed
-            self.samples_mib_s.append(instant_mib_s)
-            if (
-                self.progress_interval_s > 0
-                and sampled_at - self.last_report_time >= self.progress_interval_s
-            ):
-                self.last_report_time = sampled_at
-                print_progress(
-                    self.label,
-                    current=current,
-                    total=self.total,
-                    elapsed_s=sampled_at - self.start,
-                    instant_mib_s=instant_mib_s,
-                )
-        self.last_time = sampled_at
+            self.last_sample_time = sampled_at
+            self.last_report_time = sampled_at
+        if current < self.last_bytes:
+            return
         self.last_bytes = current
+        elapsed = sampled_at - self.last_sample_time
+        if elapsed < self.sample_interval_s:
+            return
+        delta = current - self.last_sample_bytes
+        if elapsed <= 0 or delta <= 0:
+            self.last_sample_time = sampled_at
+            self.last_sample_bytes = current
+            return
+        assert self.samples_mib_s is not None
+        window_mib_s = _mib(delta) / elapsed
+        self.samples_mib_s.append(window_mib_s)
+        self.last_sample_time = sampled_at
+        self.last_sample_bytes = current
+        if (
+            self.progress_interval_s > 0
+            and sampled_at - self.last_report_time >= self.progress_interval_s
+        ):
+            self.last_report_time = sampled_at
+            print_progress(
+                self.label,
+                current=current,
+                total=self.total,
+                elapsed_s=sampled_at - self.start,
+                window_mib_s=window_mib_s,
+            )
 
     def finish(self, bytes_done: int) -> tuple[float, SampleStats]:
         finished_at = time.perf_counter()
@@ -138,6 +174,7 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
+    configure_logging(args.log_level, format=args.log_format)
     print(
         f"event_loop_backend={event_loop.backend_name()} "
         f"installed={event_loop.installed()} version={event_loop.backend_version()}"
@@ -199,6 +236,19 @@ def parse_args(
         help="number of concurrent upload part requests on the active MTProto sender",
     )
     parser.add_argument(
+        "--download-concurrency",
+        type=int,
+        default=int(
+            env_value(
+                values,
+                "MINIPROTO_LIVE_BENCH_DOWNLOAD_CONCURRENCY",
+                env_value(values, "MINIPROTO_LIVE_BENCH_CONCURRENCY", "8"),
+            )
+            or "8"
+        ),
+        help="number of concurrent upload.getFile requests for known-size downloads",
+    )
+    parser.add_argument(
         "--request-timeout",
         type=float,
         default=float(env_value(values, "MINIPROTO_LIVE_BENCH_REQUEST_TIMEOUT", "120") or "120"),
@@ -233,6 +283,28 @@ def parse_args(
         default=float(env_value(values, "MINIPROTO_LIVE_BENCH_PROGRESS_INTERVAL", "5") or "5"),
         help="seconds between upload/download progress lines; set 0 to keep quiet until each transfer finishes",
     )
+    parser.add_argument(
+        "--log-level",
+        default=env_value(
+            values,
+            "MINIPROTO_LIVE_BENCH_LOG_LEVEL",
+            env_value(values, "MINIPROTO_LOG_LEVEL", "WARNING"),
+        )
+        or "WARNING",
+        help="miniproto log level for the benchmark run",
+    )
+    parser.add_argument(
+        "--log-format",
+        choices=("text", "json"),
+        default=env_value(values, "MINIPROTO_LIVE_BENCH_LOG_FORMAT", "text") or "text",
+        help="structured log output format",
+    )
+    parser.add_argument(
+        "--trace-memory",
+        action="store_true",
+        default=env_value(values, "MINIPROTO_LIVE_BENCH_TRACE_MEMORY") == "1",
+        help="enable tracemalloc while also reporting RSS and GC-object deltas",
+    )
     return parser.parse_args(argv)
 
 
@@ -250,12 +322,14 @@ async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int
         print(f"prepared {args.file} ({size} bytes)")
         return 0
     require_live_env(env, actor=args.actor)
+    memory_monitor = MemoryMonitor(trace_allocations=args.trace_memory)
+    memory_monitor.start()
     actors: tuple[Actor, ...] = ("user", "bot") if args.actor == "both" else (args.actor,)
     results: list[TransferSummary] = []
     for actor in actors:
         print(f"{actor}: authorizing session on DC {args.dc_id}")
         client = await authorized_client(actor, args, env)
-        peer = env_value(env, f"MINIPROTO_LIVE_BENCH_{actor.upper()}_PEER") or "self"
+        peer = benchmark_peer_for_actor(actor, env)
         try:
             results.extend(
                 await benchmark_actor(
@@ -266,6 +340,7 @@ async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int
                     download_dir=args.download_dir,
                     dc_id=args.dc_id,
                     concurrency=args.concurrency,
+                    download_concurrency=args.download_concurrency,
                     request_timeout=args.request_timeout,
                     verify_digest=args.verify_digest,
                     progress_interval_s=args.progress_interval,
@@ -273,13 +348,17 @@ async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int
             )
         finally:
             await client.disconnect()
+    memory = memory_summary(memory_monitor.finish())
     summary = BenchmarkSummary(
         generated_file=str(args.file),
         generated_file_bytes=size,
         chunk_size=DEFAULT_CHUNK_SIZE,
         upload_limit_parts=limit_parts,
+        upload_concurrency=args.concurrency,
+        download_concurrency=args.download_concurrency,
         event_loop_backend=event_loop.backend_name(),
         results=tuple(results),
+        memory=memory,
     )
     print_summary(summary)
     if args.json is not None:
@@ -297,6 +376,7 @@ async def benchmark_actor(
     download_dir: Path,
     dc_id: int,
     concurrency: int,
+    download_concurrency: int,
     request_timeout: float,
     verify_digest: bool,
     progress_interval_s: float,
@@ -308,7 +388,10 @@ async def benchmark_actor(
         f"request_timeout={request_timeout:g}s"
     )
     upload_recorder = TransferRecorder(
-        total=size, label=f"{actor}.upload", progress_interval_s=progress_interval_s
+        total=size,
+        label=f"{actor}.upload",
+        progress_interval_s=progress_interval_s,
+        sample_interval_s=max(1.0, progress_interval_s or 1.0),
     )
     upload_recorder.begin()
     sent = await client.send_file(
@@ -341,9 +424,15 @@ async def benchmark_actor(
     await asyncio.to_thread(download_dir.mkdir, parents=True, exist_ok=True)
     target = download_dir / f"{actor}-dc{dc_id}-{source.name}"
     await asyncio.to_thread(target.unlink, missing_ok=True)
-    print(f"{actor}.download: starting media_dc={media.dc_id} target={target}")
+    print(
+        f"{actor}.download: starting media_dc={media.dc_id} target={target} "
+        f"concurrency={download_concurrency} request_timeout={request_timeout:g}s"
+    )
     download_recorder = TransferRecorder(
-        total=size, label=f"{actor}.download", progress_interval_s=progress_interval_s
+        total=size,
+        label=f"{actor}.download",
+        progress_interval_s=progress_interval_s,
+        sample_interval_s=max(1.0, progress_interval_s or 1.0),
     )
     download_recorder.begin()
     downloaded = await client.download_media(
@@ -353,6 +442,7 @@ async def benchmark_actor(
         total_size=size,
         progress=download_recorder.progress,
         request_timeout=request_timeout,
+        concurrency=download_concurrency,
     )
     download_duration, download_stats = download_recorder.finish(downloaded.bytes_downloaded)
     if downloaded.bytes_downloaded != size:
@@ -426,6 +516,25 @@ def upload_limit_parts_from_env_or_default(env: Mapping[str, str], dc_id: int) -
     if configured:
         return int(configured)
     return TELEGRAM_DEFAULT_UPLOAD_PARTS
+
+
+def benchmark_peer_for_actor(actor: Actor, env: Mapping[str, str]) -> str:
+    configured = env_value(env, f"MINIPROTO_LIVE_BENCH_{actor.upper()}_PEER")
+    if actor == "bot":
+        if _is_self_peer(configured):
+            raise SystemExit(
+                "MINIPROTO_LIVE_BENCH_BOT_PEER must name a chat, user, or channel where the bot can send messages; bots cannot upload to Saved Messages/self."
+            )
+        assert configured is not None
+        return configured.strip()
+    return (configured or "self").strip()
+
+
+def _is_self_peer(peer: str | None) -> bool:
+    if peer is None:
+        return True
+    normalized = peer.strip().casefold().replace("_", " ")
+    return normalized in {"", "self", "me", "saved messages"}
 
 
 async def find_recent_media(client: Client, peer: str, caption: str) -> Any:
@@ -531,23 +640,23 @@ def print_transfer(summary: TransferSummary) -> None:
     print(
         f"{summary.actor}.{summary.operation}: "
         f"{summary.bytes} bytes in {summary.duration_s:.3f}s "
-        f"overall={summary.overall_mib_s:.3f}MiB/s "
-        f"median={summary.samples.median_mib_s:.3f}MiB/s "
-        f"p95={summary.samples.p95_mib_s:.3f}MiB/s "
-        f"p01={summary.samples.p01_mib_s:.3f}MiB/s "
-        f"fastest_5pct_avg={summary.samples.fastest_5pct_avg_mib_s:.3f}MiB/s "
-        f"slowest_1pct_avg={summary.samples.slowest_1pct_avg_mib_s:.3f}MiB/s "
-        f"samples={summary.samples.samples} media_dc={summary.media_dc_id}"
+        f"overall={summary.overall_mib_s:.3f}MiB/s({_mib_s_to_mb_s(summary.overall_mib_s):.3f}MB/s) "
+        f"median_window={summary.samples.median_mib_s:.3f}MiB/s "
+        f"p95_window={summary.samples.p95_mib_s:.3f}MiB/s "
+        f"p01_window={summary.samples.p01_mib_s:.3f}MiB/s "
+        f"fastest_5pct_window_avg={summary.samples.fastest_5pct_avg_mib_s:.3f}MiB/s "
+        f"slowest_1pct_window_avg={summary.samples.slowest_1pct_avg_mib_s:.3f}MiB/s "
+        f"window_samples={summary.samples.samples} media_dc={summary.media_dc_id}"
     )
 
 
 def print_progress(
-    label: str, *, current: int, total: int | None, elapsed_s: float, instant_mib_s: float
+    label: str, *, current: int, total: int | None, elapsed_s: float, window_mib_s: float
 ) -> None:
     if total is None or total <= 0:
         print(
             f"{label}: {_mib(current):.1f}MiB transferred "
-            f"elapsed={elapsed_s:.1f}s instant={instant_mib_s:.3f}MiB/s"
+            f"elapsed={elapsed_s:.1f}s window={window_mib_s:.3f}MiB/s"
         )
         return
     percent = min(100.0, current / total * 100)
@@ -557,7 +666,7 @@ def print_progress(
     print(
         f"{label}: {percent:6.2f}% {_mib(current):.1f}/{_mib(total):.1f}MiB "
         f"elapsed={elapsed_s:.1f}s eta={format_duration(eta_s)} "
-        f"avg={overall_mib_s:.3f}MiB/s instant={instant_mib_s:.3f}MiB/s"
+        f"avg={overall_mib_s:.3f}MiB/s window={window_mib_s:.3f}MiB/s"
     )
 
 
@@ -577,10 +686,19 @@ def format_duration(seconds: float) -> str:
 def print_summary(summary: BenchmarkSummary) -> None:
     print(
         f"benchmark_file={summary.generated_file} bytes={summary.generated_file_bytes} "
-        f"chunk_size={summary.chunk_size} upload_limit_parts={summary.upload_limit_parts}"
+        f"chunk_size={summary.chunk_size} upload_limit_parts={summary.upload_limit_parts} "
+        f"upload_concurrency={summary.upload_concurrency} download_concurrency={summary.download_concurrency}"
     )
     for result in summary.results:
         print_transfer(result)
+    if summary.memory is not None:
+        print(
+            "memory: "
+            f"rss_start={summary.memory.rss_start_bytes} rss_end={summary.memory.rss_end_bytes} "
+            f"rss_peak={summary.memory.rss_peak_bytes} rss_delta={summary.memory.rss_delta_bytes} "
+            f"traced_delta={summary.memory.traced_current_delta_bytes} traced_peak={summary.memory.traced_peak_bytes} "
+            f"gc_objects_delta={summary.memory.gc_objects_delta} leak_suspected={summary.memory.leak_suspected}"
+        )
 
 
 def load_dotenv() -> dict[str, str]:
@@ -642,6 +760,23 @@ def prompt_password(env: Mapping[str, str]) -> str:
 
 def _mib(value: int) -> float:
     return value / (1024 * 1024)
+
+
+def _mib_s_to_mb_s(value: float) -> float:
+    return value * 1024 * 1024 / 1_000_000
+
+
+def memory_summary(delta: Any) -> MemorySummary:
+    return MemorySummary(
+        rss_start_bytes=delta.start.rss_bytes,
+        rss_end_bytes=delta.end.rss_bytes,
+        rss_peak_bytes=delta.peak.rss_bytes,
+        rss_delta_bytes=delta.rss_delta_bytes,
+        traced_current_delta_bytes=delta.traced_delta_bytes,
+        traced_peak_bytes=delta.peak.traced_peak_bytes,
+        gc_objects_delta=delta.end.gc_objects - delta.start.gc_objects,
+        leak_suspected=delta.leak_suspected(),
+    )
 
 
 if __name__ == "__main__":

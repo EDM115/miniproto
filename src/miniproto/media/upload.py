@@ -8,16 +8,19 @@ import math
 import os
 import secrets
 import tempfile
+import time
 from collections.abc import AsyncIterable, Awaitable, Callable, Iterable, Iterator
 from contextlib import AbstractContextManager, contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, BinaryIO, cast
 
+from miniproto.observability import emit_event, get_logger, record_metric
 from miniproto.raw import functions, types
 
 DEFAULT_CHUNK_SIZE = 512 * 1024
 BIG_FILE_THRESHOLD = 10 * 1024 * 1024
+_LOGGER = get_logger("media.upload")
 
 type ProgressCallback = Callable[[int, int | None], Awaitable[None] | None]
 type FileSource = (
@@ -73,6 +76,7 @@ async def upload_file(
     request_timeout: float | None = None,
 ) -> MediaUploadResult:
     _validate_upload_options(part_size, concurrency, max_retries, max_buffer_size)
+    started = time.perf_counter()
     prepared = await _prepare_upload_source(source, file_name=file_name, chunk_size=part_size)
     if prepared.size <= 0:
         prepared.cleanup()
@@ -116,11 +120,62 @@ async def upload_file(
             if pending:
                 await _await_all(pending)
     except BaseException:
+        duration_ms = (time.perf_counter() - started) * 1000
+        record_metric(
+            "media.upload.errors",
+            1,
+            attributes={"big": is_big, "parts": total_parts, "concurrency": concurrency},
+        )
+        emit_event(
+            _LOGGER,
+            40,
+            "media.upload",
+            outcome="error",
+            size_bytes=prepared.size,
+            parts=total_parts,
+            part_size=part_size,
+            concurrency=concurrency,
+            big=is_big,
+            duration_ms=duration_ms,
+        )
         await _cancel_pending(pending)
         raise
     finally:
         prepared.cleanup()
 
+    duration_ms = (time.perf_counter() - started) * 1000
+    throughput_bytes_s = prepared.size / max(duration_ms / 1000, 1e-9)
+    record_metric(
+        "media.upload.bytes",
+        prepared.size,
+        unit="bytes",
+        attributes={"big": is_big, "parts": total_parts, "concurrency": concurrency},
+    )
+    record_metric(
+        "media.upload.duration",
+        duration_ms,
+        unit="ms",
+        attributes={"big": is_big, "parts": total_parts, "concurrency": concurrency},
+    )
+    record_metric(
+        "media.upload.throughput",
+        throughput_bytes_s,
+        unit="bytes/s",
+        attributes={"big": is_big, "parts": total_parts, "concurrency": concurrency},
+    )
+    emit_event(
+        _LOGGER,
+        20,
+        "media.upload",
+        outcome="success",
+        size_bytes=prepared.size,
+        parts=total_parts,
+        part_size=part_size,
+        concurrency=concurrency,
+        big=is_big,
+        duration_ms=duration_ms,
+        throughput_bytes_s=throughput_bytes_s,
+    )
     checksum = md5.hexdigest() if md5 is not None else None
     if is_big:
         input_file = types.InputFileBig(id=actual_file_id, parts=total_parts, name=prepared.name)

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import secrets
+import time
 from contextlib import suppress
 from dataclasses import dataclass
 
@@ -29,6 +31,9 @@ from miniproto.mtproto.codec import (
     encode_ping_delay_disconnect,
 )
 from miniproto.mtproto.state import MTProtoState
+from miniproto.observability import emit_event, get_logger, record_metric
+
+_LOGGER = get_logger("connection.sender")
 
 
 @dataclass(slots=True)
@@ -85,6 +90,7 @@ class MTProtoSender:
         )
 
     async def connect(self) -> None:
+        started = time.perf_counter()
         async with self._connect_lock:
             if self.is_connected:
                 return
@@ -93,8 +99,16 @@ class MTProtoSender:
                 self.endpoint, self.transport_config, connector=self._connector
             )
             self._receive_task = asyncio.create_task(self._receive_loop())
+        _emit_sender_event(
+            "sender.connect",
+            started,
+            outcome="success",
+            host=self.endpoint.host,
+            port=self.endpoint.port,
+        )
 
     async def disconnect(self) -> None:
+        started = time.perf_counter()
         self._closing = True
         receive_task = self._receive_task
         self._receive_task = None
@@ -109,6 +123,7 @@ class MTProtoSender:
             if not pending.future.done():
                 pending.future.set_exception(TransportClosed("sender disconnected"))
         self._pending.clear()
+        _emit_sender_event("sender.disconnect", started, outcome="success")
 
     async def request(
         self,
@@ -117,6 +132,7 @@ class MTProtoSender:
         content_related: bool = True,
         request_timeout: float | None = None,
     ) -> object:
+        started = time.perf_counter()
         await self.connect()
         loop = asyncio.get_running_loop()
         future: asyncio.Future[object] = loop.create_future()
@@ -124,15 +140,38 @@ class MTProtoSender:
             PendingRequest(body=body, content_related=content_related, future=future)
         )
         try:
-            return await asyncio.wait_for(future, timeout=request_timeout)
+            result = await asyncio.wait_for(future, timeout=request_timeout)
         except asyncio.CancelledError:
             self._pending.pop(msg_id, None)
             if not future.done():
                 future.cancel()
+            _emit_sender_event(
+                "sender.request",
+                started,
+                outcome="cancelled",
+                pending_count=len(self._pending),
+                request_timeout=request_timeout,
+            )
             raise
         except TimeoutError:
             self._pending.pop(msg_id, None)
+            _emit_sender_event(
+                "sender.request",
+                started,
+                outcome="error",
+                error_type="TimeoutError",
+                pending_count=len(self._pending),
+                request_timeout=request_timeout,
+            )
             raise
+        _emit_sender_event(
+            "sender.request",
+            started,
+            outcome="success",
+            pending_count=len(self._pending),
+            request_timeout=request_timeout,
+        )
+        return result
 
     async def send(self, body: bytes | object, *, content_related: bool = True) -> int:
         await self.connect()
@@ -203,6 +242,7 @@ class MTProtoSender:
         try:
             await transport.send(payload)
         except TransportError:
+            record_metric("sender.send_transport_errors", 1)
             await self._reconnect()
             if self._transport is None:
                 raise
@@ -229,8 +269,16 @@ class MTProtoSender:
             except TransportError:
                 if self._closing:
                     return
+                record_metric("sender.receive_transport_errors", 1)
                 await self._reconnect()
             except Exception as exc:
+                _emit_sender_event(
+                    "sender.receive_loop",
+                    time.perf_counter(),
+                    outcome="error",
+                    error_type=type(exc).__name__,
+                    pending_count=len(self._pending),
+                )
                 self._fail_pending(exc)
                 return
 
@@ -288,6 +336,7 @@ class MTProtoSender:
         if pending.attempts > self._reconnect_attempts:
             pending.future.set_exception(TransportError("message retry limit exceeded"))
             return
+        record_metric("sender.bad_message_retries", 1)
         await self._send_pending(pending)
 
     def _fail_pending_for_message(self, msg_id: int, exc: Exception) -> None:
@@ -302,6 +351,7 @@ class MTProtoSender:
         self._pending.clear()
 
     async def _reconnect(self) -> None:
+        started = time.perf_counter()
         async with self._connect_lock:
             if self._closing:
                 return
@@ -310,16 +360,50 @@ class MTProtoSender:
                 self._transport = None
             delay = self.transport_config.reconnect_backoff_initial
             last_error: Exception | None = None
-            for _ in range(self._reconnect_attempts):
+            for attempt in range(self._reconnect_attempts):
                 try:
                     self._transport = await open_transport(
                         self.endpoint, self.transport_config, connector=self._connector
                     )
+                    record_metric("sender.reconnects", 1, attributes={"attempts": attempt + 1})
+                    _emit_sender_event(
+                        "sender.reconnect",
+                        started,
+                        outcome="success",
+                        attempts=attempt + 1,
+                        host=self.endpoint.host,
+                        port=self.endpoint.port,
+                    )
                     return
                 except Exception as exc:
                     last_error = exc
+                    record_metric(
+                        "sender.reconnect_errors",
+                        1,
+                        attributes={"error_type": type(exc).__name__, "attempt": attempt + 1},
+                    )
                     await asyncio.sleep(delay)
                     delay = min(delay * 2, self.transport_config.reconnect_backoff_max)
             if last_error is not None:
+                _emit_sender_event(
+                    "sender.reconnect",
+                    started,
+                    outcome="error",
+                    attempts=self._reconnect_attempts,
+                    error_type=type(last_error).__name__,
+                )
                 self._fail_pending(last_error)
                 raise last_error
+
+
+def _emit_sender_event(event: str, started: float, *, outcome: str, **fields: object) -> None:
+    duration_ms = (time.perf_counter() - started) * 1000
+    record_metric(f"{event}.duration", duration_ms, unit="ms", attributes={"outcome": outcome})
+    emit_event(
+        _LOGGER,
+        logging.ERROR if outcome == "error" else logging.DEBUG,
+        event,
+        outcome=outcome,
+        duration_ms=duration_ms,
+        **fields,
+    )

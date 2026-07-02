@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import asyncio
+import logging
+import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Protocol
 
 from miniproto.config import TransportConfig
+from miniproto.observability import emit_event, get_logger, record_metric
+from miniproto.security.redaction import safe_repr
 
 
 class TransportError(ConnectionError):
@@ -43,22 +47,49 @@ class Transport(Protocol):
 
 StreamPair = tuple[asyncio.StreamReader, asyncio.StreamWriter]
 StreamConnector = Callable[[ConnectionEndpoint, TransportConfig], Awaitable[StreamPair]]
+_LOGGER = get_logger("connection.transport")
 
 
 async def default_stream_connector(
     endpoint: ConnectionEndpoint, config: TransportConfig
 ) -> StreamPair:
+    started = time.perf_counter()
     if config.proxy is not None:
         raise TransportError(
             "TransportConfig.proxy requires a custom StreamConnector; built-in proxy dialing is a later integration hook"
         )
     try:
         async with asyncio.timeout(config.connect_timeout):
-            return await asyncio.open_connection(endpoint.host, endpoint.port)
+            pair = await asyncio.open_connection(endpoint.host, endpoint.port)
     except TimeoutError as exc:
+        _emit_transport_event(
+            "transport.connect",
+            started,
+            outcome="error",
+            error_type="TransportTimeout",
+            host=endpoint.host,
+            port=endpoint.port,
+        )
         raise TransportTimeout("transport connect timed out") from exc
     except OSError as exc:
+        _emit_transport_event(
+            "transport.connect",
+            started,
+            outcome="error",
+            error_type=type(exc).__name__,
+            host=endpoint.host,
+            port=endpoint.port,
+        )
         raise TransportError(f"transport connect failed: {exc}") from exc
+    _emit_transport_event(
+        "transport.connect",
+        started,
+        outcome="success",
+        host=endpoint.host,
+        port=endpoint.port,
+        mode=config.mode,
+    )
+    return pair
 
 
 async def open_transport(
@@ -108,36 +139,92 @@ class StreamTransportBase:
         return not self._closed and self._writer is not None and not self._writer.is_closing()
 
     async def connect(self) -> None:
+        started = time.perf_counter()
         if self.is_connected:
             return
         self._reader, self._writer = await self._connector(self.endpoint, self.config)
         self._closed = False
         if self.handshake_tag:
             await self._write_raw(self.handshake_tag)
+        _emit_transport_event(
+            "transport.open",
+            started,
+            outcome="success",
+            mode=self.config.mode,
+            host=self.endpoint.host,
+            port=self.endpoint.port,
+        )
 
     async def send(self, payload: bytes) -> None:
+        started = time.perf_counter()
         if not self.is_connected:
+            _emit_transport_event(
+                "transport.send",
+                started,
+                outcome="error",
+                error_type="TransportClosed",
+                payload_bytes=len(payload),
+            )
             raise TransportClosed("transport is not connected")
         if len(payload) > self.config.max_payload_size:
+            _emit_transport_event(
+                "transport.send",
+                started,
+                outcome="error",
+                error_type="TransportError",
+                payload_bytes=len(payload),
+            )
             raise TransportError("transport payload exceeds configured maximum")
         await self._write_raw(self.encode_packet(payload))
+        _emit_transport_event(
+            "transport.send",
+            started,
+            outcome="success",
+            payload_bytes=len(payload),
+            mode=self.config.mode,
+        )
 
     async def recv(self) -> bytes:
+        started = time.perf_counter()
         if not self.is_connected or self._reader is None:
+            _emit_transport_event(
+                "transport.recv", started, outcome="error", error_type="TransportClosed"
+            )
             raise TransportClosed("transport is not connected")
         try:
             async with asyncio.timeout(self.config.read_timeout):
                 payload = await self.read_packet(self._reader)
         except TimeoutError as exc:
+            _emit_transport_event(
+                "transport.recv", started, outcome="error", error_type="TransportTimeout"
+            )
             raise TransportTimeout("transport read timed out") from exc
         except asyncio.IncompleteReadError as exc:
             self._closed = True
+            _emit_transport_event(
+                "transport.recv", started, outcome="error", error_type="TransportClosed"
+            )
             raise TransportClosed("transport closed while reading") from exc
         if len(payload) > self.config.max_payload_size:
+            _emit_transport_event(
+                "transport.recv",
+                started,
+                outcome="error",
+                error_type="TransportError",
+                payload_bytes=len(payload),
+            )
             raise TransportError("transport received payload exceeds configured maximum")
+        _emit_transport_event(
+            "transport.recv",
+            started,
+            outcome="success",
+            payload_bytes=len(payload),
+            mode=self.config.mode,
+        )
         return payload
 
     async def close(self) -> None:
+        started = time.perf_counter()
         writer = self._writer
         self._closed = True
         self._reader = None
@@ -149,6 +236,7 @@ class StreamTransportBase:
             await writer.wait_closed()
         except (ConnectionError, RuntimeError):
             return
+        _emit_transport_event("transport.close", started, outcome="success", mode=self.config.mode)
 
     async def _write_raw(self, payload: bytes) -> None:
         writer = self._writer
@@ -179,3 +267,23 @@ async def read_exactly_bounded(
     if length > max_payload_size:
         raise TransportError("transport frame length exceeds configured maximum")
     return await reader.readexactly(length)
+
+
+def _emit_transport_event(event: str, started: float, *, outcome: str, **fields: object) -> None:
+    duration_ms = (time.perf_counter() - started) * 1000
+    payload_bytes = fields.get("payload_bytes")
+    if isinstance(payload_bytes, int):
+        metric_name = (
+            "transport.bytes_sent" if event == "transport.send" else "transport.bytes_received"
+        )
+        record_metric(metric_name, payload_bytes, unit="bytes", attributes={"outcome": outcome})
+    record_metric(f"{event}.duration", duration_ms, unit="ms", attributes={"outcome": outcome})
+    emit_event(
+        _LOGGER,
+        logging.ERROR if outcome == "error" else logging.DEBUG,
+        event,
+        outcome=outcome,
+        duration_ms=duration_ms,
+        details=safe_repr(fields),
+        **fields,
+    )

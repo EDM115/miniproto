@@ -2,7 +2,7 @@
 goal: Deliver miniproto v1 as a secure async MTProto engine and SDK for Python with bundled Rust acceleration
 version: 1.0
 date_created: 2026-06-30
-last_updated: 2026-06-30
+last_updated: 2026-07-02
 owner: EDM115
 status: "In progress"
 tags: [implementation, mtproto, python, rust, pyo3, release]
@@ -255,11 +255,11 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
 - **GOAL-012**: Make runtime behavior inspectable and bounded without telemetry
   | Task     | Description                                                                                                                                                                                               | Completed | Date |
   | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---- |
-  | TASK-077 | Add `src/miniproto/observability.py` with counters/hooks for bytes sent, bytes received, RPC latency, reconnect count, flood waits, update gaps, queue depth, upload throughput, and download throughput. | no        |      |
-  | TASK-078 | Add structured logging calls across storage, transport, sender, auth, updates, and media using redacted `extra` payloads.                                                                                 | no        |      |
+  | TASK-077 | Add `src/miniproto/observability.py` with counters/hooks for bytes sent, bytes received, RPC latency, reconnect count, flood waits, update gaps, queue depth, upload throughput, and download throughput. | yes       | 2026-07-02 |
+  | TASK-078 | Add structured logging calls across storage, transport, sender, auth, updates, and media using redacted `extra` payloads.                                                                                 | yes       | 2026-07-02 |
   | TASK-079 | Add `ClientConfig` fields for request timeout, max pending RPCs, max reconnect attempts, update overflow policy, media concurrency, media memory ceiling, and flood-wait policy.                          | no        |      |
   | TASK-080 | Add shutdown leak checks and background task supervision so disconnect waits for owned tasks and surfaces fatal runtime errors.                                                                           | no        |      |
-  | TASK-081 | Add tests in `tests/test_observability.py` and `tests/test_resource_limits.py` for counters, hook calls, redacted logs, queue depth, pending RPC limit, media memory ceiling, and clean shutdown.         | no        |      |
+  | TASK-081 | Add tests in `tests/test_observability.py` and `tests/test_resource_limits.py` for counters, hook calls, redacted logs, queue depth, pending RPC limit, media memory ceiling, and clean shutdown.         | in progress | 2026-07-02 |
 
 ### Implementation Phase 12 - Verification, Integration, Benchmarks, And CI Expansion
 

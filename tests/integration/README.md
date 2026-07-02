@@ -23,4 +23,4 @@ $env:MINIPROTO_LIVE_BENCH_DC_ID = "4"
 uv run python tools/bench/benchmark_live_media_limit.py --actor both
 ```
 
-It writes the deterministic payload and downloads under `.tmp/`, uses separate encrypted benchmark sessions, prints progress every 5 seconds by default, and reports throughput percentiles for user and bot transfers. Set `MINIPROTO_LIVE_BENCH_BOT_PEER` to a real chat/user/channel if the bot cannot send to `self`.
+It writes the deterministic payload and downloads under `.tmp/`, uses separate encrypted benchmark sessions, prints fixed-window progress every 5 seconds by default, and reports throughput percentiles for user and bot transfers. Set `MINIPROTO_LIVE_BENCH_BOT_PEER` to a real chat/user/channel; bots cannot send to `self`, so the benchmark fails before uploading if this peer is missing. Use `MINIPROTO_LIVE_BENCH_DOWNLOAD_CONCURRENCY` to raise or lower concurrent `upload.getFile` requests for known-size downloads, and `MINIPROTO_LIVE_BENCH_LOG_LEVEL` / `MINIPROTO_LIVE_BENCH_LOG_FORMAT` / `MINIPROTO_LIVE_BENCH_TRACE_MEMORY` for benchmark observability.

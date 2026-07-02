@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import inspect
+import logging
+import time
 from collections.abc import Awaitable, Callable, Iterable, Mapping
 from dataclasses import replace
 from typing import Any, Protocol, runtime_checkable
@@ -16,6 +18,7 @@ from miniproto.errors import (
     SignUpRequired,
     classify_rpc_error,
 )
+from miniproto.observability import emit_event, get_logger, record_metric
 from miniproto.raw import functions, types
 from miniproto.session.models import (
     DCOption,
@@ -29,6 +32,7 @@ from miniproto.session.storage import SessionStorage
 
 Callback0 = Callable[[], Awaitable[str] | str]
 RawInvoker = Callable[[object], Awaitable[object] | object]
+_LOGGER = get_logger("auth")
 
 
 @runtime_checkable
@@ -45,50 +49,71 @@ class AuthService:
     async def sign_in_phone(
         self, phone: str, code_callback: Callback0, password_callback: Callback0 | None = None
     ) -> object:
-        sent = await self._invoke_auth(
-            functions.AuthSendCode(
-                phone_number=phone,
-                api_id=self.config.api_id,
-                api_hash=self.config.api_hash,
-                settings=types.CodeSettings(),
-            )
-        )
-        if isinstance(sent, types.AuthSentCodeSuccess):
-            await self._persist_authorization(sent.authorization, phone=phone, is_bot=False)
-            return sent.authorization
-        if not isinstance(sent, types.AuthSentCode):
-            raise RpcError("auth.sendCode returned an unexpected result", request="auth.sendCode")
-        code = await _resolve_callback(code_callback)
+        started = time.perf_counter()
         try:
-            authorization = await self._invoke_auth(
-                functions.AuthSignIn(
-                    phone_number=phone, phone_code_hash=sent.phone_code_hash, phone_code=code
+            sent = await self._invoke_auth(
+                functions.AuthSendCode(
+                    phone_number=phone,
+                    api_id=self.config.api_id,
+                    api_hash=self.config.api_hash,
+                    settings=types.CodeSettings(),
                 )
             )
-        except PasswordRequired:
-            authorization = await self._sign_in_password(password_callback)
-        if isinstance(authorization, types.AuthAuthorizationSignUpRequired):
-            raise SignUpRequired("phone number requires sign-up before sign-in")
-        if not isinstance(authorization, types.AuthAuthorization):
-            raise RpcError("auth.signIn returned an unexpected result", request="auth.signIn")
-        await self._persist_authorization(authorization, phone=phone, is_bot=False)
+            if isinstance(sent, types.AuthSentCodeSuccess):
+                await self._persist_authorization(sent.authorization, phone=phone, is_bot=False)
+                _emit_auth_event(
+                    "auth.sign_in_phone", started, outcome="success", path="sent_code_success"
+                )
+                return sent.authorization
+            if not isinstance(sent, types.AuthSentCode):
+                raise RpcError(
+                    "auth.sendCode returned an unexpected result", request="auth.sendCode"
+                )
+            code = await _resolve_callback(code_callback)
+            try:
+                authorization = await self._invoke_auth(
+                    functions.AuthSignIn(
+                        phone_number=phone, phone_code_hash=sent.phone_code_hash, phone_code=code
+                    )
+                )
+            except PasswordRequired:
+                authorization = await self._sign_in_password(password_callback)
+            if isinstance(authorization, types.AuthAuthorizationSignUpRequired):
+                raise SignUpRequired("phone number requires sign-up before sign-in")
+            if not isinstance(authorization, types.AuthAuthorization):
+                raise RpcError("auth.signIn returned an unexpected result", request="auth.signIn")
+            await self._persist_authorization(authorization, phone=phone, is_bot=False)
+        except BaseException as exc:
+            _emit_auth_event(
+                "auth.sign_in_phone", started, outcome="error", error_type=type(exc).__name__
+            )
+            raise
+        _emit_auth_event("auth.sign_in_phone", started, outcome="success", path="code")
         return authorization
 
     async def sign_in_bot(self, token: str) -> object:
-        authorization = await self._invoke_auth(
-            functions.AuthImportBotAuthorization(
-                flags=0,
-                api_id=self.config.api_id,
-                api_hash=self.config.api_hash,
-                bot_auth_token=token,
+        started = time.perf_counter()
+        try:
+            authorization = await self._invoke_auth(
+                functions.AuthImportBotAuthorization(
+                    flags=0,
+                    api_id=self.config.api_id,
+                    api_hash=self.config.api_hash,
+                    bot_auth_token=token,
+                )
             )
-        )
-        if not isinstance(authorization, types.AuthAuthorization):
-            raise RpcError(
-                "auth.importBotAuthorization returned an unexpected result",
-                request="auth.importBotAuthorization",
+            if not isinstance(authorization, types.AuthAuthorization):
+                raise RpcError(
+                    "auth.importBotAuthorization returned an unexpected result",
+                    request="auth.importBotAuthorization",
+                )
+            await self._persist_authorization(authorization, phone=None, is_bot=True)
+        except BaseException as exc:
+            _emit_auth_event(
+                "auth.sign_in_bot", started, outcome="error", error_type=type(exc).__name__
             )
-        await self._persist_authorization(authorization, phone=None, is_bot=True)
+            raise
+        _emit_auth_event("auth.sign_in_bot", started, outcome="success")
         return authorization
 
     async def export_authorization(self, dc_id: int) -> types.AuthExportedAuthorization:
@@ -133,14 +158,25 @@ class AuthService:
     async def handle_dc_migration(
         self, error: DatacenterMigration
     ) -> types.AuthExportedAuthorization | None:
+        started = time.perf_counter()
         record = await self._load_record()
         if record.dc_id == error.dc_id:
             raise InvalidDatacenter(f"already on migrated dc_id={error.dc_id}")
         if record.user is None:
             await self.storage.save(replace(record, dc_id=error.dc_id))
+            _emit_auth_event(
+                "auth.dc_migration",
+                started,
+                outcome="success",
+                target_dc_id=error.dc_id,
+                exported=False,
+            )
             return None
         exported = await self.export_authorization(error.dc_id)
         await self.storage.save(replace(record, dc_id=error.dc_id))
+        _emit_auth_event(
+            "auth.dc_migration", started, outcome="success", target_dc_id=error.dc_id, exported=True
+        )
         return exported
 
     async def _sign_in_password(self, password_callback: Callback0 | None) -> object:
@@ -273,3 +309,16 @@ def _optional_int(value: object) -> int | None:
 
 def _optional_str(value: object) -> str | None:
     return None if value is None else str(value)
+
+
+def _emit_auth_event(event: str, started: float, *, outcome: str, **fields: object) -> None:
+    duration_ms = (time.perf_counter() - started) * 1000
+    record_metric(f"{event}.duration", duration_ms, unit="ms", attributes={"outcome": outcome})
+    emit_event(
+        _LOGGER,
+        logging.ERROR if outcome == "error" else logging.INFO,
+        event,
+        outcome=outcome,
+        duration_ms=duration_ms,
+        **fields,
+    )

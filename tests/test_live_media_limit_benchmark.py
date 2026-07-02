@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import pytest
 from tools.bench.benchmark_live_media_limit import (
     DEFAULT_CHUNK_SIZE,
     TELEGRAM_DEFAULT_LIMIT_BYTES,
+    TransferRecorder,
+    benchmark_peer_for_actor,
     deterministic_chunk,
     ensure_benchmark_file,
     parse_size,
@@ -44,3 +47,27 @@ def test_sample_stats_reports_tails_and_percentiles() -> None:
     assert stats.p95_mib_s == 50.0
     assert stats.slowest_1pct_avg_mib_s == 10.0
     assert stats.fastest_5pct_avg_mib_s == 50.0
+
+
+def test_transfer_recorder_samples_fixed_time_windows() -> None:
+    one_mib = 1024 * 1024
+    recorder = TransferRecorder(
+        total=10 * one_mib, label="bench", progress_interval_s=0, sample_interval_s=5
+    )
+    recorder.begin(now=1.0)
+    recorder.record(one_mib, None, now=1.1)
+    recorder.record(5 * one_mib, None, now=6.0)
+    recorder.record(10 * one_mib, None, now=11.0)
+    assert recorder.samples_mib_s == pytest.approx([1.0, 1.0])
+
+
+def test_bot_peer_must_not_default_to_self() -> None:
+    assert benchmark_peer_for_actor("user", {}) == "self"
+    assert (
+        benchmark_peer_for_actor("bot", {"MINIPROTO_LIVE_BENCH_BOT_PEER": "@benchchat"})
+        == "@benchchat"
+    )
+    with pytest.raises(SystemExit, match="BOT_PEER"):
+        benchmark_peer_for_actor("bot", {})
+    with pytest.raises(SystemExit, match="BOT_PEER"):
+        benchmark_peer_for_actor("bot", {"MINIPROTO_LIVE_BENCH_BOT_PEER": "self"})

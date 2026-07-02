@@ -38,6 +38,19 @@ class FakeInvoker:
 
 
 @dataclass(slots=True)
+class OffsetInvoker:
+    payload: bytes
+    requests: list[Any] = field(default_factory=list)
+
+    async def __call__(self, request: object, **kwargs: object) -> object:
+        del kwargs
+        self.requests.append(request)
+        assert isinstance(request, functions.UploadGetFile)
+        await asyncio.sleep(0)
+        return upload_file_part(self.payload[request.offset : request.offset + request.limit])
+
+
+@dataclass(slots=True)
 class FakeSender:
     responses: list[object]
     requests: list[Any] = field(default_factory=list)
@@ -131,6 +144,29 @@ def test_download_file_writes_path_and_resumes(tmp_path) -> None:
     run(scenario())
 
 
+def test_download_file_concurrent_writes_ordered_payload(tmp_path) -> None:
+    async def scenario() -> None:
+        payload = b"abcdefghijklmnopqrstuvwxyz"
+        target = tmp_path / "concurrent.bin"
+        progress: list[tuple[int, int | None]] = []
+        invoker = OffsetInvoker(payload)
+        result = await download_file(
+            invoker,
+            document_location(),
+            target,
+            limit=len(payload),
+            part_size=5,
+            concurrency=3,
+            progress=lambda current, total: progress.append((current, total)),
+        )
+        assert target.read_bytes() == payload
+        assert result.bytes_downloaded == len(payload)
+        assert sorted(request.offset for request in invoker.requests) == [0, 5, 10, 15, 20, 25]
+        assert progress[-1] == (len(payload), len(payload))
+
+    run(scenario())
+
+
 def test_download_file_handles_cdn_redirect_reupload_and_decrypt() -> None:
     async def scenario() -> None:
         key = bytes(range(32))
@@ -175,6 +211,18 @@ def test_download_media_resolves_public_media_location() -> None:
     run(scenario())
 
 
+def test_download_media_uses_known_size_for_concurrent_download() -> None:
+    async def scenario() -> None:
+        payload = b"known-size-download"
+        media = Media(id=10, size=len(payload), location=document_location())
+        invoker = OffsetInvoker(payload)
+        result = await download_media(invoker, media, part_size=4, concurrency=2)
+        assert result.data == payload
+        assert sorted(request.offset for request in invoker.requests) == [0, 4, 8, 12, 16]
+
+    run(scenario())
+
+
 def test_download_file_cleans_partial_path_on_cancellation(tmp_path) -> None:
     async def scenario() -> None:
         target = tmp_path / "partial.bin"
@@ -191,6 +239,24 @@ def test_download_file_enforces_memory_ceiling() -> None:
         with pytest.raises(ValueError, match="max_buffer_size"):
             await download_file(
                 bad_invoker, document_location(), part_size=1024, max_buffer_size=512
+            )
+
+    async def bad_invoker(request: object, **kwargs: object) -> object:
+        raise AssertionError("download should validate before invoking")
+
+    run(scenario())
+
+
+def test_download_file_enforces_concurrent_memory_ceiling() -> None:
+    async def scenario() -> None:
+        with pytest.raises(ValueError, match="concurrency window"):
+            await download_file(
+                bad_invoker,
+                document_location(),
+                limit=16,
+                part_size=8,
+                concurrency=2,
+                max_buffer_size=8,
             )
 
     async def bad_invoker(request: object, **kwargs: object) -> object:
