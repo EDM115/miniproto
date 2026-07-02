@@ -38,6 +38,7 @@ from miniproto.auth import (
 )
 from miniproto.auth.key_exchange import encode_server_dh_answer
 from miniproto.errors import AuthKeyNotFound, RpcError, classify_rpc_error
+from miniproto.invoke import clear_invalid_auth_key
 from miniproto.raw import functions, types
 from miniproto.session.models import session_record_from_mapping
 
@@ -354,3 +355,22 @@ def test_auth_rpc_error_classification() -> None:
     flood = classify_rpc_error(RpcError("FLOOD_WAIT_9", code=420))
     assert isinstance(flood, TransportFlood)
     assert flood.seconds == 9
+
+
+def test_auth_key_not_found_recovery_clears_key_and_user_identity() -> None:
+    async def scenario() -> None:
+        storage = InMemorySessionStorage(
+            SessionRecord(
+                dc_id=2,
+                auth_key=AuthKey(dc_id=2, key=b"k" * 256, key_id=123),
+                user=UserIdentity(id=42, access_hash=9042, username="alice", phone="+9996621234"),
+            )
+        )
+        await clear_invalid_auth_key(storage, ClientConfig(api_id=1, api_hash="hash", dc_id=2))
+        loaded = await storage.load()
+        assert loaded is not None
+        record = session_record_from_mapping(loaded)
+        assert record.auth_key is None
+        assert record.user is None
+
+    run(scenario())

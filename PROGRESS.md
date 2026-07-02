@@ -197,8 +197,8 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
   | TASK-046 | Implement bot token sign-in in `Client.sign_in_bot()` using generated `auth.importBotAuthorization` once raw generation exists.                                                     | yes         | 2026-06-30 |
   | TASK-047 | Add DC option persistence, current DC selection, DC migration error handling, export authorization, and import authorization.                                                       | yes         | 2026-06-30 |
   | TASK-048 | Implement auth-key-not-found, invalid DC, transport flood, and key regeneration behavior with clear typed exceptions.                                                               | yes         | 2026-06-30 |
-  | TASK-049 | Add fake-server tests in `tests/test_auth.py` for successful phone auth, successful bot auth, 2FA callback use, wrong-code failures, DC migration, and auth-key-not-found recovery. | in progress | 2026-06-30 |
-  | TASK-050 | Add gated live tests under `tests/integration/test_auth_live.py` for production/test DC sign-in, bot auth, `get_me()`, and reconnect using environment-only credentials.            | in progress | 2026-07-02 |
+  | TASK-049 | Add fake-server tests in `tests/test_auth.py` for successful phone auth, successful bot auth, 2FA callback use, wrong-code failures, DC migration, and auth-key-not-found recovery. | yes         | 2026-07-02 |
+  | TASK-050 | Add gated live tests under `tests/integration/test_auth_live.py` for production/test DC sign-in, bot auth, `get_me()`, and reconnect using environment-only credentials.            | yes         | 2026-07-02 |
 
 ### Implementation Phase 7 - Raw Invocation, Error Handling, And Flood Waits
 
@@ -235,7 +235,7 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
   | TASK-066 | Implement `Client.send_message()` using `messages.sendMessage`, random ID generation, entity parsing for plain text and Markdown-lite, flood-wait behavior, and result normalization to `Message`.       | yes         | 2026-06-30 |
   | TASK-067 | Add edit/delete text-message primitives if they are required to complete v1 docs and tests; otherwise keep them as raw API examples only.                                                                | yes         | 2026-06-30 |
   | TASK-068 | Add tests in `tests/test_peers.py` and `tests/test_messages.py` for cache hits/misses, access-hash persistence, self resolution, text send, Markdown-lite entities, random IDs, and flood wait surfaces. | yes         | 2026-06-30 |
-  | TASK-069 | Add gated live test coverage for Saved Messages send and history read when `MINIPROTO_INTEGRATION=1`.                                                                                                    | in progress | 2026-07-02 |
+  | TASK-069 | Add gated live test coverage for Saved Messages send and history read when `MINIPROTO_INTEGRATION=1`.                                                                                                    | yes         | 2026-07-02 |
 
 ### Implementation Phase 10 - Media Upload And Download Primitives
 
@@ -248,7 +248,7 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
   | TASK-073 | Implement `Client.send_file()` as a thin protocol-core convenience over upload plus generated media send requests.                                                                                                               | yes         | 2026-06-30 |
   | TASK-074 | Implement `Client.download_media()` as a thin protocol-core convenience over media location resolution plus download.                                                                                                            | yes         | 2026-06-30 |
   | TASK-075 | Add tests in `tests/test_media_upload.py` and `tests/test_media_download.py` for chunk sizing, small/big branch selection, streaming, retry, resume, CDN decrypt, progress callback ordering, cancellation, and memory ceilings. | yes         | 2026-06-30 |
-  | TASK-076 | Add gated live tests for upload/download to Saved Messages when `MINIPROTO_INTEGRATION=1`.                                                                                                                                       | in progress | 2026-07-02 |
+  | TASK-076 | Add gated live tests for upload/download to Saved Messages when `MINIPROTO_INTEGRATION=1`.                                                                                                                                       | yes         | 2026-07-02 |
 
 ### Implementation Phase 11 - Observability, Resource Limits, And Production Hardening
 
