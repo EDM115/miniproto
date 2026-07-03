@@ -322,6 +322,11 @@ def test_adaptive_download_throttle_slow_starts_and_ramps_after_cooldown() -> No
             return clock_value[0]
 
         throttle = media_download._AdaptiveDownloadThrottle(4, clock=clock)
+        assert throttle.limit == 1
+        for _ in range(7):
+            throttle.on_success()
+        assert throttle.limit == 1
+        throttle.on_success()
         assert throttle.limit == 2
         await throttle.on_retry(TransportFlood(0), 1)
         assert throttle.limit == 1

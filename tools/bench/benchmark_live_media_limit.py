@@ -12,7 +12,7 @@ import statistics
 import sys
 import threading
 import time
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from contextlib import suppress
 from dataclasses import asdict, dataclass
 from getpass import getpass
@@ -74,6 +74,10 @@ class TransferCounters:
     reconnects: int
     sender_drops: int
     sender_drop_skips: int
+    media_lane_builds: int
+    media_lane_drops: int
+    media_lane_drop_skips: int
+    media_lane_closes: int
     requests_per_s: float
 
 
@@ -81,6 +85,7 @@ class TransferCounters:
 class TransferSummary:
     actor: Actor
     operation: Literal["upload", "download"]
+    repeat_index: int
     dc_id: int
     media_dc_id: int | None
     bytes: int
@@ -128,6 +133,7 @@ class BenchmarkSummary:
     download_part_retries: int
     download_flood_sleep_threshold: int | None
     event_loop_backend: str
+    repeat_count: int
     results: tuple[TransferSummary, ...]
     memory: MemorySummary | None = None
 
@@ -281,6 +287,12 @@ def parse_args(
         choices=("both", "upload", "download"),
         default=env_value(values, "MINIPROTO_LIVE_BENCH_OPERATION", "both"),
         help="which transfer operation to run",
+    )
+    parser.add_argument(
+        "--repeat",
+        type=int,
+        default=int(env_value(values, "MINIPROTO_LIVE_BENCH_REPEAT", "1") or "1"),
+        help="repeat each selected actor/profile this many times; useful because Telegram media throughput is noisy",
     )
     parser.add_argument(
         "--file-id",
@@ -488,7 +500,10 @@ def parse_args(
         default=env_value(values, "MINIPROTO_LIVE_BENCH_TRACE_MEMORY") == "1",
         help="enable tracemalloc while also reporting RSS and GC-object deltas",
     )
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    if args.repeat < 1:
+        parser.error("--repeat must be positive")
+    return args
 
 
 async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int:
@@ -526,32 +541,36 @@ async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int
         client = await authorized_client(actor, args, env)
         peer = benchmark_peer_for_actor(actor, env)
         try:
-            results.extend(
-                await benchmark_actor(
-                    client,
-                    actor=actor,
-                    operation=args.operation,
-                    peer=peer,
-                    source=args.file,
-                    benchmark_size=size,
-                    download_dir=args.download_dir,
-                    dc_id=args.dc_id,
-                    file_id=file_id_for_actor(args, env, actor),
-                    upload_concurrency=args.upload_concurrency,
-                    upload_media_lanes=args.upload_media_lanes,
-                    download_concurrency=args.download_concurrency,
-                    download_media_lanes=args.download_media_lanes,
-                    download_adaptive_concurrency=args.download_adaptive_concurrency,
-                    upload_request_timeout=upload_request_timeout,
-                    upload_part_retries=args.upload_part_retries,
-                    download_request_timeout=download_request_timeout,
-                    download_part_retries=args.download_part_retries,
-                    download_flood_sleep_threshold=args.download_flood_sleep_threshold,
-                    download_chunk_size=args.download_chunk_size,
-                    verify_digest=args.verify_digest,
-                    progress_interval_s=args.progress_interval,
+            for repeat_index in range(1, args.repeat + 1):
+                if args.repeat > 1:
+                    print(f"{actor}: starting repeat {repeat_index}/{args.repeat}")
+                results.extend(
+                    await benchmark_actor(
+                        client,
+                        actor=actor,
+                        operation=args.operation,
+                        repeat_index=repeat_index,
+                        peer=peer,
+                        source=args.file,
+                        benchmark_size=size,
+                        download_dir=args.download_dir,
+                        dc_id=args.dc_id,
+                        file_id=file_id_for_actor(args, env, actor),
+                        upload_concurrency=args.upload_concurrency,
+                        upload_media_lanes=args.upload_media_lanes,
+                        download_concurrency=args.download_concurrency,
+                        download_media_lanes=args.download_media_lanes,
+                        download_adaptive_concurrency=args.download_adaptive_concurrency,
+                        upload_request_timeout=upload_request_timeout,
+                        upload_part_retries=args.upload_part_retries,
+                        download_request_timeout=download_request_timeout,
+                        download_part_retries=args.download_part_retries,
+                        download_flood_sleep_threshold=args.download_flood_sleep_threshold,
+                        download_chunk_size=args.download_chunk_size,
+                        verify_digest=args.verify_digest,
+                        progress_interval_s=args.progress_interval,
+                    )
                 )
-            )
         finally:
             await client.disconnect()
     memory = memory_summary(memory_monitor.finish())
@@ -573,6 +592,7 @@ async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int
         download_part_retries=args.download_part_retries,
         download_flood_sleep_threshold=args.download_flood_sleep_threshold,
         event_loop_backend=event_loop.backend_name(),
+        repeat_count=args.repeat,
         results=tuple(results),
         memory=memory,
     )
@@ -588,6 +608,7 @@ async def benchmark_actor(
     *,
     actor: Actor,
     operation: Operation,
+    repeat_index: int,
     peer: str,
     source: Path,
     benchmark_size: int,
@@ -608,7 +629,7 @@ async def benchmark_actor(
     verify_digest: bool,
     progress_interval_s: float,
 ) -> tuple[TransferSummary, ...]:
-    caption = f"miniproto live media limit bench {actor} {int(time.time())}"
+    caption = f"miniproto live media limit bench {actor} r{repeat_index} {int(time.time())}"
     results: list[TransferSummary] = []
     media = None
     message_id: int | None = None
@@ -658,6 +679,7 @@ async def benchmark_actor(
         upload = TransferSummary(
             actor=actor,
             operation="upload",
+            repeat_index=repeat_index,
             dc_id=dc_id,
             media_dc_id=media.dc_id,
             bytes=size,
@@ -746,6 +768,7 @@ async def benchmark_actor(
     download = TransferSummary(
         actor=actor,
         operation="download",
+        repeat_index=repeat_index,
         dc_id=dc_id,
         media_dc_id=media.dc_id,
         bytes=downloaded.bytes_downloaded,
@@ -956,12 +979,34 @@ def transfer_counters(
         reconnects=int(metric_sum(metrics, "sender.reconnects")),
         sender_drops=int(metric_sum(metrics, "client.sender_drops")),
         sender_drop_skips=int(metric_sum(metrics, "client.sender_drop_skipped")),
+        media_lane_builds=int(metric_sum(metrics, "client.media_lane_builds")),
+        media_lane_drops=int(
+            metric_sum_where(
+                metrics, "client.media_lane_drops", lambda attrs: attrs.get("reason") != "close"
+            )
+        ),
+        media_lane_drop_skips=int(metric_sum(metrics, "client.media_lane_drop_skipped")),
+        media_lane_closes=int(
+            metric_sum_where(
+                metrics, "client.media_lane_drops", lambda attrs: attrs.get("reason") == "close"
+            )
+        ),
         requests_per_s=part_requests / max(duration_s, 1e-9),
     )
 
 
 def metric_sum(metrics: InMemoryMetrics, name: str) -> float:
     return sum(event.value for event in metrics.events if event.name == name)
+
+
+def metric_sum_where(
+    metrics: InMemoryMetrics, name: str, predicate: Callable[[Mapping[str, object]], bool]
+) -> float:
+    return sum(
+        event.value
+        for event in metrics.events
+        if event.name == name and predicate(event.attributes)
+    )
 
 
 def parse_size(value: str, *, default_bytes: int = TELEGRAM_DEFAULT_LIMIT_BYTES) -> int:
@@ -999,6 +1044,7 @@ def _file_digest_sync(path: Path) -> str:
 def print_transfer(summary: TransferSummary) -> None:
     print(
         f"{summary.actor}.{summary.operation}: "
+        f"repeat={summary.repeat_index} "
         f"{summary.bytes} bytes in {summary.duration_s:.3f}s "
         f"overall={summary.overall_mib_s:.3f}MiB/s ({_mib_s_to_mb_s(summary.overall_mib_s):.3f}MB/s) "
         f"transfer={summary.transfer_duration_s:.3f}s "
@@ -1014,6 +1060,10 @@ def print_transfer(summary: TransferSummary) -> None:
         f"flood_waits={summary.counters.flood_waits} flood_wait_seconds={summary.counters.flood_wait_seconds:g} "
         f"retry_sleep_seconds={summary.counters.retry_sleep_seconds:g} reconnects={summary.counters.reconnects} "
         f"sender_drops={summary.counters.sender_drops} sender_drop_skips={summary.counters.sender_drop_skips} "
+        f"media_lane_builds={summary.counters.media_lane_builds} "
+        f"media_lane_drops={summary.counters.media_lane_drops} "
+        f"media_lane_drop_skips={summary.counters.media_lane_drop_skips} "
+        f"media_lane_closes={summary.counters.media_lane_closes} "
         f"requests_per_s={summary.counters.requests_per_s:.3f}"
     )
 
@@ -1073,7 +1123,8 @@ def print_summary(summary: BenchmarkSummary) -> None:
         f"download_media_lanes={format_media_lanes(summary.download_media_lanes, summary.download_concurrency)} "
         f"download_adaptive_concurrency={summary.download_adaptive_concurrency} "
         f"download_request_timeout={summary.download_request_timeout:g} download_part_retries={summary.download_part_retries} "
-        f"download_flood_sleep_threshold={summary.download_flood_sleep_threshold}"
+        f"download_flood_sleep_threshold={summary.download_flood_sleep_threshold} "
+        f"repeat_count={summary.repeat_count}"
     )
     for result in summary.results:
         print_transfer(result)

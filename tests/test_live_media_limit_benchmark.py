@@ -127,6 +127,7 @@ def test_upload_request_timeout_defaults_to_shorter_part_timeout() -> None:
 def test_download_request_timeout_defaults_to_shorter_part_timeout() -> None:
     args = parse_args(["--actor", "user"], {})
     assert args.request_timeout == 120
+    assert args.repeat == 1
     assert args.download_concurrency == 1
     assert args.download_request_timeout is None
     assert effective_download_request_timeout(args) == 30
@@ -135,6 +136,15 @@ def test_download_request_timeout_defaults_to_shorter_part_timeout() -> None:
     assert args.download_adaptive_concurrency is True
     overridden = parse_args(["--actor", "user", "--download-request-timeout", "45"], {})
     assert effective_download_request_timeout(overridden) == 45
+
+
+def test_repeat_can_be_configured_from_env_and_cli() -> None:
+    env_repeat = parse_args(["--actor", "user"], {"MINIPROTO_LIVE_BENCH_REPEAT": "3"})
+    assert env_repeat.repeat == 3
+    cli_repeat = parse_args(["--actor", "user", "--repeat", "2"], {})
+    assert cli_repeat.repeat == 2
+    with pytest.raises(SystemExit):
+        parse_args(["--actor", "user", "--repeat", "0"], {})
 
 
 def test_download_concurrency_is_independent_from_upload_concurrency() -> None:
@@ -270,6 +280,10 @@ def test_transfer_counters_aggregate_metrics() -> None:
     metrics.record_metric("sender.reconnects", 1)
     metrics.record_metric("client.sender_drops", 1)
     metrics.record_metric("client.sender_drop_skipped", 1)
+    metrics.record_metric("client.media_lane_builds", 3)
+    metrics.record_metric("client.media_lane_drops", 1, attributes={"reason": "drop"})
+    metrics.record_metric("client.media_lane_drops", 2, attributes={"reason": "close"})
+    metrics.record_metric("client.media_lane_drop_skipped", 1, attributes={"reason": "drop"})
     counters = transfer_counters(metrics, "download", 2.0)
     assert counters.part_requests == 4
     assert counters.part_retries == 2
@@ -279,6 +293,10 @@ def test_transfer_counters_aggregate_metrics() -> None:
     assert counters.reconnects == 1
     assert counters.sender_drops == 1
     assert counters.sender_drop_skips == 1
+    assert counters.media_lane_builds == 3
+    assert counters.media_lane_drops == 1
+    assert counters.media_lane_closes == 2
+    assert counters.media_lane_drop_skips == 1
     assert counters.requests_per_s == 2.0
 
 

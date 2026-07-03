@@ -906,20 +906,26 @@ class _MediaSenderLane:
             record_metric("client.media_lane_builds", 1, attributes={"lane": self._index})
             return self._sender
 
-    async def drop_sender(self, expected: RawSender | None = None) -> None:
+    async def drop_sender(self, expected: RawSender | None = None, *, reason: str = "drop") -> None:
         async with self._lock:
             sender = self._sender
             if expected is not None and sender is not expected:
-                record_metric("client.media_lane_drop_skipped", 1, attributes={"lane": self._index})
+                record_metric(
+                    "client.media_lane_drop_skipped",
+                    1,
+                    attributes={"lane": self._index, "reason": reason},
+                )
                 sender = expected
             else:
                 self._sender = None
         if sender is not None:
             await sender.disconnect()
-            record_metric("client.media_lane_drops", 1, attributes={"lane": self._index})
+            record_metric(
+                "client.media_lane_drops", 1, attributes={"lane": self._index, "reason": reason}
+            )
 
     async def close(self) -> None:
-        await self.drop_sender()
+        await self.drop_sender(reason="close")
 
 
 _SEND_MESSAGE_OPTION_DEFAULTS: dict[str, object] = {

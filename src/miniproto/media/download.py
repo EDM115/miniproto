@@ -691,10 +691,25 @@ async def _sleep_before_retry(exc: Exception) -> None:
 class _AdaptiveDownloadThrottle:
     def __init__(self, max_limit: int, *, clock: Clock = time.monotonic) -> None:
         self.max_limit = max(1, max_limit)
-        self.limit = min(self.max_limit, 2)
+        self.limit = 1
         self._clock = clock
         self._successes_since_change = 0
         self._cooldown_until = 0.0
+        if self.max_limit > self.limit:
+            record_metric(
+                "media.download.adaptive_throttle",
+                self.limit,
+                attributes={"reason": "slow_start", "previous_limit": self.max_limit},
+            )
+            emit_event(
+                _LOGGER,
+                logging.DEBUG,
+                "media.download.throttle",
+                outcome="slow_start",
+                previous_limit=self.max_limit,
+                current_limit=self.limit,
+                reason="slow_start",
+            )
 
     async def on_retry(self, exc: Exception, attempt: int) -> None:
         previous = self.limit

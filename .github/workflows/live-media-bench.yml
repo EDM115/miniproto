@@ -29,6 +29,11 @@ on:
           - both
           - upload
           - download
+      repeat:
+        description: "Repeat each selected actor/profile; use >1 for noisy Telegram lane A/B runs"
+        required: true
+        default: "1"
+        type: number
       file_id:
         description: "miniproto file id for download-only runs"
         required: false
@@ -46,11 +51,11 @@ on:
         required: true
         default: "8"
       upload_media_lanes:
-        description: "Upload MTProto sender lanes; empty follows upload_concurrency, 0 uses the legacy main sender"
+        description: "Upload MTProto sender lanes; empty follows upload_concurrency, 0 uses the legacy main sender. Compare repeated empty/8/0 runs before changing defaults"
         required: false
         default: ""
       download_concurrency:
-        description: "Maximum concurrent download part requests"
+        description: "Maximum concurrent download part requests; default 1 avoids DC4 flood/disconnect stalls"
         required: true
         default: "1"
       download_media_lanes:
@@ -131,6 +136,7 @@ jobs:
       MINIPROTO_LIVE_BENCH_DC_ID: ${{ inputs.dc_id }}
       MINIPROTO_LIVE_BENCH_ACTOR: ${{ inputs.actor }}
       MINIPROTO_LIVE_BENCH_OPERATION: ${{ inputs.operation }}
+      MINIPROTO_LIVE_BENCH_REPEAT: ${{ inputs.repeat }}
       MINIPROTO_LIVE_BENCH_FILE_ID: ${{ inputs.file_id }}
       PYTHONUNBUFFERED: "1"
     steps:
@@ -220,6 +226,7 @@ jobs:
           uv run python -u tools/bench/benchmark_live_media_limit.py \
             --actor "${{ inputs.actor }}" \
             --operation "${{ inputs.operation }}" \
+            --repeat "${{ inputs.repeat }}" \
             --size "${{ inputs.size }}" \
             --dc-id "${{ inputs.dc_id }}" \
             --upload-concurrency "${{ inputs.upload_concurrency }}" \

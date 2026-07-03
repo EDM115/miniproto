@@ -16,8 +16,8 @@ Method: Each implementation was cloned into a temporary directory outside the `m
 ## Immediate Changes Already Folded Into This Slice
 
 - Downloads now have a distinct 1 MiB max/default chunk size while uploads stay capped at 512 KiB. This is inspired mainly by Pyroblack and mtcute, while remaining configurable for 512 KiB comparison runs.
-- Concurrent downloads now have adaptive throttling: flood waits cut the active request window, transient disconnect/timeouts trim it, and successful chunks slowly ramp back up. This is a small safe step toward mtcute-style media throttling without introducing media-session pools yet.
-- Live benchmark output now separates byte-transfer duration from operation duration and includes part request/retry/flood/reconnect/sender-drop counters. This keeps flood sleeps and finalization stalls visible instead of hiding them inside one average speed.
+- Concurrent downloads now have adaptive throttling: they slow-start from one active request, flood waits cut the active request window, transient disconnect/timeouts trim it, and successful chunks slowly ramp back up. This is a small safe step toward mtcute-style media throttling without introducing media-session pools yet.
+- Live benchmark output now separates byte-transfer duration from operation duration and includes part request/retry/flood/reconnect/sender-drop counters plus media-lane build/drop/close counters. This keeps flood sleeps, lane churn, and finalization stalls visible instead of hiding them inside one average speed.
 - Benchmark naming is now directional: `MINIPROTO_LIVE_BENCH_UPLOAD_CONCURRENCY` / `--upload-concurrency` and `MINIPROTO_LIVE_BENCH_DOWNLOAD_CONCURRENCY` / `--download-concurrency`. Older generic upload names remain hidden compatibility aliases only.
 
 ## Priority Backlog
@@ -66,7 +66,7 @@ Method: Each implementation was cloned into a temporary directory outside the `m
 
 - Add connection-level metrics: pending RPCs, queued RPCs, reconnect cause, read timeout, ping timeout, DC recreation, auth export/import, per-pool load, and in-flight bytes.
 - Keep structured redacted logging. Do not copy verbose raw TL/bytes logging behavior from mtcute or Pyroblack.
-- Add benchmark JSON fields for adaptive throttle reductions/increases once the metric sink can expose attribute-grouped counters cleanly.
+- Add benchmark JSON fields for adaptive throttle reductions/increases once the metric sink can expose attribute-grouped counters cleanly. Media-lane build/drop/close counters are already emitted in the live media benchmark summary.
 
 ## Boundary Notes
 
