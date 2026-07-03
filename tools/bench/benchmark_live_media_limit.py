@@ -3,17 +3,24 @@ from __future__ import annotations
 import argparse
 import asyncio
 import hashlib
+import html
 import json
 import math
 import os
+import secrets
 import statistics
 import sys
+import threading
 import time
 from collections.abc import Mapping
+from contextlib import suppress
 from dataclasses import asdict, dataclass
 from getpass import getpass
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from queue import Empty, Full, Queue
 from typing import Any, Literal
+from urllib.parse import parse_qs
 
 from miniproto import (
     Client,
@@ -108,6 +115,7 @@ class BenchmarkSummary:
     upload_request_timeout: float
     upload_part_retries: int
     download_concurrency: int
+    download_adaptive_concurrency: bool
     download_request_timeout: float
     download_part_retries: int
     download_flood_sleep_threshold: int | None
@@ -288,6 +296,23 @@ def parse_args(
         default=int(env_value(values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_CONCURRENCY", "4") or "4"),
         help="number of concurrent upload.getFile requests for known-size downloads; defaults lower than upload concurrency to avoid Telegram flood waits",
     )
+    download_adaptive_default = env_bool(
+        values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_ADAPTIVE_CONCURRENCY", default=True
+    )
+    download_adaptive = parser.add_mutually_exclusive_group()
+    download_adaptive.add_argument(
+        "--download-adaptive-concurrency",
+        dest="download_adaptive_concurrency",
+        action="store_true",
+        default=download_adaptive_default,
+        help="adaptively reduce and slowly re-grow concurrent download requests after flood waits or disconnects",
+    )
+    download_adaptive.add_argument(
+        "--no-download-adaptive-concurrency",
+        dest="download_adaptive_concurrency",
+        action="store_false",
+        help="disable adaptive download request pacing for comparison runs",
+    )
     parser.add_argument(
         "--request-timeout",
         type=float,
@@ -299,7 +324,7 @@ def parse_args(
         "--upload-request-timeout",
         type=float,
         default=float(upload_timeout) if upload_timeout else None,
-        help="per-upload-part timeout in seconds; defaults to min(--request-timeout, 30)",
+        help="per-upload-part timeout in seconds; defaults to --request-timeout",
     )
     parser.add_argument(
         "--upload-part-retries",
@@ -324,12 +349,10 @@ def parse_args(
         "--download-chunk-size",
         type=int,
         default=int(
-            env_value(
-                values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_CHUNK_SIZE", str(MAX_DOWNLOAD_CHUNK_SIZE)
-            )
-            or str(MAX_DOWNLOAD_CHUNK_SIZE)
+            env_value(values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_CHUNK_SIZE", str(DEFAULT_CHUNK_SIZE))
+            or str(DEFAULT_CHUNK_SIZE)
         ),
-        help="upload.getFile request size in bytes; defaults to 1 MiB",
+        help=f"upload.getFile request size in bytes; defaults to 512 KiB for stable live runs; use {MAX_DOWNLOAD_CHUNK_SIZE} for 1 MiB comparison runs",
     )
     download_flood_sleep_threshold = env_value(
         values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_FLOOD_SLEEP_THRESHOLD", "30"
@@ -431,6 +454,7 @@ async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int
                     dc_id=args.dc_id,
                     upload_concurrency=args.upload_concurrency,
                     download_concurrency=args.download_concurrency,
+                    download_adaptive_concurrency=args.download_adaptive_concurrency,
                     upload_request_timeout=upload_request_timeout,
                     upload_part_retries=args.upload_part_retries,
                     download_request_timeout=download_request_timeout,
@@ -454,6 +478,7 @@ async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int
         upload_request_timeout=upload_request_timeout,
         upload_part_retries=args.upload_part_retries,
         download_concurrency=args.download_concurrency,
+        download_adaptive_concurrency=args.download_adaptive_concurrency,
         download_request_timeout=download_request_timeout,
         download_part_retries=args.download_part_retries,
         download_flood_sleep_threshold=args.download_flood_sleep_threshold,
@@ -478,6 +503,7 @@ async def benchmark_actor(
     dc_id: int,
     upload_concurrency: int,
     download_concurrency: int,
+    download_adaptive_concurrency: bool,
     upload_request_timeout: float,
     upload_part_retries: int,
     download_request_timeout: float,
@@ -543,6 +569,7 @@ async def benchmark_actor(
     print(
         f"{actor}.download: starting media_dc={media.dc_id} target={target} "
         f"download_concurrency={download_concurrency} download_request_timeout={download_request_timeout:g}s "
+        f"adaptive={download_adaptive_concurrency} "
         f"retries={download_part_retries} flood_sleep_threshold={download_flood_sleep_threshold} "
         f"chunk_size={download_chunk_size}"
     )
@@ -565,6 +592,7 @@ async def benchmark_actor(
             max_retries=download_part_retries,
             flood_sleep_threshold=download_flood_sleep_threshold,
             concurrency=download_concurrency,
+            adaptive_concurrency=download_adaptive_concurrency,
             part_size=download_chunk_size,
         )
     finally:
@@ -657,7 +685,7 @@ def effective_upload_request_timeout(args: argparse.Namespace) -> float:
     configured = args.upload_request_timeout
     if configured is not None:
         return float(configured)
-    return min(float(args.request_timeout), 30.0)
+    return float(args.request_timeout)
 
 
 def effective_download_request_timeout(args: argparse.Namespace) -> float:
@@ -875,6 +903,7 @@ def print_summary(summary: BenchmarkSummary) -> None:
         f"upload_limit_parts={summary.upload_limit_parts} "
         f"upload_concurrency={summary.upload_concurrency} upload_request_timeout={summary.upload_request_timeout:g} "
         f"upload_part_retries={summary.upload_part_retries} download_concurrency={summary.download_concurrency} "
+        f"download_adaptive_concurrency={summary.download_adaptive_concurrency} "
         f"download_request_timeout={summary.download_request_timeout:g} download_part_retries={summary.download_part_retries} "
         f"download_flood_sleep_threshold={summary.download_flood_sleep_threshold}"
     )
@@ -930,12 +959,132 @@ def env_value(env: Mapping[str, str], name: str, default: str | None = None) -> 
     return env.get(name) or default
 
 
+def env_bool(env: Mapping[str, str], name: str, *, default: bool) -> bool:
+    value = env_value(env, name)
+    if value is None:
+        return default
+    normalized = value.strip().casefold()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise ValueError(f"{name} must be a boolean value, got {value!r}")
+
+
 def prompt_code(env: Mapping[str, str]) -> str:
+    if should_use_http_code_prompt(env):
+        return prompt_code_http(env)
     if env_value(env, "MINIPROTO_LIVE_PROMPT_CODE") != "1" or not sys.stdin.isatty():
         raise SystemExit(
-            "no stored user session; set MINIPROTO_LIVE_PROMPT_CODE=1 and run interactively to enter the current Telegram code"
+            "no stored user session; set MINIPROTO_LIVE_PROMPT_CODE=1 and run interactively to enter the current Telegram code, or set MINIPROTO_LIVE_BENCH_CODE_PROMPT=http for the temporary HTTP prompt"
         )
     return input("Telegram login code: ").strip()
+
+
+def should_use_http_code_prompt(env: Mapping[str, str]) -> bool:
+    mode = (env_value(env, "MINIPROTO_LIVE_BENCH_CODE_PROMPT") or "").strip().casefold()
+    if mode in {"http", "web"}:
+        return True
+    return env_bool(env, "MINIPROTO_LIVE_BENCH_HTTP_CODE_PROMPT", default=False)
+
+
+def prompt_code_http(env: Mapping[str, str]) -> str:
+    host = env_value(env, "MINIPROTO_LIVE_BENCH_HTTP_CODE_HOST", "127.0.0.1") or "127.0.0.1"
+    port = int(env_value(env, "MINIPROTO_LIVE_BENCH_HTTP_CODE_PORT", "8765") or "8765")
+    timeout_s = float(env_value(env, "MINIPROTO_LIVE_BENCH_HTTP_CODE_TIMEOUT", "900") or "900")
+    token = env_value(env, "MINIPROTO_LIVE_BENCH_HTTP_CODE_TOKEN") or secrets.token_urlsafe(24)
+    code_queue: Queue[str] = Queue(maxsize=1)
+    prompt_path = f"/{token}"
+    server: ThreadingHTTPServer
+
+    class CodeHandler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            if not self._authorized_path():
+                self._send(404, "not found")
+                return
+            self._send(200, _code_prompt_html(error=None), content_type="text/html; charset=utf-8")
+
+        def do_POST(self) -> None:
+            if not self._authorized_path():
+                self._send(404, "not found")
+                return
+            length = int(self.headers.get("Content-Length", "0") or "0")
+            if length > 256:
+                self._send(413, "request too large")
+                return
+            values = parse_qs(self.rfile.read(length).decode("utf-8", "replace"))
+            code = (values.get("code", [""])[0] or "").strip().replace(" ", "")
+            if not code:
+                self._send(
+                    400,
+                    _code_prompt_html(error="Enter the Telegram login code."),
+                    content_type="text/html; charset=utf-8",
+                )
+                return
+            with suppress(Full):
+                code_queue.put_nowait(code)
+            self._send(
+                200,
+                "<!doctype html><title>miniproto login code</title><p>Code received. You can close this tab.</p>",
+                content_type="text/html; charset=utf-8",
+            )
+            threading.Thread(target=server.shutdown, daemon=True).start()
+
+        def log_message(self, format: str, *args: object) -> None:
+            return
+
+        def _authorized_path(self) -> bool:
+            return self.path.split("?", 1)[0] == prompt_path
+
+        def _send(self, status: int, body: str, *, content_type: str = "text/plain") -> None:
+            payload = body.encode("utf-8")
+            self.send_response(status)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(payload)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(payload)
+
+    server = ThreadingHTTPServer((host, port), CodeHandler)
+    thread = threading.Thread(
+        target=server.serve_forever, name="miniproto-http-code-prompt", daemon=True
+    )
+    thread.start()
+    actual_port = int(server.server_address[1])
+    local_url = f"http://{host}:{actual_port}{prompt_path}"
+    public_base = env_value(env, "MINIPROTO_LIVE_BENCH_HTTP_CODE_PUBLIC_BASE_URL")
+    public_url = f"{public_base.rstrip('/')}{prompt_path}" if public_base else None
+    print("Telegram login code HTTP prompt is waiting for one code.")
+    print(f"Open locally: {local_url}")
+    if public_url:
+        print(f"Open through tunnel: {public_url}")
+    print(f"Prompt expires in {int(timeout_s)} seconds.")
+    try:
+        return code_queue.get(timeout=timeout_s)
+    except Empty as exc:
+        raise SystemExit("timed out waiting for Telegram login code over HTTP") from exc
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+
+def _code_prompt_html(*, error: str | None) -> str:
+    error_html = f"<p style='color:#b00020'>{html.escape(error)}</p>" if error else ""
+    return (
+        "<!doctype html><meta name='viewport' content='width=device-width,initial-scale=1'>"
+        "<title>miniproto Telegram login code</title>"
+        "<main style='font-family:system-ui,sans-serif;max-width:32rem;margin:4rem auto;padding:0 1rem'>"
+        "<h1>Telegram login code</h1>"
+        "<p>Enter the current login code for this benchmark run.</p>"
+        f"{error_html}"
+        "<form method='post'>"
+        "<input name='code' inputmode='numeric' autocomplete='one-time-code' autofocus "
+        "style='font-size:1.2rem;padding:.5rem;width:12rem'> "
+        "<button style='font-size:1.2rem;padding:.55rem 1rem'>Submit</button>"
+        "</form>"
+        "</main>"
+    )
 
 
 def prompt_password(env: Mapping[str, str]) -> str:

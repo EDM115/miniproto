@@ -6,6 +6,7 @@ from typing import Any
 
 import pytest
 
+import miniproto.media.download as media_download
 from miniproto import (
     AuthKey,
     Client,
@@ -308,6 +309,30 @@ def test_download_file_adaptive_concurrency_records_throttle(tmp_path) -> None:
         ]
         assert throttle_events
         assert min(event.value for event in throttle_events) < 4
+
+    run(scenario())
+
+
+def test_adaptive_download_throttle_slow_starts_and_ramps_after_cooldown() -> None:
+    async def scenario() -> None:
+        clock_value = [0.0]
+
+        def clock() -> float:
+            return clock_value[0]
+
+        throttle = media_download._AdaptiveDownloadThrottle(4, clock=clock)
+        assert throttle.limit == 2
+        await throttle.on_retry(TransportFlood(0), 1)
+        assert throttle.limit == 1
+        for _ in range(20):
+            throttle.on_success()
+        assert throttle.limit == 1
+        clock_value[0] = 2.1
+        for _ in range(7):
+            throttle.on_success()
+        assert throttle.limit == 1
+        throttle.on_success()
+        assert throttle.limit == 2
 
     run(scenario())
 

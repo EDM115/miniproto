@@ -34,6 +34,7 @@ class MediaDownloadError(RuntimeError):
 
 type RawInvoker = Callable[..., Awaitable[object]]
 type DownloadRetryObserver = Callable[[Exception, int], Awaitable[None] | None]
+type Clock = Callable[[], float]
 _LOGGER = get_logger("media.download")
 MAX_DOWNLOAD_CHUNK_SIZE = 1024 * 1024
 
@@ -685,22 +686,29 @@ async def _sleep_before_retry(exc: Exception) -> None:
 
 
 class _AdaptiveDownloadThrottle:
-    def __init__(self, initial_limit: int) -> None:
-        self.initial_limit = max(1, initial_limit)
-        self.limit = self.initial_limit
+    def __init__(self, max_limit: int, *, clock: Clock = time.monotonic) -> None:
+        self.max_limit = max(1, max_limit)
+        self.limit = min(self.max_limit, 2)
+        self._clock = clock
         self._successes_since_change = 0
+        self._cooldown_until = 0.0
 
     async def on_retry(self, exc: Exception, attempt: int) -> None:
         previous = self.limit
+        cooldown_s = 0.0
         if isinstance(exc, FloodWait):
             self.limit = max(1, self.limit // 2)
+            cooldown_s = max(float(exc.seconds), 2.0)
         elif isinstance(
             exc, ClientDisconnected | RequestTimeout | RpcTimeout | TimeoutError | ConnectionError
         ):
             self.limit = max(1, self.limit - 1)
+            cooldown_s = 2.0
+        self._successes_since_change = 0
+        if cooldown_s > 0:
+            self._cooldown_until = max(self._cooldown_until, self._clock() + cooldown_s)
         if self.limit == previous:
             return
-        self._successes_since_change = 0
         record_metric(
             "media.download.adaptive_throttle",
             self.limit,
@@ -722,13 +730,15 @@ class _AdaptiveDownloadThrottle:
         )
 
     def on_success(self) -> None:
-        if self.limit >= self.initial_limit:
+        if self.limit >= self.max_limit:
+            return
+        if self._clock() < self._cooldown_until:
             return
         self._successes_since_change += 1
-        if self._successes_since_change < max(2, self.limit * 2):
+        if self._successes_since_change < max(8, self.limit * 8):
             return
         previous = self.limit
-        self.limit = min(self.initial_limit, self.limit + 1)
+        self.limit = min(self.max_limit, self.limit + 1)
         self._successes_since_change = 0
         record_metric(
             "media.download.adaptive_throttle",

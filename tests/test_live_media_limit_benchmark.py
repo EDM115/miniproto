@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+import socket
+import time
+from concurrent.futures import ThreadPoolExecutor
+from urllib.error import URLError
+from urllib.parse import urlencode
+from urllib.request import urlopen
+
 import pytest
 from tools.bench.benchmark_live_media_limit import (
     DEFAULT_CHUNK_SIZE,
@@ -13,7 +20,9 @@ from tools.bench.benchmark_live_media_limit import (
     ensure_benchmark_file,
     parse_args,
     parse_size,
+    prompt_code_http,
     sample_stats,
+    should_use_http_code_prompt,
     transfer_counters,
 )
 
@@ -71,11 +80,11 @@ def test_transfer_recorder_samples_fixed_time_windows() -> None:
     assert transfer_duration == pytest.approx(10.0)
 
 
-def test_upload_request_timeout_defaults_to_shorter_part_timeout() -> None:
+def test_upload_request_timeout_defaults_to_global_request_timeout() -> None:
     args = parse_args(["--actor", "user"], {})
     assert args.request_timeout == 120
     assert args.upload_request_timeout is None
-    assert effective_upload_request_timeout(args) == 30
+    assert effective_upload_request_timeout(args) == 120
     overridden = parse_args(["--actor", "user", "--upload-request-timeout", "45"], {})
     assert effective_upload_request_timeout(overridden) == 45
 
@@ -87,7 +96,8 @@ def test_download_request_timeout_defaults_to_shorter_part_timeout() -> None:
     assert args.download_request_timeout is None
     assert effective_download_request_timeout(args) == 30
     assert args.download_flood_sleep_threshold == 30
-    assert args.download_chunk_size == MAX_DOWNLOAD_CHUNK_SIZE
+    assert args.download_chunk_size == DEFAULT_CHUNK_SIZE
+    assert args.download_adaptive_concurrency is True
     overridden = parse_args(["--actor", "user", "--download-request-timeout", "45"], {})
     assert effective_download_request_timeout(overridden) == 45
 
@@ -134,10 +144,49 @@ def test_download_flood_sleep_threshold_uses_download_specific_env_only() -> Non
 
 
 def test_download_chunk_size_uses_specific_env_and_cli() -> None:
-    args = parse_args(["--actor", "user"], {"MINIPROTO_LIVE_BENCH_DOWNLOAD_CHUNK_SIZE": "524288"})
-    assert args.download_chunk_size == DEFAULT_CHUNK_SIZE
+    args = parse_args(["--actor", "user"], {"MINIPROTO_LIVE_BENCH_DOWNLOAD_CHUNK_SIZE": "1048576"})
+    assert args.download_chunk_size == MAX_DOWNLOAD_CHUNK_SIZE
     overridden = parse_args(["--actor", "user", "--download-chunk-size", "1048576"], {})
     assert overridden.download_chunk_size == MAX_DOWNLOAD_CHUNK_SIZE
+
+
+def test_download_adaptive_concurrency_can_be_disabled() -> None:
+    env_disabled = parse_args(
+        ["--actor", "user"], {"MINIPROTO_LIVE_BENCH_DOWNLOAD_ADAPTIVE_CONCURRENCY": "0"}
+    )
+    assert env_disabled.download_adaptive_concurrency is False
+    cli_enabled = parse_args(
+        ["--actor", "user", "--download-adaptive-concurrency"],
+        {"MINIPROTO_LIVE_BENCH_DOWNLOAD_ADAPTIVE_CONCURRENCY": "0"},
+    )
+    assert cli_enabled.download_adaptive_concurrency is True
+    cli_disabled = parse_args(["--actor", "user", "--no-download-adaptive-concurrency"], {})
+    assert cli_disabled.download_adaptive_concurrency is False
+
+
+def test_http_code_prompt_accepts_posted_code() -> None:
+    port = free_local_port()
+    path_secret = "test-code-path"  # noqa: S105 - local test route, not a credential
+    env = {
+        "MINIPROTO_LIVE_BENCH_HTTP_CODE_HOST": "127.0.0.1",
+        "MINIPROTO_LIVE_BENCH_HTTP_CODE_PORT": str(port),
+        "MINIPROTO_LIVE_BENCH_HTTP_CODE_TIMEOUT": "5",
+        "MINIPROTO_LIVE_BENCH_HTTP_CODE_TOKEN": path_secret,
+    }
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(prompt_code_http, env)
+        url = f"http://127.0.0.1:{port}/{path_secret}"
+        wait_for_http_prompt(url)
+        payload = urlencode({"code": " 12345 "}).encode("ascii")
+        with urlopen(url, data=payload, timeout=2) as response:  # noqa: S310
+            assert response.status == 200
+        assert future.result(timeout=3) == "12345"
+
+
+def test_http_code_prompt_env_switch() -> None:
+    assert should_use_http_code_prompt({"MINIPROTO_LIVE_BENCH_CODE_PROMPT": "http"})
+    assert should_use_http_code_prompt({"MINIPROTO_LIVE_BENCH_HTTP_CODE_PROMPT": "1"})
+    assert not should_use_http_code_prompt({})
 
 
 def test_transfer_counters_aggregate_metrics() -> None:
@@ -172,3 +221,23 @@ def test_bot_peer_must_not_default_to_self() -> None:
         benchmark_peer_for_actor("bot", {})
     with pytest.raises(SystemExit, match="BOT_PEER"):
         benchmark_peer_for_actor("bot", {"MINIPROTO_LIVE_BENCH_BOT_PEER": "self"})
+
+
+def free_local_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return int(sock.getsockname()[1])
+
+
+def wait_for_http_prompt(url: str) -> None:
+    deadline = time.monotonic() + 3
+    last_error: BaseException | None = None
+    while time.monotonic() < deadline:
+        try:
+            with urlopen(url, timeout=0.2) as response:  # noqa: S310
+                assert response.status == 200
+                return
+        except URLError as exc:
+            last_error = exc
+            time.sleep(0.05)
+    raise AssertionError(f"HTTP prompt did not start: {last_error}")

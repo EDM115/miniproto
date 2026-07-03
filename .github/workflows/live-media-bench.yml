@@ -1,0 +1,205 @@
+name: Live Media Benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      actor:
+        description: "Which authorized account to benchmark"
+        required: true
+        default: "both"
+        type: choice
+        options:
+          - user
+          - bot
+          - both
+      user_auth_mode:
+        description: "How user login is supplied when no user session secret is restored"
+        required: true
+        default: "session"
+        type: choice
+        options:
+          - session
+          - cloudflared-code
+      size:
+        description: "Payload size: telegram-default, 2000mib, 512mib, 2gb, or bytes"
+        required: true
+        default: "telegram-default"
+      dc_id:
+        description: "Production DC id for the benchmark sessions"
+        required: true
+        default: "4"
+      upload_concurrency:
+        description: "Concurrent upload part requests"
+        required: true
+        default: "8"
+      download_concurrency:
+        description: "Maximum concurrent download part requests"
+        required: true
+        default: "4"
+      download_adaptive_concurrency:
+        description: "Adapt download concurrency after flood waits/disconnects"
+        required: true
+        default: true
+        type: boolean
+      download_chunk_size:
+        description: "upload.getFile chunk size in bytes; 524288 is stable, 1048576 tests the 1 MiB path"
+        required: true
+        default: "524288"
+      request_timeout:
+        description: "Client transport/request timeout in seconds"
+        required: true
+        default: "120"
+      upload_request_timeout:
+        description: "Upload part timeout in seconds; empty uses request_timeout"
+        required: false
+        default: ""
+      download_request_timeout:
+        description: "Download part timeout in seconds"
+        required: true
+        default: "30"
+      verify_digest:
+        description: "Hash source and download after each transfer"
+        required: true
+        default: false
+        type: boolean
+      trace_memory:
+        description: "Enable tracemalloc-backed memory diagnostics"
+        required: true
+        default: false
+        type: boolean
+      log_level:
+        description: "miniproto benchmark log level"
+        required: true
+        default: "WARNING"
+
+concurrency:
+  group: miniproto-live-media-bench
+  cancel-in-progress: false
+
+jobs:
+  live-media-bench:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      MINIPROTO_LIVE_BENCH: "1"
+      MINIPROTO_INTEGRATION: "1"
+      MINIPROTO_REAL_INTEGRATION: "1"
+      MINIPROTO_API_ID: ${{ secrets.MINIPROTO_API_ID }}
+      MINIPROTO_API_HASH: ${{ secrets.MINIPROTO_API_HASH }}
+      MINIPROTO_SESSION_KEY: ${{ secrets.MINIPROTO_SESSION_KEY }}
+      MINIPROTO_REAL_PHONE: ${{ secrets.MINIPROTO_REAL_PHONE }}
+      MINIPROTO_REAL_PASSWORD: ${{ secrets.MINIPROTO_REAL_PASSWORD }}
+      MINIPROTO_BOT_TOKEN: ${{ secrets.MINIPROTO_BOT_TOKEN }}
+      MINIPROTO_LIVE_BENCH_USER_PEER: ${{ secrets.MINIPROTO_LIVE_BENCH_USER_PEER }}
+      MINIPROTO_LIVE_BENCH_BOT_PEER: ${{ secrets.MINIPROTO_LIVE_BENCH_BOT_PEER }}
+      MINIPROTO_LIVE_BENCH_USER_SESSION_B64: ${{ secrets.MINIPROTO_LIVE_BENCH_USER_SESSION_B64 }}
+      MINIPROTO_LIVE_BENCH_BOT_SESSION_B64: ${{ secrets.MINIPROTO_LIVE_BENCH_BOT_SESSION_B64 }}
+      MINIPROTO_LIVE_BENCH_LOG_LEVEL: ${{ inputs.log_level }}
+      MINIPROTO_LIVE_BENCH_LOG_FORMAT: "text"
+      MINIPROTO_LIVE_BENCH_HTTP_CODE_PORT: "8765"
+      MINIPROTO_LIVE_BENCH_HTTP_CODE_TIMEOUT: "900"
+      MINIPROTO_LIVE_BENCH_REQUEST_TIMEOUT: ${{ inputs.request_timeout }}
+      MINIPROTO_LIVE_BENCH_UPLOAD_REQUEST_TIMEOUT: ${{ inputs.upload_request_timeout }}
+      MINIPROTO_LIVE_BENCH_DOWNLOAD_REQUEST_TIMEOUT: ${{ inputs.download_request_timeout }}
+      MINIPROTO_LIVE_BENCH_UPLOAD_CONCURRENCY: ${{ inputs.upload_concurrency }}
+      MINIPROTO_LIVE_BENCH_DOWNLOAD_CONCURRENCY: ${{ inputs.download_concurrency }}
+      MINIPROTO_LIVE_BENCH_DOWNLOAD_CHUNK_SIZE: ${{ inputs.download_chunk_size }}
+      MINIPROTO_LIVE_BENCH_SIZE: ${{ inputs.size }}
+      MINIPROTO_LIVE_BENCH_DC_ID: ${{ inputs.dc_id }}
+      MINIPROTO_LIVE_BENCH_ACTOR: ${{ inputs.actor }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v8.2.0
+      - name: Install Python
+        run: uv python install 3.14
+      - name: Sync
+        run: uv sync --extra dev
+      - name: Restore optional benchmark sessions
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .tmp
+          restore_session() {
+            local actor="$1"
+            local data="$2"
+            local target=".tmp/miniproto-live-bench-${actor}-dc${{ inputs.dc_id }}.sqlite"
+            if [ -n "${data}" ]; then
+              printf '%s' "${data}" | base64 --decode > "${target}"
+              chmod 600 "${target}"
+              echo "restored ${actor} session to ${target}"
+            fi
+          }
+          restore_session "user" "${MINIPROTO_LIVE_BENCH_USER_SESSION_B64:-}"
+          restore_session "bot" "${MINIPROTO_LIVE_BENCH_BOT_SESSION_B64:-}"
+      - name: Prepare optional user code tunnel
+        if: ${{ inputs.actor != 'bot' && inputs.user_auth_mode == 'cloudflared-code' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .tmp/live-bench-results
+          token="$(uv run python -c "import secrets; print(secrets.token_urlsafe(24))")"
+          echo "MINIPROTO_LIVE_BENCH_CODE_PROMPT=http" >> "${GITHUB_ENV}"
+          echo "MINIPROTO_LIVE_BENCH_HTTP_CODE_TOKEN=${token}" >> "${GITHUB_ENV}"
+          curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o .tmp/cloudflared
+          chmod 700 .tmp/cloudflared
+          .tmp/cloudflared tunnel --url "http://127.0.0.1:${MINIPROTO_LIVE_BENCH_HTTP_CODE_PORT}" --no-autoupdate > .tmp/live-bench-results/cloudflared.log 2>&1 &
+          echo "$!" > .tmp/live-bench-results/cloudflared.pid
+          for _ in $(seq 1 60); do
+            tunnel_url="$(grep -Eo 'https://[-a-zA-Z0-9]+\.trycloudflare\.com' .tmp/live-bench-results/cloudflared.log | head -n 1 || true)"
+            if [ -n "${tunnel_url}" ]; then
+              echo "MINIPROTO_LIVE_BENCH_HTTP_CODE_PUBLIC_BASE_URL=${tunnel_url}" >> "${GITHUB_ENV}"
+              echo "Telegram login code form will be available for 15 minutes once the benchmark asks for a code:"
+              echo "${tunnel_url}/${token}"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::cloudflared did not print a trycloudflare URL in time"
+          cat .tmp/live-bench-results/cloudflared.log || true
+          exit 2
+      - name: Check non-interactive session requirements
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ inputs.actor }}" != "bot" ] && [ ! -s ".tmp/miniproto-live-bench-user-dc${{ inputs.dc_id }}.sqlite" ] && [ "${{ inputs.user_auth_mode }}" != "cloudflared-code" ]; then
+            echo "::error::User benchmarks on GitHub-hosted runners need MINIPROTO_LIVE_BENCH_USER_SESSION_B64 unless user_auth_mode is cloudflared-code."
+            exit 2
+          fi
+      - name: Run live media benchmark
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .tmp/live-bench-results
+          extra_args=()
+          if [ "${{ inputs.verify_digest }}" = "true" ]; then
+            extra_args+=(--verify-digest)
+          fi
+          if [ "${{ inputs.trace_memory }}" = "true" ]; then
+            extra_args+=(--trace-memory)
+          fi
+          if [ "${{ inputs.download_adaptive_concurrency }}" = "true" ]; then
+            extra_args+=(--download-adaptive-concurrency)
+          else
+            extra_args+=(--no-download-adaptive-concurrency)
+          fi
+          uv run python tools/bench/benchmark_live_media_limit.py \
+            --actor "${{ inputs.actor }}" \
+            --size "${{ inputs.size }}" \
+            --dc-id "${{ inputs.dc_id }}" \
+            --upload-concurrency "${{ inputs.upload_concurrency }}" \
+            --download-concurrency "${{ inputs.download_concurrency }}" \
+            --download-chunk-size "${{ inputs.download_chunk_size }}" \
+            --request-timeout "${{ inputs.request_timeout }}" \
+            --download-request-timeout "${{ inputs.download_request_timeout }}" \
+            --json .tmp/live-bench-results/summary.json \
+            "${extra_args[@]}" 2>&1 | tee .tmp/live-bench-results/live-media-bench.log
+      - name: Upload benchmark summary
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: live-media-bench-${{ inputs.actor }}-dc${{ inputs.dc_id }}
+          path: |
+            .tmp/live-bench-results/summary.json
+            .tmp/live-bench-results/live-media-bench.log
+            .tmp/live-bench-results/cloudflared.log
+          if-no-files-found: warn
