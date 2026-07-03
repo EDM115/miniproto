@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 from tools.bench.benchmark_live_media_limit import (
     DEFAULT_CHUNK_SIZE,
+    MAX_DOWNLOAD_CHUNK_SIZE,
     TELEGRAM_DEFAULT_LIMIT_BYTES,
     TransferRecorder,
     benchmark_peer_for_actor,
@@ -13,7 +14,10 @@ from tools.bench.benchmark_live_media_limit import (
     parse_args,
     parse_size,
     sample_stats,
+    transfer_counters,
 )
+
+from miniproto.observability import InMemoryMetrics
 
 
 def test_parse_size_accepts_telegram_default_and_units() -> None:
@@ -60,8 +64,11 @@ def test_transfer_recorder_samples_fixed_time_windows() -> None:
     recorder.begin(now=1.0)
     recorder.record(one_mib, None, now=1.1)
     recorder.record(5 * one_mib, None, now=6.0)
-    recorder.record(10 * one_mib, None, now=11.0)
+    recorder.record(10 * one_mib, 10 * one_mib, now=11.0)
     assert recorder.samples_mib_s == pytest.approx([1.0, 1.0])
+    duration, transfer_duration, _stats = recorder.finish(10 * one_mib)
+    assert duration >= transfer_duration
+    assert transfer_duration == pytest.approx(10.0)
 
 
 def test_upload_request_timeout_defaults_to_shorter_part_timeout() -> None:
@@ -80,22 +87,35 @@ def test_download_request_timeout_defaults_to_shorter_part_timeout() -> None:
     assert args.download_request_timeout is None
     assert effective_download_request_timeout(args) == 30
     assert args.download_flood_sleep_threshold == 30
+    assert args.download_chunk_size == MAX_DOWNLOAD_CHUNK_SIZE
     overridden = parse_args(["--actor", "user", "--download-request-timeout", "45"], {})
     assert effective_download_request_timeout(overridden) == 45
 
 
 def test_download_concurrency_is_independent_from_upload_concurrency() -> None:
-    shared = parse_args(["--actor", "user"], {"MINIPROTO_LIVE_BENCH_CONCURRENCY": "8"})
-    assert shared.concurrency == 8
+    shared = parse_args(["--actor", "user"], {"MINIPROTO_LIVE_BENCH_UPLOAD_CONCURRENCY": "8"})
+    assert shared.upload_concurrency == 8
     assert shared.download_concurrency == 4
     specific = parse_args(
         ["--actor", "user"],
-        {"MINIPROTO_LIVE_BENCH_CONCURRENCY": "8", "MINIPROTO_LIVE_BENCH_DOWNLOAD_CONCURRENCY": "2"},
+        {
+            "MINIPROTO_LIVE_BENCH_UPLOAD_CONCURRENCY": "8",
+            "MINIPROTO_LIVE_BENCH_DOWNLOAD_CONCURRENCY": "2",
+        },
     )
-    assert specific.concurrency == 8
+    assert specific.upload_concurrency == 8
     assert specific.download_concurrency == 2
     overridden = parse_args(["--actor", "user", "--download-concurrency", "6"], {})
     assert overridden.download_concurrency == 6
+
+
+def test_legacy_generic_upload_concurrency_aliases_still_work() -> None:
+    env_alias = parse_args(["--actor", "user"], {"MINIPROTO_LIVE_BENCH_CONCURRENCY": "7"})
+    assert env_alias.upload_concurrency == 7
+    cli_alias = parse_args(["--actor", "user", "--concurrency", "9"], {})
+    assert cli_alias.upload_concurrency == 9
+    directional_cli = parse_args(["--actor", "user", "--upload-concurrency", "10"], {})
+    assert directional_cli.upload_concurrency == 10
 
 
 def test_download_flood_sleep_threshold_uses_download_specific_env_only() -> None:
@@ -111,6 +131,35 @@ def test_download_flood_sleep_threshold_uses_download_specific_env_only() -> Non
     assert specific.download_flood_sleep_threshold == 3
     overridden = parse_args(["--actor", "user", "--download-flood-sleep-threshold", "5"], {})
     assert overridden.download_flood_sleep_threshold == 5
+
+
+def test_download_chunk_size_uses_specific_env_and_cli() -> None:
+    args = parse_args(["--actor", "user"], {"MINIPROTO_LIVE_BENCH_DOWNLOAD_CHUNK_SIZE": "524288"})
+    assert args.download_chunk_size == DEFAULT_CHUNK_SIZE
+    overridden = parse_args(["--actor", "user", "--download-chunk-size", "1048576"], {})
+    assert overridden.download_chunk_size == MAX_DOWNLOAD_CHUNK_SIZE
+
+
+def test_transfer_counters_aggregate_metrics() -> None:
+    metrics = InMemoryMetrics()
+    metrics.record_metric("media.download.part_requests", 4)
+    metrics.record_metric("media.download.part_retries", 2)
+    metrics.record_metric("media.download.flood_waits", 1)
+    metrics.record_metric("media.download.flood_wait_seconds", 3)
+    metrics.record_metric("media.download.retry_sleep_seconds", 3)
+    metrics.record_metric("sender.reconnects", 1)
+    metrics.record_metric("client.sender_drops", 1)
+    metrics.record_metric("client.sender_drop_skipped", 1)
+    counters = transfer_counters(metrics, "download", 2.0)
+    assert counters.part_requests == 4
+    assert counters.part_retries == 2
+    assert counters.flood_waits == 1
+    assert counters.flood_wait_seconds == 3
+    assert counters.retry_sleep_seconds == 3
+    assert counters.reconnects == 1
+    assert counters.sender_drops == 1
+    assert counters.sender_drop_skips == 1
+    assert counters.requests_per_s == 2.0
 
 
 def test_bot_peer_must_not_default_to_self() -> None:

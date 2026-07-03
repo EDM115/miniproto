@@ -34,6 +34,7 @@ from miniproto.invoke import (
 )
 from miniproto.media import (
     DEFAULT_CHUNK_SIZE,
+    MAX_DOWNLOAD_CHUNK_SIZE,
     Destination,
     FileSource,
     MediaDownloadResult,
@@ -629,7 +630,7 @@ class Client:
                 raise
             except DatacenterMigration as exc:
                 await AuthService(self.config, self._storage, self.invoke).handle_dc_migration(exc)
-                await self._drop_sender()
+                await self._drop_sender(sender)
                 if self.is_connected and retryable and attempts < self.config.max_request_retries:
                     attempts += 1
                     continue
@@ -644,7 +645,7 @@ class Client:
                 raise
             except (AuthKeyNotFound, AuthKeyRegenerationRequired):
                 await clear_invalid_auth_key(self._storage, self.config)
-                await self._drop_sender()
+                await self._drop_sender(sender)
                 _emit_rpc_event(
                     started,
                     outcome="error",
@@ -662,7 +663,7 @@ class Client:
                     and attempts < self.config.max_request_retries
                 ):
                     attempts += 1
-                    await self._drop_sender()
+                    await self._drop_sender(sender)
                     continue
                 _emit_rpc_event(
                     started,
@@ -682,7 +683,7 @@ class Client:
                 should_retry = (
                     self.is_connected and retryable and attempts < self.config.max_request_retries
                 )
-                await self._drop_sender()
+                await self._drop_sender(sender)
                 if should_retry:
                     attempts += 1
                     continue
@@ -731,13 +732,21 @@ class Client:
 
     async def _ensure_sender(self) -> RawSender:
         sender = self._sender
-        if sender is not None:
+        if sender is not None and sender.is_connected:
             return sender
         async with self._sender_lock:
+            sender = self._sender
+            if sender is not None and sender.is_connected:
+                return sender
+            if sender is not None:
+                self._sender = None
+                await sender.disconnect()
+                record_metric("client.sender_drops", 1, attributes={"reason": "disconnected"})
             if self._sender is None:
                 self._sender = await build_sender_from_session(
                     self.config, self._storage, self._sender_factory
                 )
+                record_metric("client.sender_builds", 1)
             return self._sender
 
     async def _ensure_authorization_key(self) -> None:
@@ -746,12 +755,17 @@ class Client:
     async def _invoke_auth_request(self, raw_request: object) -> object:
         return await self.invoke(raw_request, retry=True)
 
-    async def _drop_sender(self) -> None:
+    async def _drop_sender(self, expected: RawSender | None = None) -> None:
         async with self._sender_lock:
             sender = self._sender
-            self._sender = None
+            if expected is not None and sender is not expected:
+                record_metric("client.sender_drop_skipped", 1)
+                sender = expected
+            else:
+                self._sender = None
         if sender is not None:
             await sender.disconnect()
+            record_metric("client.sender_drops", 1)
 
 
 _SEND_MESSAGE_OPTION_DEFAULTS: dict[str, object] = {
@@ -832,7 +846,7 @@ _SEND_FILE_OPTION_DEFAULTS: dict[str, object] = {
 _DOWNLOAD_MEDIA_OPTION_DEFAULTS: dict[str, object] = {
     "offset": 0,
     "limit": None,
-    "part_size": DEFAULT_CHUNK_SIZE,
+    "part_size": MAX_DOWNLOAD_CHUNK_SIZE,
     "resume": False,
     "progress": None,
     "precise": False,
@@ -843,6 +857,7 @@ _DOWNLOAD_MEDIA_OPTION_DEFAULTS: dict[str, object] = {
     "flood_sleep_threshold": 30,
     "max_buffer_size": None,
     "concurrency": 1,
+    "adaptive_concurrency": True,
 }
 
 
@@ -883,6 +898,7 @@ def _download_media_options(kwargs: dict[str, Any]) -> dict[str, Any]:
     if options["flood_sleep_threshold"] is not None:
         options["flood_sleep_threshold"] = int(options["flood_sleep_threshold"])
     options["concurrency"] = int(options["concurrency"])
+    options["adaptive_concurrency"] = bool(options["adaptive_concurrency"])
     return options
 
 

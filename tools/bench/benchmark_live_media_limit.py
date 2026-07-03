@@ -19,13 +19,16 @@ from miniproto import (
     Client,
     ClientConfig,
     EncryptedSQLiteSessionStorage,
+    InMemoryMetrics,
     MemoryMonitor,
     TransportConfig,
     configure_logging,
     event_loop,
+    get_metrics_sink,
+    set_metrics_sink,
 )
 from miniproto.invoke import load_session_record
-from miniproto.media import DEFAULT_CHUNK_SIZE
+from miniproto.media import DEFAULT_CHUNK_SIZE, MAX_DOWNLOAD_CHUNK_SIZE
 
 TELEGRAM_DEFAULT_UPLOAD_PARTS = 4000
 TELEGRAM_DEFAULT_LIMIT_BYTES = TELEGRAM_DEFAULT_UPLOAD_PARTS * DEFAULT_CHUNK_SIZE
@@ -51,6 +54,19 @@ class SampleStats:
 
 
 @dataclass(frozen=True, slots=True)
+class TransferCounters:
+    part_requests: int
+    part_retries: int
+    flood_waits: int
+    flood_wait_seconds: float
+    retry_sleep_seconds: float
+    reconnects: int
+    sender_drops: int
+    sender_drop_skips: int
+    requests_per_s: float
+
+
+@dataclass(frozen=True, slots=True)
 class TransferSummary:
     actor: Actor
     operation: Literal["upload", "download"]
@@ -58,8 +74,12 @@ class TransferSummary:
     media_dc_id: int | None
     bytes: int
     duration_s: float
+    transfer_duration_s: float
+    finalize_duration_s: float
     overall_mib_s: float
+    transfer_mib_s: float
     samples: SampleStats
+    counters: TransferCounters
     peer: str
     message_id: int | None = None
     path: str | None = None
@@ -82,6 +102,7 @@ class BenchmarkSummary:
     generated_file: str
     generated_file_bytes: int
     chunk_size: int
+    download_chunk_size: int
     upload_limit_parts: int
     upload_concurrency: int
     upload_request_timeout: float
@@ -106,6 +127,7 @@ class TransferRecorder:
     last_report_time: float = 0.0
     last_sample_bytes: int = 0
     last_bytes: int = 0
+    completed_at: float = 0.0
     samples_mib_s: list[float] | None = None
 
     def __post_init__(self) -> None:
@@ -118,6 +140,7 @@ class TransferRecorder:
         self.last_report_time = now
         self.last_sample_bytes = 0
         self.last_bytes = 0
+        self.completed_at = 0.0
         assert self.samples_mib_s is not None
         self.samples_mib_s.clear()
 
@@ -126,7 +149,6 @@ class TransferRecorder:
         await asyncio.sleep(0)
 
     def record(self, current: int, total: int | None, *, now: float | None = None) -> None:
-        del total
         sampled_at = time.perf_counter() if now is None else now
         if self.start <= 0:
             self.start = sampled_at
@@ -135,6 +157,8 @@ class TransferRecorder:
         if current < self.last_bytes:
             return
         self.last_bytes = current
+        if total is not None and total > 0 and current >= total and self.completed_at <= 0:
+            self.completed_at = sampled_at
         elapsed = sampled_at - self.last_sample_time
         if elapsed < self.sample_interval_s:
             return
@@ -161,12 +185,16 @@ class TransferRecorder:
                 window_mib_s=window_mib_s,
             )
 
-    def finish(self, bytes_done: int) -> tuple[float, SampleStats]:
+    def finish(self, bytes_done: int) -> tuple[float, float, SampleStats]:
         finished_at = time.perf_counter()
         duration = max(finished_at - self.start, 1e-9)
+        transfer_end = self.completed_at if self.completed_at > 0 else finished_at
+        transfer_duration = max(transfer_end - self.start, 1e-9)
         assert self.samples_mib_s is not None
-        return duration, sample_stats(
-            self.samples_mib_s, fallback_overall_mib_s=_mib(bytes_done) / duration
+        return (
+            duration,
+            transfer_duration,
+            sample_stats(self.samples_mib_s, fallback_overall_mib_s=_mib(bytes_done) / duration),
         )
 
 
@@ -235,11 +263,24 @@ def parse_args(
         ),
         help="production DC id to use for both user and bot sessions",
     )
+    upload_concurrency_default = env_value(
+        values,
+        "MINIPROTO_LIVE_BENCH_UPLOAD_CONCURRENCY",
+        env_value(values, "MINIPROTO_LIVE_BENCH_CONCURRENCY", "8"),
+    )
+    parser.add_argument(
+        "--upload-concurrency",
+        dest="upload_concurrency",
+        type=int,
+        default=int(upload_concurrency_default or "8"),
+        help="number of concurrent upload part requests on the active MTProto sender",
+    )
     parser.add_argument(
         "--concurrency",
+        dest="upload_concurrency",
         type=int,
-        default=int(env_value(values, "MINIPROTO_LIVE_BENCH_CONCURRENCY", "8") or "8"),
-        help="number of concurrent upload part requests on the active MTProto sender",
+        default=argparse.SUPPRESS,
+        help=argparse.SUPPRESS,
     )
     parser.add_argument(
         "--download-concurrency",
@@ -278,6 +319,17 @@ def parse_args(
         type=int,
         default=int(env_value(values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_PART_RETRIES", "6") or "6"),
         help="media-layer retries per download part after transient failures",
+    )
+    parser.add_argument(
+        "--download-chunk-size",
+        type=int,
+        default=int(
+            env_value(
+                values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_CHUNK_SIZE", str(MAX_DOWNLOAD_CHUNK_SIZE)
+            )
+            or str(MAX_DOWNLOAD_CHUNK_SIZE)
+        ),
+        help="upload.getFile request size in bytes; defaults to 1 MiB",
     )
     download_flood_sleep_threshold = env_value(
         values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_FLOOD_SLEEP_THRESHOLD", "30"
@@ -377,13 +429,14 @@ async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int
                     source=args.file,
                     download_dir=args.download_dir,
                     dc_id=args.dc_id,
-                    concurrency=args.concurrency,
+                    upload_concurrency=args.upload_concurrency,
                     download_concurrency=args.download_concurrency,
                     upload_request_timeout=upload_request_timeout,
                     upload_part_retries=args.upload_part_retries,
                     download_request_timeout=download_request_timeout,
                     download_part_retries=args.download_part_retries,
                     download_flood_sleep_threshold=args.download_flood_sleep_threshold,
+                    download_chunk_size=args.download_chunk_size,
                     verify_digest=args.verify_digest,
                     progress_interval_s=args.progress_interval,
                 )
@@ -395,8 +448,9 @@ async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int
         generated_file=str(args.file),
         generated_file_bytes=size,
         chunk_size=DEFAULT_CHUNK_SIZE,
+        download_chunk_size=args.download_chunk_size,
         upload_limit_parts=limit_parts,
-        upload_concurrency=args.concurrency,
+        upload_concurrency=args.upload_concurrency,
         upload_request_timeout=upload_request_timeout,
         upload_part_retries=args.upload_part_retries,
         download_concurrency=args.download_concurrency,
@@ -422,20 +476,21 @@ async def benchmark_actor(
     source: Path,
     download_dir: Path,
     dc_id: int,
-    concurrency: int,
+    upload_concurrency: int,
     download_concurrency: int,
     upload_request_timeout: float,
     upload_part_retries: int,
     download_request_timeout: float,
     download_part_retries: int,
     download_flood_sleep_threshold: int | None,
+    download_chunk_size: int,
     verify_digest: bool,
     progress_interval_s: float,
 ) -> tuple[TransferSummary, TransferSummary]:
     caption = f"miniproto live media limit bench {actor} {int(time.time())}"
     size = await asyncio.to_thread(lambda: source.stat().st_size)
     print(
-        f"{actor}.upload: starting peer={peer} bytes={size} concurrency={concurrency} "
+        f"{actor}.upload: starting peer={peer} bytes={size} upload_concurrency={upload_concurrency} "
         f"upload_request_timeout={upload_request_timeout:g}s retries={upload_part_retries}"
     )
     upload_recorder = TransferRecorder(
@@ -445,17 +500,22 @@ async def benchmark_actor(
         sample_interval_s=max(1.0, progress_interval_s or 1.0),
     )
     upload_recorder.begin()
-    sent = await client.send_file(
-        peer,
-        source,
-        caption=caption,
-        file_name=source.name,
-        concurrency=concurrency,
-        progress=upload_recorder.progress,
-        request_timeout=upload_request_timeout,
-        max_retries=upload_part_retries,
-    )
-    upload_duration, upload_stats = upload_recorder.finish(size)
+    previous_sink, upload_metrics = begin_transfer_metrics()
+    try:
+        sent = await client.send_file(
+            peer,
+            source,
+            caption=caption,
+            file_name=source.name,
+            concurrency=upload_concurrency,
+            progress=upload_recorder.progress,
+            request_timeout=upload_request_timeout,
+            max_retries=upload_part_retries,
+        )
+    finally:
+        set_metrics_sink(previous_sink)
+    upload_duration, upload_transfer_duration, upload_stats = upload_recorder.finish(size)
+    upload_counters = transfer_counters(upload_metrics, "upload", upload_duration)
     media = sent.media or await find_recent_media(client, peer, caption)
     if media is None:
         raise RuntimeError(f"{actor} upload completed but no media was found for the sent message")
@@ -466,8 +526,12 @@ async def benchmark_actor(
         media_dc_id=media.dc_id,
         bytes=size,
         duration_s=upload_duration,
+        transfer_duration_s=upload_transfer_duration,
+        finalize_duration_s=max(0.0, upload_duration - upload_transfer_duration),
         overall_mib_s=_mib(size) / upload_duration,
+        transfer_mib_s=_mib(size) / upload_transfer_duration,
         samples=upload_stats,
+        counters=upload_counters,
         peer=peer,
         message_id=sent.id or None,
         path=str(source),
@@ -478,8 +542,9 @@ async def benchmark_actor(
     await asyncio.to_thread(target.unlink, missing_ok=True)
     print(
         f"{actor}.download: starting media_dc={media.dc_id} target={target} "
-        f"concurrency={download_concurrency} download_request_timeout={download_request_timeout:g}s "
-        f"retries={download_part_retries} flood_sleep_threshold={download_flood_sleep_threshold}"
+        f"download_concurrency={download_concurrency} download_request_timeout={download_request_timeout:g}s "
+        f"retries={download_part_retries} flood_sleep_threshold={download_flood_sleep_threshold} "
+        f"chunk_size={download_chunk_size}"
     )
     download_recorder = TransferRecorder(
         total=size,
@@ -488,18 +553,26 @@ async def benchmark_actor(
         sample_interval_s=max(1.0, progress_interval_s or 1.0),
     )
     download_recorder.begin()
-    downloaded = await client.download_media(
-        media,
-        target,
-        limit=size,
-        total_size=size,
-        progress=download_recorder.progress,
-        request_timeout=download_request_timeout,
-        max_retries=download_part_retries,
-        flood_sleep_threshold=download_flood_sleep_threshold,
-        concurrency=download_concurrency,
+    previous_sink, download_metrics = begin_transfer_metrics()
+    try:
+        downloaded = await client.download_media(
+            media,
+            target,
+            limit=size,
+            total_size=size,
+            progress=download_recorder.progress,
+            request_timeout=download_request_timeout,
+            max_retries=download_part_retries,
+            flood_sleep_threshold=download_flood_sleep_threshold,
+            concurrency=download_concurrency,
+            part_size=download_chunk_size,
+        )
+    finally:
+        set_metrics_sink(previous_sink)
+    download_duration, download_transfer_duration, download_stats = download_recorder.finish(
+        downloaded.bytes_downloaded
     )
-    download_duration, download_stats = download_recorder.finish(downloaded.bytes_downloaded)
+    download_counters = transfer_counters(download_metrics, "download", download_duration)
     if downloaded.bytes_downloaded != size:
         raise RuntimeError(
             f"{actor} download size mismatch: expected {size}, got {downloaded.bytes_downloaded}"
@@ -519,8 +592,12 @@ async def benchmark_actor(
         media_dc_id=media.dc_id,
         bytes=downloaded.bytes_downloaded,
         duration_s=download_duration,
+        transfer_duration_s=download_transfer_duration,
+        finalize_duration_s=max(0.0, download_duration - download_transfer_duration),
         overall_mib_s=_mib(downloaded.bytes_downloaded) / download_duration,
+        transfer_mib_s=_mib(downloaded.bytes_downloaded) / download_transfer_duration,
         samples=download_stats,
+        counters=download_counters,
         peer=peer,
         message_id=sent.id or None,
         path=str(target),
@@ -676,6 +753,34 @@ def tail_mean(ordered: list[float], fraction: float, *, lowest: bool) -> float:
     return statistics.fmean(values)
 
 
+def begin_transfer_metrics() -> tuple[Any, InMemoryMetrics]:
+    previous = get_metrics_sink()
+    sink = InMemoryMetrics()
+    set_metrics_sink(sink)
+    return previous, sink
+
+
+def transfer_counters(
+    metrics: InMemoryMetrics, operation: Literal["upload", "download"], duration_s: float
+) -> TransferCounters:
+    part_requests = int(metric_sum(metrics, f"media.{operation}.part_requests"))
+    return TransferCounters(
+        part_requests=part_requests,
+        part_retries=int(metric_sum(metrics, f"media.{operation}.part_retries")),
+        flood_waits=int(metric_sum(metrics, f"media.{operation}.flood_waits")),
+        flood_wait_seconds=metric_sum(metrics, f"media.{operation}.flood_wait_seconds"),
+        retry_sleep_seconds=metric_sum(metrics, f"media.{operation}.retry_sleep_seconds"),
+        reconnects=int(metric_sum(metrics, "sender.reconnects")),
+        sender_drops=int(metric_sum(metrics, "client.sender_drops")),
+        sender_drop_skips=int(metric_sum(metrics, "client.sender_drop_skipped")),
+        requests_per_s=part_requests / max(duration_s, 1e-9),
+    )
+
+
+def metric_sum(metrics: InMemoryMetrics, name: str) -> float:
+    return sum(event.value for event in metrics.events if event.name == name)
+
+
 def parse_size(value: str, *, default_bytes: int = TELEGRAM_DEFAULT_LIMIT_BYTES) -> int:
     normalized = value.strip().casefold().replace("_", "").replace("-", "")
     if normalized in {"telegramdefault", "default", "limit", "telegramlimit", "2gbtelegram"}:
@@ -713,12 +818,20 @@ def print_transfer(summary: TransferSummary) -> None:
         f"{summary.actor}.{summary.operation}: "
         f"{summary.bytes} bytes in {summary.duration_s:.3f}s "
         f"overall={summary.overall_mib_s:.3f}MiB/s ({_mib_s_to_mb_s(summary.overall_mib_s):.3f}MB/s) "
+        f"transfer={summary.transfer_duration_s:.3f}s "
+        f"transfer_rate={summary.transfer_mib_s:.3f}MiB/s ({_mib_s_to_mb_s(summary.transfer_mib_s):.3f}MB/s) "
+        f"finalize={summary.finalize_duration_s:.3f}s "
         f"median_window={summary.samples.median_mib_s:.3f}MiB/s "
         f"p95_window={summary.samples.p95_mib_s:.3f}MiB/s "
         f"p01_window={summary.samples.p01_mib_s:.3f}MiB/s "
         f"fastest_5pct_window_avg={summary.samples.fastest_5pct_avg_mib_s:.3f}MiB/s "
         f"slowest_1pct_window_avg={summary.samples.slowest_1pct_avg_mib_s:.3f}MiB/s "
-        f"window_samples={summary.samples.samples} media_dc={summary.media_dc_id}"
+        f"window_samples={summary.samples.samples} media_dc={summary.media_dc_id} "
+        f"part_requests={summary.counters.part_requests} part_retries={summary.counters.part_retries} "
+        f"flood_waits={summary.counters.flood_waits} flood_wait_seconds={summary.counters.flood_wait_seconds:g} "
+        f"retry_sleep_seconds={summary.counters.retry_sleep_seconds:g} reconnects={summary.counters.reconnects} "
+        f"sender_drops={summary.counters.sender_drops} sender_drop_skips={summary.counters.sender_drop_skips} "
+        f"requests_per_s={summary.counters.requests_per_s:.3f}"
     )
 
 
@@ -758,7 +871,8 @@ def format_duration(seconds: float) -> str:
 def print_summary(summary: BenchmarkSummary) -> None:
     print(
         f"benchmark_file={summary.generated_file} bytes={summary.generated_file_bytes} "
-        f"chunk_size={summary.chunk_size} upload_limit_parts={summary.upload_limit_parts} "
+        f"chunk_size={summary.chunk_size} download_chunk_size={summary.download_chunk_size} "
+        f"upload_limit_parts={summary.upload_limit_parts} "
         f"upload_concurrency={summary.upload_concurrency} upload_request_timeout={summary.upload_request_timeout:g} "
         f"upload_part_retries={summary.upload_part_retries} download_concurrency={summary.download_concurrency} "
         f"download_request_timeout={summary.download_request_timeout:g} download_part_retries={summary.download_part_retries} "

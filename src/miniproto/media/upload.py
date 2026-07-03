@@ -339,6 +339,7 @@ async def _save_part(
         request = functions.UploadSaveFilePart(file_id=file_id, file_part=part_index, bytes=payload)
     for attempt in range(max_retries + 1):
         try:
+            record_metric("media.upload.part_requests", 1, attributes={"big": big})
             result = await invoke(request, request_timeout=request_timeout, retry=False)
         except Exception as exc:
             if attempt >= max_retries or not _is_transient_upload_error(exc):
@@ -351,6 +352,7 @@ async def _save_part(
                 big=big,
                 error_type=type(exc).__name__,
             )
+            record_metric("media.upload.retry_sleep_seconds", 0, unit="s", attributes={"big": big})
             await asyncio.sleep(0)
             continue
         if _is_true(result):
@@ -365,6 +367,7 @@ async def _save_part(
             big=big,
             error_type="BoolFalse",
         )
+        record_metric("media.upload.retry_sleep_seconds", 0, unit="s", attributes={"big": big})
         await asyncio.sleep(0)
     raise MediaUploadError(f"Telegram did not accept upload part {part_index}")
 

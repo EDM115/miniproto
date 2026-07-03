@@ -18,6 +18,7 @@ from miniproto import (
 )
 from miniproto.errors import BadRequest, ClientDisconnected, TransportFlood
 from miniproto.media import MediaDownloadError, decrypt_cdn_chunk, download_file, download_media
+from miniproto.observability import InMemoryMetrics, set_metrics_sink
 from miniproto.raw import functions, types
 
 AUTH_KEY = b"m" * 256
@@ -67,6 +68,23 @@ class FlakyOffsetInvoker:
         if request.offset in self.fail_offsets:
             self.fail_offsets.remove(request.offset)
             raise ClientDisconnected("sender disconnected")
+        return upload_file_part(self.payload[request.offset : request.offset + request.limit])
+
+
+@dataclass(slots=True)
+class FloodingOffsetInvoker:
+    payload: bytes
+    flood_offsets: set[int]
+    requests: list[Any] = field(default_factory=list)
+
+    async def __call__(self, request: object, **kwargs: object) -> object:
+        del kwargs
+        self.requests.append(request)
+        assert isinstance(request, functions.UploadGetFile)
+        await asyncio.sleep(0)
+        if request.offset in self.flood_offsets:
+            self.flood_offsets.remove(request.offset)
+            raise TransportFlood(0)
         return upload_file_part(self.payload[request.offset : request.offset + request.limit])
 
 
@@ -259,6 +277,37 @@ def test_download_file_concurrent_retries_transient_chunk_failure(tmp_path) -> N
         assert result.bytes_downloaded == len(payload)
         offsets = [request.offset for request in invoker.requests]
         assert offsets.count(10) == 2
+
+    run(scenario())
+
+
+def test_download_file_adaptive_concurrency_records_throttle(tmp_path) -> None:
+    async def scenario() -> None:
+        payload = b"abcdefgh"
+        target = tmp_path / "adaptive.bin"
+        invoker = FloodingOffsetInvoker(payload, flood_offsets={0})
+        metrics = InMemoryMetrics()
+        set_metrics_sink(metrics)
+        try:
+            result = await download_file(
+                invoker,
+                document_location(),
+                target,
+                limit=len(payload),
+                part_size=1,
+                concurrency=4,
+                max_retries=1,
+                flood_sleep_threshold=1,
+            )
+        finally:
+            set_metrics_sink(None)
+        assert target.read_bytes() == payload
+        assert result.bytes_downloaded == len(payload)
+        throttle_events = [
+            event for event in metrics.events if event.name == "media.download.adaptive_throttle"
+        ]
+        assert throttle_events
+        assert min(event.value for event in throttle_events) < 4
 
     run(scenario())
 

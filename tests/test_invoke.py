@@ -117,6 +117,33 @@ class DisconnectingSender:
             self.future.set_exception(TransportClosed("sender disconnected"))
 
 
+class GateFailSender:
+    def __init__(self, exc: Exception) -> None:
+        self.requests: list[object] = []
+        self.started = asyncio.Event()
+        self.release = asyncio.Event()
+        self.exc = exc
+        self.is_connected = True
+        self.disconnected = 0
+
+    async def request(
+        self,
+        body: bytes | object,
+        *,
+        content_related: bool = True,
+        request_timeout: float | None = None,
+    ) -> object:
+        del content_related, request_timeout
+        self.requests.append(body)
+        self.started.set()
+        await self.release.wait()
+        raise self.exc
+
+    async def disconnect(self) -> None:
+        self.disconnected += 1
+        self.is_connected = False
+
+
 def nearest_dc() -> types.NearestDc:
     return types.NearestDc(country="US", this_dc=2, nearest_dc=2)
 
@@ -294,6 +321,26 @@ def test_invoke_classifies_transport_failure_from_dead_sender_as_client_disconne
         with pytest.raises(ClientDisconnected):
             await client.invoke(functions.HelpGetNearestDc())
         assert sender.disconnected == 1
+
+    run(scenario())
+
+
+def test_invoke_does_not_drop_replacement_sender_from_stale_failure() -> None:
+    async def scenario() -> None:
+        first = GateFailSender(TransportError("old sender failed"))
+        second = FakeSender([nearest_dc().serialize()])
+        client = await connected_client(
+            first, config=ClientConfig(api_id=1, api_hash="hash", max_request_retries=1)
+        )
+        task = asyncio.create_task(client.invoke(functions.HelpGetNearestDc()))
+        await first.started.wait()
+        client._sender = second
+        first.release.set()
+        result = await task
+        assert result == nearest_dc()
+        assert first.disconnected == 1
+        assert second.disconnected == 0
+        assert len(second.requests) == 1
 
     run(scenario())
 

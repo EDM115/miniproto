@@ -190,15 +190,15 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
 ### Implementation Phase 6 - Authorization And DC Migration
 
 - **GOAL-007**: Implement authorization flows and DC state movement required before useful raw invocation
-  | Task     | Description                                                                                                                                                                         | Completed   | Date       |
-  | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ---------- |
-  | TASK-044 | Add RSA key selection, PQ factorization, DH exchange, and auth key creation flow under `src/miniproto/auth/`.                                                                       | yes         | 2026-06-30 |
-  | TASK-045 | Implement phone sign-in in `Client.sign_in_phone()` using callback-provided code and optional password callback, with no secret logging.                                            | yes         | 2026-06-30 |
-  | TASK-046 | Implement bot token sign-in in `Client.sign_in_bot()` using generated `auth.importBotAuthorization` once raw generation exists.                                                     | yes         | 2026-06-30 |
-  | TASK-047 | Add DC option persistence, current DC selection, DC migration error handling, export authorization, and import authorization.                                                       | yes         | 2026-06-30 |
-  | TASK-048 | Implement auth-key-not-found, invalid DC, transport flood, and key regeneration behavior with clear typed exceptions.                                                               | yes         | 2026-06-30 |
-  | TASK-049 | Add fake-server tests in `tests/test_auth.py` for successful phone auth, successful bot auth, 2FA callback use, wrong-code failures, DC migration, and auth-key-not-found recovery. | yes         | 2026-07-02 |
-  | TASK-050 | Add gated live tests under `tests/integration/test_auth_live.py` for production/test DC sign-in, bot auth, `get_me()`, and reconnect using environment-only credentials.            | yes         | 2026-07-02 |
+  | Task     | Description                                                                                                                                                                         | Completed | Date       |
+  | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---------- |
+  | TASK-044 | Add RSA key selection, PQ factorization, DH exchange, and auth key creation flow under `src/miniproto/auth/`.                                                                       | yes       | 2026-06-30 |
+  | TASK-045 | Implement phone sign-in in `Client.sign_in_phone()` using callback-provided code and optional password callback, with no secret logging.                                            | yes       | 2026-06-30 |
+  | TASK-046 | Implement bot token sign-in in `Client.sign_in_bot()` using generated `auth.importBotAuthorization` once raw generation exists.                                                     | yes       | 2026-06-30 |
+  | TASK-047 | Add DC option persistence, current DC selection, DC migration error handling, export authorization, and import authorization.                                                       | yes       | 2026-06-30 |
+  | TASK-048 | Implement auth-key-not-found, invalid DC, transport flood, and key regeneration behavior with clear typed exceptions.                                                               | yes       | 2026-06-30 |
+  | TASK-049 | Add fake-server tests in `tests/test_auth.py` for successful phone auth, successful bot auth, 2FA callback use, wrong-code failures, DC migration, and auth-key-not-found recovery. | yes       | 2026-07-02 |
+  | TASK-050 | Add gated live tests under `tests/integration/test_auth_live.py` for production/test DC sign-in, bot auth, `get_me()`, and reconnect using environment-only credentials.            | yes       | 2026-07-02 |
 
 ### Implementation Phase 7 - Raw Invocation, Error Handling, And Flood Waits
 
@@ -227,51 +227,51 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
 ### Implementation Phase 9 - Peer Cache And Text Message Methods
 
 - **GOAL-010**: Implement common non-media methods that prove peer resolution, raw invocation, and update delivery work together
-  | Task     | Description                                                                                                                                                                                              | Completed   | Date       |
-  | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ---------- |
-  | TASK-063 | Add peer cache models and storage methods for users, chats, channels, usernames, phone numbers, self, and access hashes.                                                                                 | yes         | 2026-06-30 |
-  | TASK-064 | Implement `Client.get_me()` using generated raw calls and cached self identity.                                                                                                                          | yes         | 2026-06-30 |
-  | TASK-065 | Implement `Client.resolve_peer()` for existing `Peer`, self aliases, numeric IDs, usernames, and cached access hashes.                                                                                   | yes         | 2026-06-30 |
-  | TASK-066 | Implement `Client.send_message()` using `messages.sendMessage`, random ID generation, entity parsing for plain text and Markdown-lite, flood-wait behavior, and result normalization to `Message`.       | yes         | 2026-06-30 |
-  | TASK-067 | Add protocol-core history, edit, and delete text-message primitives while leaving routers, filters, middleware, conversations, and broad framework ergonomics to `mpgram`.                              | yes         | 2026-07-02 |
-  | TASK-068 | Add tests in `tests/test_peers.py` and `tests/test_messages.py` for cache hits/misses, access-hash persistence, self resolution, text send, Markdown-lite entities, random IDs, and flood wait surfaces. | yes         | 2026-06-30 |
-  | TASK-069 | Add gated live test coverage for Saved Messages send and history read when `MINIPROTO_INTEGRATION=1`.                                                                                                    | yes         | 2026-07-02 |
+  | Task     | Description                                                                                                                                                                                              | Completed | Date       |
+  | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---------- |
+  | TASK-063 | Add peer cache models and storage methods for users, chats, channels, usernames, phone numbers, self, and access hashes.                                                                                 | yes       | 2026-06-30 |
+  | TASK-064 | Implement `Client.get_me()` using generated raw calls and cached self identity.                                                                                                                          | yes       | 2026-06-30 |
+  | TASK-065 | Implement `Client.resolve_peer()` for existing `Peer`, self aliases, numeric IDs, usernames, and cached access hashes.                                                                                   | yes       | 2026-06-30 |
+  | TASK-066 | Implement `Client.send_message()` using `messages.sendMessage`, random ID generation, entity parsing for plain text and Markdown-lite, flood-wait behavior, and result normalization to `Message`.       | yes       | 2026-06-30 |
+  | TASK-067 | Add protocol-core history, edit, and delete text-message primitives while leaving routers, filters, middleware, conversations, and broad framework ergonomics to `mpgram`.                               | yes       | 2026-07-02 |
+  | TASK-068 | Add tests in `tests/test_peers.py` and `tests/test_messages.py` for cache hits/misses, access-hash persistence, self resolution, text send, Markdown-lite entities, random IDs, and flood wait surfaces. | yes       | 2026-06-30 |
+  | TASK-069 | Add gated live test coverage for Saved Messages send and history read when `MINIPROTO_INTEGRATION=1`.                                                                                                    | yes       | 2026-07-02 |
 
 ### Implementation Phase 10 - Media Upload And Download Primitives
 
 - **GOAL-011**: Implement protocol-core media transfer primitives without framework-level media sugar
-  | Task     | Description                                                                                                                                                                                                                      | Completed   | Date       |
-  | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ---------- |
-  | TASK-070 | Add `src/miniproto/media/upload.py` for small file upload, big file upload, 512 KiB default chunks, streamed unknown-size inputs, concurrency bounds, progress callbacks, and retry of missing parts.                            | yes         | 2026-06-30 |
-  | TASK-071 | Add `src/miniproto/media/download.py` for resumable download, offset/range handling, file-like destinations, path destinations, progress callbacks, and cancellation-safe cleanup.                                               | yes         | 2026-06-30 |
-  | TASK-072 | Add CDN redirect, CDN token, and CDN decryption support under `src/miniproto/media/cdn.py`.                                                                                                                                      | yes         | 2026-06-30 |
-  | TASK-073 | Implement `Client.send_file()` as a thin protocol-core convenience over upload plus generated media send requests.                                                                                                               | yes         | 2026-06-30 |
-  | TASK-074 | Implement `Client.download_media()` as a thin protocol-core convenience over media location resolution plus download.                                                                                                            | yes         | 2026-06-30 |
-  | TASK-075 | Add tests in `tests/test_media_upload.py` and `tests/test_media_download.py` for chunk sizing, small/big branch selection, streaming, retry, resume, CDN decrypt, progress callback ordering, cancellation, and memory ceilings. | yes         | 2026-06-30 |
-  | TASK-076 | Add gated live tests for upload/download to Saved Messages when `MINIPROTO_INTEGRATION=1`.                                                                                                                                       | yes         | 2026-07-02 |
+  | Task     | Description                                                                                                                                                                                                                      | Completed | Date       |
+  | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---------- |
+  | TASK-070 | Add `src/miniproto/media/upload.py` for small file upload, big file upload, 512 KiB default chunks, streamed unknown-size inputs, concurrency bounds, progress callbacks, and retry of missing parts.                            | yes       | 2026-06-30 |
+  | TASK-071 | Add `src/miniproto/media/download.py` for resumable download, offset/range handling, file-like destinations, path destinations, progress callbacks, and cancellation-safe cleanup.                                               | yes       | 2026-06-30 |
+  | TASK-072 | Add CDN redirect, CDN token, and CDN decryption support under `src/miniproto/media/cdn.py`.                                                                                                                                      | yes       | 2026-06-30 |
+  | TASK-073 | Implement `Client.send_file()` as a thin protocol-core convenience over upload plus generated media send requests.                                                                                                               | yes       | 2026-06-30 |
+  | TASK-074 | Implement `Client.download_media()` as a thin protocol-core convenience over media location resolution plus download.                                                                                                            | yes       | 2026-06-30 |
+  | TASK-075 | Add tests in `tests/test_media_upload.py` and `tests/test_media_download.py` for chunk sizing, small/big branch selection, streaming, retry, resume, CDN decrypt, progress callback ordering, cancellation, and memory ceilings. | yes       | 2026-06-30 |
+  | TASK-076 | Add gated live tests for upload/download to Saved Messages when `MINIPROTO_INTEGRATION=1`.                                                                                                                                       | yes       | 2026-07-02 |
 
 ### Implementation Phase 11 - Observability, Resource Limits, And Production Hardening
 
 - **GOAL-012**: Make runtime behavior inspectable and bounded without telemetry
-  | Task     | Description                                                                                                                                                                                               | Completed | Date |
-  | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---- |
-  | TASK-077 | Add `src/miniproto/observability.py` with counters/hooks for bytes sent, bytes received, RPC latency, reconnect count, flood waits, update gaps, queue depth, upload throughput, and download throughput. | yes       | 2026-07-02 |
-  | TASK-078 | Add structured logging calls across storage, transport, sender, auth, updates, and media using redacted `extra` payloads.                                                                                 | yes       | 2026-07-02 |
-  | TASK-079 | Add `ClientConfig` fields for request timeout, max pending RPCs, max reconnect attempts, update overflow policy, media concurrency, media memory ceiling, and flood-wait policy.                          | no        |      |
-  | TASK-080 | Add shutdown leak checks and background task supervision so disconnect waits for owned tasks and surfaces fatal runtime errors.                                                                           | no        |      |
+  | Task     | Description                                                                                                                                                                                               | Completed   | Date       |
+  | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ---------- |
+  | TASK-077 | Add `src/miniproto/observability.py` with counters/hooks for bytes sent, bytes received, RPC latency, reconnect count, flood waits, update gaps, queue depth, upload throughput, and download throughput. | yes         | 2026-07-02 |
+  | TASK-078 | Add structured logging calls across storage, transport, sender, auth, updates, and media using redacted `extra` payloads.                                                                                 | yes         | 2026-07-02 |
+  | TASK-079 | Add `ClientConfig` fields for request timeout, max pending RPCs, max reconnect attempts, update overflow policy, media concurrency, media memory ceiling, and flood-wait policy.                          | no          |            |
+  | TASK-080 | Add shutdown leak checks and background task supervision so disconnect waits for owned tasks and surfaces fatal runtime errors.                                                                           | no          |            |
   | TASK-081 | Add tests in `tests/test_observability.py` and `tests/test_resource_limits.py` for counters, hook calls, redacted logs, queue depth, pending RPC limit, media memory ceiling, and clean shutdown.         | in progress | 2026-07-02 |
 
 ### Implementation Phase 12 - Verification, Integration, Benchmarks, And CI Expansion
 
 - **GOAL-013**: Turn local and CI verification into a release-quality gate
-  | Task     | Description                                                                                                                                                                                                  | Completed | Date |
-  | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------- | ---- |
-  | TASK-082 | Expand `.github/workflows/ci.yml` to run Python 3.13 explicitly, add schema freshness checks, docs build, maturin wheel build, and benchmark smoke artifact upload.                                          | no        |      |
-  | TASK-083 | Add `tests/integration/README.md` documenting required environment variables, Telegram test DC preference, credential handling, and skip behavior.                                                           | yes       | 2026-07-02 |
-  | TASK-084 | Add fake-server tests for auth, raw invoke, transport recovery, update gaps, media transfer, and DC migration before relying on live Telegram tests.                                                         | no        |      |
+  | Task     | Description                                                                                                                                                                                                                                            | Completed   | Date       |
+  | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------- | ---------- |
+  | TASK-082 | Expand `.github/workflows/ci.yml` to run Python 3.13 explicitly, add schema freshness checks, docs build, maturin wheel build, and benchmark smoke artifact upload.                                                                                    | no          |            |
+  | TASK-083 | Add `tests/integration/README.md` documenting required environment variables, Telegram test DC preference, credential handling, and skip behavior.                                                                                                     | yes         | 2026-07-02 |
+  | TASK-084 | Add fake-server tests for auth, raw invoke, transport recovery, update gaps, media transfer, and DC migration before relying on live Telegram tests.                                                                                                   | no          |            |
   | TASK-085 | Add benchmark scripts under `tools/bench/` for native vs fallback crypto, TL serialization, 1k pending RPCs, update dispatch latency, media throughput including opt-in live 2000 MiB Telegram transfer checks, reconnect recovery, and sustained RSS. | in progress | 2026-07-02 |
-  | TASK-086 | Add release command aggregation in `docs/development.md` or a non-secret script under `tools/` that runs formatting, linting, type checking, tests, Rust checks, schema checks, docs build, and wheel build. | no        |      |
-  | TASK-087 | Run and record the full local verification suite in this file when all release-critical behavior is implemented.                                                                                             | no        |      |
+  | TASK-086 | Add release command aggregation in `docs/development.md` or a non-secret script under `tools/` that runs formatting, linting, type checking, tests, Rust checks, schema checks, docs build, and wheel build.                                           | no          |            |
+  | TASK-087 | Run and record the full local verification suite in this file when all release-critical behavior is implemented.                                                                                                                                       | no          |            |
 
 ### Implementation Phase 13 - Documentation, Packaging, And v1 Release Readiness
 
@@ -327,6 +327,7 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
 - **FILE-017**: `tests/` owns unit, fake-server, integration, parity, resource, and release tests
 - **FILE-018**: `src/miniproto/connection/` and `src/miniproto/mtproto/` own Phase 5 transport/runtime code; `src/miniproto/auth/`, `src/miniproto/updates/`, `src/miniproto/peers.py`, `src/miniproto/messages.py`, and `src/miniproto/media/` own the current auth, update, peer-cache, text-message, and media-transfer services
 - **FILE-019**: `docs/faked-methods.md` owns the ledger of fake-backed Telegram RPCs, private test hooks, and intentionally deferred public methods
+- **FILE-020**: `plans/2026-07-03-reference-implementation-improvement-notes.md` owns read-only reference-implementation comparison notes and prioritized follow-up ideas from Pyroblack, Telethon, grammers, and mtcute
 
 ## 6. Testing
 
@@ -383,6 +384,7 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
 - [plans/2026-06-25-implementation-progress.md](./plans/2026-06-25-implementation-progress.md)
 - [plans/2026-06-26-package-boundary-and-ecosystem-intent.md](./plans/2026-06-26-package-boundary-and-ecosystem-intent.md)
 - [plans/2026-06-29-package-boundary-progress.md](./plans/2026-06-29-package-boundary-progress.md)
+- [plans/2026-07-03-reference-implementation-improvement-notes.md](./plans/2026-07-03-reference-implementation-improvement-notes.md)
 - [README.md](./README.md)
 - [docs/development.md](./docs/development.md)
 - [tools/schema/README.md](./tools/schema/README.md)

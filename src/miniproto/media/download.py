@@ -20,7 +20,7 @@ from miniproto.errors import (
     RpcTimeout,
 )
 from miniproto.media.cdn import cdn_redirect_from_raw, get_cdn_file_part
-from miniproto.media.upload import DEFAULT_CHUNK_SIZE, ProgressCallback
+from miniproto.media.upload import ProgressCallback
 from miniproto.observability import emit_event, get_logger, record_metric
 from miniproto.raw import functions, types
 from miniproto.types import Media
@@ -33,7 +33,9 @@ class MediaDownloadError(RuntimeError):
 
 
 type RawInvoker = Callable[..., Awaitable[object]]
+type DownloadRetryObserver = Callable[[Exception, int], Awaitable[None] | None]
 _LOGGER = get_logger("media.download")
+MAX_DOWNLOAD_CHUNK_SIZE = 1024 * 1024
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,7 +64,7 @@ async def download_file(
     *,
     offset: int = 0,
     limit: int | None = None,
-    part_size: int = DEFAULT_CHUNK_SIZE,
+    part_size: int = MAX_DOWNLOAD_CHUNK_SIZE,
     resume: bool = False,
     progress: ProgressCallback | None = None,
     precise: bool = False,
@@ -73,6 +75,7 @@ async def download_file(
     flood_sleep_threshold: int | None = 30,
     max_buffer_size: int | None = None,
     concurrency: int = 1,
+    adaptive_concurrency: bool = True,
 ) -> MediaDownloadResult:
     _validate_download_options(
         offset, limit, part_size, max_retries, flood_sleep_threshold, max_buffer_size, concurrency
@@ -98,6 +101,7 @@ async def download_file(
                 max_retries=max_retries,
                 flood_sleep_threshold=flood_sleep_threshold,
                 concurrency=concurrency,
+                adaptive_concurrency=adaptive_concurrency,
             )
         else:
             result = await _download_file_sequential(
@@ -257,6 +261,7 @@ async def _download_file_concurrent(
     max_retries: int,
     flood_sleep_threshold: int | None,
     concurrency: int,
+    adaptive_concurrency: bool,
 ) -> MediaDownloadResult:
     destination_handle = _open_destination(destination, resume=resume)
     downloaded = destination_handle.existing_bytes
@@ -267,6 +272,9 @@ async def _download_file_concurrent(
     end_offset = start_offset + remaining
     pending: set[asyncio.Task[tuple[int, bytes, int]]] = set()
     stopped = False
+    throttle = (
+        _AdaptiveDownloadThrottle(concurrency) if adaptive_concurrency and concurrency > 1 else None
+    )
 
     async def fetch(request_offset: int, request_limit: int) -> tuple[int, bytes, int]:
         payload = await _download_part(
@@ -279,14 +287,18 @@ async def _download_file_concurrent(
             request_timeout=request_timeout,
             max_retries=max_retries,
             flood_sleep_threshold=flood_sleep_threshold,
+            retry_observer=throttle.on_retry if throttle is not None else None,
         )
+        if throttle is not None:
+            throttle.on_success()
         if len(payload) > request_limit:
             payload = payload[:request_limit]
         return request_offset, payload, request_limit
 
     def fill_window() -> None:
         nonlocal next_offset
-        while len(pending) < concurrency and next_offset < end_offset and not stopped:
+        allowed = concurrency if throttle is None else throttle.limit
+        while len(pending) < allowed and next_offset < end_offset and not stopped:
             request_limit = min(part_size, end_offset - next_offset)
             pending.add(asyncio.create_task(fetch(next_offset, request_limit)))
             next_offset += request_limit
@@ -422,12 +434,14 @@ async def _download_part(
     request_timeout: float | None,
     max_retries: int,
     flood_sleep_threshold: int | None,
+    retry_observer: DownloadRetryObserver | None = None,
 ) -> bytes:
     request = functions.UploadGetFile(
         precise=precise, cdn_supported=cdn_supported, location=location, offset=offset, limit=limit
     )
     for attempt in range(max_retries + 1):
         try:
+            record_metric("media.download.part_requests", 1)
             result = await invoke(
                 request, request_timeout=request_timeout, retry=False, flood_sleep_threshold=0
             )
@@ -447,6 +461,10 @@ async def _download_part(
                 error_type=type(exc).__name__,
                 flood_wait_seconds=exc.seconds if isinstance(exc, FloodWait) else None,
             )
+            if retry_observer is not None:
+                observed = retry_observer(exc, attempt + 1)
+                if inspect.isawaitable(observed):
+                    await observed
             await _sleep_before_retry(exc)
     raise MediaDownloadError(f"download part at offset {offset} did not complete")
 
@@ -541,8 +559,8 @@ def _validate_download_options(
         raise ValueError("limit must not be negative")
     if part_size <= 0:
         raise ValueError("part_size must be positive")
-    if part_size > DEFAULT_CHUNK_SIZE:
-        raise ValueError("part_size must not exceed 512 KiB")
+    if part_size > MAX_DOWNLOAD_CHUNK_SIZE:
+        raise ValueError("part_size must not exceed 1 MiB")
     if concurrency <= 0:
         raise ValueError("concurrency must be positive")
     if max_retries < 0:
@@ -654,15 +672,82 @@ def _emit_part_retry(
     }
     if flood_wait_seconds is not None:
         fields["flood_wait_seconds"] = flood_wait_seconds
+        record_metric("media.download.flood_waits", 1)
+        record_metric("media.download.flood_wait_seconds", flood_wait_seconds, unit="s")
     emit_event(_LOGGER, logging.WARNING, "media.download.part_retry", **fields)
 
 
 async def _sleep_before_retry(exc: Exception) -> None:
     delay = exc.seconds if isinstance(exc, FloodWait) else 0
+    if delay > 0:
+        record_metric("media.download.retry_sleep_seconds", delay, unit="s")
     await asyncio.sleep(delay)
 
 
+class _AdaptiveDownloadThrottle:
+    def __init__(self, initial_limit: int) -> None:
+        self.initial_limit = max(1, initial_limit)
+        self.limit = self.initial_limit
+        self._successes_since_change = 0
+
+    async def on_retry(self, exc: Exception, attempt: int) -> None:
+        previous = self.limit
+        if isinstance(exc, FloodWait):
+            self.limit = max(1, self.limit // 2)
+        elif isinstance(
+            exc, ClientDisconnected | RequestTimeout | RpcTimeout | TimeoutError | ConnectionError
+        ):
+            self.limit = max(1, self.limit - 1)
+        if self.limit == previous:
+            return
+        self._successes_since_change = 0
+        record_metric(
+            "media.download.adaptive_throttle",
+            self.limit,
+            attributes={
+                "reason": type(exc).__name__,
+                "attempt": attempt,
+                "previous_limit": previous,
+            },
+        )
+        emit_event(
+            _LOGGER,
+            logging.WARNING,
+            "media.download.throttle",
+            outcome="reduced",
+            previous_limit=previous,
+            current_limit=self.limit,
+            reason=type(exc).__name__,
+            attempt=attempt,
+        )
+
+    def on_success(self) -> None:
+        if self.limit >= self.initial_limit:
+            return
+        self._successes_since_change += 1
+        if self._successes_since_change < max(2, self.limit * 2):
+            return
+        previous = self.limit
+        self.limit = min(self.initial_limit, self.limit + 1)
+        self._successes_since_change = 0
+        record_metric(
+            "media.download.adaptive_throttle",
+            self.limit,
+            attributes={"reason": "success", "previous_limit": previous},
+        )
+        emit_event(
+            _LOGGER,
+            logging.DEBUG,
+            "media.download.throttle",
+            outcome="increased",
+            previous_limit=previous,
+            current_limit=self.limit,
+            reason="success",
+        )
+
+
 __all__ = [
+    "MAX_DOWNLOAD_CHUNK_SIZE",
     "Destination",
     "MediaDownloadError",
     "MediaDownloadResult",
