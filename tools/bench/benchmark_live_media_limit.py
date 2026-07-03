@@ -134,6 +134,7 @@ class TransferRecorder:
     last_sample_time: float = 0.0
     last_report_time: float = 0.0
     last_sample_bytes: int = 0
+    last_report_bytes: int = 0
     last_bytes: int = 0
     completed_at: float = 0.0
     samples_mib_s: list[float] | None = None
@@ -147,6 +148,7 @@ class TransferRecorder:
         self.last_sample_time = now
         self.last_report_time = now
         self.last_sample_bytes = 0
+        self.last_report_bytes = 0
         self.last_bytes = 0
         self.completed_at = 0.0
         assert self.samples_mib_s is not None
@@ -185,6 +187,7 @@ class TransferRecorder:
             and sampled_at - self.last_report_time >= self.progress_interval_s
         ):
             self.last_report_time = sampled_at
+            self.last_report_bytes = current
             print_progress(
                 self.label,
                 current=current,
@@ -195,6 +198,8 @@ class TransferRecorder:
 
     def report_heartbeat(self, *, now: float | None = None) -> None:
         if self.progress_interval_s <= 0 or self.start <= 0:
+            return
+        if self.last_bytes != self.last_report_bytes:
             return
         sampled_at = time.perf_counter() if now is None else now
         if sampled_at - self.last_report_time < self.progress_interval_s:

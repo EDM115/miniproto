@@ -94,6 +94,25 @@ def test_transfer_recorder_heartbeat_reports_stalled_progress(capsys) -> None:
     assert capsys.readouterr().out == ""
 
 
+def test_transfer_recorder_heartbeat_does_not_hide_moving_window(capsys) -> None:
+    one_mib = 1024 * 1024
+    recorder = TransferRecorder(
+        total=10 * one_mib, label="bench", progress_interval_s=5, sample_interval_s=5
+    )
+    recorder.begin(now=1.0)
+    recorder.record(one_mib, 10 * one_mib, now=3.0)
+    recorder.report_heartbeat(now=6.1)
+    assert capsys.readouterr().out == ""
+    recorder.record(5 * one_mib, 10 * one_mib, now=6.2)
+    captured = capsys.readouterr().out
+    assert "bench:" in captured
+    assert "window=0.962MiB/s" in captured
+    recorder.report_heartbeat(now=11.3)
+    stalled = capsys.readouterr().out
+    assert "bench:" in stalled
+    assert "window=0.000MiB/s" in stalled
+
+
 def test_upload_request_timeout_defaults_to_global_request_timeout() -> None:
     args = parse_args(["--actor", "user"], {})
     assert args.request_timeout == 120
