@@ -18,6 +18,7 @@ from tools.bench.benchmark_live_media_limit import (
     effective_download_request_timeout,
     effective_upload_request_timeout,
     ensure_benchmark_file,
+    format_media_lanes,
     parse_args,
     parse_size,
     prompt_code_http,
@@ -113,19 +114,19 @@ def test_transfer_recorder_heartbeat_does_not_hide_moving_window(capsys) -> None
     assert "window=0.000MiB/s" in stalled
 
 
-def test_upload_request_timeout_defaults_to_global_request_timeout() -> None:
+def test_upload_request_timeout_defaults_to_shorter_part_timeout() -> None:
     args = parse_args(["--actor", "user"], {})
     assert args.request_timeout == 120
-    assert args.upload_request_timeout is None
-    assert effective_upload_request_timeout(args) == 120
-    overridden = parse_args(["--actor", "user", "--upload-request-timeout", "45"], {})
-    assert effective_upload_request_timeout(overridden) == 45
+    assert args.upload_request_timeout == 45
+    assert effective_upload_request_timeout(args) == 45
+    overridden = parse_args(["--actor", "user", "--upload-request-timeout", "60"], {})
+    assert effective_upload_request_timeout(overridden) == 60
 
 
 def test_download_request_timeout_defaults_to_shorter_part_timeout() -> None:
     args = parse_args(["--actor", "user"], {})
     assert args.request_timeout == 120
-    assert args.download_concurrency == 4
+    assert args.download_concurrency == 1
     assert args.download_request_timeout is None
     assert effective_download_request_timeout(args) == 30
     assert args.download_flood_sleep_threshold == 30
@@ -138,7 +139,7 @@ def test_download_request_timeout_defaults_to_shorter_part_timeout() -> None:
 def test_download_concurrency_is_independent_from_upload_concurrency() -> None:
     shared = parse_args(["--actor", "user"], {"MINIPROTO_LIVE_BENCH_UPLOAD_CONCURRENCY": "8"})
     assert shared.upload_concurrency == 8
-    assert shared.download_concurrency == 4
+    assert shared.download_concurrency == 1
     specific = parse_args(
         ["--actor", "user"],
         {
@@ -150,6 +151,31 @@ def test_download_concurrency_is_independent_from_upload_concurrency() -> None:
     assert specific.download_concurrency == 2
     overridden = parse_args(["--actor", "user", "--download-concurrency", "6"], {})
     assert overridden.download_concurrency == 6
+
+
+def test_media_lanes_are_directional_and_optional() -> None:
+    defaults = parse_args(["--actor", "user"], {})
+    assert defaults.upload_media_lanes is None
+    assert defaults.download_media_lanes is None
+    assert format_media_lanes(defaults.upload_media_lanes, defaults.upload_concurrency) == "auto(8)"
+    assert (
+        format_media_lanes(defaults.download_media_lanes, defaults.download_concurrency)
+        == "auto(1)"
+    )
+    specific = parse_args(
+        ["--actor", "user"],
+        {
+            "MINIPROTO_LIVE_BENCH_UPLOAD_MEDIA_LANES": "0",
+            "MINIPROTO_LIVE_BENCH_DOWNLOAD_MEDIA_LANES": "2",
+        },
+    )
+    assert specific.upload_media_lanes == 0
+    assert specific.download_media_lanes == 2
+    overridden = parse_args(
+        ["--actor", "user", "--upload-media-lanes", "4", "--download-media-lanes", "0"], {}
+    )
+    assert overridden.upload_media_lanes == 4
+    assert overridden.download_media_lanes == 0
 
 
 def test_legacy_generic_upload_concurrency_aliases_still_work() -> None:

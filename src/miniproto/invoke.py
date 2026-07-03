@@ -170,7 +170,11 @@ def load_session_record(payload: Mapping[str, Any] | None, default_dc_id: int) -
 
 
 async def build_sender_from_session(
-    config: ClientConfig, storage: SessionStorage, factory: SenderFactory | None = None
+    config: ClientConfig,
+    storage: SessionStorage,
+    factory: SenderFactory | None = None,
+    *,
+    fresh_session_id: bool = False,
 ) -> RawSender:
     payload = await storage.load()
     record = load_session_record(payload, config.dc_id)
@@ -186,7 +190,11 @@ async def build_sender_from_session(
     option = select_dc_option(record.dc_options, dc_id)
     metadata = dict(record.metadata)
     server_salt = int(metadata.get("server_salt", 0) or 0)
-    session_id = int(metadata.get("session_id", secrets.randbits(64)) or secrets.randbits(64))
+    session_id = (
+        secrets.randbits(64)
+        if fresh_session_id
+        else int(metadata.get("session_id", secrets.randbits(64)) or secrets.randbits(64))
+    )
     return MTProtoSender(
         ConnectionEndpoint(option.ip_address, option.port),
         config.transport,

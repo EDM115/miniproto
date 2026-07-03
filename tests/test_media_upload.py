@@ -228,6 +228,7 @@ def test_client_send_file_uploads_and_sends_generated_media_request() -> None:
             caption="see **file**",
             parse_mode="markdown-lite",
             random_id=9,
+            media_lanes=0,
         )
         upload_request = inner_request(sender.requests[0])
         send_request = inner_request(sender.requests[1])
@@ -252,6 +253,63 @@ def test_client_send_file_uploads_and_sends_generated_media_request() -> None:
         assert message.media.location == types.InputDocumentFileLocation(
             id=100, access_hash=200, file_reference=b"ref", thumb_size=""
         )
+
+    run(scenario())
+
+
+def test_client_send_file_uses_dedicated_media_lanes() -> None:
+    async def scenario() -> None:
+        document = types.Document(
+            id=101,
+            access_hash=201,
+            file_reference=b"ref",
+            date=1_700_000_000,
+            mime_type="application/octet-stream",
+            size=2048,
+            dc_id=2,
+            attributes=(types.DocumentAttributeFilename(file_name="lanes.bin"),),
+        )
+        raw_media = types.MessageMediaDocument(document=document)
+        main_sender = FakeSender(
+            [
+                types.UpdateShortSentMessage(
+                    id=301, pts=1, pts_count=1, date=1_700_000_001, media=raw_media
+                )
+            ]
+        )
+        lane_senders = [FakeSender([types.BoolTrue()]), FakeSender([types.BoolTrue()])]
+        built_senders: list[FakeSender] = []
+
+        def sender_factory(record: SessionRecord) -> FakeSender:
+            del record
+            sender = lane_senders[len(built_senders)]
+            built_senders.append(sender)
+            return sender
+
+        client = Client(
+            ClientConfig(api_id=1, api_hash="hash", session_storage=storage_with_auth())
+        )
+        client._sender = main_sender
+        client._sender_factory = sender_factory
+        await client.connect()
+        message = await client.send_file(
+            "@alice",
+            b"a" * 2048,
+            file_name="lanes.bin",
+            part_size=1024,
+            concurrency=2,
+            random_id=10,
+        )
+        assert message.id == 301
+        assert built_senders == lane_senders
+        assert [len(sender.requests) for sender in lane_senders] == [1, 1]
+        assert len(main_sender.requests) == 1
+        upload_requests: list[functions.UploadSaveFilePart] = []
+        for request in (inner_request(sender.requests[0]) for sender in lane_senders):
+            assert isinstance(request, functions.UploadSaveFilePart)
+            upload_requests.append(request)
+        assert {request.file_part for request in upload_requests} == {0, 1}
+        assert isinstance(inner_request(main_sender.requests[0]), functions.MessagesSendMedia)
 
     run(scenario())
 

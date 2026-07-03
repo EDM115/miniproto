@@ -32,10 +32,18 @@ on:
         description: "Concurrent upload part requests"
         required: true
         default: "8"
+      upload_media_lanes:
+        description: "Upload MTProto sender lanes; empty follows upload_concurrency, 0 uses the legacy main sender"
+        required: false
+        default: ""
       download_concurrency:
         description: "Maximum concurrent download part requests"
         required: true
-        default: "4"
+        default: "1"
+      download_media_lanes:
+        description: "Download MTProto sender lanes; empty follows download_concurrency, 0 uses the legacy main sender"
+        required: false
+        default: ""
       download_adaptive_concurrency:
         description: "Adapt download concurrency after flood waits/disconnects"
         required: true
@@ -50,9 +58,9 @@ on:
         required: true
         default: "120"
       upload_request_timeout:
-        description: "Upload part timeout in seconds; empty uses request_timeout"
+        description: "Upload part timeout in seconds"
         required: false
-        default: ""
+        default: "45"
       download_request_timeout:
         description: "Download part timeout in seconds"
         required: true
@@ -103,6 +111,8 @@ jobs:
       MINIPROTO_LIVE_BENCH_DOWNLOAD_REQUEST_TIMEOUT: ${{ inputs.download_request_timeout }}
       MINIPROTO_LIVE_BENCH_UPLOAD_CONCURRENCY: ${{ inputs.upload_concurrency }}
       MINIPROTO_LIVE_BENCH_DOWNLOAD_CONCURRENCY: ${{ inputs.download_concurrency }}
+      MINIPROTO_LIVE_BENCH_UPLOAD_MEDIA_LANES: ${{ inputs.upload_media_lanes }}
+      MINIPROTO_LIVE_BENCH_DOWNLOAD_MEDIA_LANES: ${{ inputs.download_media_lanes }}
       MINIPROTO_LIVE_BENCH_DOWNLOAD_CHUNK_SIZE: ${{ inputs.download_chunk_size }}
       MINIPROTO_LIVE_BENCH_SIZE: ${{ inputs.size }}
       MINIPROTO_LIVE_BENCH_DC_ID: ${{ inputs.dc_id }}
@@ -182,6 +192,12 @@ jobs:
             extra_args+=(--download-adaptive-concurrency)
           else
             extra_args+=(--no-download-adaptive-concurrency)
+          fi
+          if [ -n "${{ inputs.upload_media_lanes }}" ]; then
+            extra_args+=(--upload-media-lanes "${{ inputs.upload_media_lanes }}")
+          fi
+          if [ -n "${{ inputs.download_media_lanes }}" ]; then
+            extra_args+=(--download-media-lanes "${{ inputs.download_media_lanes }}")
           fi
           uv run python -u tools/bench/benchmark_live_media_limit.py \
             --actor "${{ inputs.actor }}" \

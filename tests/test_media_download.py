@@ -477,12 +477,46 @@ def test_client_download_media_uses_generated_get_file_request() -> None:
         )
         client._sender = sender
         await client.connect()
-        result = await client.download_media(media)
+        result = await client.download_media(media, media_lanes=0)
         request = inner_request(sender.requests[0])
         assert isinstance(request, functions.UploadGetFile)
         assert request.location == document_location()
         assert request.cdn_supported is True
         assert result.data == b"abc"
+
+    run(scenario())
+
+
+def test_client_download_media_uses_dedicated_media_lanes() -> None:
+    async def scenario() -> None:
+        media = Media(id=10, size=2048, location=document_location())
+        lane_senders = [
+            FakeSender([upload_file_part(b"a" * 1024)]),
+            FakeSender([upload_file_part(b"b" * 1024)]),
+        ]
+        built_senders: list[FakeSender] = []
+
+        def sender_factory(record: SessionRecord) -> FakeSender:
+            del record
+            sender = lane_senders[len(built_senders)]
+            built_senders.append(sender)
+            return sender
+
+        client = Client(
+            ClientConfig(api_id=1, api_hash="hash", session_storage=storage_with_auth())
+        )
+        client._sender_factory = sender_factory
+        await client.connect()
+        result = await client.download_media(media, part_size=1024, concurrency=2)
+        assert result.data == b"a" * 1024 + b"b" * 1024
+        assert built_senders == lane_senders
+        assert client._sender is None
+        assert [len(sender.requests) for sender in lane_senders] == [1, 1]
+        requests: list[functions.UploadGetFile] = []
+        for request in (inner_request(sender.requests[0]) for sender in lane_senders):
+            assert isinstance(request, functions.UploadGetFile)
+            requests.append(request)
+        assert {request.offset for request in requests} == {0, 1024}
 
     run(scenario())
 

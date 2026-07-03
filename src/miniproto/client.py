@@ -464,18 +464,21 @@ class Client:
         file_options = _send_file_options(kwargs)
         resolved_peer = await self._peer_cache.resolve_peer(peer)
         try:
-            uploaded = await upload_file(
-                self.invoke,
-                file,
-                file_name=file_options["file_name"],
-                part_size=file_options["part_size"],
-                concurrency=file_options["concurrency"],
-                progress=file_options["progress"],
-                file_id=file_options["file_id"],
-                max_retries=file_options["max_retries"],
-                max_buffer_size=file_options["max_buffer_size"],
-                request_timeout=file_options["request_timeout"],
-            )
+            async with _MediaInvokeContext(
+                self, _media_lane_count(file_options["media_lanes"], file_options["concurrency"])
+            ) as media_invoke:
+                uploaded = await upload_file(
+                    media_invoke,
+                    file,
+                    file_name=file_options["file_name"],
+                    part_size=file_options["part_size"],
+                    concurrency=file_options["concurrency"],
+                    progress=file_options["progress"],
+                    file_id=file_options["file_id"],
+                    max_retries=file_options["max_retries"],
+                    max_buffer_size=file_options["max_buffer_size"],
+                    request_timeout=file_options["request_timeout"],
+                )
             parsed = (
                 parse_message_text(file_options["caption"], file_options["parse_mode"])
                 if file_options["entities"] is None
@@ -533,7 +536,14 @@ class Client:
         started = time.perf_counter()
         options = _download_media_options(kwargs)
         try:
-            result = await download_media_file(self.invoke, media, destination, **options)
+            download_options = dict(options)
+            download_options.pop("media_lanes", None)
+            async with _MediaInvokeContext(
+                self, _media_lane_count(options["media_lanes"], options["concurrency"])
+            ) as media_invoke:
+                result = await download_media_file(
+                    media_invoke, media, destination, **download_options
+                )
         except BaseException as exc:
             _emit_client_event(
                 "client.download_media",
@@ -562,6 +572,25 @@ class Client:
         flood_sleep_threshold: int | None = None,
         retry: bool | None = None,
     ) -> object:
+        return await self._invoke_via_sender(
+            raw_request,
+            ensure_sender=self._ensure_sender,
+            drop_sender=self._drop_sender,
+            request_timeout=request_timeout,
+            flood_sleep_threshold=flood_sleep_threshold,
+            retry=retry,
+        )
+
+    async def _invoke_via_sender(
+        self,
+        raw_request: object,
+        *,
+        ensure_sender: Callable[[], Awaitable[RawSender]],
+        drop_sender: Callable[[RawSender], Awaitable[None]],
+        request_timeout: float | None = None,
+        flood_sleep_threshold: int | None = None,
+        retry: bool | None = None,
+    ) -> object:
         if not self.is_connected:
             raise ConnectionError("client must be connected before invoking raw requests")
         started = time.perf_counter()
@@ -576,7 +605,7 @@ class Client:
         attempts = 0
         request_name = _request_name(raw_request)
         while True:
-            sender = await self._ensure_sender()
+            sender = await ensure_sender()
             try:
                 raw_result = await sender.request(
                     wrapped_request, content_related=True, request_timeout=timeout
@@ -630,7 +659,7 @@ class Client:
                 raise
             except DatacenterMigration as exc:
                 await AuthService(self.config, self._storage, self.invoke).handle_dc_migration(exc)
-                await self._drop_sender(sender)
+                await drop_sender(sender)
                 if self.is_connected and retryable and attempts < self.config.max_request_retries:
                     attempts += 1
                     continue
@@ -645,7 +674,7 @@ class Client:
                 raise
             except (AuthKeyNotFound, AuthKeyRegenerationRequired):
                 await clear_invalid_auth_key(self._storage, self.config)
-                await self._drop_sender(sender)
+                await drop_sender(sender)
                 _emit_rpc_event(
                     started,
                     outcome="error",
@@ -663,7 +692,7 @@ class Client:
                     and attempts < self.config.max_request_retries
                 ):
                     attempts += 1
-                    await self._drop_sender(sender)
+                    await drop_sender(sender)
                     continue
                 _emit_rpc_event(
                     started,
@@ -683,7 +712,7 @@ class Client:
                 should_retry = (
                     self.is_connected and retryable and attempts < self.config.max_request_retries
                 )
-                await self._drop_sender(sender)
+                await drop_sender(sender)
                 if should_retry:
                     attempts += 1
                     continue
@@ -768,6 +797,110 @@ class Client:
             record_metric("client.sender_drops", 1)
 
 
+class _MediaInvokeContext:
+    def __init__(self, client: Client, lane_count: int) -> None:
+        self._client = client
+        self._lane_count = lane_count
+        self._pool: _MediaSenderPool | None = None
+
+    async def __aenter__(self) -> Callable[..., Awaitable[object]]:
+        if self._lane_count <= 0:
+            return self._client.invoke
+        self._pool = _MediaSenderPool(self._client, self._lane_count)
+        return self._pool.invoke
+
+    async def __aexit__(
+        self, exc_type: type[BaseException] | None, exc: BaseException | None, tb: object | None
+    ) -> None:
+        del exc_type, exc, tb
+        if self._pool is not None:
+            await self._pool.close()
+
+
+class _MediaSenderPool:
+    def __init__(self, client: Client, lane_count: int) -> None:
+        self._client = client
+        self._lanes = tuple(_MediaSenderLane(client, index) for index in range(max(1, lane_count)))
+        self._next_index = 0
+        self._lock = asyncio.Lock()
+        record_metric("client.media_lane_pool_created", 1, attributes={"lanes": len(self._lanes)})
+
+    async def invoke(
+        self,
+        raw_request: object,
+        *,
+        request_timeout: float | None = None,
+        flood_sleep_threshold: int | None = None,
+        retry: bool | None = None,
+    ) -> object:
+        lane = await self._next_lane()
+        return await self._client._invoke_via_sender(
+            raw_request,
+            ensure_sender=lane.ensure_sender,
+            drop_sender=lane.drop_sender,
+            request_timeout=request_timeout,
+            flood_sleep_threshold=flood_sleep_threshold,
+            retry=retry,
+        )
+
+    async def close(self) -> None:
+        await asyncio.gather(*(lane.close() for lane in self._lanes))
+
+    async def _next_lane(self) -> _MediaSenderLane:
+        async with self._lock:
+            lane = self._lanes[self._next_index]
+            self._next_index = (self._next_index + 1) % len(self._lanes)
+            return lane
+
+
+class _MediaSenderLane:
+    def __init__(self, client: Client, index: int) -> None:
+        self._client = client
+        self._index = index
+        self._sender: RawSender | None = None
+        self._lock = asyncio.Lock()
+
+    async def ensure_sender(self) -> RawSender:
+        sender = self._sender
+        if sender is not None and sender.is_connected:
+            return sender
+        async with self._lock:
+            sender = self._sender
+            if sender is not None and sender.is_connected:
+                return sender
+            if sender is not None:
+                self._sender = None
+                await sender.disconnect()
+                record_metric(
+                    "client.media_lane_drops",
+                    1,
+                    attributes={"lane": self._index, "reason": "disconnected"},
+                )
+            self._sender = await build_sender_from_session(
+                self._client.config,
+                self._client._storage,
+                self._client._sender_factory,
+                fresh_session_id=True,
+            )
+            record_metric("client.media_lane_builds", 1, attributes={"lane": self._index})
+            return self._sender
+
+    async def drop_sender(self, expected: RawSender | None = None) -> None:
+        async with self._lock:
+            sender = self._sender
+            if expected is not None and sender is not expected:
+                record_metric("client.media_lane_drop_skipped", 1, attributes={"lane": self._index})
+                sender = expected
+            else:
+                self._sender = None
+        if sender is not None:
+            await sender.disconnect()
+            record_metric("client.media_lane_drops", 1, attributes={"lane": self._index})
+
+    async def close(self) -> None:
+        await self.drop_sender()
+
+
 _SEND_MESSAGE_OPTION_DEFAULTS: dict[str, object] = {
     "no_webpage": False,
     "silent": False,
@@ -841,6 +974,7 @@ _SEND_FILE_OPTION_DEFAULTS: dict[str, object] = {
     "request_timeout": None,
     "flood_sleep_threshold": None,
     "retry": None,
+    "media_lanes": None,
 }
 
 _DOWNLOAD_MEDIA_OPTION_DEFAULTS: dict[str, object] = {
@@ -858,6 +992,7 @@ _DOWNLOAD_MEDIA_OPTION_DEFAULTS: dict[str, object] = {
     "max_buffer_size": None,
     "concurrency": 1,
     "adaptive_concurrency": True,
+    "media_lanes": None,
 }
 
 
@@ -877,6 +1012,8 @@ def _send_file_options(kwargs: dict[str, Any]) -> dict[str, Any]:
     options["part_size"] = int(options["part_size"])
     options["concurrency"] = int(options["concurrency"])
     options["max_retries"] = int(options["max_retries"])
+    if options["media_lanes"] is not None:
+        options["media_lanes"] = int(options["media_lanes"])
     options["send_options"] = {
         name: kwargs.get(name, default) for name, default in _SEND_MEDIA_OPTION_DEFAULTS.items()
     }
@@ -899,7 +1036,16 @@ def _download_media_options(kwargs: dict[str, Any]) -> dict[str, Any]:
         options["flood_sleep_threshold"] = int(options["flood_sleep_threshold"])
     options["concurrency"] = int(options["concurrency"])
     options["adaptive_concurrency"] = bool(options["adaptive_concurrency"])
+    if options["media_lanes"] is not None:
+        options["media_lanes"] = int(options["media_lanes"])
     return options
+
+
+def _media_lane_count(configured: Any, concurrency: Any) -> int:
+    lanes = max(1, int(concurrency)) if configured is None else int(configured)
+    if lanes < 0:
+        raise ValueError("media_lanes must be non-negative")
+    return lanes
 
 
 def _message_id_tuple(message_ids: int | Iterable[int]) -> tuple[int, ...]:

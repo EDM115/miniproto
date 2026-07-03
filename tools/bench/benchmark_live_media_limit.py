@@ -40,6 +40,8 @@ from miniproto.media import DEFAULT_CHUNK_SIZE, MAX_DOWNLOAD_CHUNK_SIZE
 TELEGRAM_DEFAULT_UPLOAD_PARTS = 4000
 TELEGRAM_DEFAULT_LIMIT_BYTES = TELEGRAM_DEFAULT_UPLOAD_PARTS * DEFAULT_CHUNK_SIZE
 BENCH_GUARD_ENV = "MINIPROTO_LIVE_BENCH"
+DEFAULT_UPLOAD_REQUEST_TIMEOUT = 45.0
+DEFAULT_DOWNLOAD_CONCURRENCY = 1
 
 Actor = Literal["user", "bot"]
 
@@ -112,9 +114,11 @@ class BenchmarkSummary:
     download_chunk_size: int
     upload_limit_parts: int
     upload_concurrency: int
+    upload_media_lanes: int | None
     upload_request_timeout: float
     upload_part_retries: int
     download_concurrency: int
+    download_media_lanes: int | None
     download_adaptive_concurrency: bool
     download_request_timeout: float
     download_part_retries: int
@@ -320,11 +324,32 @@ def parse_args(
         default=argparse.SUPPRESS,
         help=argparse.SUPPRESS,
     )
+    upload_media_lanes = env_value(values, "MINIPROTO_LIVE_BENCH_UPLOAD_MEDIA_LANES")
+    parser.add_argument(
+        "--upload-media-lanes",
+        type=int,
+        default=int(upload_media_lanes) if upload_media_lanes else None,
+        help="MTProto sender lanes for upload parts; default follows --upload-concurrency, set 0 for the legacy main-sender path",
+    )
     parser.add_argument(
         "--download-concurrency",
         type=int,
-        default=int(env_value(values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_CONCURRENCY", "4") or "4"),
-        help="number of concurrent upload.getFile requests for known-size downloads; defaults lower than upload concurrency to avoid Telegram flood waits",
+        default=int(
+            env_value(
+                values,
+                "MINIPROTO_LIVE_BENCH_DOWNLOAD_CONCURRENCY",
+                str(DEFAULT_DOWNLOAD_CONCURRENCY),
+            )
+            or str(DEFAULT_DOWNLOAD_CONCURRENCY)
+        ),
+        help="maximum concurrent upload.getFile requests for known-size downloads; defaults to 1 because Telegram flood waits can erase concurrency gains",
+    )
+    download_media_lanes = env_value(values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_MEDIA_LANES")
+    parser.add_argument(
+        "--download-media-lanes",
+        type=int,
+        default=int(download_media_lanes) if download_media_lanes else None,
+        help="MTProto sender lanes for download parts; default follows --download-concurrency, set 0 for the legacy main-sender path",
     )
     download_adaptive_default = env_bool(
         values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_ADAPTIVE_CONCURRENCY", default=True
@@ -349,12 +374,14 @@ def parse_args(
         default=float(env_value(values, "MINIPROTO_LIVE_BENCH_REQUEST_TIMEOUT", "120") or "120"),
         help="per-request timeout in seconds",
     )
-    upload_timeout = env_value(values, "MINIPROTO_LIVE_BENCH_UPLOAD_REQUEST_TIMEOUT")
+    upload_timeout = env_value(
+        values, "MINIPROTO_LIVE_BENCH_UPLOAD_REQUEST_TIMEOUT", str(DEFAULT_UPLOAD_REQUEST_TIMEOUT)
+    )
     parser.add_argument(
         "--upload-request-timeout",
         type=float,
         default=float(upload_timeout) if upload_timeout else None,
-        help="per-upload-part timeout in seconds; defaults to --request-timeout",
+        help=f"per-upload-part timeout in seconds; defaults to {DEFAULT_UPLOAD_REQUEST_TIMEOUT:g}s for live media benchmarks",
     )
     parser.add_argument(
         "--upload-part-retries",
@@ -483,7 +510,9 @@ async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int
                     download_dir=args.download_dir,
                     dc_id=args.dc_id,
                     upload_concurrency=args.upload_concurrency,
+                    upload_media_lanes=args.upload_media_lanes,
                     download_concurrency=args.download_concurrency,
+                    download_media_lanes=args.download_media_lanes,
                     download_adaptive_concurrency=args.download_adaptive_concurrency,
                     upload_request_timeout=upload_request_timeout,
                     upload_part_retries=args.upload_part_retries,
@@ -505,9 +534,11 @@ async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int
         download_chunk_size=args.download_chunk_size,
         upload_limit_parts=limit_parts,
         upload_concurrency=args.upload_concurrency,
+        upload_media_lanes=args.upload_media_lanes,
         upload_request_timeout=upload_request_timeout,
         upload_part_retries=args.upload_part_retries,
         download_concurrency=args.download_concurrency,
+        download_media_lanes=args.download_media_lanes,
         download_adaptive_concurrency=args.download_adaptive_concurrency,
         download_request_timeout=download_request_timeout,
         download_part_retries=args.download_part_retries,
@@ -532,7 +563,9 @@ async def benchmark_actor(
     download_dir: Path,
     dc_id: int,
     upload_concurrency: int,
+    upload_media_lanes: int | None,
     download_concurrency: int,
+    download_media_lanes: int | None,
     download_adaptive_concurrency: bool,
     upload_request_timeout: float,
     upload_part_retries: int,
@@ -547,6 +580,7 @@ async def benchmark_actor(
     size = await asyncio.to_thread(lambda: source.stat().st_size)
     print(
         f"{actor}.upload: starting peer={peer} bytes={size} upload_concurrency={upload_concurrency} "
+        f"upload_media_lanes={format_media_lanes(upload_media_lanes, upload_concurrency)} "
         f"upload_request_timeout={upload_request_timeout:g}s retries={upload_part_retries}"
     )
     upload_recorder = TransferRecorder(
@@ -565,6 +599,7 @@ async def benchmark_actor(
             caption=caption,
             file_name=source.name,
             concurrency=upload_concurrency,
+            media_lanes=upload_media_lanes,
             progress=upload_recorder.progress,
             request_timeout=upload_request_timeout,
             max_retries=upload_part_retries,
@@ -601,6 +636,7 @@ async def benchmark_actor(
     print(
         f"{actor}.download: starting media_dc={media.dc_id} target={target} "
         f"download_concurrency={download_concurrency} download_request_timeout={download_request_timeout:g}s "
+        f"download_media_lanes={format_media_lanes(download_media_lanes, download_concurrency)} "
         f"adaptive={download_adaptive_concurrency} "
         f"retries={download_part_retries} flood_sleep_threshold={download_flood_sleep_threshold} "
         f"chunk_size={download_chunk_size}"
@@ -625,6 +661,7 @@ async def benchmark_actor(
             max_retries=download_part_retries,
             flood_sleep_threshold=download_flood_sleep_threshold,
             concurrency=download_concurrency,
+            media_lanes=download_media_lanes,
             adaptive_concurrency=download_adaptive_concurrency,
             part_size=download_chunk_size,
         )
@@ -953,13 +990,22 @@ def format_duration(seconds: float) -> str:
     return f"{secs}s"
 
 
+def format_media_lanes(media_lanes: int | None, concurrency: int) -> str:
+    if media_lanes is None:
+        return f"auto({max(1, concurrency)})"
+    return str(media_lanes)
+
+
 def print_summary(summary: BenchmarkSummary) -> None:
     print(
         f"benchmark_file={summary.generated_file} bytes={summary.generated_file_bytes} "
         f"chunk_size={summary.chunk_size} download_chunk_size={summary.download_chunk_size} "
         f"upload_limit_parts={summary.upload_limit_parts} "
-        f"upload_concurrency={summary.upload_concurrency} upload_request_timeout={summary.upload_request_timeout:g} "
-        f"upload_part_retries={summary.upload_part_retries} download_concurrency={summary.download_concurrency} "
+        f"upload_concurrency={summary.upload_concurrency} "
+        f"upload_media_lanes={format_media_lanes(summary.upload_media_lanes, summary.upload_concurrency)} "
+        f"upload_request_timeout={summary.upload_request_timeout:g} upload_part_retries={summary.upload_part_retries} "
+        f"download_concurrency={summary.download_concurrency} "
+        f"download_media_lanes={format_media_lanes(summary.download_media_lanes, summary.download_concurrency)} "
         f"download_adaptive_concurrency={summary.download_adaptive_concurrency} "
         f"download_request_timeout={summary.download_request_timeout:g} download_part_retries={summary.download_part_retries} "
         f"download_flood_sleep_threshold={summary.download_flood_sleep_threshold}"
