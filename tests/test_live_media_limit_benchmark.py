@@ -18,6 +18,7 @@ from tools.bench.benchmark_live_media_limit import (
     effective_download_request_timeout,
     effective_upload_request_timeout,
     ensure_benchmark_file,
+    file_id_for_actor,
     format_media_lanes,
     parse_args,
     parse_size,
@@ -176,6 +177,17 @@ def test_media_lanes_are_directional_and_optional() -> None:
     )
     assert overridden.upload_media_lanes == 4
     assert overridden.download_media_lanes == 0
+
+
+def test_operation_and_file_id_options_support_download_only() -> None:
+    args = parse_args(["--actor", "user", "--operation", "download", "--file-id", "mpf1_test"], {})
+    assert args.operation == "download"
+    assert args.file_id == "mpf1_test"
+    assert file_id_for_actor(args, {}, "user") == "mpf1_test"
+    assert (
+        file_id_for_actor(args, {"MINIPROTO_LIVE_BENCH_USER_FILE_ID": "mpf1_user_specific"}, "user")
+        == "mpf1_user_specific"
+    )
 
 
 def test_legacy_generic_upload_concurrency_aliases_still_work() -> None:

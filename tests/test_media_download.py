@@ -15,6 +15,7 @@ from miniproto import (
     InMemorySessionStorage,
     Media,
     SessionRecord,
+    encode_file_id,
     event_loop,
 )
 from miniproto.errors import BadRequest, ClientDisconnected, TransportFlood
@@ -389,6 +390,29 @@ def test_download_media_uses_known_size_for_concurrent_download() -> None:
         result = await download_media(invoker, media, part_size=4, concurrency=2)
         assert result.data == payload
         assert sorted(request.offset for request in invoker.requests) == [0, 4, 8, 12, 16]
+
+    run(scenario())
+
+
+def test_download_media_accepts_miniproto_file_id() -> None:
+    async def scenario() -> None:
+        document = types.Document(
+            id=11,
+            access_hash=22,
+            file_reference=b"ref",
+            date=1_700_000_000,
+            mime_type="application/octet-stream",
+            size=3,
+            dc_id=2,
+            attributes=(types.DocumentAttributeFilename(file_name="remote.bin"),),
+        )
+        file_id = encode_file_id(document)
+        invoker = FakeInvoker([upload_file_part(b"abc")])
+        result = await download_media(invoker, file_id)
+        assert result.data == b"abc"
+        assert isinstance(invoker.requests[0].location, types.InputDocumentFileLocation)
+        assert invoker.requests[0].location.id == 11
+        assert invoker.requests[0].limit == 1024 * 1024
 
     run(scenario())
 

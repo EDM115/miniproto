@@ -19,6 +19,7 @@ from miniproto.errors import (
     RpcError,
     RpcTimeout,
 )
+from miniproto.file_id import is_file_id, media_from_file_id
 from miniproto.media.cdn import cdn_redirect_from_raw, get_cdn_file_part
 from miniproto.media.upload import ProgressCallback
 from miniproto.observability import emit_event, get_logger, record_metric
@@ -358,6 +359,8 @@ async def download_media(
 
 
 def download_location_from_media(media: object) -> object:
+    if is_file_id(media):
+        return download_location_from_media(media_from_file_id(media))
     if isinstance(media, Media):
         if media.location is not None:
             return media.location

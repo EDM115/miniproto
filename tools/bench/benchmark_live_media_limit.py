@@ -34,6 +34,7 @@ from miniproto import (
     get_metrics_sink,
     set_metrics_sink,
 )
+from miniproto.file_id import encode_file_id, media_from_file_id
 from miniproto.invoke import load_session_record
 from miniproto.media import DEFAULT_CHUNK_SIZE, MAX_DOWNLOAD_CHUNK_SIZE
 
@@ -44,6 +45,7 @@ DEFAULT_UPLOAD_REQUEST_TIMEOUT = 45.0
 DEFAULT_DOWNLOAD_CONCURRENCY = 1
 
 Actor = Literal["user", "bot"]
+Operation = Literal["both", "upload", "download"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -92,6 +94,7 @@ class TransferSummary:
     peer: str
     message_id: int | None = None
     path: str | None = None
+    file_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -113,6 +116,7 @@ class BenchmarkSummary:
     chunk_size: int
     download_chunk_size: int
     upload_limit_parts: int
+    operation: Operation
     upload_concurrency: int
     upload_media_lanes: int | None
     upload_request_timeout: float
@@ -271,6 +275,17 @@ def parse_args(
         choices=("user", "bot", "both"),
         default=env_value(values, "MINIPROTO_LIVE_BENCH_ACTOR", "both"),
         help="which authorized account to benchmark",
+    )
+    parser.add_argument(
+        "--operation",
+        choices=("both", "upload", "download"),
+        default=env_value(values, "MINIPROTO_LIVE_BENCH_OPERATION", "both"),
+        help="which transfer operation to run",
+    )
+    parser.add_argument(
+        "--file-id",
+        default=env_value(values, "MINIPROTO_LIVE_BENCH_FILE_ID"),
+        help="miniproto benchmark file id printed by an earlier upload run; required for download-only unless an actor-specific file-id env var is set",
     )
     parser.add_argument(
         "--size",
@@ -479,15 +494,25 @@ def parse_args(
 async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int:
     limit_parts = upload_limit_parts_from_env_or_default(env, args.dc_id)
     size = parse_size(args.size, default_bytes=limit_parts * DEFAULT_CHUNK_SIZE)
-    print(
-        f"payload: path={args.file} bytes={size} chunks={math.ceil(size / DEFAULT_CHUNK_SIZE)} "
-        f"chunk_size={DEFAULT_CHUNK_SIZE}"
-    )
-    ensure_benchmark_file(
-        args.file, size=size, chunk_size=DEFAULT_CHUNK_SIZE, force=args.force_regenerate
-    )
+    upload_needed = args.operation in {"both", "upload"}
+    if upload_needed or args.prepare_only:
+        print(
+            f"payload: path={args.file} bytes={size} chunks={math.ceil(size / DEFAULT_CHUNK_SIZE)} "
+            f"chunk_size={DEFAULT_CHUNK_SIZE}"
+        )
+        ensure_benchmark_file(
+            args.file, size=size, chunk_size=DEFAULT_CHUNK_SIZE, force=args.force_regenerate
+        )
+    else:
+        print(
+            f"payload: operation=download source_file={args.file} fallback_bytes={size} "
+            "local payload generation skipped"
+        )
     if args.prepare_only:
-        print(f"prepared {args.file} ({size} bytes)")
+        if upload_needed:
+            print(f"prepared {args.file} ({size} bytes)")
+        else:
+            print("download-only mode does not prepare a local payload")
         return 0
     require_live_env(env, actor=args.actor)
     memory_monitor = MemoryMonitor(trace_allocations=args.trace_memory)
@@ -505,10 +530,13 @@ async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int
                 await benchmark_actor(
                     client,
                     actor=actor,
+                    operation=args.operation,
                     peer=peer,
                     source=args.file,
+                    benchmark_size=size,
                     download_dir=args.download_dir,
                     dc_id=args.dc_id,
+                    file_id=file_id_for_actor(args, env, actor),
                     upload_concurrency=args.upload_concurrency,
                     upload_media_lanes=args.upload_media_lanes,
                     download_concurrency=args.download_concurrency,
@@ -533,6 +561,7 @@ async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int
         chunk_size=DEFAULT_CHUNK_SIZE,
         download_chunk_size=args.download_chunk_size,
         upload_limit_parts=limit_parts,
+        operation=args.operation,
         upload_concurrency=args.upload_concurrency,
         upload_media_lanes=args.upload_media_lanes,
         upload_request_timeout=upload_request_timeout,
@@ -558,10 +587,13 @@ async def benchmark_actor(
     client: Client,
     *,
     actor: Actor,
+    operation: Operation,
     peer: str,
     source: Path,
+    benchmark_size: int,
     download_dir: Path,
     dc_id: int,
+    file_id: str | None,
     upload_concurrency: int,
     upload_media_lanes: int | None,
     download_concurrency: int,
@@ -575,63 +607,90 @@ async def benchmark_actor(
     download_chunk_size: int,
     verify_digest: bool,
     progress_interval_s: float,
-) -> tuple[TransferSummary, TransferSummary]:
+) -> tuple[TransferSummary, ...]:
     caption = f"miniproto live media limit bench {actor} {int(time.time())}"
-    size = await asyncio.to_thread(lambda: source.stat().st_size)
-    print(
-        f"{actor}.upload: starting peer={peer} bytes={size} upload_concurrency={upload_concurrency} "
-        f"upload_media_lanes={format_media_lanes(upload_media_lanes, upload_concurrency)} "
-        f"upload_request_timeout={upload_request_timeout:g}s retries={upload_part_retries}"
-    )
-    upload_recorder = TransferRecorder(
-        total=size,
-        label=f"{actor}.upload",
-        progress_interval_s=progress_interval_s,
-        sample_interval_s=max(1.0, progress_interval_s or 1.0),
-    )
-    upload_recorder.begin()
-    previous_sink, upload_metrics = begin_transfer_metrics()
-    upload_heartbeat = start_progress_heartbeat(upload_recorder)
-    try:
-        sent = await client.send_file(
-            peer,
-            source,
-            caption=caption,
-            file_name=source.name,
-            concurrency=upload_concurrency,
-            media_lanes=upload_media_lanes,
-            progress=upload_recorder.progress,
-            request_timeout=upload_request_timeout,
-            max_retries=upload_part_retries,
+    results: list[TransferSummary] = []
+    media = None
+    message_id: int | None = None
+    active_file_id = file_id
+    size = benchmark_size
+    if operation in {"both", "upload"}:
+        size = await asyncio.to_thread(lambda: source.stat().st_size)
+        print(
+            f"{actor}.upload: starting peer={peer} bytes={size} upload_concurrency={upload_concurrency} "
+            f"upload_media_lanes={format_media_lanes(upload_media_lanes, upload_concurrency)} "
+            f"upload_request_timeout={upload_request_timeout:g}s retries={upload_part_retries}"
         )
-    finally:
-        await stop_progress_heartbeat(upload_heartbeat)
-        set_metrics_sink(previous_sink)
-    upload_duration, upload_transfer_duration, upload_stats = upload_recorder.finish(size)
-    upload_counters = transfer_counters(upload_metrics, "upload", upload_duration)
-    media = sent.media or await find_recent_media(client, peer, caption)
+        upload_recorder = TransferRecorder(
+            total=size,
+            label=f"{actor}.upload",
+            progress_interval_s=progress_interval_s,
+            sample_interval_s=max(1.0, progress_interval_s or 1.0),
+        )
+        upload_recorder.begin()
+        previous_sink, upload_metrics = begin_transfer_metrics()
+        upload_heartbeat = start_progress_heartbeat(upload_recorder)
+        try:
+            sent = await client.send_file(
+                peer,
+                source,
+                caption=caption,
+                file_name=source.name,
+                concurrency=upload_concurrency,
+                media_lanes=upload_media_lanes,
+                progress=upload_recorder.progress,
+                request_timeout=upload_request_timeout,
+                max_retries=upload_part_retries,
+            )
+        finally:
+            await stop_progress_heartbeat(upload_heartbeat)
+            set_metrics_sink(previous_sink)
+        upload_duration, upload_transfer_duration, upload_stats = upload_recorder.finish(size)
+        upload_counters = transfer_counters(upload_metrics, "upload", upload_duration)
+        media = sent.media or await find_recent_media(client, peer, caption)
+        if media is None:
+            raise RuntimeError(
+                f"{actor} upload completed but no media was found for the sent message"
+            )
+        active_file_id = media.file_id or encode_file_id(media)
+        message_id = sent.id or None
+        print(f"{actor}.upload: file_id={active_file_id}")
+        upload = TransferSummary(
+            actor=actor,
+            operation="upload",
+            dc_id=dc_id,
+            media_dc_id=media.dc_id,
+            bytes=size,
+            duration_s=upload_duration,
+            transfer_duration_s=upload_transfer_duration,
+            finalize_duration_s=max(0.0, upload_duration - upload_transfer_duration),
+            overall_mib_s=_mib(size) / upload_duration,
+            transfer_mib_s=_mib(size) / upload_transfer_duration,
+            samples=upload_stats,
+            counters=upload_counters,
+            peer=peer,
+            message_id=message_id,
+            path=str(source),
+            file_id=active_file_id,
+        )
+        print_transfer(upload)
+        results.append(upload)
+        if operation == "upload":
+            return tuple(results)
+    else:
+        if not active_file_id:
+            raise RuntimeError(
+                f"{actor} download-only benchmark requires --file-id or MINIPROTO_LIVE_BENCH_{actor.upper()}_FILE_ID"
+            )
+        media = media_from_file_id(active_file_id)
+        size = media.size or benchmark_size
+        print(f"{actor}.download: using file_id={active_file_id}")
+
     if media is None:
-        raise RuntimeError(f"{actor} upload completed but no media was found for the sent message")
-    upload = TransferSummary(
-        actor=actor,
-        operation="upload",
-        dc_id=dc_id,
-        media_dc_id=media.dc_id,
-        bytes=size,
-        duration_s=upload_duration,
-        transfer_duration_s=upload_transfer_duration,
-        finalize_duration_s=max(0.0, upload_duration - upload_transfer_duration),
-        overall_mib_s=_mib(size) / upload_duration,
-        transfer_mib_s=_mib(size) / upload_transfer_duration,
-        samples=upload_stats,
-        counters=upload_counters,
-        peer=peer,
-        message_id=sent.id or None,
-        path=str(source),
-    )
-    print_transfer(upload)
+        raise RuntimeError(f"{actor} download has no media to download")
     await asyncio.to_thread(download_dir.mkdir, parents=True, exist_ok=True)
-    target = download_dir / f"{actor}-dc{dc_id}-{source.name}"
+    target_name = media.file_name or source.name
+    target = download_dir / f"{actor}-dc{dc_id}-{target_name}"
     await asyncio.to_thread(target.unlink, missing_ok=True)
     print(
         f"{actor}.download: starting media_dc={media.dc_id} target={target} "
@@ -698,11 +757,13 @@ async def benchmark_actor(
         samples=download_stats,
         counters=download_counters,
         peer=peer,
-        message_id=sent.id or None,
+        message_id=message_id,
         path=str(target),
+        file_id=active_file_id,
     )
     print_transfer(download)
-    return upload, download
+    results.append(download)
+    return tuple(results)
 
 
 def start_progress_heartbeat(recorder: TransferRecorder) -> asyncio.Task[None] | None:
@@ -996,12 +1057,16 @@ def format_media_lanes(media_lanes: int | None, concurrency: int) -> str:
     return str(media_lanes)
 
 
+def file_id_for_actor(args: argparse.Namespace, env: Mapping[str, str], actor: Actor) -> str | None:
+    return env_value(env, f"MINIPROTO_LIVE_BENCH_{actor.upper()}_FILE_ID") or args.file_id
+
+
 def print_summary(summary: BenchmarkSummary) -> None:
     print(
         f"benchmark_file={summary.generated_file} bytes={summary.generated_file_bytes} "
         f"chunk_size={summary.chunk_size} download_chunk_size={summary.download_chunk_size} "
         f"upload_limit_parts={summary.upload_limit_parts} "
-        f"upload_concurrency={summary.upload_concurrency} "
+        f"operation={summary.operation} upload_concurrency={summary.upload_concurrency} "
         f"upload_media_lanes={format_media_lanes(summary.upload_media_lanes, summary.upload_concurrency)} "
         f"upload_request_timeout={summary.upload_request_timeout:g} upload_part_retries={summary.upload_part_retries} "
         f"download_concurrency={summary.download_concurrency} "

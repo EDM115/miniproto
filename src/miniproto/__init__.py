@@ -30,6 +30,16 @@ from miniproto.errors import (
     TransportFlood,
     Unauthorized,
 )
+from miniproto.file_id import (
+    FILE_ID_PREFIX,
+    DecodedFileId,
+    decode_file_id,
+    encode_file_id,
+    input_media_from_file_id,
+    is_file_id,
+    media_from_file_id,
+    try_encode_file_id,
+)
 from miniproto.media import MediaDownloadResult, MediaUploadResult
 from miniproto.observability import (
     InMemoryMetrics,
@@ -67,6 +77,7 @@ from miniproto.session.storage import (
 from miniproto.types import Media, Message, NewMessage, Peer, Update, User
 
 __all__ = [
+    "FILE_ID_PREFIX",
     "AuthError",
     "AuthKey",
     "AuthKeyExchange",
@@ -80,6 +91,7 @@ __all__ = [
     "ClientDisconnected",
     "DCOption",
     "DatacenterMigration",
+    "DecodedFileId",
     "DeviceInfo",
     "EncryptedSQLiteSessionStorage",
     "FloodWait",
@@ -126,13 +138,19 @@ __all__ = [
     "UserIdentity",
     "configure_logging",
     "current_process_id",
+    "decode_file_id",
     "emit_event",
+    "encode_file_id",
     "event_loop",
     "get_logger",
     "get_metrics_sink",
+    "input_media_from_file_id",
+    "is_file_id",
+    "media_from_file_id",
     "process_rss_bytes",
     "record_metric",
     "resource_snapshot",
     "set_metrics_sink",
     "to_jsonable",
+    "try_encode_file_id",
 ]

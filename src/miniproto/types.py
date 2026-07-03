@@ -49,6 +49,12 @@ class Media:
     dc_id: int | None = None
     location: object | None = None
 
+    @property
+    def file_id(self) -> str | None:
+        from miniproto.file_id import try_encode_file_id
+
+        return try_encode_file_id(self)
+
 
 @dataclass(slots=True, frozen=True)
 class Message:

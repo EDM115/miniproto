@@ -20,6 +20,19 @@ on:
         options:
           - session
           - cloudflared-code
+      operation:
+        description: "Transfer operation to run"
+        required: true
+        default: "both"
+        type: choice
+        options:
+          - both
+          - upload
+          - download
+      file_id:
+        description: "miniproto file id for download-only runs"
+        required: false
+        default: ""
       size:
         description: "Payload size: telegram-default, 2000mib, 512mib, 2gb, or bytes"
         required: true
@@ -117,6 +130,8 @@ jobs:
       MINIPROTO_LIVE_BENCH_SIZE: ${{ inputs.size }}
       MINIPROTO_LIVE_BENCH_DC_ID: ${{ inputs.dc_id }}
       MINIPROTO_LIVE_BENCH_ACTOR: ${{ inputs.actor }}
+      MINIPROTO_LIVE_BENCH_OPERATION: ${{ inputs.operation }}
+      MINIPROTO_LIVE_BENCH_FILE_ID: ${{ inputs.file_id }}
       PYTHONUNBUFFERED: "1"
     steps:
       - uses: actions/checkout@v7
@@ -199,8 +214,12 @@ jobs:
           if [ -n "${{ inputs.download_media_lanes }}" ]; then
             extra_args+=(--download-media-lanes "${{ inputs.download_media_lanes }}")
           fi
+          if [ -n "${{ inputs.file_id }}" ]; then
+            extra_args+=(--file-id "${{ inputs.file_id }}")
+          fi
           uv run python -u tools/bench/benchmark_live_media_limit.py \
             --actor "${{ inputs.actor }}" \
+            --operation "${{ inputs.operation }}" \
             --size "${{ inputs.size }}" \
             --dc-id "${{ inputs.dc_id }}" \
             --upload-concurrency "${{ inputs.upload_concurrency }}" \

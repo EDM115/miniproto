@@ -20,6 +20,7 @@ from miniproto.errors import (
     Unauthorized,
     classify_rpc_error,
 )
+from miniproto.file_id import decode_file_id, input_media_from_file_id, is_file_id
 from miniproto.invoke import (
     RawSender,
     SenderFactory,
@@ -463,21 +464,36 @@ class Client:
         started = time.perf_counter()
         file_options = _send_file_options(kwargs)
         resolved_peer = await self._peer_cache.resolve_peer(peer)
+        file_id_source = file if is_file_id(file) else None
+        decoded_file_id = decode_file_id(file_id_source) if file_id_source is not None else None
         try:
-            async with _MediaInvokeContext(
-                self, _media_lane_count(file_options["media_lanes"], file_options["concurrency"])
-            ) as media_invoke:
-                uploaded = await upload_file(
-                    media_invoke,
-                    file,
-                    file_name=file_options["file_name"],
-                    part_size=file_options["part_size"],
-                    concurrency=file_options["concurrency"],
-                    progress=file_options["progress"],
-                    file_id=file_options["file_id"],
-                    max_retries=file_options["max_retries"],
-                    max_buffer_size=file_options["max_buffer_size"],
-                    request_timeout=file_options["request_timeout"],
+            uploaded = None
+            if decoded_file_id is None:
+                async with _MediaInvokeContext(
+                    self,
+                    _media_lane_count(file_options["media_lanes"], file_options["concurrency"]),
+                ) as media_invoke:
+                    uploaded = await upload_file(
+                        media_invoke,
+                        file,
+                        file_name=file_options["file_name"],
+                        part_size=file_options["part_size"],
+                        concurrency=file_options["concurrency"],
+                        progress=file_options["progress"],
+                        file_id=file_options["file_id"],
+                        max_retries=file_options["max_retries"],
+                        max_buffer_size=file_options["max_buffer_size"],
+                        request_timeout=file_options["request_timeout"],
+                    )
+                input_media = _uploaded_input_media(uploaded.input_file, file_options)
+            else:
+                assert file_id_source is not None
+                input_media = input_media_from_file_id(
+                    file_id_source,
+                    spoiler=bool(file_options["spoiler"]),
+                    ttl_seconds=file_options["ttl_seconds"],
+                    video_cover=file_options["video_cover"],
+                    video_timestamp=file_options["video_timestamp"],
                 )
             parsed = (
                 parse_message_text(file_options["caption"], file_options["parse_mode"])
@@ -491,7 +507,7 @@ class Client:
             )
             request = functions.MessagesSendMedia(
                 peer=input_peer_from_peer(resolved_peer),
-                media=_uploaded_input_media(uploaded.input_file, file_options),
+                media=input_media,
                 message=parsed.text,
                 random_id=make_random_id()
                 if file_options["random_id"] is None
@@ -523,9 +539,14 @@ class Client:
             started,
             outcome="success",
             peer_kind=resolved_peer.kind,
-            size_bytes=uploaded.size,
-            parts=uploaded.parts,
-            big=uploaded.big,
+            size_bytes=uploaded.size
+            if uploaded is not None
+            else decoded_file_id.size
+            if decoded_file_id is not None
+            else None,
+            parts=uploaded.parts if uploaded is not None else 0,
+            big=uploaded.big if uploaded is not None else False,
+            reused_file_id=decoded_file_id is not None,
             message_id=message.id,
         )
         return message

@@ -16,6 +16,7 @@ from miniproto import (
     Peer,
     RpcError,
     SessionRecord,
+    encode_file_id,
     event_loop,
 )
 from miniproto.media import BIG_FILE_THRESHOLD, DEFAULT_CHUNK_SIZE, MediaUploadError, upload_file
@@ -310,6 +311,46 @@ def test_client_send_file_uses_dedicated_media_lanes() -> None:
             upload_requests.append(request)
         assert {request.file_part for request in upload_requests} == {0, 1}
         assert isinstance(inner_request(main_sender.requests[0]), functions.MessagesSendMedia)
+
+    run(scenario())
+
+
+def test_client_send_file_reuses_miniproto_file_id_without_upload() -> None:
+    async def scenario() -> None:
+        document = types.Document(
+            id=102,
+            access_hash=202,
+            file_reference=b"existing-ref",
+            date=1_700_000_000,
+            mime_type="application/octet-stream",
+            size=4096,
+            dc_id=2,
+            attributes=(types.DocumentAttributeFilename(file_name="existing.bin"),),
+        )
+        file_id = encode_file_id(document)
+        raw_media = types.MessageMediaDocument(document=document)
+        sender = FakeSender(
+            [
+                types.UpdateShortSentMessage(
+                    id=302, pts=1, pts_count=1, date=1_700_000_001, media=raw_media
+                )
+            ]
+        )
+        client = Client(
+            ClientConfig(api_id=1, api_hash="hash", session_storage=storage_with_auth())
+        )
+        client._sender = sender
+        await client.connect()
+        message = await client.send_file("@alice", file_id, caption="reuse", random_id=11)
+        assert message.id == 302
+        assert len(sender.requests) == 1
+        send_request = inner_request(sender.requests[0])
+        assert isinstance(send_request, functions.MessagesSendMedia)
+        assert isinstance(send_request.media, types.InputMediaDocument)
+        assert isinstance(send_request.media.id, types.InputDocument)
+        assert send_request.media.id.id == document.id
+        assert send_request.media.id.access_hash == document.access_hash
+        assert send_request.media.id.file_reference == document.file_reference
 
     run(scenario())
 
