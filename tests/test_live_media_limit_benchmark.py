@@ -80,6 +80,20 @@ def test_transfer_recorder_samples_fixed_time_windows() -> None:
     assert transfer_duration == pytest.approx(10.0)
 
 
+def test_transfer_recorder_heartbeat_reports_stalled_progress(capsys) -> None:
+    one_mib = 1024 * 1024
+    recorder = TransferRecorder(
+        total=10 * one_mib, label="bench", progress_interval_s=5, sample_interval_s=5
+    )
+    recorder.begin(now=1.0)
+    recorder.report_heartbeat(now=6.1)
+    captured = capsys.readouterr().out
+    assert "bench:" in captured
+    assert "0.00%" in captured
+    recorder.report_heartbeat(now=7.0)
+    assert capsys.readouterr().out == ""
+
+
 def test_upload_request_timeout_defaults_to_global_request_timeout() -> None:
     args = parse_args(["--actor", "user"], {})
     assert args.request_timeout == 120

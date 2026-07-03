@@ -70,7 +70,7 @@ on:
       log_level:
         description: "miniproto benchmark log level"
         required: true
-        default: "WARNING"
+        default: "INFO"
 
 concurrency:
   group: miniproto-live-media-bench
@@ -107,6 +107,7 @@ jobs:
       MINIPROTO_LIVE_BENCH_SIZE: ${{ inputs.size }}
       MINIPROTO_LIVE_BENCH_DC_ID: ${{ inputs.dc_id }}
       MINIPROTO_LIVE_BENCH_ACTOR: ${{ inputs.actor }}
+      PYTHONUNBUFFERED: "1"
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v8.2.0
@@ -182,7 +183,7 @@ jobs:
           else
             extra_args+=(--no-download-adaptive-concurrency)
           fi
-          uv run python tools/bench/benchmark_live_media_limit.py \
+          uv run python -u tools/bench/benchmark_live_media_limit.py \
             --actor "${{ inputs.actor }}" \
             --size "${{ inputs.size }}" \
             --dc-id "${{ inputs.dc_id }}" \
@@ -194,7 +195,7 @@ jobs:
             --json .tmp/live-bench-results/summary.json \
             "${extra_args[@]}" 2>&1 | tee .tmp/live-bench-results/live-media-bench.log
       - name: Upload benchmark summary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: live-media-bench-${{ inputs.actor }}-dc${{ inputs.dc_id }}

@@ -193,6 +193,21 @@ class TransferRecorder:
                 window_mib_s=window_mib_s,
             )
 
+    def report_heartbeat(self, *, now: float | None = None) -> None:
+        if self.progress_interval_s <= 0 or self.start <= 0:
+            return
+        sampled_at = time.perf_counter() if now is None else now
+        if sampled_at - self.last_report_time < self.progress_interval_s:
+            return
+        self.last_report_time = sampled_at
+        print_progress(
+            self.label,
+            current=self.last_bytes,
+            total=self.total,
+            elapsed_s=sampled_at - self.start,
+            window_mib_s=0.0,
+        )
+
     def finish(self, bytes_done: int) -> tuple[float, float, SampleStats]:
         finished_at = time.perf_counter()
         duration = max(finished_at - self.start, 1e-9)
@@ -209,6 +224,7 @@ class TransferRecorder:
 def main(argv: list[str] | None = None) -> int:
     env = load_dotenv()
     args = parse_args(argv, env)
+    configure_standard_streams_line_buffering()
     if env_value(env, BENCH_GUARD_ENV) != "1":
         print(
             f"Refusing to run the live media-limit benchmark without {BENCH_GUARD_ENV}=1. "
@@ -222,6 +238,15 @@ def main(argv: list[str] | None = None) -> int:
         f"installed={event_loop.installed()} version={event_loop.backend_version()}"
     )
     return event_loop.run(run_benchmark(args, env))
+
+
+def configure_standard_streams_line_buffering() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if not callable(reconfigure):
+            continue
+        with suppress(TypeError, ValueError):
+            reconfigure(line_buffering=True, write_through=True)
 
 
 def parse_args(
@@ -399,9 +424,9 @@ def parse_args(
         default=env_value(
             values,
             "MINIPROTO_LIVE_BENCH_LOG_LEVEL",
-            env_value(values, "MINIPROTO_LOG_LEVEL", "WARNING"),
+            env_value(values, "MINIPROTO_LOG_LEVEL", "INFO"),
         )
-        or "WARNING",
+        or "INFO",
         help="miniproto log level for the benchmark run",
     )
     parser.add_argument(
@@ -527,6 +552,7 @@ async def benchmark_actor(
     )
     upload_recorder.begin()
     previous_sink, upload_metrics = begin_transfer_metrics()
+    upload_heartbeat = start_progress_heartbeat(upload_recorder)
     try:
         sent = await client.send_file(
             peer,
@@ -539,6 +565,7 @@ async def benchmark_actor(
             max_retries=upload_part_retries,
         )
     finally:
+        await stop_progress_heartbeat(upload_heartbeat)
         set_metrics_sink(previous_sink)
     upload_duration, upload_transfer_duration, upload_stats = upload_recorder.finish(size)
     upload_counters = transfer_counters(upload_metrics, "upload", upload_duration)
@@ -581,6 +608,7 @@ async def benchmark_actor(
     )
     download_recorder.begin()
     previous_sink, download_metrics = begin_transfer_metrics()
+    download_heartbeat = start_progress_heartbeat(download_recorder)
     try:
         downloaded = await client.download_media(
             media,
@@ -596,6 +624,7 @@ async def benchmark_actor(
             part_size=download_chunk_size,
         )
     finally:
+        await stop_progress_heartbeat(download_heartbeat)
         set_metrics_sink(previous_sink)
     download_duration, download_transfer_duration, download_stats = download_recorder.finish(
         downloaded.bytes_downloaded
@@ -632,6 +661,29 @@ async def benchmark_actor(
     )
     print_transfer(download)
     return upload, download
+
+
+def start_progress_heartbeat(recorder: TransferRecorder) -> asyncio.Task[None] | None:
+    if recorder.progress_interval_s <= 0:
+        return None
+    return asyncio.create_task(progress_heartbeat(recorder))
+
+
+async def stop_progress_heartbeat(task: asyncio.Task[None] | None) -> None:
+    if task is None:
+        return
+    task.cancel()
+    with suppress(asyncio.CancelledError):
+        await task
+
+
+async def progress_heartbeat(recorder: TransferRecorder) -> None:
+    try:
+        while True:
+            await asyncio.sleep(recorder.progress_interval_s)
+            recorder.report_heartbeat()
+    except asyncio.CancelledError:
+        raise
 
 
 async def authorized_client(
