@@ -14,7 +14,7 @@ Supported upload inputs are paths, bytes-like objects, seekable binary file obje
 
 ## Download
 
-Use `Client.download_media(media, destination=None)` for the thin high-level path. It resolves public `Media`, raw `MessageMediaDocument`, raw `MessageMediaPhoto`, raw `Document`, raw `Photo`, or generated `InputFileLocation` objects into `upload.getFile` requests. Passing no destination returns downloaded bytes in `MediaDownloadResult.data`; passing a path writes to disk; `resume=True` appends to an existing path and starts requests after the existing byte count.
+Use `Client.download_media(media, destination=None)` for the thin high-level path. It resolves public `Media`, raw `MessageMediaDocument`, raw `MessageMediaPhoto`, raw `Document`, raw `Photo`, or generated `InputFileLocation` objects into `upload.getFile` requests. Passing no destination returns downloaded bytes in `MediaDownloadResult.data`; passing a path writes to disk; `resume=True` appends to an existing path and starts requests after the existing byte count. Large known-size downloads can use bounded `concurrency`; transient chunk failures and short `FloodWait` responses are retried at the media layer with `max_retries` while non-transient RPC errors still fail immediately. Set `flood_sleep_threshold=None` to fail download chunks on flood waits instead of sleeping and retrying them.
 
 ## CDN
 

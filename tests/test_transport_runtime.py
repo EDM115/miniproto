@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+from typing import Any, cast
 
 import pytest
 from tests.support.fake_mtproto import FakeMTProtoServer
 
 from miniproto import event_loop
 from miniproto.config import TransportConfig, TransportMode
-from miniproto.connection.sender import MTProtoSender
+from miniproto.connection.sender import MTProtoSender, PendingRequest
 from miniproto.connection.tcp_abridged import TcpAbridgedTransport
 from miniproto.connection.tcp_intermediate import (
     TcpIntermediateTransport,
@@ -15,6 +16,7 @@ from miniproto.connection.tcp_intermediate import (
 )
 from miniproto.connection.transport import (
     ConnectionEndpoint,
+    TransportClosed,
     TransportError,
     TransportTimeout,
     open_transport,
@@ -41,6 +43,57 @@ from miniproto.mtproto.state import MTProtoState
 AUTH_KEY = bytes(range(256))
 SERVER_SALT = 0x1111222233334444
 SESSION_ID = 0x2222333344445555
+
+
+class _OpenWriter:
+    def is_closing(self) -> bool:
+        return False
+
+
+class _ReadAbortingTransport(TcpIntermediateTransport):
+    async def read_packet(self, reader: asyncio.StreamReader) -> bytes:
+        del reader
+        raise ConnectionAbortedError("socket aborted")
+
+
+class _ExplodingTransport:
+    def __init__(self) -> None:
+        self.closed = False
+
+    @property
+    def is_connected(self) -> bool:
+        return not self.closed
+
+    async def connect(self) -> None:
+        return None
+
+    async def send(self, payload: bytes) -> None:
+        del payload
+
+    async def recv(self) -> bytes:
+        raise ValueError("unexpected decode failure")
+
+    async def close(self) -> None:
+        self.closed = True
+
+
+class _SendExplodingTransport:
+    @property
+    def is_connected(self) -> bool:
+        return True
+
+    async def connect(self) -> None:
+        return None
+
+    async def send(self, payload: bytes) -> None:
+        del payload
+        raise RuntimeError("send failed before wait")
+
+    async def recv(self) -> bytes:
+        raise AssertionError("recv should not be called")
+
+    async def close(self) -> None:
+        return None
 
 
 def test_transport_framing_encodes_official_mode_tags_and_lengths() -> None:
@@ -101,6 +154,19 @@ def test_transport_read_deadline_is_enforced() -> None:
         finally:
             server.close()
             await server.wait_closed()
+
+    event_loop.run(run())
+
+
+def test_transport_recv_wraps_os_errors_as_transport_closed() -> None:
+    async def run() -> None:
+        transport = _ReadAbortingTransport(ConnectionEndpoint("127.0.0.1", 443), TransportConfig())
+        transport._closed = False
+        transport._reader = asyncio.StreamReader()
+        transport._writer = cast(Any, _OpenWriter())
+        with pytest.raises(TransportClosed, match="transport read failed"):
+            await transport.recv()
+        assert not transport.is_connected
 
     event_loop.run(run())
 
@@ -218,6 +284,75 @@ def test_sender_handles_container_ack_and_rpc_result() -> None:
     event_loop.run(run())
 
 
+def test_sender_transport_receive_timeout_fails_pending_requests() -> None:
+    async def run() -> None:
+        async def handle(message):
+            del message
+            await asyncio.sleep(1)
+            return b"late"
+
+        config = TransportConfig(
+            mode="tcp_intermediate",
+            read_timeout=0.01,
+            reconnect_backoff_initial=0,
+            reconnect_backoff_max=0,
+        )
+        async with FakeMTProtoServer(AUTH_KEY, config, handle) as server:
+            sender = MTProtoSender(
+                server.endpoint,
+                config,
+                MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID),
+            )
+            with pytest.raises(TimeoutError):
+                await sender.request(b"request", request_timeout=1.0)
+            assert sender.sender_state.pending_count == 0
+            await sender.disconnect()
+
+    event_loop.run(run())
+
+
+def test_sender_receive_loop_closes_transport_after_unexpected_failure() -> None:
+    async def run() -> None:
+        sender = MTProtoSender(
+            ConnectionEndpoint("127.0.0.1", 443),
+            TransportConfig(),
+            MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID),
+        )
+        transport = _ExplodingTransport()
+        sender._transport = transport
+        future: asyncio.Future[object] = asyncio.get_running_loop().create_future()
+        sender._pending[123] = PendingRequest(body=b"request", content_related=True, future=future)
+        task = asyncio.create_task(sender._receive_loop())
+        sender._receive_task = task
+        await task
+        assert transport.closed
+        assert sender._transport is None
+        assert not sender.is_connected
+        assert sender.sender_state.pending_count == 0
+        with pytest.raises(ValueError, match="unexpected decode failure"):
+            future.result()
+
+    event_loop.run(run())
+
+
+def test_sender_send_pending_cleans_future_when_send_fails_before_waiting() -> None:
+    async def run() -> None:
+        sender = MTProtoSender(
+            ConnectionEndpoint("127.0.0.1", 443),
+            TransportConfig(),
+            MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID),
+        )
+        sender._transport = _SendExplodingTransport()
+        future: asyncio.Future[object] = asyncio.get_running_loop().create_future()
+        pending = PendingRequest(body=b"request", content_related=True, future=future)
+        with pytest.raises(RuntimeError, match="send failed before wait"):
+            await sender._send_pending(pending)
+        assert sender.sender_state.pending_count == 0
+        assert future.cancelled()
+
+    event_loop.run(run())
+
+
 def test_sender_flushes_pending_acks_without_leaking_pending_request() -> None:
     async def run() -> None:
         seen: list[MsgsAck] = []
@@ -280,7 +415,8 @@ def test_sender_reconnect_retries_connector_with_backoff() -> None:
             )
             await sender._reconnect()
             assert attempts == 3
-            assert sender.is_connected
+            assert sender._transport is not None
+            assert sender._transport.is_connected
             await sender.disconnect()
         finally:
             server.close()

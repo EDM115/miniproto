@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from miniproto.errors import RpcError
+from miniproto.raw import functions
 from miniproto.security.redaction import (
     REDACTED,
     is_sensitive_key,
@@ -78,6 +79,17 @@ def test_safe_repr_redacts_dataclass_secret_fields() -> None:
     assert "metadata-secret" not in rendered
     assert "alice" in rendered
     assert "ok" in rendered
+
+
+def test_safe_repr_summarizes_binary_payloads_without_dumping_contents() -> None:
+    payload = (b"miniproto-live-media-limit:0000000000000404\n" * 8) + b"x" * 128
+    request = functions.UploadSaveBigFilePart(
+        file_id=1, file_part=2, file_total_parts=3, bytes=payload
+    )
+    rendered = str(RpcError("sender disconnected", request=request))
+    assert "miniproto-live-media-limit" not in rendered
+    assert "b'" not in rendered
+    assert f"<bytes len={len(payload)}>" in rendered
 
 
 def test_rpc_error_string_and_repr_redact_context_and_request_data() -> None:

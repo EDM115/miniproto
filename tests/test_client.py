@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime
 
 import pytest
@@ -41,6 +42,45 @@ def test_authorization_uses_session_state() -> None:
         storage = InMemorySessionStorage({"auth_key": b"secret"})
         client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage))
         assert await client.is_authorized()
+
+    event_loop.run(run())
+
+
+def test_concurrent_sender_initialization_is_single_flight() -> None:
+    async def run() -> None:
+        class FakeRawSender:
+            @property
+            def is_connected(self) -> bool:
+                return True
+
+            async def request(
+                self,
+                body: bytes | object,
+                *,
+                content_related: bool = True,
+                request_timeout: float | None = None,
+            ) -> object:
+                del body, content_related, request_timeout
+                return b"ok"
+
+            async def disconnect(self) -> None:
+                return None
+
+        created = 0
+
+        async def factory(record: object) -> FakeRawSender:
+            nonlocal created
+            del record
+            created += 1
+            await asyncio.sleep(0)
+            return FakeRawSender()
+
+        storage = InMemorySessionStorage({"auth_key": b"secret"})
+        client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage))
+        client._sender_factory = factory
+        senders = await asyncio.gather(*(client._ensure_sender() for _ in range(10)))
+        assert created == 1
+        assert len({id(sender) for sender in senders}) == 1
 
     event_loop.run(run())
 

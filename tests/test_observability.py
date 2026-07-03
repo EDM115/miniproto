@@ -10,6 +10,7 @@ from miniproto.observability import (
     configure_logging,
     emit_event,
     get_logger,
+    process_rss_bytes,
     record_metric,
     set_metrics_sink,
     to_jsonable,
@@ -62,3 +63,9 @@ def test_memory_monitor_reports_delta_and_jsonable_payload() -> None:
     assert isinstance(delta.leak_suspected(), bool)
     assert isinstance(encoded, dict)
     assert "start" in encoded
+
+
+def test_process_rss_bytes_reports_current_process_memory() -> None:
+    rss = process_rss_bytes()
+    assert isinstance(rss, int)
+    assert rss > 0

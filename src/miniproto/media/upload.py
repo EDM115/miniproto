@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import inspect
 import io
+import logging
 import math
 import os
 import secrets
@@ -15,6 +16,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, BinaryIO, cast
 
+from miniproto.errors import (
+    ClientDisconnected,
+    InternalServerError,
+    RequestTimeout,
+    RpcError,
+    RpcTimeout,
+)
 from miniproto.observability import emit_event, get_logger, record_metric
 from miniproto.raw import functions, types
 
@@ -330,11 +338,34 @@ async def _save_part(
     else:
         request = functions.UploadSaveFilePart(file_id=file_id, file_part=part_index, bytes=payload)
     for attempt in range(max_retries + 1):
-        result = await invoke(request, request_timeout=request_timeout, retry=True)
+        try:
+            result = await invoke(request, request_timeout=request_timeout, retry=False)
+        except Exception as exc:
+            if attempt >= max_retries or not _is_transient_upload_error(exc):
+                raise
+            _emit_part_retry(
+                part_index=part_index,
+                total_parts=total_parts,
+                attempt=attempt + 1,
+                max_retries=max_retries,
+                big=big,
+                error_type=type(exc).__name__,
+            )
+            await asyncio.sleep(0)
+            continue
         if _is_true(result):
             return
         if attempt >= max_retries:
             break
+        _emit_part_retry(
+            part_index=part_index,
+            total_parts=total_parts,
+            attempt=attempt + 1,
+            max_retries=max_retries,
+            big=big,
+            error_type="BoolFalse",
+        )
+        await asyncio.sleep(0)
     raise MediaUploadError(f"Telegram did not accept upload part {part_index}")
 
 
@@ -412,6 +443,48 @@ def _source_name(source: object) -> str:
 
 def _is_true(result: object) -> bool:
     return result is True or isinstance(result, types.BoolTrue)
+
+
+def _is_transient_upload_error(exc: Exception) -> bool:
+    if isinstance(
+        exc,
+        ClientDisconnected
+        | RequestTimeout
+        | RpcTimeout
+        | InternalServerError
+        | TimeoutError
+        | ConnectionError,
+    ):
+        return True
+    if not isinstance(exc, RpcError):
+        return False
+    if exc.code == -503 or (exc.code is not None and exc.code >= 500):
+        return True
+    if exc.code is not None:
+        return False
+    message = exc.message.casefold()
+    return any(
+        token in message
+        for token in ("sender disconnected", "transport", "connection", "timed out", "timeout")
+    )
+
+
+def _emit_part_retry(
+    *, part_index: int, total_parts: int, attempt: int, max_retries: int, big: bool, error_type: str
+) -> None:
+    record_metric("media.upload.part_retries", 1, attributes={"big": big, "error_type": error_type})
+    emit_event(
+        _LOGGER,
+        logging.WARNING,
+        "media.upload.part_retry",
+        outcome="retry",
+        part_index=part_index,
+        total_parts=total_parts,
+        attempt=attempt,
+        max_retries=max_retries,
+        big=big,
+        error_type=error_type,
+    )
 
 
 __all__ = [

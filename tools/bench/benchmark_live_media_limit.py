@@ -20,6 +20,7 @@ from miniproto import (
     ClientConfig,
     EncryptedSQLiteSessionStorage,
     MemoryMonitor,
+    TransportConfig,
     configure_logging,
     event_loop,
 )
@@ -83,7 +84,12 @@ class BenchmarkSummary:
     chunk_size: int
     upload_limit_parts: int
     upload_concurrency: int
+    upload_request_timeout: float
+    upload_part_retries: int
     download_concurrency: int
+    download_request_timeout: float
+    download_part_retries: int
+    download_flood_sleep_threshold: int | None
     event_loop_backend: str
     results: tuple[TransferSummary, ...]
     memory: MemorySummary | None = None
@@ -238,21 +244,51 @@ def parse_args(
     parser.add_argument(
         "--download-concurrency",
         type=int,
-        default=int(
-            env_value(
-                values,
-                "MINIPROTO_LIVE_BENCH_DOWNLOAD_CONCURRENCY",
-                env_value(values, "MINIPROTO_LIVE_BENCH_CONCURRENCY", "8"),
-            )
-            or "8"
-        ),
-        help="number of concurrent upload.getFile requests for known-size downloads",
+        default=int(env_value(values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_CONCURRENCY", "4") or "4"),
+        help="number of concurrent upload.getFile requests for known-size downloads; defaults lower than upload concurrency to avoid Telegram flood waits",
     )
     parser.add_argument(
         "--request-timeout",
         type=float,
         default=float(env_value(values, "MINIPROTO_LIVE_BENCH_REQUEST_TIMEOUT", "120") or "120"),
         help="per-request timeout in seconds",
+    )
+    upload_timeout = env_value(values, "MINIPROTO_LIVE_BENCH_UPLOAD_REQUEST_TIMEOUT")
+    parser.add_argument(
+        "--upload-request-timeout",
+        type=float,
+        default=float(upload_timeout) if upload_timeout else None,
+        help="per-upload-part timeout in seconds; defaults to min(--request-timeout, 30)",
+    )
+    parser.add_argument(
+        "--upload-part-retries",
+        type=int,
+        default=int(env_value(values, "MINIPROTO_LIVE_BENCH_UPLOAD_PART_RETRIES", "6") or "6"),
+        help="media-layer retries per upload part after transient failures",
+    )
+    download_timeout = env_value(values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_REQUEST_TIMEOUT")
+    parser.add_argument(
+        "--download-request-timeout",
+        type=float,
+        default=float(download_timeout) if download_timeout else None,
+        help="per-download-part timeout in seconds; defaults to min(--request-timeout, 30)",
+    )
+    parser.add_argument(
+        "--download-part-retries",
+        type=int,
+        default=int(env_value(values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_PART_RETRIES", "6") or "6"),
+        help="media-layer retries per download part after transient failures",
+    )
+    download_flood_sleep_threshold = env_value(
+        values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_FLOOD_SLEEP_THRESHOLD", "30"
+    )
+    parser.add_argument(
+        "--download-flood-sleep-threshold",
+        type=int,
+        default=int(download_flood_sleep_threshold)
+        if download_flood_sleep_threshold is not None
+        else None,
+        help="maximum FLOOD_WAIT seconds to sleep and retry per download chunk",
     )
     parser.add_argument(
         "--force-regenerate",
@@ -326,6 +362,8 @@ async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int
     memory_monitor.start()
     actors: tuple[Actor, ...] = ("user", "bot") if args.actor == "both" else (args.actor,)
     results: list[TransferSummary] = []
+    upload_request_timeout = effective_upload_request_timeout(args)
+    download_request_timeout = effective_download_request_timeout(args)
     for actor in actors:
         print(f"{actor}: authorizing session on DC {args.dc_id}")
         client = await authorized_client(actor, args, env)
@@ -341,7 +379,11 @@ async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int
                     dc_id=args.dc_id,
                     concurrency=args.concurrency,
                     download_concurrency=args.download_concurrency,
-                    request_timeout=args.request_timeout,
+                    upload_request_timeout=upload_request_timeout,
+                    upload_part_retries=args.upload_part_retries,
+                    download_request_timeout=download_request_timeout,
+                    download_part_retries=args.download_part_retries,
+                    download_flood_sleep_threshold=args.download_flood_sleep_threshold,
                     verify_digest=args.verify_digest,
                     progress_interval_s=args.progress_interval,
                 )
@@ -355,7 +397,12 @@ async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int
         chunk_size=DEFAULT_CHUNK_SIZE,
         upload_limit_parts=limit_parts,
         upload_concurrency=args.concurrency,
+        upload_request_timeout=upload_request_timeout,
+        upload_part_retries=args.upload_part_retries,
         download_concurrency=args.download_concurrency,
+        download_request_timeout=download_request_timeout,
+        download_part_retries=args.download_part_retries,
+        download_flood_sleep_threshold=args.download_flood_sleep_threshold,
         event_loop_backend=event_loop.backend_name(),
         results=tuple(results),
         memory=memory,
@@ -377,7 +424,11 @@ async def benchmark_actor(
     dc_id: int,
     concurrency: int,
     download_concurrency: int,
-    request_timeout: float,
+    upload_request_timeout: float,
+    upload_part_retries: int,
+    download_request_timeout: float,
+    download_part_retries: int,
+    download_flood_sleep_threshold: int | None,
     verify_digest: bool,
     progress_interval_s: float,
 ) -> tuple[TransferSummary, TransferSummary]:
@@ -385,7 +436,7 @@ async def benchmark_actor(
     size = await asyncio.to_thread(lambda: source.stat().st_size)
     print(
         f"{actor}.upload: starting peer={peer} bytes={size} concurrency={concurrency} "
-        f"request_timeout={request_timeout:g}s"
+        f"upload_request_timeout={upload_request_timeout:g}s retries={upload_part_retries}"
     )
     upload_recorder = TransferRecorder(
         total=size,
@@ -401,7 +452,8 @@ async def benchmark_actor(
         file_name=source.name,
         concurrency=concurrency,
         progress=upload_recorder.progress,
-        request_timeout=request_timeout,
+        request_timeout=upload_request_timeout,
+        max_retries=upload_part_retries,
     )
     upload_duration, upload_stats = upload_recorder.finish(size)
     media = sent.media or await find_recent_media(client, peer, caption)
@@ -426,7 +478,8 @@ async def benchmark_actor(
     await asyncio.to_thread(target.unlink, missing_ok=True)
     print(
         f"{actor}.download: starting media_dc={media.dc_id} target={target} "
-        f"concurrency={download_concurrency} request_timeout={request_timeout:g}s"
+        f"concurrency={download_concurrency} download_request_timeout={download_request_timeout:g}s "
+        f"retries={download_part_retries} flood_sleep_threshold={download_flood_sleep_threshold}"
     )
     download_recorder = TransferRecorder(
         total=size,
@@ -441,7 +494,9 @@ async def benchmark_actor(
         limit=size,
         total_size=size,
         progress=download_recorder.progress,
-        request_timeout=request_timeout,
+        request_timeout=download_request_timeout,
+        max_retries=download_part_retries,
+        flood_sleep_threshold=download_flood_sleep_threshold,
         concurrency=download_concurrency,
     )
     download_duration, download_stats = download_recorder.finish(downloaded.bytes_downloaded)
@@ -486,6 +541,9 @@ async def authorized_client(
             api_id=int(required_env(env, "MINIPROTO_API_ID")),
             api_hash=required_env(env, "MINIPROTO_API_HASH"),
             session_storage=storage,
+            transport=TransportConfig(
+                read_timeout=args.request_timeout, write_timeout=args.request_timeout
+            ),
             dc_id=args.dc_id,
             test_mode=False,
             request_timeout=args.request_timeout,
@@ -516,6 +574,20 @@ def upload_limit_parts_from_env_or_default(env: Mapping[str, str], dc_id: int) -
     if configured:
         return int(configured)
     return TELEGRAM_DEFAULT_UPLOAD_PARTS
+
+
+def effective_upload_request_timeout(args: argparse.Namespace) -> float:
+    configured = args.upload_request_timeout
+    if configured is not None:
+        return float(configured)
+    return min(float(args.request_timeout), 30.0)
+
+
+def effective_download_request_timeout(args: argparse.Namespace) -> float:
+    configured = args.download_request_timeout
+    if configured is not None:
+        return float(configured)
+    return min(float(args.request_timeout), 30.0)
 
 
 def benchmark_peer_for_actor(actor: Actor, env: Mapping[str, str]) -> str:
@@ -640,7 +712,7 @@ def print_transfer(summary: TransferSummary) -> None:
     print(
         f"{summary.actor}.{summary.operation}: "
         f"{summary.bytes} bytes in {summary.duration_s:.3f}s "
-        f"overall={summary.overall_mib_s:.3f}MiB/s({_mib_s_to_mb_s(summary.overall_mib_s):.3f}MB/s) "
+        f"overall={summary.overall_mib_s:.3f}MiB/s ({_mib_s_to_mb_s(summary.overall_mib_s):.3f}MB/s) "
         f"median_window={summary.samples.median_mib_s:.3f}MiB/s "
         f"p95_window={summary.samples.p95_mib_s:.3f}MiB/s "
         f"p01_window={summary.samples.p01_mib_s:.3f}MiB/s "
@@ -687,7 +759,10 @@ def print_summary(summary: BenchmarkSummary) -> None:
     print(
         f"benchmark_file={summary.generated_file} bytes={summary.generated_file_bytes} "
         f"chunk_size={summary.chunk_size} upload_limit_parts={summary.upload_limit_parts} "
-        f"upload_concurrency={summary.upload_concurrency} download_concurrency={summary.download_concurrency}"
+        f"upload_concurrency={summary.upload_concurrency} upload_request_timeout={summary.upload_request_timeout:g} "
+        f"upload_part_retries={summary.upload_part_retries} download_concurrency={summary.download_concurrency} "
+        f"download_request_timeout={summary.download_request_timeout:g} download_part_retries={summary.download_part_retries} "
+        f"download_flood_sleep_threshold={summary.download_flood_sleep_threshold}"
     )
     for result in summary.results:
         print_transfer(result)

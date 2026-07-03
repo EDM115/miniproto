@@ -79,7 +79,14 @@ class MTProtoSender:
 
     @property
     def is_connected(self) -> bool:
-        return self._transport is not None and self._transport.is_connected and not self._closing
+        receive_task = self._receive_task
+        return (
+            self._transport is not None
+            and self._transport.is_connected
+            and receive_task is not None
+            and not receive_task.done()
+            and not self._closing
+        )
 
     @property
     def sender_state(self) -> SenderState:
@@ -94,6 +101,7 @@ class MTProtoSender:
         async with self._connect_lock:
             if self.is_connected:
                 return
+            await self._close_transport()
             self._closing = False
             self._transport = await open_transport(
                 self.endpoint, self.transport_config, connector=self._connector
@@ -229,7 +237,13 @@ class MTProtoSender:
             pending.attempts += 1
             if not pending.future.done():
                 self._pending[msg_id] = pending
-            await self._send_payload(payload)
+            try:
+                await self._send_payload(payload)
+            except BaseException:
+                self._pending.pop(msg_id, None)
+                if not pending.future.done():
+                    pending.future.cancel()
+                raise
             return msg_id
 
     async def _send_payload(self, payload: bytes) -> None:
@@ -266,10 +280,11 @@ class MTProtoSender:
                 await self._handle_incoming(message)
             except asyncio.CancelledError:
                 raise
-            except TransportError:
+            except TransportError as exc:
                 if self._closing:
                     return
                 record_metric("sender.receive_transport_errors", 1)
+                self._fail_pending(exc)
                 await self._reconnect()
             except Exception as exc:
                 _emit_sender_event(
@@ -280,6 +295,7 @@ class MTProtoSender:
                     pending_count=len(self._pending),
                 )
                 self._fail_pending(exc)
+                await self._close_transport()
                 return
 
     async def _handle_incoming(self, message: DecodedEncryptedMessage) -> None:
@@ -350,14 +366,18 @@ class MTProtoSender:
                 pending.future.set_exception(exc)
         self._pending.clear()
 
+    async def _close_transport(self) -> None:
+        transport = self._transport
+        self._transport = None
+        if transport is not None:
+            await transport.close()
+
     async def _reconnect(self) -> None:
         started = time.perf_counter()
         async with self._connect_lock:
             if self._closing:
                 return
-            if self._transport is not None:
-                await self._transport.close()
-                self._transport = None
+            await self._close_transport()
             delay = self.transport_config.reconnect_backoff_initial
             last_error: Exception | None = None
             for attempt in range(self._reconnect_attempts):

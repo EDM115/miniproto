@@ -205,6 +205,12 @@ class StreamTransportBase:
                 "transport.recv", started, outcome="error", error_type="TransportClosed"
             )
             raise TransportClosed("transport closed while reading") from exc
+        except OSError as exc:
+            self._closed = True
+            _emit_transport_event(
+                "transport.recv", started, outcome="error", error_type=type(exc).__name__
+            )
+            raise TransportClosed(f"transport read failed: {exc}") from exc
         if len(payload) > self.config.max_payload_size:
             _emit_transport_event(
                 "transport.recv",

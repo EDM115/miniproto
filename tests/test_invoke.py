@@ -56,6 +56,8 @@ class FakeSender:
             raise AssertionError("fake sender has no queued response")
         response = self.responses.pop(0)
         if isinstance(response, BaseException):
+            if isinstance(response, TransportClosed):
+                self.is_connected = False
             raise response
         return response
 
@@ -278,6 +280,20 @@ def test_invoke_does_not_retry_unsafe_requests_after_transport_failure() -> None
         with pytest.raises(RpcError, match="after send"):
             await client.invoke(request)
         assert len(sender.requests) == 1
+        assert sender.disconnected == 1
+
+    run(scenario())
+
+
+def test_invoke_classifies_transport_failure_from_dead_sender_as_client_disconnected() -> None:
+    async def scenario() -> None:
+        sender = FakeSender([TransportClosed("sender disconnected")])
+        client = await connected_client(
+            sender, config=ClientConfig(api_id=1, api_hash="hash", max_request_retries=0)
+        )
+        with pytest.raises(ClientDisconnected):
+            await client.invoke(functions.HelpGetNearestDc())
+        assert sender.disconnected == 1
 
     run(scenario())
 

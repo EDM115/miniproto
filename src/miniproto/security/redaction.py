@@ -72,6 +72,8 @@ def safe_repr(value: object) -> str:
 
 
 def _redact_nested(value: object) -> object:
+    if isinstance(value, bytes | bytearray | memoryview):
+        return _binary_summary(value)
     if isinstance(value, Mapping):
         return redact_mapping(value)
     if is_dataclass(value) and not isinstance(value, type):
@@ -88,6 +90,11 @@ def _redact_nested(value: object) -> object:
     if isinstance(value, str):
         return redact_text(value)
     return value
+
+
+def _binary_summary(value: bytes | bytearray | memoryview) -> str:
+    view = memoryview(value)
+    return f"<{type(value).__name__} len={view.nbytes}>"
 
 
 def _normalize_key(key: str) -> str:

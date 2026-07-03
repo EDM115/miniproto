@@ -7,7 +7,10 @@ from tools.bench.benchmark_live_media_limit import (
     TransferRecorder,
     benchmark_peer_for_actor,
     deterministic_chunk,
+    effective_download_request_timeout,
+    effective_upload_request_timeout,
     ensure_benchmark_file,
+    parse_args,
     parse_size,
     sample_stats,
 )
@@ -59,6 +62,55 @@ def test_transfer_recorder_samples_fixed_time_windows() -> None:
     recorder.record(5 * one_mib, None, now=6.0)
     recorder.record(10 * one_mib, None, now=11.0)
     assert recorder.samples_mib_s == pytest.approx([1.0, 1.0])
+
+
+def test_upload_request_timeout_defaults_to_shorter_part_timeout() -> None:
+    args = parse_args(["--actor", "user"], {})
+    assert args.request_timeout == 120
+    assert args.upload_request_timeout is None
+    assert effective_upload_request_timeout(args) == 30
+    overridden = parse_args(["--actor", "user", "--upload-request-timeout", "45"], {})
+    assert effective_upload_request_timeout(overridden) == 45
+
+
+def test_download_request_timeout_defaults_to_shorter_part_timeout() -> None:
+    args = parse_args(["--actor", "user"], {})
+    assert args.request_timeout == 120
+    assert args.download_concurrency == 4
+    assert args.download_request_timeout is None
+    assert effective_download_request_timeout(args) == 30
+    assert args.download_flood_sleep_threshold == 30
+    overridden = parse_args(["--actor", "user", "--download-request-timeout", "45"], {})
+    assert effective_download_request_timeout(overridden) == 45
+
+
+def test_download_concurrency_is_independent_from_upload_concurrency() -> None:
+    shared = parse_args(["--actor", "user"], {"MINIPROTO_LIVE_BENCH_CONCURRENCY": "8"})
+    assert shared.concurrency == 8
+    assert shared.download_concurrency == 4
+    specific = parse_args(
+        ["--actor", "user"],
+        {"MINIPROTO_LIVE_BENCH_CONCURRENCY": "8", "MINIPROTO_LIVE_BENCH_DOWNLOAD_CONCURRENCY": "2"},
+    )
+    assert specific.concurrency == 8
+    assert specific.download_concurrency == 2
+    overridden = parse_args(["--actor", "user", "--download-concurrency", "6"], {})
+    assert overridden.download_concurrency == 6
+
+
+def test_download_flood_sleep_threshold_uses_download_specific_env_only() -> None:
+    shared = parse_args(["--actor", "user"], {"MINIPROTO_LIVE_BENCH_FLOOD_SLEEP_THRESHOLD": "9"})
+    assert shared.download_flood_sleep_threshold == 30
+    specific = parse_args(
+        ["--actor", "user"],
+        {
+            "MINIPROTO_LIVE_BENCH_FLOOD_SLEEP_THRESHOLD": "9",
+            "MINIPROTO_LIVE_BENCH_DOWNLOAD_FLOOD_SLEEP_THRESHOLD": "3",
+        },
+    )
+    assert specific.download_flood_sleep_threshold == 3
+    overridden = parse_args(["--actor", "user", "--download-flood-sleep-threshold", "5"], {})
+    assert overridden.download_flood_sleep_threshold == 5
 
 
 def test_bot_peer_must_not_default_to_self() -> None:

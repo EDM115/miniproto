@@ -84,20 +84,14 @@ class PeerCache:
 
     async def _resolve_numeric_peer(self, value: int) -> Peer:
         record = await self._load_record()
-        for preferred_kind, peer_id in _numeric_candidates(value):
-            entry = (
-                _find_entry(record.peers, kind=preferred_kind, id=peer_id)
-                if preferred_kind
-                else None
-            )
-            if entry is not None:
-                return _peer_from_entry(entry)
-            if preferred_kind is None:
-                selected = _select_entry_by_id(record.peers, peer_id)
-                if selected is not None:
-                    return _peer_from_entry(selected)
-                if record.user is not None and record.user.id == peer_id:
-                    return _user_from_identity(record.user).peer
+        resolved = _resolve_numeric_peer_from_record(record, value)
+        if resolved is not None:
+            return resolved
+        await self._seed_dialog_peers()
+        record = await self._load_record()
+        resolved = _resolve_numeric_peer_from_record(record, value)
+        if resolved is not None:
+            return resolved
         raise NotFound("numeric peer id is not cached")
 
     async def _resolve_phone(self, phone: str) -> Peer:
@@ -127,6 +121,21 @@ class PeerCache:
         if resolved is None:
             raise NotFound("resolved username did not include a usable peer")
         return resolved
+
+    async def _seed_dialog_peers(self, *, limit: int = 100) -> None:
+        result = await self._invoke_raw(
+            functions.MessagesGetDialogs(
+                exclude_pinned=True,
+                offset_date=0,
+                offset_id=0,
+                offset_peer=types.InputPeerEmpty(),
+                limit=limit,
+                hash=0,
+            )
+        )
+        entries = tuple(_entries_from_raw(result))
+        if entries:
+            await self._save_entries(entries)
 
     async def _invoke_raw(self, request: object) -> object:
         try:
@@ -337,6 +346,22 @@ def _identity_from_user(user: User) -> UserIdentity:
 
 def _peer_from_entry(entry: PeerCacheEntry) -> Peer:
     return Peer(id=entry.id, kind=entry.kind, access_hash=entry.access_hash)
+
+
+def _resolve_numeric_peer_from_record(record: SessionRecord, value: int) -> Peer | None:
+    for preferred_kind, peer_id in _numeric_candidates(value):
+        entry = (
+            _find_entry(record.peers, kind=preferred_kind, id=peer_id) if preferred_kind else None
+        )
+        if entry is not None:
+            return _peer_from_entry(entry)
+        if preferred_kind is None:
+            selected = _select_entry_by_id(record.peers, peer_id)
+            if selected is not None:
+                return _peer_from_entry(selected)
+            if record.user is not None and record.user.id == peer_id:
+                return _user_from_identity(record.user).peer
+    return None
 
 
 def _peer_from_raw_peer(raw_peer: object, entries: Iterable[PeerCacheEntry]) -> Peer | None:

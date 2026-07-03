@@ -173,6 +173,37 @@ def test_resolve_username_fetches_contacts_resolve_username_and_caches_access_ha
     run(scenario())
 
 
+def test_resolve_numeric_peer_seeds_dialog_cache_when_missing() -> None:
+    async def scenario() -> None:
+        storage = storage_with_record()
+        sender = FakeSender(
+            [
+                types.MessagesDialogs(
+                    dialogs=(),
+                    messages=(),
+                    chats=(),
+                    users=(types.User(id=854158484, access_hash=484, username="EDM115"),),
+                )
+            ]
+        )
+        client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage))
+        client._sender = sender
+        await client.connect()
+        resolved = await client.resolve_peer("854158484")
+        request = inner_request(sender.requests[0])
+        assert isinstance(request, functions.MessagesGetDialogs)
+        assert isinstance(request.offset_peer, types.InputPeerEmpty)
+        assert request.limit == 100
+        assert resolved == Peer(id=854158484, kind="user", access_hash=484)
+        loaded = await storage.load()
+        assert loaded is not None
+        record = session_record_from_mapping(loaded)
+        assert record.peers[0].id == 854158484
+        assert record.peers[0].access_hash == 484
+
+    run(scenario())
+
+
 def test_resolve_phone_and_encoded_channel_id_from_cache() -> None:
     async def scenario() -> None:
         storage = InMemorySessionStorage(

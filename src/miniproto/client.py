@@ -73,6 +73,7 @@ class Client:
         self._update_manager = UpdateManager(config, self._storage, self.invoke)
         self._sender: RawSender | None = None
         self._sender_factory: SenderFactory | None = None
+        self._sender_lock = asyncio.Lock()
 
     async def __aenter__(self) -> Client:
         await self.connect()
@@ -675,10 +676,15 @@ class Client:
                     raise typed from exc
                 raise
             except (TimeoutError, TransportError, ConnectionError) as exc:
-                typed = wrap_transport_failure(exc, raw_request, connected=self.is_connected)
-                if self.is_connected and retryable and attempts < self.config.max_request_retries:
+                typed = wrap_transport_failure(
+                    exc, raw_request, connected=self.is_connected and sender.is_connected
+                )
+                should_retry = (
+                    self.is_connected and retryable and attempts < self.config.max_request_retries
+                )
+                await self._drop_sender()
+                if should_retry:
                     attempts += 1
-                    await self._drop_sender()
                     continue
                 _emit_rpc_event(
                     started,
@@ -724,11 +730,15 @@ class Client:
         await self._update_manager.feed_raw_update(raw_update)
 
     async def _ensure_sender(self) -> RawSender:
-        if self._sender is None:
-            self._sender = await build_sender_from_session(
-                self.config, self._storage, self._sender_factory
-            )
-        return self._sender
+        sender = self._sender
+        if sender is not None:
+            return sender
+        async with self._sender_lock:
+            if self._sender is None:
+                self._sender = await build_sender_from_session(
+                    self.config, self._storage, self._sender_factory
+                )
+            return self._sender
 
     async def _ensure_authorization_key(self) -> None:
         await ensure_auth_key(self.config, self._storage)
@@ -737,8 +747,9 @@ class Client:
         return await self.invoke(raw_request, retry=True)
 
     async def _drop_sender(self) -> None:
-        sender = self._sender
-        self._sender = None
+        async with self._sender_lock:
+            sender = self._sender
+            self._sender = None
         if sender is not None:
             await sender.disconnect()
 
@@ -828,6 +839,8 @@ _DOWNLOAD_MEDIA_OPTION_DEFAULTS: dict[str, object] = {
     "cdn_supported": True,
     "total_size": None,
     "request_timeout": None,
+    "max_retries": 2,
+    "flood_sleep_threshold": 30,
     "max_buffer_size": None,
     "concurrency": 1,
 }
@@ -866,6 +879,9 @@ def _download_media_options(kwargs: dict[str, Any]) -> dict[str, Any]:
     if options["limit"] is not None:
         options["limit"] = int(options["limit"])
     options["part_size"] = int(options["part_size"])
+    options["max_retries"] = int(options["max_retries"])
+    if options["flood_sleep_threshold"] is not None:
+        options["flood_sleep_threshold"] = int(options["flood_sleep_threshold"])
     options["concurrency"] = int(options["concurrency"])
     return options
 

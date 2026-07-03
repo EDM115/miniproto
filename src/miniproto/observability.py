@@ -222,6 +222,8 @@ def process_rss_bytes() -> int | None:
 
 
 def _windows_rss_bytes() -> int | None:
+    from ctypes import wintypes
+
     class ProcessMemoryCounters(ctypes.Structure):
         _fields_ = [
             ("cb", ctypes.c_ulong),
@@ -238,8 +240,17 @@ def _windows_rss_bytes() -> int | None:
 
     counters = ProcessMemoryCounters()
     counters.cb = ctypes.sizeof(counters)
-    handle = ctypes.windll.kernel32.GetCurrentProcess()
-    ok = ctypes.windll.psapi.GetProcessMemoryInfo(handle, ctypes.byref(counters), counters.cb)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    psapi = ctypes.WinDLL("psapi", use_last_error=True)
+    kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+    psapi.GetProcessMemoryInfo.argtypes = (
+        wintypes.HANDLE,
+        ctypes.POINTER(ProcessMemoryCounters),
+        wintypes.DWORD,
+    )
+    psapi.GetProcessMemoryInfo.restype = wintypes.BOOL
+    handle = kernel32.GetCurrentProcess()
+    ok = psapi.GetProcessMemoryInfo(handle, ctypes.byref(counters), counters.cb)
     if not ok:
         return None
     return int(counters.WorkingSetSize)

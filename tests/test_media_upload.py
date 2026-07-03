@@ -10,9 +10,11 @@ from miniproto import (
     AuthKey,
     Client,
     ClientConfig,
+    ClientDisconnected,
     DCOption,
     InMemorySessionStorage,
     Peer,
+    RpcError,
     SessionRecord,
     event_loop,
 )
@@ -141,6 +143,32 @@ def test_upload_file_spools_unknown_size_iterables_and_retries_false_parts() -> 
         assert result.size == 4
         assert [request.file_part for request in invoker.requests] == [0, 0]
         assert invoker.requests[0].bytes == b"abcd"
+
+    run(scenario())
+
+
+def test_upload_file_retries_transient_part_exceptions_at_media_layer() -> None:
+    async def scenario() -> None:
+        invoker = FakeInvoker([ClientDisconnected("sender disconnected"), types.BoolTrue()])
+        result = await upload_file(invoker, b"abc", part_size=1024, max_retries=1, file_id=8)
+        assert result.size == 3
+        assert [request.file_part for request in invoker.requests] == [0, 0]
+
+    run(scenario())
+
+
+def test_upload_file_does_not_retry_non_transient_rpc_errors() -> None:
+    async def scenario() -> None:
+        requests: list[object] = []
+
+        async def invoke(request: object, **kwargs: object) -> object:
+            del kwargs
+            requests.append(request)
+            raise RpcError("FILE_PART_INVALID", code=400)
+
+        with pytest.raises(RpcError, match="FILE_PART_INVALID"):
+            await upload_file(invoke, b"abc", part_size=1024, max_retries=3)
+        assert len(requests) == 1
 
     run(scenario())
 

@@ -16,6 +16,7 @@ from miniproto import (
     SessionRecord,
     event_loop,
 )
+from miniproto.errors import BadRequest, ClientDisconnected, TransportFlood
 from miniproto.media import MediaDownloadError, decrypt_cdn_chunk, download_file, download_media
 from miniproto.raw import functions, types
 
@@ -26,9 +27,11 @@ AUTH_KEY = b"m" * 256
 class FakeInvoker:
     responses: list[object]
     requests: list[Any] = field(default_factory=list)
+    kwargs: list[dict[str, object]] = field(default_factory=list)
 
     async def __call__(self, request: object, **kwargs: object) -> object:
         self.requests.append(request)
+        self.kwargs.append(dict(kwargs))
         if not self.responses:
             raise AssertionError("fake invoker has no queued response")
         response = self.responses.pop(0)
@@ -47,6 +50,23 @@ class OffsetInvoker:
         self.requests.append(request)
         assert isinstance(request, functions.UploadGetFile)
         await asyncio.sleep(0)
+        return upload_file_part(self.payload[request.offset : request.offset + request.limit])
+
+
+@dataclass(slots=True)
+class FlakyOffsetInvoker:
+    payload: bytes
+    fail_offsets: set[int]
+    requests: list[Any] = field(default_factory=list)
+
+    async def __call__(self, request: object, **kwargs: object) -> object:
+        del kwargs
+        self.requests.append(request)
+        assert isinstance(request, functions.UploadGetFile)
+        await asyncio.sleep(0)
+        if request.offset in self.fail_offsets:
+            self.fail_offsets.remove(request.offset)
+            raise ClientDisconnected("sender disconnected")
         return upload_file_part(self.payload[request.offset : request.offset + request.limit])
 
 
@@ -167,6 +187,82 @@ def test_download_file_concurrent_writes_ordered_payload(tmp_path) -> None:
     run(scenario())
 
 
+def test_download_file_retries_transient_get_file_failure() -> None:
+    async def scenario() -> None:
+        invoker = FakeInvoker([ClientDisconnected("sender disconnected"), upload_file_part(b"abc")])
+        result = await download_file(
+            invoker, document_location(), part_size=1024, request_timeout=3, max_retries=1
+        )
+        assert result.data == b"abc"
+        assert len(invoker.requests) == 2
+        assert invoker.kwargs == [
+            {"request_timeout": 3, "retry": False, "flood_sleep_threshold": 0},
+            {"request_timeout": 3, "retry": False, "flood_sleep_threshold": 0},
+        ]
+
+    run(scenario())
+
+
+def test_download_file_retries_short_flood_wait_at_media_layer() -> None:
+    async def scenario() -> None:
+        invoker = FakeInvoker([TransportFlood(0), upload_file_part(b"abc")])
+        result = await download_file(
+            invoker, document_location(), part_size=1024, max_retries=1, flood_sleep_threshold=1
+        )
+        assert result.data == b"abc"
+        assert len(invoker.requests) == 2
+        assert invoker.kwargs == [
+            {"request_timeout": None, "retry": False, "flood_sleep_threshold": 0},
+            {"request_timeout": None, "retry": False, "flood_sleep_threshold": 0},
+        ]
+
+    run(scenario())
+
+
+def test_download_file_does_not_retry_long_flood_wait() -> None:
+    async def scenario() -> None:
+        invoker = FakeInvoker([TransportFlood(2)])
+        with pytest.raises(TransportFlood):
+            await download_file(
+                invoker, document_location(), part_size=1024, max_retries=2, flood_sleep_threshold=1
+            )
+        assert len(invoker.requests) == 1
+
+    run(scenario())
+
+
+def test_download_file_does_not_retry_non_transient_get_file_failure() -> None:
+    async def scenario() -> None:
+        invoker = FakeInvoker([BadRequest("FILE_REFERENCE_EXPIRED")])
+        with pytest.raises(BadRequest):
+            await download_file(invoker, document_location(), part_size=1024, max_retries=2)
+        assert len(invoker.requests) == 1
+
+    run(scenario())
+
+
+def test_download_file_concurrent_retries_transient_chunk_failure(tmp_path) -> None:
+    async def scenario() -> None:
+        payload = b"abcdefghijklmnopqrstuvwxyz"
+        target = tmp_path / "retry.bin"
+        invoker = FlakyOffsetInvoker(payload, fail_offsets={10})
+        result = await download_file(
+            invoker,
+            document_location(),
+            target,
+            limit=len(payload),
+            part_size=5,
+            concurrency=3,
+            max_retries=1,
+        )
+        assert target.read_bytes() == payload
+        assert result.bytes_downloaded == len(payload)
+        offsets = [request.offset for request in invoker.requests]
+        assert offsets.count(10) == 2
+
+    run(scenario())
+
+
 def test_download_file_handles_cdn_redirect_reupload_and_decrypt() -> None:
     async def scenario() -> None:
         key = bytes(range(32))
@@ -240,6 +336,28 @@ def test_download_file_enforces_memory_ceiling() -> None:
             await download_file(
                 bad_invoker, document_location(), part_size=1024, max_buffer_size=512
             )
+
+    async def bad_invoker(request: object, **kwargs: object) -> object:
+        raise AssertionError("download should validate before invoking")
+
+    run(scenario())
+
+
+def test_download_file_rejects_negative_retries() -> None:
+    async def scenario() -> None:
+        with pytest.raises(ValueError, match="max_retries"):
+            await download_file(bad_invoker, document_location(), max_retries=-1)
+
+    async def bad_invoker(request: object, **kwargs: object) -> object:
+        raise AssertionError("download should validate before invoking")
+
+    run(scenario())
+
+
+def test_download_file_rejects_negative_flood_sleep_threshold() -> None:
+    async def scenario() -> None:
+        with pytest.raises(ValueError, match="flood_sleep_threshold"):
+            await download_file(bad_invoker, document_location(), flood_sleep_threshold=-1)
 
     async def bad_invoker(request: object, **kwargs: object) -> object:
         raise AssertionError("download should validate before invoking")
