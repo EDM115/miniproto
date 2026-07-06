@@ -134,6 +134,11 @@ def test_download_request_timeout_defaults_to_shorter_part_timeout() -> None:
     assert args.download_flood_sleep_threshold == 30
     assert args.download_chunk_size == DEFAULT_CHUNK_SIZE
     assert args.download_adaptive_concurrency is True
+    assert args.download_max_in_flight_bytes is None
+    assert args.download_adaptive_part_size is True
+    assert args.download_max_chunk_size == MAX_DOWNLOAD_CHUNK_SIZE
+    assert args.download_read_ahead_bytes == 0
+    assert args.download_range_cache_bytes == 0
     overridden = parse_args(["--actor", "user", "--download-request-timeout", "45"], {})
     assert effective_download_request_timeout(overridden) == 45
 
@@ -231,6 +236,53 @@ def test_download_chunk_size_uses_specific_env_and_cli() -> None:
     assert overridden.download_chunk_size == MAX_DOWNLOAD_CHUNK_SIZE
 
 
+def test_download_byte_window_and_range_options_use_specific_env_and_cli() -> None:
+    args = parse_args(
+        ["--actor", "user"],
+        {
+            "MINIPROTO_LIVE_BENCH_DOWNLOAD_MAX_IN_FLIGHT_BYTES": "2097152",
+            "MINIPROTO_LIVE_BENCH_DOWNLOAD_MAX_CHUNK_SIZE": "1048576",
+            "MINIPROTO_LIVE_BENCH_DOWNLOAD_READ_AHEAD_BYTES": "1048576",
+            "MINIPROTO_LIVE_BENCH_DOWNLOAD_RANGE_CACHE_BYTES": "4194304",
+        },
+    )
+    assert args.download_max_in_flight_bytes == 2 * 1024 * 1024
+    assert args.download_max_chunk_size == MAX_DOWNLOAD_CHUNK_SIZE
+    assert args.download_read_ahead_bytes == MAX_DOWNLOAD_CHUNK_SIZE
+    assert args.download_range_cache_bytes == 4 * 1024 * 1024
+    overridden = parse_args(
+        [
+            "--actor",
+            "user",
+            "--download-max-in-flight-bytes",
+            "1048576",
+            "--download-max-chunk-size",
+            "1048576",
+            "--download-read-ahead-bytes",
+            "524288",
+            "--download-range-cache-bytes",
+            "1048576",
+        ],
+        {},
+    )
+    assert overridden.download_max_in_flight_bytes == MAX_DOWNLOAD_CHUNK_SIZE
+    assert overridden.download_max_chunk_size == MAX_DOWNLOAD_CHUNK_SIZE
+    assert overridden.download_read_ahead_bytes == DEFAULT_CHUNK_SIZE
+    assert overridden.download_range_cache_bytes == MAX_DOWNLOAD_CHUNK_SIZE
+    with pytest.raises(SystemExit):
+        parse_args(
+            [
+                "--actor",
+                "user",
+                "--download-chunk-size",
+                "1048576",
+                "--download-max-in-flight-bytes",
+                "524288",
+            ],
+            {},
+        )
+
+
 def test_download_adaptive_concurrency_can_be_disabled() -> None:
     env_disabled = parse_args(
         ["--actor", "user"], {"MINIPROTO_LIVE_BENCH_DOWNLOAD_ADAPTIVE_CONCURRENCY": "0"}
@@ -243,6 +295,20 @@ def test_download_adaptive_concurrency_can_be_disabled() -> None:
     assert cli_enabled.download_adaptive_concurrency is True
     cli_disabled = parse_args(["--actor", "user", "--no-download-adaptive-concurrency"], {})
     assert cli_disabled.download_adaptive_concurrency is False
+
+
+def test_download_adaptive_part_size_can_be_disabled() -> None:
+    env_disabled = parse_args(
+        ["--actor", "user"], {"MINIPROTO_LIVE_BENCH_DOWNLOAD_ADAPTIVE_PART_SIZE": "0"}
+    )
+    assert env_disabled.download_adaptive_part_size is False
+    cli_enabled = parse_args(
+        ["--actor", "user", "--download-adaptive-part-size"],
+        {"MINIPROTO_LIVE_BENCH_DOWNLOAD_ADAPTIVE_PART_SIZE": "0"},
+    )
+    assert cli_enabled.download_adaptive_part_size is True
+    cli_disabled = parse_args(["--actor", "user", "--no-download-adaptive-part-size"], {})
+    assert cli_disabled.download_adaptive_part_size is False
 
 
 def test_http_code_prompt_accepts_posted_code() -> None:
@@ -284,6 +350,13 @@ def test_transfer_counters_aggregate_metrics() -> None:
     metrics.record_metric("client.media_lane_drops", 1, attributes={"reason": "drop"})
     metrics.record_metric("client.media_lane_drops", 2, attributes={"reason": "close"})
     metrics.record_metric("client.media_lane_drop_skipped", 1, attributes={"reason": "drop"})
+    metrics.record_metric("media.download.byte_window_waits", 3)
+    metrics.record_metric("media.download.writer_queue_seconds", 0.5)
+    metrics.record_metric("media.download.writer_write_seconds", 0.25)
+    metrics.record_metric("media.download.adaptive_part_size", 1048576)
+    metrics.record_metric("media.download.range_cache_hits", 2)
+    metrics.record_metric("media.download.range_cache_misses", 3)
+    metrics.record_metric("media.download.range_cache_deduped", 1)
     counters = transfer_counters(metrics, "download", 2.0)
     assert counters.part_requests == 4
     assert counters.part_retries == 2
@@ -297,6 +370,13 @@ def test_transfer_counters_aggregate_metrics() -> None:
     assert counters.media_lane_drops == 1
     assert counters.media_lane_closes == 2
     assert counters.media_lane_drop_skips == 1
+    assert counters.byte_window_waits == 3
+    assert counters.writer_queue_seconds == 0.5
+    assert counters.writer_write_seconds == 0.25
+    assert counters.adaptive_part_size_changes == 1
+    assert counters.range_cache_hits == 2
+    assert counters.range_cache_misses == 3
+    assert counters.range_cache_deduped == 1
     assert counters.requests_per_s == 2.0
 
 

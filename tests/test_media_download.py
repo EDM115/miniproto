@@ -19,7 +19,13 @@ from miniproto import (
     event_loop,
 )
 from miniproto.errors import BadRequest, ClientDisconnected, TransportFlood
-from miniproto.media import MediaDownloadError, decrypt_cdn_chunk, download_file, download_media
+from miniproto.media import (
+    DownloadRangeCache,
+    MediaDownloadError,
+    decrypt_cdn_chunk,
+    download_file,
+    download_media,
+)
 from miniproto.observability import InMemoryMetrics, set_metrics_sink
 from miniproto.raw import functions, types
 
@@ -91,6 +97,42 @@ class FloodingOffsetInvoker:
 
 
 @dataclass(slots=True)
+class SlowOffsetInvoker:
+    payload: bytes
+    requests: list[Any] = field(default_factory=list)
+    active: int = 0
+    max_active: int = 0
+
+    async def __call__(self, request: object, **kwargs: object) -> object:
+        del kwargs
+        self.requests.append(request)
+        assert isinstance(request, functions.UploadGetFile)
+        self.active += 1
+        self.max_active = max(self.max_active, self.active)
+        try:
+            await asyncio.sleep(0.01)
+            return upload_file_part(self.payload[request.offset : request.offset + request.limit])
+        finally:
+            self.active -= 1
+
+
+@dataclass(slots=True)
+class RefreshingOffsetInvoker:
+    payload: bytes
+    old_reference: bytes
+    requests: list[Any] = field(default_factory=list)
+
+    async def __call__(self, request: object, **kwargs: object) -> object:
+        del kwargs
+        self.requests.append(request)
+        assert isinstance(request, functions.UploadGetFile)
+        await asyncio.sleep(0.01)
+        if getattr(request.location, "file_reference", b"") == self.old_reference:
+            raise BadRequest("FILE_REFERENCE_EXPIRED")
+        return upload_file_part(self.payload[request.offset : request.offset + request.limit])
+
+
+@dataclass(slots=True)
 class FakeSender:
     responses: list[object]
     requests: list[Any] = field(default_factory=list)
@@ -103,6 +145,7 @@ class FakeSender:
         content_related: bool = True,
         request_timeout: float | None = None,
     ) -> object:
+        await asyncio.sleep(0)
         self.requests.append(body)
         if not self.responses:
             raise AssertionError("fake sender has no queued response")
@@ -203,6 +246,121 @@ def test_download_file_concurrent_writes_ordered_payload(tmp_path) -> None:
         assert result.bytes_downloaded == len(payload)
         assert sorted(request.offset for request in invoker.requests) == [0, 5, 10, 15, 20, 25]
         assert progress[-1] == (len(payload), len(payload))
+
+    run(scenario())
+
+
+def test_download_file_concurrent_respects_byte_window(tmp_path) -> None:
+    async def scenario() -> None:
+        payload = b"abcdefghijklmnop"
+        target = tmp_path / "byte-window.bin"
+        invoker = SlowOffsetInvoker(payload)
+        result = await download_file(
+            invoker,
+            document_location(),
+            target,
+            limit=len(payload),
+            part_size=4,
+            concurrency=4,
+            max_in_flight_bytes=4,
+        )
+        assert target.read_bytes() == payload
+        assert result.bytes_downloaded == len(payload)
+        assert invoker.max_active == 1
+        assert [request.offset for request in invoker.requests] == [0, 4, 8, 12]
+
+    run(scenario())
+
+
+def test_download_media_range_cache_reuses_miniproto_file_id() -> None:
+    async def scenario() -> None:
+        document = types.Document(
+            id=11,
+            access_hash=22,
+            file_reference=b"ref",
+            date=1_700_000_000,
+            mime_type="application/octet-stream",
+            size=3,
+            dc_id=2,
+            attributes=(types.DocumentAttributeFilename(file_name="remote.bin"),),
+        )
+        file_id = encode_file_id(document)
+        cache = DownloadRangeCache(max_bytes=1024)
+        first = FakeInvoker([upload_file_part(b"abc")])
+        first_result = await download_media(first, file_id, limit=3, part_size=3, range_cache=cache)
+        assert first_result.data == b"abc"
+        second = FakeInvoker([])
+        second_result = await download_media(
+            second, file_id, limit=3, part_size=3, range_cache=cache
+        )
+        assert second_result.data == b"abc"
+        assert len(first.requests) == 1
+        assert second.requests == []
+
+    run(scenario())
+
+
+def test_download_file_read_ahead_prefetches_into_range_cache() -> None:
+    async def scenario() -> None:
+        cache = DownloadRangeCache(max_bytes=1024)
+        invoker = OffsetInvoker(b"abcdef")
+        result = await download_file(
+            invoker,
+            document_location(),
+            limit=3,
+            part_size=3,
+            range_cache=cache,
+            range_cache_key="doc:10",
+            read_ahead_bytes=3,
+        )
+        assert result.data == b"abc"
+        for _ in range(10):
+            if len(invoker.requests) >= 2:
+                break
+            await asyncio.sleep(0.01)
+        assert [request.offset for request in invoker.requests] == [0, 3]
+        cached = await cache.get("doc:10", 3, 3)
+        assert cached == b"def"
+
+    run(scenario())
+
+
+def test_download_file_deduplicates_file_reference_refresh(tmp_path) -> None:
+    async def scenario() -> None:
+        old_location = document_location()
+        new_location = types.InputDocumentFileLocation(
+            id=10, access_hash=20, file_reference=b"new-ref", thumb_size=""
+        )
+        refresh_calls = 0
+
+        async def refresher(location: object) -> object:
+            nonlocal refresh_calls
+            assert location == old_location
+            refresh_calls += 1
+            await asyncio.sleep(0.01)
+            return new_location
+
+        payload = b"abcdefgh"
+        target = tmp_path / "refreshed.bin"
+        invoker = RefreshingOffsetInvoker(payload, old_reference=b"ref")
+        result = await download_file(
+            invoker,
+            old_location,
+            target,
+            limit=len(payload),
+            part_size=4,
+            concurrency=2,
+            adaptive_concurrency=False,
+            max_retries=0,
+            file_reference_refresher=refresher,
+        )
+        assert target.read_bytes() == payload
+        assert result.raw_location == new_location
+        assert refresh_calls == 1
+        assert [request.location.file_reference for request in invoker.requests].count(b"ref") == 2
+        assert [request.location.file_reference for request in invoker.requests].count(
+            b"new-ref"
+        ) == 2
 
     run(scenario())
 
@@ -343,6 +501,27 @@ def test_adaptive_download_throttle_slow_starts_and_ramps_after_cooldown() -> No
     run(scenario())
 
 
+def test_adaptive_part_sizer_grows_and_settles_on_regression() -> None:
+    sizer = media_download._AdaptivePartSizer(
+        initial_size=4,
+        max_size=16,
+        total_bytes=1024,
+        enabled=True,
+        min_total_bytes=0,
+        min_samples=2,
+    )
+    sizer.on_success(requested_size=4, received_size=4, duration_s=1.0)
+    assert sizer.current_size == 4
+    sizer.on_success(requested_size=4, received_size=4, duration_s=1.0)
+    assert sizer.current_size == 8
+    sizer.on_success(requested_size=8, received_size=8, duration_s=0.5)
+    sizer.on_success(requested_size=8, received_size=8, duration_s=0.5)
+    assert sizer.current_size == 16
+    sizer.on_success(requested_size=16, received_size=16, duration_s=10.0)
+    sizer.on_success(requested_size=16, received_size=16, duration_s=10.0)
+    assert sizer.current_size == 8
+
+
 def test_download_file_handles_cdn_redirect_reupload_and_decrypt() -> None:
     async def scenario() -> None:
         key = bytes(range(32))
@@ -435,7 +614,7 @@ def test_download_file_cleans_partial_path_on_cancellation(tmp_path) -> None:
 
 def test_download_file_enforces_memory_ceiling() -> None:
     async def scenario() -> None:
-        with pytest.raises(ValueError, match="max_buffer_size"):
+        with pytest.raises(ValueError, match="max_in_flight_bytes"):
             await download_file(
                 bad_invoker, document_location(), part_size=1024, max_buffer_size=512
             )
@@ -468,20 +647,23 @@ def test_download_file_rejects_negative_flood_sleep_threshold() -> None:
     run(scenario())
 
 
-def test_download_file_enforces_concurrent_memory_ceiling() -> None:
+def test_download_file_uses_memory_ceiling_as_byte_window(tmp_path) -> None:
     async def scenario() -> None:
-        with pytest.raises(ValueError, match="concurrency window"):
-            await download_file(
-                bad_invoker,
-                document_location(),
-                limit=16,
-                part_size=8,
-                concurrency=2,
-                max_buffer_size=8,
-            )
-
-    async def bad_invoker(request: object, **kwargs: object) -> object:
-        raise AssertionError("download should validate before invoking")
+        payload = b"abcdefghijklmnop"
+        target = tmp_path / "buffer-window.bin"
+        invoker = SlowOffsetInvoker(payload)
+        result = await download_file(
+            invoker,
+            document_location(),
+            target,
+            limit=len(payload),
+            part_size=8,
+            concurrency=2,
+            max_buffer_size=8,
+        )
+        assert target.read_bytes() == payload
+        assert result.bytes_downloaded == len(payload)
+        assert invoker.max_active == 1
 
     run(scenario())
 
@@ -536,7 +718,9 @@ def test_client_download_media_uses_dedicated_media_lanes() -> None:
         )
         client._sender_factory = sender_factory
         await client.connect()
-        result = await client.download_media(media, part_size=1024, concurrency=2)
+        result = await client.download_media(
+            media, part_size=1024, concurrency=2, adaptive_concurrency=False
+        )
         assert result.data == b"a" * 1024 + b"b" * 1024
         assert built_senders == lane_senders
         assert client._sender is None
@@ -546,6 +730,42 @@ def test_client_download_media_uses_dedicated_media_lanes() -> None:
             assert isinstance(request, functions.UploadGetFile)
             requests.append(request)
         assert {request.offset for request in requests} == {0, 1024}
+
+    run(scenario())
+
+
+def test_client_download_media_reuses_warm_media_lanes_until_disconnect() -> None:
+    async def scenario() -> None:
+        media = Media(id=10, size=2048, location=document_location())
+        lane_senders = [
+            FakeSender([upload_file_part(b"a" * 1024), upload_file_part(b"c" * 1024)]),
+            FakeSender([upload_file_part(b"b" * 1024), upload_file_part(b"d" * 1024)]),
+        ]
+        built_senders: list[FakeSender] = []
+
+        def sender_factory(record: SessionRecord) -> FakeSender:
+            del record
+            sender = lane_senders[len(built_senders)]
+            built_senders.append(sender)
+            return sender
+
+        client = Client(
+            ClientConfig(api_id=1, api_hash="hash", session_storage=storage_with_auth())
+        )
+        client._sender_factory = sender_factory
+        await client.connect()
+        first = await client.download_media(
+            media, part_size=1024, concurrency=2, adaptive_concurrency=False
+        )
+        second = await client.download_media(
+            media, part_size=1024, concurrency=2, adaptive_concurrency=False
+        )
+        assert first.data == b"a" * 1024 + b"b" * 1024
+        assert second.data == b"c" * 1024 + b"d" * 1024
+        assert built_senders == lane_senders
+        assert [len(sender.requests) for sender in lane_senders] == [2, 2]
+        await client.disconnect()
+        assert not any(sender.is_connected for sender in lane_senders)
 
     run(scenario())
 

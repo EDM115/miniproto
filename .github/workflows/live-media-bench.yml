@@ -71,6 +71,27 @@ on:
         description: "upload.getFile chunk size in bytes; 524288 is stable, 1048576 tests the 1 MiB path"
         required: true
         default: "524288"
+      download_max_in_flight_bytes:
+        description: "Max in-flight download bytes; empty uses chunk_size * concurrency"
+        required: false
+        default: ""
+      download_adaptive_part_size:
+        description: "Try larger download chunks during large transfers and keep the fastest observed size"
+        required: true
+        default: true
+        type: boolean
+      download_max_chunk_size:
+        description: "Largest adaptive upload.getFile chunk size to try"
+        required: true
+        default: "1048576"
+      download_read_ahead_bytes:
+        description: "Optional range-cache read-ahead bytes; 0 disables read-ahead"
+        required: true
+        default: "0"
+      download_range_cache_bytes:
+        description: "Optional in-memory range cache bytes; 0 disables range caching"
+        required: true
+        default: "0"
       request_timeout:
         description: "Client transport/request timeout in seconds"
         required: true
@@ -132,6 +153,11 @@ jobs:
       MINIPROTO_LIVE_BENCH_UPLOAD_MEDIA_LANES: ${{ inputs.upload_media_lanes }}
       MINIPROTO_LIVE_BENCH_DOWNLOAD_MEDIA_LANES: ${{ inputs.download_media_lanes }}
       MINIPROTO_LIVE_BENCH_DOWNLOAD_CHUNK_SIZE: ${{ inputs.download_chunk_size }}
+      MINIPROTO_LIVE_BENCH_DOWNLOAD_MAX_IN_FLIGHT_BYTES: ${{ inputs.download_max_in_flight_bytes }}
+      MINIPROTO_LIVE_BENCH_DOWNLOAD_ADAPTIVE_PART_SIZE: ${{ inputs.download_adaptive_part_size }}
+      MINIPROTO_LIVE_BENCH_DOWNLOAD_MAX_CHUNK_SIZE: ${{ inputs.download_max_chunk_size }}
+      MINIPROTO_LIVE_BENCH_DOWNLOAD_READ_AHEAD_BYTES: ${{ inputs.download_read_ahead_bytes }}
+      MINIPROTO_LIVE_BENCH_DOWNLOAD_RANGE_CACHE_BYTES: ${{ inputs.download_range_cache_bytes }}
       MINIPROTO_LIVE_BENCH_SIZE: ${{ inputs.size }}
       MINIPROTO_LIVE_BENCH_DC_ID: ${{ inputs.dc_id }}
       MINIPROTO_LIVE_BENCH_ACTOR: ${{ inputs.actor }}
@@ -214,6 +240,11 @@ jobs:
           else
             extra_args+=(--no-download-adaptive-concurrency)
           fi
+          if [ "${{ inputs.download_adaptive_part_size }}" = "true" ]; then
+            extra_args+=(--download-adaptive-part-size)
+          else
+            extra_args+=(--no-download-adaptive-part-size)
+          fi
           if [ -n "${{ inputs.upload_media_lanes }}" ]; then
             extra_args+=(--upload-media-lanes "${{ inputs.upload_media_lanes }}")
           fi
@@ -222,6 +253,9 @@ jobs:
           fi
           if [ -n "${{ inputs.file_id }}" ]; then
             extra_args+=(--file-id "${{ inputs.file_id }}")
+          fi
+          if [ -n "${{ inputs.download_max_in_flight_bytes }}" ]; then
+            extra_args+=(--download-max-in-flight-bytes "${{ inputs.download_max_in_flight_bytes }}")
           fi
           uv run python -u tools/bench/benchmark_live_media_limit.py \
             --actor "${{ inputs.actor }}" \
@@ -232,6 +266,9 @@ jobs:
             --upload-concurrency "${{ inputs.upload_concurrency }}" \
             --download-concurrency "${{ inputs.download_concurrency }}" \
             --download-chunk-size "${{ inputs.download_chunk_size }}" \
+            --download-max-chunk-size "${{ inputs.download_max_chunk_size }}" \
+            --download-read-ahead-bytes "${{ inputs.download_read_ahead_bytes }}" \
+            --download-range-cache-bytes "${{ inputs.download_range_cache_bytes }}" \
             --request-timeout "${{ inputs.request_timeout }}" \
             --download-request-timeout "${{ inputs.download_request_timeout }}" \
             --json .tmp/live-bench-results/summary.json \

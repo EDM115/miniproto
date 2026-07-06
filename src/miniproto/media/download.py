@@ -6,6 +6,7 @@ import io
 import logging
 import os
 import time
+from collections import OrderedDict
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -35,9 +36,12 @@ class MediaDownloadError(RuntimeError):
 
 type RawInvoker = Callable[..., Awaitable[object]]
 type DownloadRetryObserver = Callable[[Exception, int], Awaitable[None] | None]
+type FileReferenceRefresher = Callable[[object], Awaitable[object] | object]
 type Clock = Callable[[], float]
 _LOGGER = get_logger("media.download")
 MAX_DOWNLOAD_CHUNK_SIZE = 1024 * 1024
+DEFAULT_RANGE_CACHE_BYTES = 64 * 1024 * 1024
+DEFAULT_ADAPTIVE_PART_SIZE_MIN_BYTES = 8 * 1024 * 1024
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,6 +63,107 @@ class _DestinationHandle:
     get_data: Callable[[], bytes | None]
 
 
+@dataclass(slots=True)
+class _DownloadWriterStats:
+    queued_seconds: float = 0.0
+    write_seconds: float = 0.0
+    writes: int = 0
+
+
+class DownloadRangeCache:
+    def __init__(self, *, max_bytes: int = DEFAULT_RANGE_CACHE_BYTES) -> None:
+        if max_bytes <= 0:
+            raise ValueError("range cache max_bytes must be positive")
+        self.max_bytes = int(max_bytes)
+        self._entries: OrderedDict[tuple[str, int, int], bytes] = OrderedDict()
+        self._pending: dict[tuple[str, int, int], asyncio.Task[bytes]] = {}
+        self._background: set[asyncio.Task[None]] = set()
+        self._size = 0
+        self._lock = asyncio.Lock()
+
+    async def get(self, key: str, offset: int, limit: int) -> bytes | None:
+        cache_key = (key, offset, limit)
+        async with self._lock:
+            payload = self._entries.get(cache_key)
+            if payload is None:
+                record_metric("media.download.range_cache_misses", 1)
+                return None
+            self._entries.move_to_end(cache_key)
+            record_metric("media.download.range_cache_hits", 1)
+            return payload
+
+    async def put(self, key: str, offset: int, limit: int, payload: bytes) -> None:
+        if not payload or len(payload) > self.max_bytes:
+            return
+        cache_key = (key, offset, limit)
+        async with self._lock:
+            previous = self._entries.pop(cache_key, None)
+            if previous is not None:
+                self._size -= len(previous)
+            self._entries[cache_key] = payload
+            self._size += len(payload)
+            while self._size > self.max_bytes and self._entries:
+                _old_key, old_payload = self._entries.popitem(last=False)
+                self._size -= len(old_payload)
+            record_metric("media.download.range_cache_bytes", self._size, unit="bytes")
+
+    async def get_or_fetch(
+        self, key: str, offset: int, limit: int, fetch: Callable[[], Awaitable[bytes]]
+    ) -> bytes:
+        async def run_fetch() -> bytes:
+            return await fetch()
+
+        cached = await self.get(key, offset, limit)
+        if cached is not None:
+            return cached
+        cache_key = (key, offset, limit)
+        async with self._lock:
+            task = self._pending.get(cache_key)
+            if task is None:
+                task = asyncio.create_task(run_fetch())
+                self._pending[cache_key] = task
+                record_metric("media.download.range_cache_fetches", 1)
+            else:
+                record_metric("media.download.range_cache_deduped", 1)
+        try:
+            payload = await task
+        finally:
+            async with self._lock:
+                if self._pending.get(cache_key) is task:
+                    del self._pending[cache_key]
+        await self.put(key, offset, limit, payload)
+        return payload
+
+    def prefetch(
+        self, key: str, offset: int, limit: int, fetch: Callable[[], Awaitable[bytes]]
+    ) -> None:
+        async def run() -> None:
+            try:
+                await self.get_or_fetch(key, offset, limit, fetch)
+            except Exception:
+                record_metric("media.download.range_cache_prefetch_errors", 1)
+
+        task = asyncio.create_task(run())
+        self._background.add(task)
+        task.add_done_callback(self._background.discard)
+
+    async def clear(self) -> None:
+        async with self._lock:
+            pending = tuple(self._pending.values())
+            background = tuple(self._background)
+            self._pending.clear()
+            self._background.clear()
+            self._entries.clear()
+            self._size = 0
+        for task in (*pending, *background):
+            task.cancel()
+        if pending or background:
+            await asyncio.gather(*pending, *background, return_exceptions=True)
+
+
+_DEFAULT_RANGE_CACHE: DownloadRangeCache | None = None
+
+
 async def download_file(
     invoke: RawInvoker,
     location: object,
@@ -78,10 +183,37 @@ async def download_file(
     max_buffer_size: int | None = None,
     concurrency: int = 1,
     adaptive_concurrency: bool = True,
+    max_in_flight_bytes: int | None = None,
+    adaptive_part_size: bool = True,
+    max_part_size: int = MAX_DOWNLOAD_CHUNK_SIZE,
+    range_cache: DownloadRangeCache | bool | None = None,
+    range_cache_key: str | None = None,
+    range_cache_max_bytes: int = DEFAULT_RANGE_CACHE_BYTES,
+    read_ahead_bytes: int = 0,
+    file_reference_refresher: FileReferenceRefresher | None = None,
 ) -> MediaDownloadResult:
     _validate_download_options(
-        offset, limit, part_size, max_retries, flood_sleep_threshold, max_buffer_size, concurrency
+        offset,
+        limit,
+        part_size,
+        max_retries,
+        flood_sleep_threshold,
+        max_buffer_size,
+        concurrency,
+        max_in_flight_bytes,
+        adaptive_part_size,
+        max_part_size,
+        range_cache_max_bytes,
+        read_ahead_bytes,
     )
+    effective_max_in_flight_bytes = (
+        max_in_flight_bytes if max_in_flight_bytes is not None else max_buffer_size
+    )
+    resolved_range_cache = _resolve_range_cache(
+        range_cache, max_bytes=range_cache_max_bytes, read_ahead_bytes=read_ahead_bytes
+    )
+    location_state = _DownloadLocationState(location)
+    reference_deduper = _FileReferenceRefreshDeduper()
     if limit is None and concurrency > 1 and total_size is not None:
         limit = max(0, total_size - offset)
     started = time.perf_counter()
@@ -89,7 +221,6 @@ async def download_file(
         if concurrency > 1 and limit is not None:
             result = await _download_file_concurrent(
                 invoke,
-                location,
                 destination,
                 offset=offset,
                 limit=limit,
@@ -104,11 +235,20 @@ async def download_file(
                 flood_sleep_threshold=flood_sleep_threshold,
                 concurrency=concurrency,
                 adaptive_concurrency=adaptive_concurrency,
+                max_in_flight_bytes=effective_max_in_flight_bytes,
+                adaptive_part_size=adaptive_part_size,
+                max_part_size=max_part_size,
+                range_cache=resolved_range_cache,
+                range_cache_key=range_cache_key,
+                read_ahead_bytes=read_ahead_bytes,
+                location_state=location_state,
+                reference_deduper=reference_deduper,
+                file_reference_refresher=file_reference_refresher,
             )
         else:
             result = await _download_file_sequential(
                 invoke,
-                location,
+                location_state,
                 destination,
                 offset=offset,
                 limit=limit,
@@ -121,6 +261,11 @@ async def download_file(
                 request_timeout=request_timeout,
                 max_retries=max_retries,
                 flood_sleep_threshold=flood_sleep_threshold,
+                range_cache=resolved_range_cache,
+                range_cache_key=range_cache_key,
+                read_ahead_bytes=read_ahead_bytes,
+                reference_deduper=reference_deduper,
+                file_reference_refresher=file_reference_refresher,
             )
     except BaseException:
         duration_ms = (time.perf_counter() - started) * 1000
@@ -177,7 +322,7 @@ async def download_file(
 
 async def _download_file_sequential(
     invoke: RawInvoker,
-    location: object,
+    location_state: _DownloadLocationState,
     destination: Destination = None,
     *,
     offset: int,
@@ -191,6 +336,11 @@ async def _download_file_sequential(
     request_timeout: float | None,
     max_retries: int,
     flood_sleep_threshold: int | None,
+    range_cache: DownloadRangeCache | None,
+    range_cache_key: str | None,
+    read_ahead_bytes: int,
+    reference_deduper: _FileReferenceRefreshDeduper,
+    file_reference_refresher: FileReferenceRefresher | None,
 ) -> MediaDownloadResult:
     destination_handle = _open_destination(destination, resume=resume)
     current_offset = offset + destination_handle.existing_bytes
@@ -201,9 +351,9 @@ async def _download_file_sequential(
     try:
         while remaining is None or remaining > 0:
             request_limit = part_size if remaining is None else min(part_size, remaining)
-            payload = await _download_part(
+            payload = await _download_part_cached(
                 invoke,
-                location=location,
+                location_state=location_state,
                 offset=current_offset,
                 limit=request_limit,
                 precise=precise,
@@ -211,6 +361,10 @@ async def _download_file_sequential(
                 request_timeout=request_timeout,
                 max_retries=max_retries,
                 flood_sleep_threshold=flood_sleep_threshold,
+                range_cache=range_cache,
+                range_cache_key=range_cache_key,
+                reference_deduper=reference_deduper,
+                file_reference_refresher=file_reference_refresher,
             )
             if remaining is not None and len(payload) > remaining:
                 payload = payload[:remaining]
@@ -222,6 +376,23 @@ async def _download_file_sequential(
             if remaining is not None:
                 remaining -= len(payload)
             await _call_progress(progress, downloaded, callback_total)
+            _prefetch_read_ahead(
+                invoke,
+                location_state=location_state,
+                precise=precise,
+                cdn_supported=cdn_supported,
+                request_timeout=request_timeout,
+                max_retries=max_retries,
+                flood_sleep_threshold=flood_sleep_threshold,
+                range_cache=range_cache,
+                range_cache_key=range_cache_key,
+                start_offset=current_offset,
+                part_size=part_size,
+                read_ahead_bytes=read_ahead_bytes,
+                hard_end=None,
+                reference_deduper=reference_deduper,
+                file_reference_refresher=file_reference_refresher,
+            )
             if len(payload) < request_limit:
                 break
         if destination_handle.should_close:
@@ -232,7 +403,7 @@ async def _download_file_sequential(
             offset=offset,
             destination=destination_handle.path or destination_handle.handle,
             data=data,
-            raw_location=location,
+            raw_location=location_state.current,
         )
     except asyncio.CancelledError:
         if destination_handle.should_close:
@@ -248,7 +419,6 @@ async def _download_file_sequential(
 
 async def _download_file_concurrent(
     invoke: RawInvoker,
-    location: object,
     destination: Destination = None,
     *,
     offset: int,
@@ -264,6 +434,15 @@ async def _download_file_concurrent(
     flood_sleep_threshold: int | None,
     concurrency: int,
     adaptive_concurrency: bool,
+    max_in_flight_bytes: int | None,
+    adaptive_part_size: bool,
+    max_part_size: int,
+    range_cache: DownloadRangeCache | None,
+    range_cache_key: str | None,
+    read_ahead_bytes: int,
+    location_state: _DownloadLocationState,
+    reference_deduper: _FileReferenceRefreshDeduper,
+    file_reference_refresher: FileReferenceRefresher | None,
 ) -> MediaDownloadResult:
     destination_handle = _open_destination(destination, resume=resume)
     downloaded = destination_handle.existing_bytes
@@ -273,15 +452,28 @@ async def _download_file_concurrent(
     next_offset = start_offset
     end_offset = start_offset + remaining
     pending: set[asyncio.Task[tuple[int, bytes, int]]] = set()
+    pending_limits: dict[asyncio.Task[tuple[int, bytes, int]], int] = {}
+    in_flight_bytes = 0
+    byte_window = max_in_flight_bytes or max(part_size, part_size * concurrency)
     stopped = False
     throttle = (
         _AdaptiveDownloadThrottle(concurrency) if adaptive_concurrency and concurrency > 1 else None
     )
+    part_sizer = _AdaptivePartSizer(
+        initial_size=part_size,
+        max_size=max_part_size,
+        total_bytes=limit,
+        enabled=adaptive_part_size,
+    )
+    writer = _ConcurrentDestinationWriter(
+        destination_handle, queue_size=max(1, concurrency), preallocate_size=limit
+    )
 
     async def fetch(request_offset: int, request_limit: int) -> tuple[int, bytes, int]:
-        payload = await _download_part(
+        started = time.perf_counter()
+        payload = await _download_part_cached(
             invoke,
-            location=location,
+            location_state=location_state,
             offset=request_offset,
             limit=request_limit,
             precise=precise,
@@ -290,19 +482,35 @@ async def _download_file_concurrent(
             max_retries=max_retries,
             flood_sleep_threshold=flood_sleep_threshold,
             retry_observer=throttle.on_retry if throttle is not None else None,
+            range_cache=range_cache,
+            range_cache_key=range_cache_key,
+            reference_deduper=reference_deduper,
+            file_reference_refresher=file_reference_refresher,
         )
         if throttle is not None:
             throttle.on_success()
         if len(payload) > request_limit:
             payload = payload[:request_limit]
+        part_sizer.on_success(
+            requested_size=request_limit,
+            received_size=len(payload),
+            duration_s=max(time.perf_counter() - started, 1e-9),
+        )
         return request_offset, payload, request_limit
 
     def fill_window() -> None:
-        nonlocal next_offset
+        nonlocal next_offset, in_flight_bytes
         allowed = concurrency if throttle is None else throttle.limit
         while len(pending) < allowed and next_offset < end_offset and not stopped:
-            request_limit = min(part_size, end_offset - next_offset)
-            pending.add(asyncio.create_task(fetch(next_offset, request_limit)))
+            request_limit = min(part_sizer.current_size, byte_window, end_offset - next_offset)
+            if in_flight_bytes and in_flight_bytes + request_limit > byte_window:
+                record_metric("media.download.byte_window_waits", 1)
+                break
+            task = asyncio.create_task(fetch(next_offset, request_limit))
+            pending.add(task)
+            pending_limits[task] = request_limit
+            in_flight_bytes += request_limit
+            record_metric("media.download.in_flight_bytes", in_flight_bytes, unit="bytes")
             next_offset += request_limit
 
     try:
@@ -310,20 +518,39 @@ async def _download_file_concurrent(
         while pending:
             done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
             for task in done:
+                in_flight_bytes -= pending_limits.pop(task, 0)
                 request_offset, payload, request_limit = await task
                 if not payload:
                     stopped = True
                     continue
                 output_offset = request_offset - offset
-                destination_handle.handle.seek(output_offset)
-                destination_handle.handle.write(payload)
+                await writer.submit(output_offset, payload)
                 downloaded += len(payload)
                 await _call_progress(progress, downloaded, callback_total)
+                _prefetch_read_ahead(
+                    invoke,
+                    location_state=location_state,
+                    precise=precise,
+                    cdn_supported=cdn_supported,
+                    request_timeout=request_timeout,
+                    max_retries=max_retries,
+                    flood_sleep_threshold=flood_sleep_threshold,
+                    range_cache=range_cache,
+                    range_cache_key=range_cache_key,
+                    start_offset=request_offset + len(payload),
+                    part_size=part_sizer.current_size,
+                    read_ahead_bytes=read_ahead_bytes,
+                    hard_end=end_offset,
+                    reference_deduper=reference_deduper,
+                    file_reference_refresher=file_reference_refresher,
+                )
                 if len(payload) < request_limit:
                     stopped = True
             fill_window()
         if stopped:
             await _cancel_tasks(pending)
+        stats = await writer.close()
+        _record_writer_stats(stats)
         if destination_handle.should_close:
             destination_handle.handle.close()
         data = destination_handle.get_data()
@@ -332,10 +559,11 @@ async def _download_file_concurrent(
             offset=offset,
             destination=destination_handle.path or destination_handle.handle,
             data=data,
-            raw_location=location,
+            raw_location=location_state.current,
         )
     except asyncio.CancelledError:
         await _cancel_tasks(pending)
+        await writer.abort()
         if destination_handle.should_close:
             destination_handle.handle.close()
         if destination_handle.remove_on_cancel and destination_handle.path is not None:
@@ -343,6 +571,7 @@ async def _download_file_concurrent(
         raise
     except BaseException:
         await _cancel_tasks(pending)
+        await writer.abort()
         if destination_handle.should_close:
             destination_handle.handle.close()
         raise
@@ -351,6 +580,8 @@ async def _download_file_concurrent(
 async def download_media(
     invoke: RawInvoker, media: object, destination: Destination = None, **kwargs: Any
 ) -> MediaDownloadResult:
+    if "range_cache_key" not in kwargs or kwargs.get("range_cache_key") is None:
+        kwargs["range_cache_key"] = _range_cache_key_from_media(media)
     location = download_location_from_media(media)
     total_size = kwargs.pop("total_size", None)
     if total_size is None and isinstance(media, Media):
@@ -414,6 +645,59 @@ def media_from_raw(raw: object) -> Media | None:
     return None
 
 
+class _DownloadLocationState:
+    def __init__(self, location: object) -> None:
+        self._location = location
+        self._lock = asyncio.Lock()
+
+    @property
+    def current(self) -> object:
+        return self._location
+
+    async def refresh(
+        self, *, reference_deduper: _FileReferenceRefreshDeduper, refresher: FileReferenceRefresher
+    ) -> object:
+        old_location = self._location
+        new_location = await reference_deduper.refresh(old_location, refresher)
+        async with self._lock:
+            if _file_reference_bytes(self._location) == _file_reference_bytes(old_location):
+                self._location = new_location
+            return self._location
+
+
+class _FileReferenceRefreshDeduper:
+    def __init__(self) -> None:
+        self._pending: dict[bytes, asyncio.Task[object]] = {}
+        self._lock = asyncio.Lock()
+
+    async def refresh(self, location: object, refresher: FileReferenceRefresher) -> object:
+        reference = _file_reference_bytes(location)
+        if not reference:
+            refreshed = refresher(location)
+            return await refreshed if inspect.isawaitable(refreshed) else refreshed
+        async with self._lock:
+            task = self._pending.get(reference)
+            if task is None:
+                task = asyncio.create_task(_call_file_reference_refresher(refresher, location))
+                self._pending[reference] = task
+                record_metric("media.download.file_reference_refreshes", 1)
+            else:
+                record_metric("media.download.file_reference_refresh_deduped", 1)
+        try:
+            return await task
+        finally:
+            async with self._lock:
+                if self._pending.get(reference) is task:
+                    del self._pending[reference]
+
+
+async def _call_file_reference_refresher(
+    refresher: FileReferenceRefresher, location: object
+) -> object:
+    refreshed = refresher(location)
+    return await refreshed if inspect.isawaitable(refreshed) else refreshed
+
+
 async def _payload_from_get_file_result(
     invoke: RawInvoker, result: object, *, offset: int, limit: int, request_timeout: float | None
 ) -> bytes:
@@ -425,6 +709,96 @@ async def _payload_from_get_file_result(
     if isinstance(result, types.UploadFile):
         return result.bytes
     raise MediaDownloadError(f"unsupported upload.getFile response: {type(result).__name__}")
+
+
+async def _download_part_cached(
+    invoke: RawInvoker,
+    *,
+    location_state: _DownloadLocationState,
+    offset: int,
+    limit: int,
+    precise: bool,
+    cdn_supported: bool,
+    request_timeout: float | None,
+    max_retries: int,
+    flood_sleep_threshold: int | None,
+    range_cache: DownloadRangeCache | None,
+    range_cache_key: str | None,
+    reference_deduper: _FileReferenceRefreshDeduper,
+    file_reference_refresher: FileReferenceRefresher | None,
+    retry_observer: DownloadRetryObserver | None = None,
+) -> bytes:
+    async def fetch() -> bytes:
+        return await _download_part_with_reference_refresh(
+            invoke,
+            location_state=location_state,
+            offset=offset,
+            limit=limit,
+            precise=precise,
+            cdn_supported=cdn_supported,
+            request_timeout=request_timeout,
+            max_retries=max_retries,
+            flood_sleep_threshold=flood_sleep_threshold,
+            retry_observer=retry_observer,
+            reference_deduper=reference_deduper,
+            file_reference_refresher=file_reference_refresher,
+        )
+
+    if range_cache is None or range_cache_key is None:
+        return await fetch()
+    return await range_cache.get_or_fetch(range_cache_key, offset, limit, fetch)
+
+
+async def _download_part_with_reference_refresh(
+    invoke: RawInvoker,
+    *,
+    location_state: _DownloadLocationState,
+    offset: int,
+    limit: int,
+    precise: bool,
+    cdn_supported: bool,
+    request_timeout: float | None,
+    max_retries: int,
+    flood_sleep_threshold: int | None,
+    retry_observer: DownloadRetryObserver | None,
+    reference_deduper: _FileReferenceRefreshDeduper,
+    file_reference_refresher: FileReferenceRefresher | None,
+) -> bytes:
+    for refresh_attempt in range(2):
+        try:
+            return await _download_part(
+                invoke,
+                location=location_state.current,
+                offset=offset,
+                limit=limit,
+                precise=precise,
+                cdn_supported=cdn_supported,
+                request_timeout=request_timeout,
+                max_retries=max_retries,
+                flood_sleep_threshold=flood_sleep_threshold,
+                retry_observer=retry_observer,
+            )
+        except Exception as exc:
+            if (
+                file_reference_refresher is None
+                or refresh_attempt > 0
+                or not _is_file_reference_error(exc)
+            ):
+                raise
+            record_metric("media.download.file_reference_refresh_attempts", 1)
+            emit_event(
+                _LOGGER,
+                logging.WARNING,
+                "media.download.file_reference_refresh",
+                outcome="retry",
+                offset=offset,
+                limit=limit,
+                error_type=type(exc).__name__,
+            )
+            await location_state.refresh(
+                reference_deduper=reference_deduper, refresher=file_reference_refresher
+            )
+    raise MediaDownloadError(f"download part at offset {offset} did not complete")
 
 
 async def _download_part(
@@ -548,6 +922,105 @@ def _is_input_file_location(value: object) -> bool:
     return getattr(type(value), "RESULT_TYPE", None) == "InputFileLocation"
 
 
+def _range_cache_key_from_media(media: object) -> str | None:
+    if is_file_id(media):
+        return str(media)
+    if isinstance(media, Media):
+        return media.file_id
+    resolved = media_from_raw(media)
+    return resolved.file_id if resolved is not None else None
+
+
+def _resolve_range_cache(
+    range_cache: DownloadRangeCache | bool | None, *, max_bytes: int, read_ahead_bytes: int
+) -> DownloadRangeCache | None:
+    if isinstance(range_cache, DownloadRangeCache):
+        return range_cache
+    if range_cache is False:
+        return None
+    if range_cache is True or read_ahead_bytes > 0:
+        return _default_range_cache(max_bytes)
+    return None
+
+
+def _default_range_cache(max_bytes: int) -> DownloadRangeCache:
+    global _DEFAULT_RANGE_CACHE
+    if _DEFAULT_RANGE_CACHE is None or _DEFAULT_RANGE_CACHE.max_bytes != max_bytes:
+        _DEFAULT_RANGE_CACHE = DownloadRangeCache(max_bytes=max_bytes)
+    return _DEFAULT_RANGE_CACHE
+
+
+def _prefetch_read_ahead(
+    invoke: RawInvoker,
+    *,
+    location_state: _DownloadLocationState,
+    precise: bool,
+    cdn_supported: bool,
+    request_timeout: float | None,
+    max_retries: int,
+    flood_sleep_threshold: int | None,
+    range_cache: DownloadRangeCache | None,
+    range_cache_key: str | None,
+    start_offset: int,
+    part_size: int,
+    read_ahead_bytes: int,
+    hard_end: int | None,
+    reference_deduper: _FileReferenceRefreshDeduper,
+    file_reference_refresher: FileReferenceRefresher | None,
+) -> None:
+    if range_cache is None or range_cache_key is None or read_ahead_bytes <= 0:
+        return
+    remaining = read_ahead_bytes
+    current_offset = start_offset
+    while remaining > 0 and (hard_end is None or current_offset < hard_end):
+        request_limit = min(part_size, remaining)
+        if hard_end is not None:
+            request_limit = min(request_limit, hard_end - current_offset)
+        if request_limit <= 0:
+            break
+        offset_for_task = current_offset
+        limit_for_task = request_limit
+
+        async def fetch(offset: int = offset_for_task, limit: int = limit_for_task) -> bytes:
+            return await _download_part_with_reference_refresh(
+                invoke,
+                location_state=location_state,
+                offset=offset,
+                limit=limit,
+                precise=precise,
+                cdn_supported=cdn_supported,
+                request_timeout=request_timeout,
+                max_retries=max_retries,
+                flood_sleep_threshold=flood_sleep_threshold,
+                retry_observer=None,
+                reference_deduper=reference_deduper,
+                file_reference_refresher=file_reference_refresher,
+            )
+
+        range_cache.prefetch(range_cache_key, offset_for_task, limit_for_task, fetch)
+        current_offset += request_limit
+        remaining -= request_limit
+
+
+def _file_reference_bytes(location: object) -> bytes:
+    reference = getattr(location, "file_reference", b"")
+    if isinstance(reference, bytes):
+        return reference
+    if isinstance(reference, bytearray | memoryview):
+        return bytes(reference)
+    if isinstance(reference, str):
+        return reference.encode("utf-8")
+    return b""
+
+
+def _is_file_reference_error(exc: Exception) -> bool:
+    if not isinstance(exc, RpcError):
+        return False
+    message = exc.message.upper()
+    name = exc.rpc_error_name.upper()
+    return "FILE_REFERENCE" in message or "FILE_REFERENCE" in name
+
+
 def _validate_download_options(
     offset: int,
     limit: int | None,
@@ -556,6 +1029,11 @@ def _validate_download_options(
     flood_sleep_threshold: int | None,
     max_buffer_size: int | None,
     concurrency: int,
+    max_in_flight_bytes: int | None,
+    adaptive_part_size: bool,
+    max_part_size: int,
+    range_cache_max_bytes: int,
+    read_ahead_bytes: int,
 ) -> None:
     if offset < 0:
         raise ValueError("offset must not be negative")
@@ -565,16 +1043,173 @@ def _validate_download_options(
         raise ValueError("part_size must be positive")
     if part_size > MAX_DOWNLOAD_CHUNK_SIZE:
         raise ValueError("part_size must not exceed 1 MiB")
+    if max_part_size <= 0:
+        raise ValueError("max_part_size must be positive")
+    if max_part_size > MAX_DOWNLOAD_CHUNK_SIZE:
+        raise ValueError("max_part_size must not exceed 1 MiB")
+    if max_part_size < part_size:
+        raise ValueError("max_part_size must be greater than or equal to part_size")
     if concurrency <= 0:
         raise ValueError("concurrency must be positive")
     if max_retries < 0:
         raise ValueError("max_retries must not be negative")
     if flood_sleep_threshold is not None and flood_sleep_threshold < 0:
         raise ValueError("flood_sleep_threshold must not be negative")
-    window = part_size * concurrency
-    ceiling = window if max_buffer_size is None else max_buffer_size
-    if ceiling < window:
-        raise ValueError("max_buffer_size is lower than the configured download concurrency window")
+    byte_limit = max_in_flight_bytes if max_in_flight_bytes is not None else max_buffer_size
+    if byte_limit is not None and byte_limit < part_size:
+        raise ValueError("max_in_flight_bytes must be greater than or equal to part_size")
+    if read_ahead_bytes < 0:
+        raise ValueError("read_ahead_bytes must not be negative")
+    if range_cache_max_bytes <= 0:
+        raise ValueError("range_cache_max_bytes must be positive")
+    del adaptive_part_size
+
+
+class _ConcurrentDestinationWriter:
+    def __init__(
+        self, destination: _DestinationHandle, *, queue_size: int, preallocate_size: int | None
+    ) -> None:
+        self._destination = destination
+        self._queue: asyncio.Queue[tuple[int, bytes, float] | None] = asyncio.Queue(
+            maxsize=max(1, queue_size)
+        )
+        self._stats = _DownloadWriterStats()
+        self._threaded = destination.path is not None
+        if destination.path is not None and preallocate_size is not None:
+            destination.handle.truncate(preallocate_size)
+        self._worker = asyncio.create_task(self._run())
+
+    async def submit(self, offset: int, payload: bytes) -> None:
+        await self._queue.put((offset, payload, time.perf_counter()))
+
+    async def close(self) -> _DownloadWriterStats:
+        await self._queue.join()
+        await self._queue.put(None)
+        await self._worker
+        return self._stats
+
+    async def abort(self) -> None:
+        self._worker.cancel()
+        await asyncio.gather(self._worker, return_exceptions=True)
+
+    async def _run(self) -> None:
+        while True:
+            item = await self._queue.get()
+            try:
+                if item is None:
+                    return
+                offset, payload, queued_at = item
+                self._stats.queued_seconds += max(time.perf_counter() - queued_at, 0.0)
+                started = time.perf_counter()
+                if self._threaded:
+                    await asyncio.to_thread(self._write, offset, payload)
+                else:
+                    self._write(offset, payload)
+                self._stats.write_seconds += max(time.perf_counter() - started, 0.0)
+                self._stats.writes += 1
+            finally:
+                self._queue.task_done()
+
+    def _write(self, offset: int, payload: bytes) -> None:
+        self._destination.handle.seek(offset)
+        self._destination.handle.write(payload)
+
+
+def _record_writer_stats(stats: _DownloadWriterStats) -> None:
+    if stats.writes <= 0:
+        return
+    record_metric("media.download.writer_writes", stats.writes)
+    record_metric("media.download.writer_queue_seconds", stats.queued_seconds, unit="s")
+    record_metric("media.download.writer_write_seconds", stats.write_seconds, unit="s")
+
+
+class _AdaptivePartSizer:
+    def __init__(
+        self,
+        *,
+        initial_size: int,
+        max_size: int,
+        total_bytes: int | None,
+        enabled: bool,
+        min_total_bytes: int = DEFAULT_ADAPTIVE_PART_SIZE_MIN_BYTES,
+        min_samples: int = 4,
+        worse_tolerance: float = 0.03,
+    ) -> None:
+        self.current_size = initial_size
+        self._max_size = max(initial_size, max_size)
+        self._enabled = (
+            enabled
+            and initial_size < self._max_size
+            and (total_bytes is None or total_bytes >= min_total_bytes)
+        )
+        self._min_samples = max(1, min_samples)
+        self._worse_tolerance = worse_tolerance
+        self._sample_count = 0
+        self._sample_bytes = 0
+        self._sample_seconds = 0.0
+        self._best_size = initial_size
+        self._best_throughput: float | None = None
+        self._settled = not self._enabled
+
+    def on_success(self, *, requested_size: int, received_size: int, duration_s: float) -> None:
+        if self._settled or requested_size != self.current_size or received_size < requested_size:
+            return
+        self._sample_count += 1
+        self._sample_bytes += received_size
+        self._sample_seconds += max(duration_s, 1e-9)
+        if self._sample_count < self._min_samples:
+            return
+        throughput = self._sample_bytes / max(self._sample_seconds, 1e-9)
+        previous = self.current_size
+        if self._best_throughput is None:
+            self._best_throughput = throughput
+            self._best_size = self.current_size
+            self._try_grow(previous=previous, reason="initial_sample")
+            return
+        if throughput >= self._best_throughput * (1.0 - self._worse_tolerance):
+            self._best_throughput = throughput
+            self._best_size = self.current_size
+            self._try_grow(previous=previous, reason="throughput_improved")
+            return
+        self.current_size = self._best_size
+        self._settled = True
+        record_metric(
+            "media.download.adaptive_part_size",
+            self.current_size,
+            attributes={"reason": "throughput_regressed", "previous_size": previous},
+        )
+        emit_event(
+            _LOGGER,
+            logging.DEBUG,
+            "media.download.part_size",
+            outcome="settled",
+            previous_size=previous,
+            current_size=self.current_size,
+            reason="throughput_regressed",
+        )
+
+    def _try_grow(self, *, previous: int, reason: str) -> None:
+        if self.current_size >= self._max_size:
+            self._settled = True
+            return
+        self.current_size = min(self._max_size, self.current_size * 2)
+        self._sample_count = 0
+        self._sample_bytes = 0
+        self._sample_seconds = 0.0
+        record_metric(
+            "media.download.adaptive_part_size",
+            self.current_size,
+            attributes={"reason": reason, "previous_size": previous},
+        )
+        emit_event(
+            _LOGGER,
+            logging.DEBUG,
+            "media.download.part_size",
+            outcome="increased",
+            previous_size=previous,
+            current_size=self.current_size,
+            reason=reason,
+        )
 
 
 def _open_destination(destination: Destination, *, resume: bool) -> _DestinationHandle:
@@ -775,8 +1410,10 @@ class _AdaptiveDownloadThrottle:
 
 
 __all__ = [
+    "DEFAULT_RANGE_CACHE_BYTES",
     "MAX_DOWNLOAD_CHUNK_SIZE",
     "Destination",
+    "DownloadRangeCache",
     "MediaDownloadError",
     "MediaDownloadResult",
     "download_file",

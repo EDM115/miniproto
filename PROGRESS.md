@@ -327,7 +327,7 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
 - **FILE-017**: `tests/` owns unit, fake-server, integration, parity, resource, and release tests
 - **FILE-018**: `src/miniproto/connection/` and `src/miniproto/mtproto/` own Phase 5 transport/runtime code; `src/miniproto/auth/`, `src/miniproto/updates/`, `src/miniproto/peers.py`, `src/miniproto/messages.py`, and `src/miniproto/media/` own the current auth, update, peer-cache, text-message, and media-transfer services
 - **FILE-019**: `docs/faked-methods.md` owns the ledger of fake-backed Telegram RPCs, private test hooks, and intentionally deferred public methods
-- **FILE-020**: `plans/2026-07-03-reference-implementation-improvement-notes.md` owns read-only reference-implementation comparison notes and prioritized follow-up ideas from Pyroblack, Telethon, grammers, and mtcute
+- **FILE-020**: `plans/2026-07-03-reference-implementation-improvement-notes.md` owns read-only reference-implementation comparison notes and prioritized follow-up ideas from Pyroblack, Telethon, grammers, mtcute, and Web K/tweb
 
 ## 6. Testing
 

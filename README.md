@@ -26,4 +26,4 @@ The generated raw API is pinned to Telegram Layer 214 from the official schema p
 
 ## References
 
-The project takes API ergonomics inspiration from Pyrogram and forks, Telethon, Grammers, TDLib, GramJS, mtcute, and Telegram's official MTProto docs, but it does not inherit GPL/LGPL code. The focus is speed, low memory use, reliable reconnect/update behavior, type hints, documentation, and a clean split between protocol SDK and framework package.
+The project takes API ergonomics inspiration from Pyrogram and forks, Telethon, Grammers, TDLib, GramJS, mtcute, Telegram Web K/tweb, and Telegram's official MTProto docs, but it does not copy GPL/LGPL reference code. The focus is speed, low memory use, reliable reconnect/update behavior, type hints, documentation, and a clean split between protocol SDK and framework package.

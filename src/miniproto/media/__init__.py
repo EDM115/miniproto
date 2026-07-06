@@ -1,7 +1,9 @@
 from miniproto.media.cdn import CdnError, CdnRedirect, decrypt_cdn_chunk
 from miniproto.media.download import (
+    DEFAULT_RANGE_CACHE_BYTES,
     MAX_DOWNLOAD_CHUNK_SIZE,
     Destination,
+    DownloadRangeCache,
     MediaDownloadError,
     MediaDownloadResult,
     download_file,
@@ -22,10 +24,12 @@ from miniproto.media.upload import (
 __all__ = [
     "BIG_FILE_THRESHOLD",
     "DEFAULT_CHUNK_SIZE",
+    "DEFAULT_RANGE_CACHE_BYTES",
     "MAX_DOWNLOAD_CHUNK_SIZE",
     "CdnError",
     "CdnRedirect",
     "Destination",
+    "DownloadRangeCache",
     "FileSource",
     "MediaDownloadError",
     "MediaDownloadResult",

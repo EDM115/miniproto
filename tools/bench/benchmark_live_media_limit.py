@@ -78,6 +78,13 @@ class TransferCounters:
     media_lane_drops: int
     media_lane_drop_skips: int
     media_lane_closes: int
+    byte_window_waits: int
+    writer_queue_seconds: float
+    writer_write_seconds: float
+    adaptive_part_size_changes: int
+    range_cache_hits: int
+    range_cache_misses: int
+    range_cache_deduped: int
     requests_per_s: float
 
 
@@ -129,6 +136,11 @@ class BenchmarkSummary:
     download_concurrency: int
     download_media_lanes: int | None
     download_adaptive_concurrency: bool
+    download_max_in_flight_bytes: int | None
+    download_adaptive_part_size: bool
+    download_max_chunk_size: int
+    download_read_ahead_bytes: int
+    download_range_cache_bytes: int
     download_request_timeout: float
     download_part_retries: int
     download_flood_sleep_threshold: int | None
@@ -438,6 +450,57 @@ def parse_args(
         ),
         help=f"upload.getFile request size in bytes; defaults to 512 KiB for stable live runs; use {MAX_DOWNLOAD_CHUNK_SIZE} for 1 MiB comparison runs",
     )
+    download_max_in_flight = env_value(values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_MAX_IN_FLIGHT_BYTES")
+    parser.add_argument(
+        "--download-max-in-flight-bytes",
+        type=int,
+        default=int(download_max_in_flight) if download_max_in_flight else None,
+        help="cap in-flight download bytes across active upload.getFile requests; empty uses chunk_size * concurrency",
+    )
+    download_adaptive_part_default = env_bool(
+        values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_ADAPTIVE_PART_SIZE", default=True
+    )
+    download_adaptive_part = parser.add_mutually_exclusive_group()
+    download_adaptive_part.add_argument(
+        "--download-adaptive-part-size",
+        dest="download_adaptive_part_size",
+        action="store_true",
+        default=download_adaptive_part_default,
+        help="try larger download chunks during large transfers and keep the fastest observed size",
+    )
+    download_adaptive_part.add_argument(
+        "--no-download-adaptive-part-size",
+        dest="download_adaptive_part_size",
+        action="store_false",
+        help="keep --download-chunk-size fixed for controlled comparison runs",
+    )
+    parser.add_argument(
+        "--download-max-chunk-size",
+        type=int,
+        default=int(
+            env_value(
+                values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_MAX_CHUNK_SIZE", str(MAX_DOWNLOAD_CHUNK_SIZE)
+            )
+            or str(MAX_DOWNLOAD_CHUNK_SIZE)
+        ),
+        help=f"largest chunk size adaptive download part sizing may try; Telegram currently caps upload.getFile at {MAX_DOWNLOAD_CHUNK_SIZE} bytes",
+    )
+    parser.add_argument(
+        "--download-read-ahead-bytes",
+        type=int,
+        default=int(
+            env_value(values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_READ_AHEAD_BYTES", "0") or "0"
+        ),
+        help="optional range-cache read-ahead budget in bytes; useful for range/stream experiments, disabled by default",
+    )
+    parser.add_argument(
+        "--download-range-cache-bytes",
+        type=int,
+        default=int(
+            env_value(values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_RANGE_CACHE_BYTES", "0") or "0"
+        ),
+        help="optional in-memory range cache size in bytes; 0 disables benchmark range caching",
+    )
     download_flood_sleep_threshold = env_value(
         values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_FLOOD_SLEEP_THRESHOLD", "30"
     )
@@ -503,6 +566,21 @@ def parse_args(
     args = parser.parse_args(argv)
     if args.repeat < 1:
         parser.error("--repeat must be positive")
+    if args.download_max_chunk_size < args.download_chunk_size:
+        parser.error(
+            "--download-max-chunk-size must be greater than or equal to --download-chunk-size"
+        )
+    if (
+        args.download_max_in_flight_bytes is not None
+        and args.download_max_in_flight_bytes < args.download_chunk_size
+    ):
+        parser.error(
+            "--download-max-in-flight-bytes must be greater than or equal to --download-chunk-size"
+        )
+    if args.download_read_ahead_bytes < 0:
+        parser.error("--download-read-ahead-bytes must not be negative")
+    if args.download_range_cache_bytes < 0:
+        parser.error("--download-range-cache-bytes must not be negative")
     return args
 
 
@@ -561,6 +639,11 @@ async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int
                         download_concurrency=args.download_concurrency,
                         download_media_lanes=args.download_media_lanes,
                         download_adaptive_concurrency=args.download_adaptive_concurrency,
+                        download_max_in_flight_bytes=args.download_max_in_flight_bytes,
+                        download_adaptive_part_size=args.download_adaptive_part_size,
+                        download_max_chunk_size=args.download_max_chunk_size,
+                        download_read_ahead_bytes=args.download_read_ahead_bytes,
+                        download_range_cache_bytes=args.download_range_cache_bytes,
                         upload_request_timeout=upload_request_timeout,
                         upload_part_retries=args.upload_part_retries,
                         download_request_timeout=download_request_timeout,
@@ -588,6 +671,11 @@ async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int
         download_concurrency=args.download_concurrency,
         download_media_lanes=args.download_media_lanes,
         download_adaptive_concurrency=args.download_adaptive_concurrency,
+        download_max_in_flight_bytes=args.download_max_in_flight_bytes,
+        download_adaptive_part_size=args.download_adaptive_part_size,
+        download_max_chunk_size=args.download_max_chunk_size,
+        download_read_ahead_bytes=args.download_read_ahead_bytes,
+        download_range_cache_bytes=args.download_range_cache_bytes,
         download_request_timeout=download_request_timeout,
         download_part_retries=args.download_part_retries,
         download_flood_sleep_threshold=args.download_flood_sleep_threshold,
@@ -620,6 +708,11 @@ async def benchmark_actor(
     download_concurrency: int,
     download_media_lanes: int | None,
     download_adaptive_concurrency: bool,
+    download_max_in_flight_bytes: int | None,
+    download_adaptive_part_size: bool,
+    download_max_chunk_size: int,
+    download_read_ahead_bytes: int,
+    download_range_cache_bytes: int,
     upload_request_timeout: float,
     upload_part_retries: int,
     download_request_timeout: float,
@@ -720,7 +813,10 @@ async def benchmark_actor(
         f"download_media_lanes={format_media_lanes(download_media_lanes, download_concurrency)} "
         f"adaptive={download_adaptive_concurrency} "
         f"retries={download_part_retries} flood_sleep_threshold={download_flood_sleep_threshold} "
-        f"chunk_size={download_chunk_size}"
+        f"chunk_size={download_chunk_size} max_chunk_size={download_max_chunk_size} "
+        f"max_in_flight_bytes={download_max_in_flight_bytes} "
+        f"adaptive_part_size={download_adaptive_part_size} "
+        f"read_ahead_bytes={download_read_ahead_bytes} range_cache_bytes={download_range_cache_bytes}"
     )
     download_recorder = TransferRecorder(
         total=size,
@@ -745,6 +841,12 @@ async def benchmark_actor(
             media_lanes=download_media_lanes,
             adaptive_concurrency=download_adaptive_concurrency,
             part_size=download_chunk_size,
+            max_in_flight_bytes=download_max_in_flight_bytes,
+            adaptive_part_size=download_adaptive_part_size,
+            max_part_size=download_max_chunk_size,
+            read_ahead_bytes=download_read_ahead_bytes,
+            range_cache=download_range_cache_bytes > 0,
+            range_cache_max_bytes=download_range_cache_bytes or 64 * 1024 * 1024,
         )
     finally:
         await stop_progress_heartbeat(download_heartbeat)
@@ -991,12 +1093,23 @@ def transfer_counters(
                 metrics, "client.media_lane_drops", lambda attrs: attrs.get("reason") == "close"
             )
         ),
+        byte_window_waits=int(metric_sum(metrics, f"media.{operation}.byte_window_waits")),
+        writer_queue_seconds=metric_sum(metrics, f"media.{operation}.writer_queue_seconds"),
+        writer_write_seconds=metric_sum(metrics, f"media.{operation}.writer_write_seconds"),
+        adaptive_part_size_changes=metric_count(metrics, f"media.{operation}.adaptive_part_size"),
+        range_cache_hits=int(metric_sum(metrics, f"media.{operation}.range_cache_hits")),
+        range_cache_misses=int(metric_sum(metrics, f"media.{operation}.range_cache_misses")),
+        range_cache_deduped=int(metric_sum(metrics, f"media.{operation}.range_cache_deduped")),
         requests_per_s=part_requests / max(duration_s, 1e-9),
     )
 
 
 def metric_sum(metrics: InMemoryMetrics, name: str) -> float:
     return sum(event.value for event in metrics.events if event.name == name)
+
+
+def metric_count(metrics: InMemoryMetrics, name: str) -> int:
+    return sum(1 for event in metrics.events if event.name == name)
 
 
 def metric_sum_where(
@@ -1064,6 +1177,13 @@ def print_transfer(summary: TransferSummary) -> None:
         f"media_lane_drops={summary.counters.media_lane_drops} "
         f"media_lane_drop_skips={summary.counters.media_lane_drop_skips} "
         f"media_lane_closes={summary.counters.media_lane_closes} "
+        f"byte_window_waits={summary.counters.byte_window_waits} "
+        f"writer_queue_seconds={summary.counters.writer_queue_seconds:g} "
+        f"writer_write_seconds={summary.counters.writer_write_seconds:g} "
+        f"adaptive_part_size_changes={summary.counters.adaptive_part_size_changes} "
+        f"range_cache_hits={summary.counters.range_cache_hits} "
+        f"range_cache_misses={summary.counters.range_cache_misses} "
+        f"range_cache_deduped={summary.counters.range_cache_deduped} "
         f"requests_per_s={summary.counters.requests_per_s:.3f}"
     )
 
@@ -1122,6 +1242,11 @@ def print_summary(summary: BenchmarkSummary) -> None:
         f"download_concurrency={summary.download_concurrency} "
         f"download_media_lanes={format_media_lanes(summary.download_media_lanes, summary.download_concurrency)} "
         f"download_adaptive_concurrency={summary.download_adaptive_concurrency} "
+        f"download_max_in_flight_bytes={summary.download_max_in_flight_bytes} "
+        f"download_adaptive_part_size={summary.download_adaptive_part_size} "
+        f"download_max_chunk_size={summary.download_max_chunk_size} "
+        f"download_read_ahead_bytes={summary.download_read_ahead_bytes} "
+        f"download_range_cache_bytes={summary.download_range_cache_bytes} "
         f"download_request_timeout={summary.download_request_timeout:g} download_part_retries={summary.download_part_retries} "
         f"download_flood_sleep_threshold={summary.download_flood_sleep_threshold} "
         f"repeat_count={summary.repeat_count}"

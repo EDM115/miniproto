@@ -28,6 +28,7 @@ from miniproto.invoke import (
     clear_invalid_auth_key,
     decode_rpc_response,
     is_retryable_request,
+    load_session_record,
     should_retry_rpc_error,
     should_sleep_for_flood_wait,
     wrap_raw_request,
@@ -76,6 +77,8 @@ class Client:
         self._sender: RawSender | None = None
         self._sender_factory: SenderFactory | None = None
         self._sender_lock = asyncio.Lock()
+        self._media_pools: dict[tuple[str, int, int], _MediaSenderPool] = {}
+        self._media_pools_lock = asyncio.Lock()
 
     async def __aenter__(self) -> Client:
         await self.connect()
@@ -113,6 +116,7 @@ class Client:
             except BaseException as exc:
                 update_error = exc
             await self._drop_sender()
+            await self._close_media_pools()
             await self._storage.close()
             if update_error is not None:
                 _emit_client_event(
@@ -472,6 +476,7 @@ class Client:
                 async with _MediaInvokeContext(
                     self,
                     _media_lane_count(file_options["media_lanes"], file_options["concurrency"]),
+                    kind="upload",
                 ) as media_invoke:
                     uploaded = await upload_file(
                         media_invoke,
@@ -560,7 +565,9 @@ class Client:
             download_options = dict(options)
             download_options.pop("media_lanes", None)
             async with _MediaInvokeContext(
-                self, _media_lane_count(options["media_lanes"], options["concurrency"])
+                self,
+                _media_lane_count(options["media_lanes"], options["concurrency"]),
+                kind="download",
             ) as media_invoke:
                 result = await download_media_file(
                     media_invoke, media, destination, **download_options
@@ -817,34 +824,71 @@ class Client:
             await sender.disconnect()
             record_metric("client.sender_drops", 1)
 
+    async def _get_media_pool(self, *, kind: str, lane_count: int) -> _MediaSenderPool:
+        dc_id = await self._current_dc_id()
+        key = (kind, dc_id, lane_count)
+        async with self._media_pools_lock:
+            pool = self._media_pools.get(key)
+            if pool is not None:
+                record_metric(
+                    "client.media_lane_pool_reused",
+                    1,
+                    attributes={"kind": kind, "dc_id": dc_id, "lanes": lane_count},
+                )
+                return pool
+            pool = _MediaSenderPool(self, lane_count, kind=kind, dc_id=dc_id)
+            self._media_pools[key] = pool
+            return pool
+
+    async def _current_dc_id(self) -> int:
+        record = load_session_record(await self._storage.load(), self.config.dc_id)
+        return record.dc_id or self.config.dc_id
+
+    async def _close_media_pools(self) -> None:
+        async with self._media_pools_lock:
+            pools = tuple(self._media_pools.values())
+            self._media_pools.clear()
+        if pools:
+            await asyncio.gather(*(pool.close() for pool in pools))
+
 
 class _MediaInvokeContext:
-    def __init__(self, client: Client, lane_count: int) -> None:
+    def __init__(self, client: Client, lane_count: int, *, kind: str) -> None:
         self._client = client
         self._lane_count = lane_count
+        self._kind = kind
         self._pool: _MediaSenderPool | None = None
 
     async def __aenter__(self) -> Callable[..., Awaitable[object]]:
         if self._lane_count <= 0:
             return self._client.invoke
-        self._pool = _MediaSenderPool(self._client, self._lane_count)
+        self._pool = await self._client._get_media_pool(
+            kind=self._kind, lane_count=self._lane_count
+        )
         return self._pool.invoke
 
     async def __aexit__(
         self, exc_type: type[BaseException] | None, exc: BaseException | None, tb: object | None
     ) -> None:
         del exc_type, exc, tb
-        if self._pool is not None:
-            await self._pool.close()
 
 
 class _MediaSenderPool:
-    def __init__(self, client: Client, lane_count: int) -> None:
+    def __init__(self, client: Client, lane_count: int, *, kind: str, dc_id: int) -> None:
         self._client = client
-        self._lanes = tuple(_MediaSenderLane(client, index) for index in range(max(1, lane_count)))
-        self._next_index = 0
+        self._kind = kind
+        self._dc_id = dc_id
+        self._lanes = tuple(
+            _MediaSenderLane(client, index, kind=kind, dc_id=dc_id)
+            for index in range(max(1, lane_count))
+        )
         self._lock = asyncio.Lock()
-        record_metric("client.media_lane_pool_created", 1, attributes={"lanes": len(self._lanes)})
+        self._next_lane_index = 0
+        record_metric(
+            "client.media_lane_pool_created",
+            1,
+            attributes={"kind": self._kind, "dc_id": self._dc_id, "lanes": len(self._lanes)},
+        )
 
     async def invoke(
         self,
@@ -854,32 +898,58 @@ class _MediaSenderPool:
         flood_sleep_threshold: int | None = None,
         retry: bool | None = None,
     ) -> object:
-        lane = await self._next_lane()
-        return await self._client._invoke_via_sender(
-            raw_request,
-            ensure_sender=lane.ensure_sender,
-            drop_sender=lane.drop_sender,
-            request_timeout=request_timeout,
-            flood_sleep_threshold=flood_sleep_threshold,
-            retry=retry,
-        )
+        lane = await self._acquire_lane()
+        try:
+            record_metric(
+                "client.media_lane_requests",
+                1,
+                attributes={"kind": self._kind, "dc_id": self._dc_id, "lane": lane.index},
+            )
+            return await self._client._invoke_via_sender(
+                raw_request,
+                ensure_sender=lane.ensure_sender,
+                drop_sender=lane.drop_sender,
+                request_timeout=request_timeout,
+                flood_sleep_threshold=flood_sleep_threshold,
+                retry=retry,
+            )
+        finally:
+            await self._release_lane(lane)
 
     async def close(self) -> None:
         await asyncio.gather(*(lane.close() for lane in self._lanes))
 
-    async def _next_lane(self) -> _MediaSenderLane:
+    async def _acquire_lane(self) -> _MediaSenderLane:
         async with self._lock:
-            lane = self._lanes[self._next_index]
-            self._next_index = (self._next_index + 1) % len(self._lanes)
+            min_active = min(lane.active_requests for lane in self._lanes)
+            lane = self._lanes[self._next_lane_index]
+            for offset in range(len(self._lanes)):
+                candidate = self._lanes[(self._next_lane_index + offset) % len(self._lanes)]
+                if candidate.active_requests == min_active:
+                    lane = candidate
+                    break
+            self._next_lane_index = (lane.index + 1) % len(self._lanes)
+            lane.active_requests += 1
             return lane
+
+    async def _release_lane(self, lane: _MediaSenderLane) -> None:
+        async with self._lock:
+            lane.active_requests = max(0, lane.active_requests - 1)
 
 
 class _MediaSenderLane:
-    def __init__(self, client: Client, index: int) -> None:
+    def __init__(self, client: Client, index: int, *, kind: str, dc_id: int) -> None:
         self._client = client
         self._index = index
+        self._kind = kind
+        self._dc_id = dc_id
         self._sender: RawSender | None = None
         self._lock = asyncio.Lock()
+        self.active_requests = 0
+
+    @property
+    def index(self) -> int:
+        return self._index
 
     async def ensure_sender(self) -> RawSender:
         sender = self._sender
@@ -895,7 +965,12 @@ class _MediaSenderLane:
                 record_metric(
                     "client.media_lane_drops",
                     1,
-                    attributes={"lane": self._index, "reason": "disconnected"},
+                    attributes={
+                        "kind": self._kind,
+                        "dc_id": self._dc_id,
+                        "lane": self._index,
+                        "reason": "disconnected",
+                    },
                 )
             self._sender = await build_sender_from_session(
                 self._client.config,
@@ -903,7 +978,11 @@ class _MediaSenderLane:
                 self._client._sender_factory,
                 fresh_session_id=True,
             )
-            record_metric("client.media_lane_builds", 1, attributes={"lane": self._index})
+            record_metric(
+                "client.media_lane_builds",
+                1,
+                attributes={"kind": self._kind, "dc_id": self._dc_id, "lane": self._index},
+            )
             return self._sender
 
     async def drop_sender(self, expected: RawSender | None = None, *, reason: str = "drop") -> None:
@@ -913,7 +992,12 @@ class _MediaSenderLane:
                 record_metric(
                     "client.media_lane_drop_skipped",
                     1,
-                    attributes={"lane": self._index, "reason": reason},
+                    attributes={
+                        "kind": self._kind,
+                        "dc_id": self._dc_id,
+                        "lane": self._index,
+                        "reason": reason,
+                    },
                 )
                 sender = expected
             else:
@@ -921,7 +1005,14 @@ class _MediaSenderLane:
         if sender is not None:
             await sender.disconnect()
             record_metric(
-                "client.media_lane_drops", 1, attributes={"lane": self._index, "reason": reason}
+                "client.media_lane_drops",
+                1,
+                attributes={
+                    "kind": self._kind,
+                    "dc_id": self._dc_id,
+                    "lane": self._index,
+                    "reason": reason,
+                },
             )
 
     async def close(self) -> None:
@@ -1019,6 +1110,14 @@ _DOWNLOAD_MEDIA_OPTION_DEFAULTS: dict[str, object] = {
     "max_buffer_size": None,
     "concurrency": 1,
     "adaptive_concurrency": True,
+    "max_in_flight_bytes": None,
+    "adaptive_part_size": True,
+    "max_part_size": MAX_DOWNLOAD_CHUNK_SIZE,
+    "range_cache": None,
+    "range_cache_key": None,
+    "range_cache_max_bytes": None,
+    "read_ahead_bytes": 0,
+    "file_reference_refresher": None,
     "media_lanes": None,
 }
 
@@ -1058,6 +1157,15 @@ def _download_media_options(kwargs: dict[str, Any]) -> dict[str, Any]:
     if options["limit"] is not None:
         options["limit"] = int(options["limit"])
     options["part_size"] = int(options["part_size"])
+    if options["max_in_flight_bytes"] is not None:
+        options["max_in_flight_bytes"] = int(options["max_in_flight_bytes"])
+    options["adaptive_part_size"] = bool(options["adaptive_part_size"])
+    options["max_part_size"] = int(options["max_part_size"])
+    if options["range_cache_max_bytes"] is None:
+        options["range_cache_max_bytes"] = 64 * 1024 * 1024
+    else:
+        options["range_cache_max_bytes"] = int(options["range_cache_max_bytes"])
+    options["read_ahead_bytes"] = int(options["read_ahead_bytes"])
     options["max_retries"] = int(options["max_retries"])
     if options["flood_sleep_threshold"] is not None:
         options["flood_sleep_threshold"] = int(options["flood_sleep_threshold"])
