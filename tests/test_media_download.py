@@ -26,7 +26,7 @@ from miniproto.media import (
     download_file,
     download_media,
 )
-from miniproto.observability import InMemoryMetrics, set_metrics_sink
+from miniproto.observability import InMemoryMetrics, get_metrics_sink, set_metrics_sink
 from miniproto.raw import functions, types
 
 AUTH_KEY = b"m" * 256
@@ -522,6 +522,34 @@ def test_adaptive_part_sizer_grows_and_settles_on_regression() -> None:
     assert sizer.current_size == 8
 
 
+def test_download_file_sequential_adaptive_part_size_grows(tmp_path) -> None:
+    async def scenario() -> None:
+        payload = b"a" * (media_download.DEFAULT_ADAPTIVE_PART_SIZE_MIN_BYTES + 4096)
+        target = tmp_path / "adaptive-sequential.bin"
+        invoker = OffsetInvoker(payload)
+        metrics = InMemoryMetrics()
+        previous = get_metrics_sink()
+        set_metrics_sink(metrics)
+        try:
+            result = await download_file(
+                invoker,
+                document_location(),
+                target,
+                limit=len(payload),
+                part_size=1024,
+                max_part_size=media_download.MAX_DOWNLOAD_CHUNK_SIZE,
+                adaptive_part_size=True,
+            )
+        finally:
+            set_metrics_sink(previous)
+        assert result.bytes_downloaded == len(payload)
+        assert target.stat().st_size == len(payload)
+        assert max(request.limit for request in invoker.requests) > 1024
+        assert any(event.name == "media.download.adaptive_part_size" for event in metrics.events)
+
+    run(scenario())
+
+
 def test_download_file_handles_cdn_redirect_reupload_and_decrypt() -> None:
     async def scenario() -> None:
         key = bytes(range(32))
@@ -719,7 +747,7 @@ def test_client_download_media_uses_dedicated_media_lanes() -> None:
         client._sender_factory = sender_factory
         await client.connect()
         result = await client.download_media(
-            media, part_size=1024, concurrency=2, adaptive_concurrency=False
+            media, part_size=1024, concurrency=2, media_lanes=2, adaptive_concurrency=False
         )
         assert result.data == b"a" * 1024 + b"b" * 1024
         assert built_senders == lane_senders
@@ -755,10 +783,10 @@ def test_client_download_media_reuses_warm_media_lanes_until_disconnect() -> Non
         client._sender_factory = sender_factory
         await client.connect()
         first = await client.download_media(
-            media, part_size=1024, concurrency=2, adaptive_concurrency=False
+            media, part_size=1024, concurrency=2, media_lanes=2, adaptive_concurrency=False
         )
         second = await client.download_media(
-            media, part_size=1024, concurrency=2, adaptive_concurrency=False
+            media, part_size=1024, concurrency=2, media_lanes=2, adaptive_concurrency=False
         )
         assert first.data == b"a" * 1024 + b"b" * 1024
         assert second.data == b"c" * 1024 + b"d" * 1024

@@ -1092,7 +1092,7 @@ _SEND_FILE_OPTION_DEFAULTS: dict[str, object] = {
     "request_timeout": None,
     "flood_sleep_threshold": None,
     "retry": None,
-    "media_lanes": None,
+    "media_lanes": 2,
 }
 
 _DOWNLOAD_MEDIA_OPTION_DEFAULTS: dict[str, object] = {
@@ -1118,7 +1118,7 @@ _DOWNLOAD_MEDIA_OPTION_DEFAULTS: dict[str, object] = {
     "range_cache_max_bytes": None,
     "read_ahead_bytes": 0,
     "file_reference_refresher": None,
-    "media_lanes": None,
+    "media_lanes": 1,
 }
 
 

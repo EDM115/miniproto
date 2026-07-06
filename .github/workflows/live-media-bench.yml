@@ -51,17 +51,17 @@ on:
         required: true
         default: "8"
       upload_media_lanes:
-        description: "Upload MTProto sender lanes; empty follows upload_concurrency, 0 uses the legacy main sender. Compare repeated empty/8/0 runs before changing defaults"
+        description: "Upload MTProto sender lanes; 2 was fastest in the July 2026 DC4 VPS run, 0 uses the legacy main sender"
         required: false
-        default: ""
+        default: "2"
       download_concurrency:
         description: "Maximum concurrent download part requests; default 1 avoids DC4 flood/disconnect stalls"
         required: true
         default: "1"
       download_media_lanes:
-        description: "Download MTProto sender lanes; empty follows download_concurrency, 0 uses the legacy main sender"
+        description: "Download MTProto sender lanes; 1 was most stable in the July 2026 DC4 VPS run, 0 uses the legacy main sender"
         required: false
-        default: ""
+        default: "1"
       download_adaptive_concurrency:
         description: "Adapt download concurrency after flood waits/disconnects"
         required: true

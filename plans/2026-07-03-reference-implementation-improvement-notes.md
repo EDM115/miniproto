@@ -27,6 +27,7 @@ Method: Pyroblack, Telethon, grammers, mtcute and Web K were cloned into tempora
 - Range-style downloads now have an opt-in `DownloadRangeCache`, file-ID-derived cache keys in `download_media()`, in-flight range dedupe, and `read_ahead_bytes` prefetching for streaming experiments.
 - Expired file-reference recovery now has a low-level `file_reference_refresher` hook with deduplication by old reference bytes, preventing concurrent stale chunks from stampeding a refresh path.
 - Large downloads now have adaptive part sizing: miniproto can probe larger `upload.getFile` chunk sizes up to the Telegram 1 MiB ceiling and settle back to the best observed size when a larger chunk regresses.
+- A 2026-07-06 user DC4 VPS benchmark made two defaults more concrete: upload lanes default to 2 because 2 lanes reached about 12.35 MiB/s versus about 8.78 MiB/s on the legacy main sender, while 4 lanes added churn without improving total time; download lanes default to 1 because 2/4 lane full-file downloads added flood waits/reconnect churn and did not beat the single-lane result. Range cache/read-ahead remains opt-in because it was much slower for full-file downloads in that run and is meant for repeated ranges/streaming.
 
 ## Priority Backlog
 

@@ -169,15 +169,12 @@ def test_download_concurrency_is_independent_from_upload_concurrency() -> None:
     assert overridden.download_concurrency == 6
 
 
-def test_media_lanes_are_directional_and_optional() -> None:
+def test_media_lanes_are_directional_and_use_measured_defaults() -> None:
     defaults = parse_args(["--actor", "user"], {})
-    assert defaults.upload_media_lanes is None
-    assert defaults.download_media_lanes is None
-    assert format_media_lanes(defaults.upload_media_lanes, defaults.upload_concurrency) == "auto(8)"
-    assert (
-        format_media_lanes(defaults.download_media_lanes, defaults.download_concurrency)
-        == "auto(1)"
-    )
+    assert defaults.upload_media_lanes == 2
+    assert defaults.download_media_lanes == 1
+    assert format_media_lanes(defaults.upload_media_lanes, defaults.upload_concurrency) == "2"
+    assert format_media_lanes(defaults.download_media_lanes, defaults.download_concurrency) == "1"
     specific = parse_args(
         ["--actor", "user"],
         {

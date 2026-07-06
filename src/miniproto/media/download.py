@@ -261,6 +261,8 @@ async def download_file(
                 request_timeout=request_timeout,
                 max_retries=max_retries,
                 flood_sleep_threshold=flood_sleep_threshold,
+                adaptive_part_size=adaptive_part_size,
+                max_part_size=max_part_size,
                 range_cache=resolved_range_cache,
                 range_cache_key=range_cache_key,
                 read_ahead_bytes=read_ahead_bytes,
@@ -336,6 +338,8 @@ async def _download_file_sequential(
     request_timeout: float | None,
     max_retries: int,
     flood_sleep_threshold: int | None,
+    adaptive_part_size: bool,
+    max_part_size: int,
     range_cache: DownloadRangeCache | None,
     range_cache_key: str | None,
     read_ahead_bytes: int,
@@ -346,11 +350,21 @@ async def _download_file_sequential(
     current_offset = offset + destination_handle.existing_bytes
     downloaded = destination_handle.existing_bytes
     remaining = None if limit is None else max(0, limit - destination_handle.existing_bytes)
-    del total_size
     callback_total = limit
+    part_sizer = _AdaptivePartSizer(
+        initial_size=part_size,
+        max_size=max_part_size,
+        total_bytes=limit if limit is not None else total_size,
+        enabled=adaptive_part_size,
+    )
     try:
         while remaining is None or remaining > 0:
-            request_limit = part_size if remaining is None else min(part_size, remaining)
+            request_limit = (
+                part_sizer.current_size
+                if remaining is None
+                else min(part_sizer.current_size, remaining)
+            )
+            started = time.perf_counter()
             payload = await _download_part_cached(
                 invoke,
                 location_state=location_state,
@@ -370,6 +384,11 @@ async def _download_file_sequential(
                 payload = payload[:remaining]
             if not payload:
                 break
+            part_sizer.on_success(
+                requested_size=request_limit,
+                received_size=len(payload),
+                duration_s=max(time.perf_counter() - started, 1e-9),
+            )
             destination_handle.handle.write(payload)
             downloaded += len(payload)
             current_offset += len(payload)
@@ -387,7 +406,7 @@ async def _download_file_sequential(
                 range_cache=range_cache,
                 range_cache_key=range_cache_key,
                 start_offset=current_offset,
-                part_size=part_size,
+                part_size=part_sizer.current_size,
                 read_ahead_bytes=read_ahead_bytes,
                 hard_end=None,
                 reference_deduper=reference_deduper,

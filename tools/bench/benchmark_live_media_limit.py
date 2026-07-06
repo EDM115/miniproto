@@ -42,7 +42,9 @@ TELEGRAM_DEFAULT_UPLOAD_PARTS = 4000
 TELEGRAM_DEFAULT_LIMIT_BYTES = TELEGRAM_DEFAULT_UPLOAD_PARTS * DEFAULT_CHUNK_SIZE
 BENCH_GUARD_ENV = "MINIPROTO_LIVE_BENCH"
 DEFAULT_UPLOAD_REQUEST_TIMEOUT = 45.0
+DEFAULT_UPLOAD_MEDIA_LANES = 2
 DEFAULT_DOWNLOAD_CONCURRENCY = 1
+DEFAULT_DOWNLOAD_MEDIA_LANES = 1
 
 Actor = Literal["user", "bot"]
 Operation = Literal["both", "upload", "download"]
@@ -363,12 +365,14 @@ def parse_args(
         default=argparse.SUPPRESS,
         help=argparse.SUPPRESS,
     )
-    upload_media_lanes = env_value(values, "MINIPROTO_LIVE_BENCH_UPLOAD_MEDIA_LANES")
+    upload_media_lanes = env_value(
+        values, "MINIPROTO_LIVE_BENCH_UPLOAD_MEDIA_LANES", str(DEFAULT_UPLOAD_MEDIA_LANES)
+    )
     parser.add_argument(
         "--upload-media-lanes",
         type=int,
         default=int(upload_media_lanes) if upload_media_lanes else None,
-        help="MTProto sender lanes for upload parts; default follows --upload-concurrency, set 0 for the legacy main-sender path",
+        help=f"MTProto sender lanes for upload parts; defaults to {DEFAULT_UPLOAD_MEDIA_LANES} from live DC4 measurements, set 0 for the legacy main-sender path",
     )
     parser.add_argument(
         "--download-concurrency",
@@ -383,12 +387,14 @@ def parse_args(
         ),
         help="maximum concurrent upload.getFile requests for known-size downloads; defaults to 1 because Telegram flood waits can erase concurrency gains",
     )
-    download_media_lanes = env_value(values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_MEDIA_LANES")
+    download_media_lanes = env_value(
+        values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_MEDIA_LANES", str(DEFAULT_DOWNLOAD_MEDIA_LANES)
+    )
     parser.add_argument(
         "--download-media-lanes",
         type=int,
         default=int(download_media_lanes) if download_media_lanes else None,
-        help="MTProto sender lanes for download parts; default follows --download-concurrency, set 0 for the legacy main-sender path",
+        help=f"MTProto sender lanes for download parts; defaults to {DEFAULT_DOWNLOAD_MEDIA_LANES} from live DC4 measurements, set 0 for the legacy main-sender path",
     )
     download_adaptive_default = env_bool(
         values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_ADAPTIVE_CONCURRENCY", default=True
