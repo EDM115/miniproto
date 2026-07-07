@@ -42,6 +42,8 @@ DEFAULT_ACK_MAX_DELAY = 10.0
 DEFAULT_ACK_FLUSH_LIMIT = 8192
 DEFAULT_PING_INTERVAL = 45.0
 DEFAULT_INCOMING_QUEUE_SIZE = 256
+DEFAULT_RECONNECT_COOLDOWN = 1.0
+RECONNECT_FLAP_WINDOW = 10.0
 
 _LOGGER = get_logger("connection.sender")
 
@@ -52,6 +54,7 @@ class PendingRequest:
     content_related: bool
     future: asyncio.Future[object]
     attempts: int = 0
+    transport: Transport | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -77,6 +80,7 @@ class MTProtoSender:
         max_pending_rpcs: int | None = None,
         incoming_queue_size: int = DEFAULT_INCOMING_QUEUE_SIZE,
         on_salt_change: Callable[[int], None] | None = None,
+        reconnect_cooldown: float = DEFAULT_RECONNECT_COOLDOWN,
     ) -> None:
         self.endpoint = endpoint
         self.transport_config = transport_config
@@ -94,6 +98,8 @@ class MTProtoSender:
         self._ack_max_delay = max(0.05, ack_max_delay)
         self._keepalive_tick = max(0.05, min(5.0, self._ping_interval / 4, self._ack_max_delay / 2))
         self._max_pending_rpcs = max_pending_rpcs
+        self._reconnect_cooldown = max(0.0, reconnect_cooldown)
+        self._last_connect_time = float("-inf")
         self._transport: Transport | None = None
         self._connect_lock = asyncio.Lock()
         self._send_lock = asyncio.Lock()
@@ -142,6 +148,7 @@ class MTProtoSender:
                 self.endpoint, self.transport_config, connector=self._connector
             )
             self.connection_initialized = False
+            self._last_connect_time = time.monotonic()
             self._receive_task = asyncio.create_task(self._receive_loop())
             self._keepalive_task = asyncio.create_task(self._keepalive_loop())
         _emit_sender_event(
@@ -276,7 +283,9 @@ class MTProtoSender:
         record_metric("sender.acks_flushed", len(msg_ids))
         return msg_id
 
-    async def _send_pending(self, pending: PendingRequest) -> int:
+    async def _send_pending(
+        self, pending: PendingRequest, *, fail_future_on_error: bool = True
+    ) -> int:
         async with self._send_lock:
             msg_id = self.state.next_msg_id()
             seq_no = self.state.next_seq_no(content_related=pending.content_related)
@@ -293,15 +302,15 @@ class MTProtoSender:
             if not pending.future.done():
                 self._pending[msg_id] = pending
             try:
-                await self._send_payload(payload)
+                pending.transport = await self._send_payload(payload)
             except BaseException:
                 self._pending.pop(msg_id, None)
-                if not pending.future.done():
+                if fail_future_on_error and not pending.future.done():
                     pending.future.cancel()
                 raise
             return msg_id
 
-    async def _send_payload(self, payload: bytes) -> None:
+    async def _send_payload(self, payload: bytes) -> Transport:
         transport = self._transport
         if transport is None or not transport.is_connected:
             await self._reconnect(failed_transport=transport)
@@ -313,9 +322,12 @@ class MTProtoSender:
         except TransportError:
             record_metric("sender.send_transport_errors", 1)
             await self._reconnect(failed_transport=transport)
-            if self._transport is None:
+            replacement = self._transport
+            if replacement is None:
                 raise
-            await self._transport.send(payload)
+            await replacement.send(payload)
+            return replacement
+        return transport
 
     async def _receive_loop(self) -> None:
         while not self._closing:
@@ -338,12 +350,16 @@ class MTProtoSender:
                     await self._flush_acks_safely()
             except asyncio.CancelledError:
                 raise
-            except TransportError as exc:
+            except TransportError:
                 if self._closing:
                     return
+                # Telegram media DCs routinely close connections after serving
+                # responses when throttling; treat it as routine: reconnect (paced)
+                # and transparently re-send in-flight requests, like the reference
+                # clients (Telethon re-enqueues, TDLib resends via msgs_state_info).
                 record_metric("sender.receive_transport_errors", 1)
-                self._fail_pending(exc)
                 await self._reconnect(failed_transport=transport)
+                await self._resend_pending()
             except Exception as exc:
                 _emit_sender_event(
                     "sender.receive_loop",
@@ -489,6 +505,36 @@ class MTProtoSender:
         with suppress(asyncio.CancelledError):
             await keepalive_task
 
+    async def _resend_pending(self) -> None:
+        """Re-send in-flight requests that were sent on a now-dead transport.
+
+        Requests keep their original future and get a fresh msg_id, so callers never
+        observe a routine server-side connection close (same behavior as Telethon's
+        pending-state re-enqueue and TDLib's query resend).
+        """
+        current = self._transport
+        stale = [
+            (msg_id, pending)
+            for msg_id, pending in self._pending.items()
+            if pending.transport is not current
+        ]
+        for msg_id, pending in stale:
+            self._pending.pop(msg_id, None)
+            if pending.future.done():
+                continue
+            if pending.attempts > self._reconnect_attempts:
+                # "connection" keeps this classified as transient by the media layer.
+                pending.future.set_exception(TransportError("connection retry limit exceeded"))
+                continue
+            try:
+                await self._send_pending(pending, fail_future_on_error=False)
+                record_metric("sender.pending_resends", 1)
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                if not pending.future.done():
+                    pending.future.set_exception(exc)
+
     async def _retry_bad_message(self, bad_msg_id: int) -> None:
         pending = self._pending.pop(bad_msg_id, None)
         if pending is None or pending.future.done():
@@ -533,6 +579,18 @@ class MTProtoSender:
                 # and the receive loop (observed live as a TransportClosed storm).
                 record_metric("sender.reconnect_skipped", 1)
                 return
+            if (
+                self._reconnect_cooldown > 0
+                and time.monotonic() - self._last_connect_time < RECONNECT_FLAP_WINDOW
+            ):
+                # The previous connection died young: Telegram media DCs shed
+                # connections when throttling, and instant zero-backoff reconnects
+                # keep the account in that regime. Pace like MTKruto (3 s if the
+                # last connect was <10 s ago) and TDLib (connect flood control).
+                record_metric("sender.reconnect_cooldowns", 1)
+                await asyncio.sleep(self._reconnect_cooldown)
+                if self._closing:
+                    return
             await self._close_transport()
             delay = self.transport_config.reconnect_backoff_initial
             last_error: Exception | None = None
@@ -542,6 +600,7 @@ class MTProtoSender:
                         self.endpoint, self.transport_config, connector=self._connector
                     )
                     self.connection_initialized = False
+                    self._last_connect_time = time.monotonic()
                     record_metric("sender.reconnects", 1, attributes={"attempts": attempt + 1})
                     _emit_sender_event(
                         "sender.reconnect",

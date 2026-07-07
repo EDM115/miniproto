@@ -287,7 +287,7 @@ def test_sender_handles_container_ack_and_rpc_result() -> None:
     event_loop.run(run())
 
 
-def test_sender_transport_receive_timeout_fails_pending_requests() -> None:
+def test_sender_transport_receive_timeout_resends_then_fails_after_retry_limit() -> None:
     async def run() -> None:
         async def handle(message):
             del message
@@ -305,10 +305,66 @@ def test_sender_transport_receive_timeout_fails_pending_requests() -> None:
                 server.endpoint,
                 config,
                 MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID),
+                reconnect_cooldown=0,
             )
-            with pytest.raises(TimeoutError):
-                await sender.request(b"request", request_timeout=1.0)
+            # In-flight requests are transparently re-sent across reconnects; only
+            # after the retry limit is exhausted does the caller see the failure.
+            with pytest.raises(TransportError, match="retry limit"):
+                await sender.request(b"request", request_timeout=5.0)
             assert sender.sender_state.pending_count == 0
+            await sender.disconnect()
+
+    event_loop.run(run())
+
+
+def test_sender_resends_pending_requests_when_server_closes_connection() -> None:
+    async def run() -> None:
+        connections = 0
+
+        def handle(message):
+            nonlocal connections
+            connections += 1
+            if connections == 1:
+                # Raising makes the fake server drop the TCP connection, mimicking
+                # Telegram's routine close-after-response load shedding.
+                raise ValueError("simulated server-side close")
+            return RpcResult(req_msg_id=message.msg_id, result=b"ok")
+
+        config = TransportConfig(mode="tcp_intermediate", read_timeout=2.0)
+        state = MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID)
+        async with FakeMTProtoServer(AUTH_KEY, config, handle) as server:
+            sender = MTProtoSender(server.endpoint, config, state, reconnect_cooldown=0)
+            # The caller never observes the close: the request is re-sent on the
+            # new connection with a fresh msg_id and the same future.
+            assert await sender.request(b"req1", request_timeout=5.0) == b"ok"
+            assert connections == 2
+            assert sender.sender_state.pending_count == 0
+            await sender.disconnect()
+
+    event_loop.run(run())
+
+
+def test_sender_paces_reconnects_when_connections_flap() -> None:
+    async def run() -> None:
+        connections = 0
+
+        def handle(message):
+            nonlocal connections
+            connections += 1
+            if connections == 1:
+                raise ValueError("simulated server-side close")
+            return RpcResult(req_msg_id=message.msg_id, result=b"ok")
+
+        config = TransportConfig(mode="tcp_intermediate", read_timeout=2.0)
+        state = MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID)
+        async with FakeMTProtoServer(AUTH_KEY, config, handle) as server:
+            sender = MTProtoSender(server.endpoint, config, state, reconnect_cooldown=0.2)
+            loop = asyncio.get_running_loop()
+            started = loop.time()
+            assert await sender.request(b"req1", request_timeout=5.0) == b"ok"
+            elapsed = loop.time() - started
+            # The reconnect after a young connection dies must wait out the cooldown.
+            assert elapsed >= 0.2
             await sender.disconnect()
 
     event_loop.run(run())

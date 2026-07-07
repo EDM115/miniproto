@@ -188,7 +188,11 @@ class StreamTransportBase:
         started = time.perf_counter()
         if not self.is_connected or self._reader is None:
             _emit_transport_event(
-                "transport.recv", started, outcome="error", error_type="TransportClosed"
+                "transport.recv",
+                started,
+                outcome="error",
+                error_type="TransportClosed",
+                level=logging.INFO,
             )
             raise TransportClosed("transport is not connected")
         try:
@@ -196,19 +200,34 @@ class StreamTransportBase:
                 payload = await self.read_packet(self._reader)
         except TimeoutError as exc:
             _emit_transport_event(
-                "transport.recv", started, outcome="error", error_type="TransportTimeout"
+                "transport.recv",
+                started,
+                outcome="error",
+                error_type="TransportTimeout",
+                level=logging.WARNING,
             )
             raise TransportTimeout("transport read timed out") from exc
         except asyncio.IncompleteReadError as exc:
+            # Telegram routinely closes media connections as a throttling/load-shedding
+            # signal; a server-side EOF is normal operation, not an error worth ERROR
+            # logs (Telethon logs INFO, Pyrogram nothing, TDLib INFO).
             self._closed = True
             _emit_transport_event(
-                "transport.recv", started, outcome="error", error_type="TransportClosed"
+                "transport.recv",
+                started,
+                outcome="error",
+                error_type="TransportClosed",
+                level=logging.INFO,
             )
             raise TransportClosed("transport closed while reading") from exc
         except OSError as exc:
             self._closed = True
             _emit_transport_event(
-                "transport.recv", started, outcome="error", error_type=type(exc).__name__
+                "transport.recv",
+                started,
+                outcome="error",
+                error_type=type(exc).__name__,
+                level=logging.INFO,
             )
             raise TransportClosed(f"transport read failed: {exc}") from exc
         if len(payload) > self.config.max_payload_size:
@@ -275,7 +294,9 @@ async def read_exactly_bounded(
     return await reader.readexactly(length)
 
 
-def _emit_transport_event(event: str, started: float, *, outcome: str, **fields: object) -> None:
+def _emit_transport_event(
+    event: str, started: float, *, outcome: str, level: int | None = None, **fields: object
+) -> None:
     duration_ms = (time.perf_counter() - started) * 1000
     payload_bytes = fields.get("payload_bytes")
     if isinstance(payload_bytes, int):
@@ -284,9 +305,11 @@ def _emit_transport_event(event: str, started: float, *, outcome: str, **fields:
         )
         record_metric(metric_name, payload_bytes, unit="bytes", attributes={"outcome": outcome})
     record_metric(f"{event}.duration", duration_ms, unit="ms", attributes={"outcome": outcome})
+    if level is None:
+        level = logging.ERROR if outcome == "error" else logging.DEBUG
     emit_event(
         _LOGGER,
-        logging.ERROR if outcome == "error" else logging.DEBUG,
+        level,
         event,
         outcome=outcome,
         duration_ms=duration_ms,
