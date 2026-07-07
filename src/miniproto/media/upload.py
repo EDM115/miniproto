@@ -7,6 +7,7 @@ import io
 import logging
 import math
 import os
+import random
 import secrets
 import tempfile
 import time
@@ -31,6 +32,11 @@ from miniproto.raw import functions, types
 DEFAULT_CHUNK_SIZE = 512 * 1024
 BIG_FILE_THRESHOLD = 10 * 1024 * 1024
 DEFAULT_UPLOAD_FLOOD_SLEEP_THRESHOLD = 30
+# Floods within the threshold are server pacing and retry without consuming
+# the transient-failure budget; this cap only bounds pathological storms.
+MAX_FLOOD_RETRIES_PER_PART = 16
+_MIN_FLOOD_SLEEP_S = 1.0
+_FLOOD_SLEEP_JITTER_S = 1.0
 # Stale parts occupying a lane for the global 30 s hurt upload tails; 45 s is
 # the live-bench default that sustained 15-16 MiB/s uploads on DC4.
 DEFAULT_UPLOAD_PART_TIMEOUT = 45.0
@@ -393,46 +399,68 @@ async def _save_part(
         )
     else:
         request = functions.UploadSaveFilePart(file_id=file_id, file_part=part_index, bytes=payload)
-    for attempt in range(max_retries + 1):
+    failures = 0
+    flood_retries = 0
+    while True:
         try:
             record_metric("media.upload.part_requests", 1, attributes={"big": big})
             result = await invoke(
                 request, request_timeout=request_timeout, retry=False, flood_sleep_threshold=0
             )
         except Exception as exc:
-            if attempt >= max_retries or not _is_transient_upload_error(
-                exc, flood_sleep_threshold=flood_sleep_threshold
-            ):
+            if not _is_transient_upload_error(exc, flood_sleep_threshold=flood_sleep_threshold):
                 raise
+            if isinstance(exc, FloodWait):
+                # Server pacing, not a failure: floods never consume the
+                # transient retry budget (one flood used to abort a 2000 MiB
+                # upload at 99%); a generous separate cap bounds storms.
+                flood_retries += 1
+                if flood_retries > MAX_FLOOD_RETRIES_PER_PART:
+                    record_metric("media.upload.flood_retry_budget_exhausted", 1)
+                    raise
+                attempt = flood_retries
+            else:
+                failures += 1
+                if failures > max_retries:
+                    raise
+                attempt = failures
             _emit_part_retry(
                 part_index=part_index,
                 total_parts=total_parts,
-                attempt=attempt + 1,
+                attempt=attempt,
                 max_retries=max_retries,
                 big=big,
                 error_type=type(exc).__name__,
                 flood_wait_seconds=exc.seconds if isinstance(exc, FloodWait) else None,
             )
-            await _sleep_before_retry(exc, attempt, big=big)
+            await _sleep_before_retry(exc, failures, big=big)
             continue
         if _is_true(result):
             return
-        if attempt >= max_retries:
+        failures += 1
+        if failures > max_retries:
             break
         _emit_part_retry(
             part_index=part_index,
             total_parts=total_parts,
-            attempt=attempt + 1,
+            attempt=failures,
             max_retries=max_retries,
             big=big,
             error_type="BoolFalse",
         )
-        await _sleep_before_retry(None, attempt, big=big)
+        await _sleep_before_retry(None, failures, big=big)
     raise MediaUploadError(f"Telegram did not accept upload part {part_index}")
 
 
 async def _sleep_before_retry(exc: Exception | None, attempt: int, *, big: bool) -> None:
-    delay = float(exc.seconds) if isinstance(exc, FloodWait) else backoff_delay(attempt)
+    if isinstance(exc, FloodWait):
+        # Floor + jitter: instant retries of FLOOD_WAIT_0/1 re-trigger the
+        # flood, and parts flooded together must not retry in lockstep.
+        delay = max(float(exc.seconds), _MIN_FLOOD_SLEEP_S) + random.uniform(  # noqa: S311
+            0.0, _FLOOD_SLEEP_JITTER_S
+        )
+    else:
+        delay = backoff_delay(attempt)
     record_metric("media.upload.retry_sleep_seconds", delay, unit="s", attributes={"big": big})
     await asyncio.sleep(delay)
 

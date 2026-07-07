@@ -244,6 +244,20 @@ def test_upload_file_sleeps_and_retries_flood_waits_within_threshold() -> None:
     run(scenario())
 
 
+def test_upload_file_floods_do_not_consume_the_transient_retry_budget() -> None:
+    async def scenario() -> None:
+        # 4 consecutive floods on one part with max_retries=1: server pacing
+        # must not abort the upload (one flood used to kill uploads at 99%).
+        invoker = FakeInvoker(
+            [FloodWait(0), FloodWait(0), FloodWait(0), FloodWait(0), types.BoolTrue()]
+        )
+        result = await upload_file(invoker, b"abc", part_size=1024, max_retries=1, file_id=9)
+        assert result.size == 3
+        assert [request.file_part for request in invoker.requests] == [0, 0, 0, 0, 0]
+
+    run(scenario())
+
+
 def test_upload_file_aborts_on_flood_wait_beyond_threshold() -> None:
     async def scenario() -> None:
         invoker = FakeInvoker([FloodWait(60)])

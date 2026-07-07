@@ -761,6 +761,10 @@ class Client:
                     attempts=attempts + 1,
                     retryable=retryable,
                     error_type=type(exc).__name__,
+                    # threshold == 0 means the caller (media retry layer)
+                    # explicitly handles floods itself: expected control flow,
+                    # not an error worth one ERROR line per flood.
+                    level=logging.INFO if threshold == 0 else None,
                 )
                 raise
             except DatacenterMigration as exc:
@@ -1731,6 +1735,7 @@ def _emit_rpc_event(
     attempts: int,
     retryable: bool,
     error_type: str | None = None,
+    level: int | None = None,
 ) -> None:
     duration_ms = (time.perf_counter() - started) * 1000
     record_metric(
@@ -1743,9 +1748,11 @@ def _emit_rpc_event(
         record_metric(
             "rpc.errors", 1, attributes={"request": request, "error_type": error_type or "unknown"}
         )
+    if level is None:
+        level = logging.ERROR if outcome == "error" else logging.DEBUG
     emit_event(
         _LOGGER,
-        logging.ERROR if outcome == "error" else logging.DEBUG,
+        level,
         "rpc.invoke",
         outcome=outcome,
         request=request,

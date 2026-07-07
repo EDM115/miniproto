@@ -491,7 +491,7 @@ def test_download_file_concurrent_retries_transient_chunk_failure(tmp_path) -> N
     run(scenario())
 
 
-def test_download_file_flood_wait_releases_window_without_throttling(tmp_path) -> None:
+def test_download_file_flood_wait_does_not_reduce_concurrency(tmp_path) -> None:
     async def scenario() -> None:
         payload = bytes(range(256)) * 32  # 8 KiB
         target = tmp_path / "adaptive.bin"
@@ -514,18 +514,54 @@ def test_download_file_flood_wait_releases_window_without_throttling(tmp_path) -
             set_metrics_sink(None)
         assert target.read_bytes() == payload
         assert result.bytes_downloaded == len(payload)
-        # FLOOD_WAIT is per-request pacing: the sleeping task hands its budget
-        # back to the window and the concurrency limit stays untouched.
-        releases = [
-            event
-            for event in metrics.events
-            if event.name == "media.download.flood_capacity_releases"
-        ]
-        assert releases
+        # FLOOD_WAIT is per-request pacing: the flooded request just sleeps and
+        # retries while the concurrency limit stays untouched.
         throttle_events = [
             event for event in metrics.events if event.name == "media.download.adaptive_throttle"
         ]
         assert all(event.value >= 4 for event in throttle_events)
+
+    run(scenario())
+
+
+def test_download_file_floods_do_not_consume_the_transient_retry_budget(tmp_path) -> None:
+    async def scenario() -> None:
+        payload = bytes(range(256)) * 8  # 2 KiB
+        target = tmp_path / "flood-budget.bin"
+        floods_remaining = [4]
+
+        @dataclass(slots=True)
+        class RepeatFloodInvoker:
+            requests: list[Any] = field(default_factory=list)
+
+            async def __call__(self, request: object, **kwargs: object) -> object:
+                del kwargs
+                self.requests.append(request)
+                assert isinstance(request, functions.UploadGetFile)
+                if request.offset == 0 and floods_remaining[0] > 0:
+                    floods_remaining[0] -= 1
+                    raise FloodWait(0)
+                return upload_file_part(payload[request.offset : request.offset + request.limit])
+
+        invoker = RepeatFloodInvoker()
+        # 4 consecutive floods on one part with max_retries=1: floods are server
+        # pacing and must not abort the transfer (they used to burn the retry
+        # budget and kill 2000 MiB downloads mid-flight).
+        await download_file(
+            invoker,
+            document_location(),
+            target,
+            limit=len(payload),
+            part_size=1024,
+            adaptive_part_size=False,
+            concurrency=2,
+            adaptive_concurrency=False,
+            max_retries=1,
+            flood_sleep_threshold=30,
+        )
+        assert target.read_bytes() == payload
+        assert floods_remaining[0] == 0
+        assert [r.offset for r in invoker.requests].count(0) == 5
 
     run(scenario())
 
@@ -602,11 +638,11 @@ def test_download_requests_always_satisfy_telegram_alignment_rules() -> None:
     run(scenario())
 
 
-def test_download_file_flood_sleep_releases_window_capacity(tmp_path) -> None:
+def test_download_file_flood_sleeps_hold_their_slot_without_backfill(tmp_path) -> None:
     async def scenario() -> None:
-        payload = bytes(range(256)) * 36  # 9 KiB -> 9 parts
-        target = tmp_path / "flood-release.bin"
-        invoker = FloodingOffsetInvoker(payload, flood_offsets={0}, seconds=1)
+        payload = bytes(range(256)) * 24  # 6 KiB -> 6 parts
+        target = tmp_path / "flood-hold.bin"
+        invoker = FloodingOffsetInvoker(payload, flood_offsets={0, 1024}, seconds=1)
         result = await download_file(
             invoker,
             document_location(),
@@ -616,16 +652,19 @@ def test_download_file_flood_sleep_releases_window_capacity(tmp_path) -> None:
             adaptive_part_size=False,
             adaptive_concurrency=False,
             concurrency=2,
-            max_in_flight_bytes=2048,
             max_retries=1,
         )
         assert target.read_bytes() == payload
         assert result.bytes_downloaded == len(payload)
-        # While the offset-0 request slept out its flood wait it released its
-        # window budget, so every other part completed during the sleep and the
-        # retried request finished last.
-        assert invoker.requests[-1].offset == 0
-        assert len(invoker.requests) == 10
+        # Both initial requests flooded together. Their slots stay HELD during
+        # the sleeps -- backfilling them with new offsets would sustain the
+        # request rate the server just objected to (observed live as a
+        # FLOOD_WAIT_2 -> FLOOD_WAIT_15 escalation). The next request after the
+        # floods must therefore be one of the retries, never a new offset (with
+        # backfill it would have been offset 2048, issued ~1 s before any retry).
+        assert [request.offset for request in invoker.requests[:2]] == [0, 1024]
+        assert invoker.requests[2].offset in {0, 1024}
+        assert len(invoker.requests) == 8
 
     run(scenario())
 
@@ -689,20 +728,19 @@ def test_progress_reporter_coalesces_and_always_finishes() -> None:
     run(scenario())
 
 
-def test_transfer_window_reacquire_waits_for_capacity() -> None:
+def test_transfer_window_tracks_slots_and_bytes() -> None:
     async def scenario() -> None:
         window = media_download._TransferWindow(2048)
         assert window.try_acquire(1024)
         assert window.try_acquire(1024)
         assert not window.try_acquire(1024)
-        waiter = asyncio.ensure_future(window.reacquire(1024))
-        await asyncio.sleep(0)
-        assert not waiter.done()
-        window.release(1024)
-        await asyncio.sleep(0)
-        assert waiter.done()
-        assert window.in_flight_bytes == 2048
         assert window.active == 2
+        window.release(1024)
+        assert window.active == 1
+        assert window.in_flight_bytes == 1024
+        # A release always wakes the scheduler so it can refill the window.
+        await asyncio.wait_for(window.wait_refill(), timeout=1.0)
+        assert window.try_acquire(1024)
 
     run(scenario())
 

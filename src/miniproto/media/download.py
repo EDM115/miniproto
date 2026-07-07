@@ -5,8 +5,9 @@ import inspect
 import io
 import logging
 import os
+import random
 import time
-from collections import OrderedDict, deque
+from collections import OrderedDict
 from collections.abc import Awaitable, Callable
 from contextlib import suppress
 from dataclasses import dataclass
@@ -54,6 +55,12 @@ _MIB = 1024 * 1024
 _ALIGNMENT = 4096
 _PRECISE_ALIGNMENT = 1024
 _MAX_BACKGROUND_PREFETCHES = 32
+# Floods within the sleep threshold are server pacing and retry without
+# consuming the transient-failure budget; this cap only bounds pathological
+# storms (16 x <=30 s worst case per part).
+MAX_FLOOD_RETRIES_PER_PART = 16
+_MIN_FLOOD_SLEEP_S = 1.0
+_FLOOD_SLEEP_JITTER_S = 1.0
 # mtcute's DownloadDelayGate constants: stagger request launches so opening the
 # window does not burst-fire every request in one event-loop tick (burst starts
 # reliably attract FLOOD_WAITs).
@@ -235,12 +242,14 @@ def _is_full_file_download(offset: int, limit: int | None, total_size: int | Non
 
 
 class _TransferWindow:
-    """Slot/byte budget shared by the scheduler and in-flight part tasks.
+    """Slot/byte budget for in-flight download requests.
 
-    A part task sleeping out a ``FLOOD_WAIT`` releases its budget for the whole
-    sleep and re-acquires it before retrying, so the server slowing down ONE
-    request no longer starves the pipeline (mtcute/MTKruto sleep only the
-    affected request).
+    A part task sleeping out a ``FLOOD_WAIT`` keeps holding its slot: floods
+    are the server's pacing signal, and backfilling freed slots with new
+    requests sustains the request rate the server just objected to (observed
+    live as an escalation from FLOOD_WAIT_2 to FLOOD_WAIT_15 and thousands of
+    retries). Holding the slot lets pressure drop naturally while every other
+    slot keeps flowing -- mtcute's fixed-slot model.
     """
 
     def __init__(self, max_bytes: int) -> None:
@@ -248,7 +257,6 @@ class _TransferWindow:
         self.in_flight_bytes = 0
         self.active = 0
         self._refill = asyncio.Event()
-        self._waiters: deque[tuple[int, asyncio.Future[None]]] = deque()
 
     def _has_room(self, nbytes: int) -> bool:
         return self.in_flight_bytes == 0 or self.in_flight_bytes + nbytes <= self.max_bytes
@@ -263,64 +271,11 @@ class _TransferWindow:
     def release(self, nbytes: int) -> None:
         self.in_flight_bytes = max(0, self.in_flight_bytes - nbytes)
         self.active = max(0, self.active - 1)
-        while self._waiters and self._has_room(self._waiters[0][0]):
-            waiter_bytes, waiter = self._waiters.popleft()
-            if waiter.done():
-                continue
-            self.in_flight_bytes += waiter_bytes
-            self.active += 1
-            waiter.set_result(None)
         self._refill.set()
-
-    async def reacquire(self, nbytes: int) -> None:
-        if self.try_acquire(nbytes):
-            return
-        waiter: asyncio.Future[None] = asyncio.get_running_loop().create_future()
-        self._waiters.append((nbytes, waiter))
-        try:
-            await waiter
-        except asyncio.CancelledError:
-            if waiter.done() and not waiter.cancelled():
-                # The budget was granted concurrently with cancellation; refund it.
-                self.release(nbytes)
-            with suppress(ValueError):
-                self._waiters.remove((nbytes, waiter))
-            raise
 
     async def wait_refill(self) -> None:
         await self._refill.wait()
         self._refill.clear()
-
-
-class _WindowLease:
-    """Tracks whether a part task currently holds its window budget.
-
-    The budget is acquired by the scheduler before the task starts, released for
-    the duration of flood sleeps, and finally released exactly once when the
-    task ends -- even when a cancellation lands mid-reacquire.
-    """
-
-    __slots__ = ("held", "nbytes", "window")
-
-    def __init__(self, window: _TransferWindow, nbytes: int) -> None:
-        self.window = window
-        self.nbytes = nbytes
-        self.held = True
-
-    def release_for_sleep(self) -> None:
-        if self.held:
-            self.held = False
-            self.window.release(self.nbytes)
-
-    async def reacquire_after_sleep(self) -> None:
-        if not self.held:
-            await self.window.reacquire(self.nbytes)
-            self.held = True
-
-    def close(self) -> None:
-        if self.held:
-            self.held = False
-            self.window.release(self.nbytes)
 
 
 class _DownloadDelayGate:
@@ -333,6 +288,7 @@ class _DownloadDelayGate:
         decay: float = _STAGGER_DECAY,
         floor: float = _STAGGER_FLOOR,
     ) -> None:
+        self._initial = initial
         self._delay = initial
         self._decay = decay
         self._floor = floor
@@ -342,6 +298,10 @@ class _DownloadDelayGate:
         self._delay = max(self._floor, delay * self._decay)
         if delay > 0:
             await asyncio.sleep(delay)
+
+    def reset(self) -> None:
+        """Re-arm the full stagger after a flood so launches stop bursting."""
+        self._delay = self._initial
 
 
 class _ProgressReporter:
@@ -750,11 +710,16 @@ async def _download_file_concurrent(
         destination_handle, queue_size=max(1, concurrency), preallocate_size=limit
     )
 
+    async def on_part_retry(exc: Exception, attempt: int) -> None:
+        if stagger is not None and isinstance(exc, FloodWait):
+            stagger.reset()
+        if throttle is not None:
+            await throttle.on_retry(exc, attempt)
+
     async def fetch(
         request_offset: int, wire_limit: int, expect_limit: int
     ) -> tuple[int, bytes, int, int]:
         started = time.perf_counter()
-        lease = _WindowLease(window, wire_limit)
         try:
             payload = await _download_part_cached(
                 invoke,
@@ -766,15 +731,14 @@ async def _download_file_concurrent(
                 request_timeout=request_timeout,
                 max_retries=max_retries,
                 flood_sleep_threshold=flood_sleep_threshold,
-                retry_observer=throttle.on_retry if throttle is not None else None,
+                retry_observer=on_part_retry,
                 range_cache=range_cache,
                 range_cache_key=range_cache_key,
                 reference_deduper=reference_deduper,
                 file_reference_refresher=file_reference_refresher,
-                lease=lease,
             )
         finally:
-            lease.close()
+            window.release(wire_limit)
         if throttle is not None:
             throttle.on_success()
         received = len(payload)
@@ -1046,7 +1010,6 @@ async def _download_part_cached(
     reference_deduper: _FileReferenceRefreshDeduper,
     file_reference_refresher: FileReferenceRefresher | None,
     retry_observer: DownloadRetryObserver | None = None,
-    lease: _WindowLease | None = None,
 ) -> bytes:
     async def fetch() -> bytes:
         return await _download_part_with_reference_refresh(
@@ -1062,7 +1025,6 @@ async def _download_part_cached(
             retry_observer=retry_observer,
             reference_deduper=reference_deduper,
             file_reference_refresher=file_reference_refresher,
-            lease=lease,
         )
 
     if range_cache is None or range_cache_key is None:
@@ -1084,7 +1046,6 @@ async def _download_part_with_reference_refresh(
     retry_observer: DownloadRetryObserver | None,
     reference_deduper: _FileReferenceRefreshDeduper,
     file_reference_refresher: FileReferenceRefresher | None,
-    lease: _WindowLease | None = None,
 ) -> bytes:
     for refresh_attempt in range(2):
         try:
@@ -1099,7 +1060,6 @@ async def _download_part_with_reference_refresh(
                 max_retries=max_retries,
                 flood_sleep_threshold=flood_sleep_threshold,
                 retry_observer=retry_observer,
-                lease=lease,
             )
         except Exception as exc:
             if (
@@ -1136,12 +1096,13 @@ async def _download_part(
     max_retries: int,
     flood_sleep_threshold: int | None,
     retry_observer: DownloadRetryObserver | None = None,
-    lease: _WindowLease | None = None,
 ) -> bytes:
     request = functions.UploadGetFile(
         precise=precise, cdn_supported=cdn_supported, location=location, offset=offset, limit=limit
     )
-    for attempt in range(max_retries + 1):
+    failures = 0
+    flood_retries = 0
+    while True:
         try:
             record_metric("media.download.part_requests", 1)
             result = await invoke(
@@ -1151,35 +1112,36 @@ async def _download_part(
                 invoke, result, offset=offset, limit=limit, request_timeout=request_timeout
             )
         except Exception as exc:
-            if attempt >= max_retries or not _is_transient_download_error(
-                exc, flood_sleep_threshold=flood_sleep_threshold
-            ):
+            if not _is_transient_download_error(exc, flood_sleep_threshold=flood_sleep_threshold):
                 raise
+            if isinstance(exc, FloodWait):
+                # Floods within the threshold are server pacing, not failures:
+                # they never consume the transient retry budget (a 2 GiB
+                # transfer routinely sees several per part). A generous
+                # separate cap still bounds pathological storms.
+                flood_retries += 1
+                if flood_retries > MAX_FLOOD_RETRIES_PER_PART:
+                    record_metric("media.download.flood_retry_budget_exhausted", 1)
+                    raise
+                attempt = flood_retries
+            else:
+                failures += 1
+                if failures > max_retries:
+                    raise
+                attempt = failures
             _emit_part_retry(
                 offset=offset,
                 limit=limit,
-                attempt=attempt + 1,
+                attempt=attempt,
                 max_retries=max_retries,
                 error_type=type(exc).__name__,
                 flood_wait_seconds=exc.seconds if isinstance(exc, FloodWait) else None,
             )
             if retry_observer is not None:
-                observed = retry_observer(exc, attempt + 1)
+                observed = retry_observer(exc, attempt)
                 if inspect.isawaitable(observed):
                     await observed
-            if lease is not None and isinstance(exc, FloodWait):
-                # The server asked only THIS request to slow down; hand the slot
-                # and byte budget back to the window for the whole sleep so the
-                # rest of the pipeline keeps flowing.
-                lease.release_for_sleep()
-                record_metric("media.download.flood_capacity_releases", 1)
-                try:
-                    await _sleep_before_retry(exc, attempt)
-                finally:
-                    await lease.reacquire_after_sleep()
-            else:
-                await _sleep_before_retry(exc, attempt)
-    raise MediaDownloadError(f"download part at offset {offset} did not complete")
+            await _sleep_before_retry(exc, failures)
 
 
 def _media_from_document(document: types.Document, *, raw: object) -> Media:
@@ -1690,7 +1652,16 @@ def _emit_part_retry(
 
 
 async def _sleep_before_retry(exc: Exception, attempt: int = 0) -> None:
-    delay = float(exc.seconds) if isinstance(exc, FloodWait) else backoff_delay(attempt)
+    if isinstance(exc, FloodWait):
+        # FLOOD_WAIT_0/1 retried instantly just re-triggers the flood, and
+        # requests flooded in the same tick would otherwise retry in lockstep
+        # (observed live as an escalation to 10-15 s waits): enforce a floor
+        # and jitter to de-synchronize the wakers.
+        delay = max(float(exc.seconds), _MIN_FLOOD_SLEEP_S) + random.uniform(  # noqa: S311
+            0.0, _FLOOD_SLEEP_JITTER_S
+        )
+    else:
+        delay = backoff_delay(attempt)
     if delay > 0:
         record_metric("media.download.retry_sleep_seconds", delay, unit="s")
     await asyncio.sleep(delay)
