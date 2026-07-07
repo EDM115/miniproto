@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import socket
 from typing import Any, cast
 
 import pytest
@@ -153,6 +154,65 @@ def test_transport_read_deadline_is_enforced() -> None:
             )
             with pytest.raises(TransportTimeout):
                 await transport.recv()
+            await transport.close()
+        finally:
+            server.close()
+            await server.wait_closed()
+
+    event_loop.run(run())
+
+
+def test_transport_sets_tcp_socket_options_on_connect() -> None:
+    async def run() -> None:
+        async def handle(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+            del reader
+            await asyncio.sleep(0.2)
+            writer.close()
+
+        server = await asyncio.start_server(handle, "127.0.0.1", 0)
+        try:
+            host, port = server.sockets[0].getsockname()[:2]
+            transport = await open_transport(
+                ConnectionEndpoint(str(host), int(port)), TransportConfig()
+            )
+            writer = cast(Any, transport)._writer
+            sock = writer.get_extra_info("socket")
+            assert sock is not None
+            assert sock.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY) != 0
+            assert sock.getsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE) != 0
+            await transport.close()
+        finally:
+            server.close()
+            await server.wait_closed()
+
+    event_loop.run(run())
+
+
+def test_transport_watchdog_allows_slow_streams_with_steady_activity() -> None:
+    async def run() -> None:
+        # Each packet arrives within the read deadline, but the whole stream takes
+        # longer than one deadline; the per-connection watchdog must not fire.
+        packet = TcpIntermediateTransport(
+            ConnectionEndpoint("127.0.0.1", 1), TransportConfig()
+        ).encode_packet(b"\x01\x02\x03\x04")
+
+        async def handle(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+            del reader
+            for _ in range(5):
+                writer.write(packet)
+                await writer.drain()
+                await asyncio.sleep(0.08)
+            writer.close()
+
+        server = await asyncio.start_server(handle, "127.0.0.1", 0)
+        try:
+            host, port = server.sockets[0].getsockname()[:2]
+            transport = await open_transport(
+                ConnectionEndpoint(str(host), int(port)),
+                TransportConfig(mode="tcp_intermediate", read_timeout=0.25),
+            )
+            for _ in range(5):
+                assert await transport.recv() == b"\x01\x02\x03\x04"
             await transport.close()
         finally:
             server.close()
@@ -543,34 +603,64 @@ def test_sender_flushes_acks_automatically_before_64_unacked_accumulate() -> Non
     async def run() -> None:
         total_requests = 200
         sent_content = 0
-        acked = 0
+        standalone_acked = 0
         max_unacked = 0
+        servers: list[FakeMTProtoServer] = []
+
+        def total_acked() -> int:
+            piggybacked = len(servers[0].acks_received) if servers else 0
+            return standalone_acked + piggybacked
 
         def handle(message):
-            nonlocal sent_content, acked, max_unacked
+            nonlocal sent_content, standalone_acked, max_unacked
             body = decode_message_body(message.body)
             if isinstance(body, MsgsAck):
-                acked += len(body.msg_ids)
+                standalone_acked += len(body.msg_ids)
                 return None
             sent_content += 1
-            max_unacked = max(max_unacked, sent_content - acked)
+            max_unacked = max(max_unacked, sent_content - total_acked())
             return RpcResult(req_msg_id=message.msg_id, result=b"ok")
 
         config = TransportConfig(mode="tcp_intermediate", read_timeout=5.0)
         state = MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID)
         async with FakeMTProtoServer(AUTH_KEY, config, handle) as server:
+            servers.append(server)
             sender = MTProtoSender(server.endpoint, config, state, ack_max_delay=0.2)
             for _ in range(total_requests):
                 assert await sender.request(b"req1", request_timeout=5.0) == b"ok"
             for _ in range(200):
-                if acked >= total_requests:
+                if total_acked() >= total_requests:
                     break
                 await asyncio.sleep(0.05)
-            assert acked >= total_requests
+            assert total_acked() >= total_requests
             # Telegram drops sessions after 64 unacked content messages; the automatic
             # flush must keep the outstanding window far below that.
             assert max_unacked < 64
             assert state.pending_ack_count == 0
+            await sender.disconnect()
+
+    event_loop.run(run())
+
+
+def test_sender_piggybacks_acks_in_container_with_next_request() -> None:
+    async def run() -> None:
+        def handle(message):
+            body = decode_message_body(message.body)
+            assert not isinstance(body, MsgsAck), "acks should ride containers here"
+            return RpcResult(req_msg_id=message.msg_id, result=b"ok")
+
+        config = TransportConfig(mode="tcp_intermediate", read_timeout=2.0)
+        state = MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID)
+        async with FakeMTProtoServer(AUTH_KEY, config, handle) as server:
+            sender = MTProtoSender(server.endpoint, config, state)
+            assert await sender.request(b"first", request_timeout=2.0) == b"ok"
+            # The first response queued a pending ack; it must ride inside a
+            # msg_container together with the next outgoing request instead of
+            # costing its own transport frame.
+            assert await sender.request(b"second", request_timeout=2.0) == b"ok"
+            assert server.containered_bodies >= 1
+            assert len(server.acks_received) >= 1
+            assert state.pending_ack_count <= 1  # only the second response may remain
             await sender.disconnect()
 
     event_loop.run(run())

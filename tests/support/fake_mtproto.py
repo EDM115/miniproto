@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from collections.abc import Awaitable, Callable, Iterator
+from dataclasses import dataclass, field
 
 from miniproto.config import TransportConfig
 from miniproto.connection.tcp_abridged import TcpAbridgedTransport
@@ -13,8 +13,12 @@ from miniproto.connection.tcp_intermediate import (
 from miniproto.connection.transport import ConnectionEndpoint
 from miniproto.mtproto.codec import (
     DecodedEncryptedMessage,
+    MessageContainer,
+    MsgsAck,
     decode_encrypted_message,
+    decode_message_body,
     encode_encrypted_message,
+    encode_message_body,
 )
 from miniproto.mtproto.state import MTProtoState
 
@@ -31,6 +35,8 @@ class FakeMTProtoServer:
     server_salt: int = 0x1111222233334444
     session_id: int = 0x5555666677778888
     host: str = "127.0.0.1"
+    acks_received: list[int] = field(default_factory=list)
+    containered_bodies: int = 0
     _server: asyncio.AbstractServer | None = None
     _state: MTProtoState | None = None
 
@@ -74,32 +80,60 @@ class FakeMTProtoServer:
             while True:
                 packet = await transport.read_packet()
                 incoming = decode_encrypted_message(self.auth_key, packet, client_to_server=True)
-                response = self.handler(incoming)
-                if asyncio.iscoroutine(response):
-                    response = await response
-                if response is None:
-                    continue
-                state = self._state
-                if state is None:
-                    raise RuntimeError("fake server state missing")
-                msg_id = state.next_msg_id() | 1
-                seq_no = state.next_seq_no(content_related=True)
-                await transport.send_packet(
-                    encode_encrypted_message(
-                        self.auth_key,
-                        incoming.server_salt,
-                        incoming.session_id,
-                        msg_id,
-                        seq_no,
-                        response,
-                        client_to_server=False,
+                for leaf in self._leaves(incoming):
+                    response = self.handler(leaf)
+                    if asyncio.iscoroutine(response):
+                        response = await response
+                    if response is None:
+                        continue
+                    state = self._state
+                    if state is None:
+                        raise RuntimeError("fake server state missing")
+                    msg_id = state.next_msg_id() | 1
+                    seq_no = state.next_seq_no(content_related=True)
+                    await transport.send_packet(
+                        encode_encrypted_message(
+                            self.auth_key,
+                            incoming.server_salt,
+                            incoming.session_id,
+                            msg_id,
+                            seq_no,
+                            response,
+                            client_to_server=False,
+                        )
                     )
-                )
         except (asyncio.IncompleteReadError, ConnectionError, ValueError):
             pass
         finally:
             writer.close()
             await writer.wait_closed()
+
+    def _leaves(self, incoming: DecodedEncryptedMessage) -> Iterator[DecodedEncryptedMessage]:
+        """Unwrap client-sent msg_containers into individual handler dispatches.
+
+        Ack messages riding inside containers are recorded on ``acks_received``
+        instead of reaching the handler, mirroring how a real server consumes
+        them; top-level MsgsAck frames still reach the handler for tests that
+        assert standalone ack flushes.
+        """
+        body = decode_message_body(incoming.body)
+        if not isinstance(body, MessageContainer):
+            yield incoming
+            return
+        for item in body.messages:
+            if isinstance(item.body, MsgsAck):
+                self.acks_received.extend(item.body.msg_ids)
+                continue
+            self.containered_bodies += 1
+            yield DecodedEncryptedMessage(
+                auth_key_id=incoming.auth_key_id,
+                server_salt=incoming.server_salt,
+                session_id=incoming.session_id,
+                msg_id=item.msg_id,
+                seq_no=item.seq_no,
+                body=encode_message_body(item.body),
+                padding=b"",
+            )
 
 
 class _ServerTransport:

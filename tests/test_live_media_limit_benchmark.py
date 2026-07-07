@@ -128,7 +128,7 @@ def test_download_request_timeout_defaults_to_shorter_part_timeout() -> None:
     args = parse_args(["--actor", "user"], {})
     assert args.request_timeout == 120
     assert args.repeat == 1
-    assert args.download_concurrency == 1
+    assert args.download_concurrency == 6
     assert args.download_request_timeout is None
     assert effective_download_request_timeout(args) == 30
     assert args.download_flood_sleep_threshold == 30
@@ -155,7 +155,7 @@ def test_repeat_can_be_configured_from_env_and_cli() -> None:
 def test_download_concurrency_is_independent_from_upload_concurrency() -> None:
     shared = parse_args(["--actor", "user"], {"MINIPROTO_LIVE_BENCH_UPLOAD_CONCURRENCY": "8"})
     assert shared.upload_concurrency == 8
-    assert shared.download_concurrency == 1
+    assert shared.download_concurrency == 6
     specific = parse_args(
         ["--actor", "user"],
         {
@@ -172,9 +172,9 @@ def test_download_concurrency_is_independent_from_upload_concurrency() -> None:
 def test_media_lanes_are_directional_and_use_measured_defaults() -> None:
     defaults = parse_args(["--actor", "user"], {})
     assert defaults.upload_media_lanes == 2
-    assert defaults.download_media_lanes == 1
+    assert defaults.download_media_lanes == 2
     assert format_media_lanes(defaults.upload_media_lanes, defaults.upload_concurrency) == "2"
-    assert format_media_lanes(defaults.download_media_lanes, defaults.download_concurrency) == "1"
+    assert format_media_lanes(defaults.download_media_lanes, defaults.download_concurrency) == "2"
     specific = parse_args(
         ["--actor", "user"],
         {

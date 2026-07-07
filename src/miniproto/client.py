@@ -4,25 +4,37 @@ import asyncio
 import logging
 import mimetypes
 import time
-from collections.abc import AsyncIterator, Awaitable, Callable, Iterable
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterable, Mapping
 from contextlib import suppress
 from dataclasses import replace
-from typing import Any, TypeVar, overload
+from typing import Any, TypeVar, cast, overload
 
-from miniproto.auth.bootstrap import ensure_auth_key
+from miniproto.auth.bootstrap import (
+    UnencryptedAuthKeyTransport,
+    ensure_auth_key,
+    telegram_rsa_public_keys,
+)
+from miniproto.auth.dc import select_dc_option
+from miniproto.auth.key_exchange import AuthKeyExchange
 from miniproto.auth.service import AuthService
 from miniproto.config import ClientConfig
-from miniproto.connection.transport import TransportError
+from miniproto.connection.transport import ConnectionEndpoint, TransportError
 from miniproto.errors import (
     AuthKeyNotFound,
     AuthKeyRegenerationRequired,
     DatacenterMigration,
     FloodWait,
+    InvalidDatacenter,
     RpcError,
     Unauthorized,
     classify_rpc_error,
 )
-from miniproto.file_id import decode_file_id, input_media_from_file_id, is_file_id
+from miniproto.file_id import (
+    decode_file_id,
+    input_media_from_file_id,
+    is_file_id,
+    media_from_file_id,
+)
 from miniproto.invoke import (
     RawSender,
     SenderFactory,
@@ -40,13 +52,17 @@ from miniproto.invoke import (
 )
 from miniproto.media import (
     DEFAULT_CHUNK_SIZE,
+    DEFAULT_DOWNLOAD_CONCURRENCY,
+    DEFAULT_DOWNLOAD_PART_SIZE,
     MAX_DOWNLOAD_CHUNK_SIZE,
     Destination,
     FileSource,
     MediaDownloadResult,
+    media_from_raw,
     upload_file,
 )
 from miniproto.media import download_media as download_media_file
+from miniproto.media.upload import DEFAULT_UPLOAD_CONCURRENCY
 from miniproto.messages import (
     make_random_id,
     message_from_send_result,
@@ -60,7 +76,7 @@ from miniproto.peers import PeerCache, input_channel_from_peer, input_peer_from_
 from miniproto.raw import functions, types
 from miniproto.session.storage import InMemorySessionStorage, SessionStorage
 from miniproto.tl.codec import TLCodecError, decode_object
-from miniproto.types import Message, NewMessage, Peer, Update, User
+from miniproto.types import Media, Message, NewMessage, Peer, Update, User
 from miniproto.updates.manager import UpdateHandler, UpdateManager
 
 UpdateT = TypeVar("UpdateT", bound=Update)
@@ -84,8 +100,11 @@ class Client:
         self._sender: RawSender | None = None
         self._sender_factory: SenderFactory | None = None
         self._sender_lock = asyncio.Lock()
-        self._media_pools: dict[tuple[str, int, int], _MediaSenderPool] = {}
+        self._media_pools: dict[tuple[str, int], _MediaSenderPool] = {}
         self._media_pools_lock = asyncio.Lock()
+        # Exported-authorization auth keys per media DC (P1-5): key bytes + salt.
+        self._dc_auth_cache: dict[int, tuple[bytes, int]] = {}
+        self._dc_auth_lock = asyncio.Lock()
         self._receive_dispatch_task: asyncio.Task[None] | None = None
         self._dispatch_sender: RawSender | None = None
         self._latest_server_salt: int | None = None
@@ -611,6 +630,7 @@ class Client:
                 self,
                 _media_lane_count(options["media_lanes"], options["concurrency"]),
                 kind="download",
+                dc_id=_resolve_media_dc_id(media),
             ) as media_invoke:
                 result = await download_media_file(
                     media_invoke, media, destination, **download_options
@@ -668,6 +688,7 @@ class Client:
         flood_sleep_threshold: int | None = None,
         retry: bool | None = None,
         without_updates: bool = False,
+        migrate_session: bool = True,
     ) -> object:
         if not self.is_connected:
             raise ConnectionError("client must be connected before invoking raw requests")
@@ -743,6 +764,19 @@ class Client:
                 )
                 raise
             except DatacenterMigration as exc:
+                if not migrate_session:
+                    # Media-lane requests never migrate the main session; the
+                    # caller re-resolves its pool to the indicated DC instead
+                    # (FILE_MIGRATE_X handling lives in _MediaInvokeContext).
+                    _emit_rpc_event(
+                        started,
+                        outcome="error",
+                        request=request_name,
+                        attempts=attempts + 1,
+                        retryable=retryable,
+                        error_type=type(exc).__name__,
+                    )
+                    raise
                 await AuthService(self.config, self._storage, self.invoke).handle_dc_migration(exc)
                 await drop_sender(sender)
                 if self.is_connected and retryable and attempts < self.config.max_request_retries:
@@ -984,19 +1018,24 @@ class Client:
         await self._storage.save(replace(record, metadata=metadata))
         record_metric("client.server_salt_persisted", 1)
 
-    async def _get_media_pool(self, *, kind: str, lane_count: int) -> _MediaSenderPool:
-        dc_id = await self._current_dc_id()
-        key = (kind, dc_id, lane_count)
+    async def _get_media_pool(
+        self, *, kind: str, lane_count: int, dc_id: int | None = None
+    ) -> _MediaSenderPool:
+        target_dc = dc_id if dc_id is not None else await self._current_dc_id()
+        # Pools are keyed by (kind, dc) only: asking for a different lane count
+        # resizes the existing pool instead of building a disjoint socket set.
+        key = (kind, target_dc)
         async with self._media_pools_lock:
             pool = self._media_pools.get(key)
             if pool is not None:
+                pool.ensure_lanes(lane_count)
                 record_metric(
                     "client.media_lane_pool_reused",
                     1,
-                    attributes={"kind": kind, "dc_id": dc_id, "lanes": lane_count},
+                    attributes={"kind": kind, "dc_id": target_dc, "lanes": lane_count},
                 )
                 return pool
-            pool = _MediaSenderPool(self, lane_count, kind=kind, dc_id=dc_id)
+            pool = _MediaSenderPool(self, lane_count, kind=kind, dc_id=target_dc)
             self._media_pools[key] = pool
             return pool
 
@@ -1011,26 +1050,162 @@ class Client:
         if pools:
             await asyncio.gather(*(pool.close() for pool in pools))
 
+    async def _build_media_sender(self, dc_id: int) -> RawSender:
+        """Build a media-lane sender for ``dc_id`` (same-DC or cross-DC)."""
+        session_dc = await self._current_dc_id()
+        if dc_id == session_dc:
+            return await build_sender_from_session(
+                self.config,
+                self._storage,
+                self._sender_factory,
+                fresh_session_id=True,
+                server_salt_override=self._latest_server_salt,
+                on_salt_change=self._on_salt_change,
+            )
+        return await self._build_foreign_media_sender(dc_id)
+
+    async def _build_foreign_media_sender(self, dc_id: int) -> RawSender:
+        """Cross-DC media sender: per-DC auth key + imported authorization.
+
+        The main session's DC and auth key are never touched (FastTelethon's
+        ExportAuthorizationRequest flow / MTKruto's per-DC connection pools).
+        """
+        auth_key_override: bytes | None = None
+        server_salt: int | None = None
+        if self._sender_factory is None:
+            auth_key_override, server_salt = await self._ensure_media_dc_auth(dc_id)
+        sender = await build_sender_from_session(
+            self.config,
+            self._storage,
+            self._sender_factory,
+            fresh_session_id=True,
+            server_salt_override=server_salt,
+            on_salt_change=lambda salt: self._on_media_dc_salt(dc_id, salt),
+            dc_id_override=dc_id,
+            auth_key_override=auth_key_override,
+            allow_media_only=True,
+        )
+        try:
+            await self._import_media_authorization(sender, dc_id)
+        except BaseException:
+            await sender.disconnect()
+            raise
+        return sender
+
+    async def _ensure_media_dc_auth(self, dc_id: int) -> tuple[bytes, int]:
+        cached = self._dc_auth_cache.get(dc_id)
+        if cached is not None:
+            return cached
+        async with self._dc_auth_lock:
+            cached = self._dc_auth_cache.get(dc_id)
+            if cached is not None:
+                return cached
+            record = load_session_record(await self._storage.load(), self.config.dc_id)
+            stored = _stored_dc_auth(record.metadata, dc_id)
+            if stored is not None:
+                self._dc_auth_cache[dc_id] = stored
+                record_metric("client.media_dc_auth_reused", 1, attributes={"dc_id": dc_id})
+                return stored
+            if not record.dc_options:
+                raise InvalidDatacenter(f"no DC options stored for dc_id={dc_id}")
+            option = select_dc_option(record.dc_options, dc_id, allow_media_only=True)
+            started = time.perf_counter()
+            transport = UnencryptedAuthKeyTransport(
+                ConnectionEndpoint(option.ip_address, option.port), self.config
+            )
+            try:
+                result = await AuthKeyExchange(
+                    transport,
+                    dc_id=dc_id,
+                    rsa_keys=telegram_rsa_public_keys(test_mode=self.config.test_mode),
+                    test_mode=self.config.test_mode,
+                ).create_auth_key()
+            finally:
+                await transport.close()
+            auth = (result.auth_key, result.server_salt)
+            record = load_session_record(await self._storage.load(), self.config.dc_id)
+            metadata = dict(record.metadata)
+            dc_auth = dict(cast(Mapping[str, Any], metadata.get("dc_auth") or {}))
+            dc_auth[str(dc_id)] = {"key": result.auth_key, "salt": result.server_salt}
+            metadata["dc_auth"] = dc_auth
+            await self._storage.save(replace(record, metadata=metadata))
+            self._dc_auth_cache[dc_id] = auth
+            _emit_client_event(
+                "client.media_dc_auth", started, outcome="success", target_dc_id=dc_id
+            )
+            return auth
+
+    async def _import_media_authorization(self, sender: RawSender, dc_id: int) -> None:
+        started = time.perf_counter()
+        exported = await AuthService(self.config, self._storage, self.invoke).export_authorization(
+            dc_id
+        )
+        record_metric("client.media_auth_exports", 1, attributes={"target_dc_id": dc_id})
+        request = functions.AuthImportAuthorization(id=exported.id, bytes=exported.bytes)
+        wrapped = wrap_raw_request(
+            request, self.config, needs_init=sender_needs_init(sender), without_updates=True
+        )
+        raw_result = await sender.request(
+            wrapped, content_related=True, request_timeout=self.config.request_timeout
+        )
+        mark_sender_initialized(sender)
+        decode_rpc_response(raw_result, request)
+        record_metric("client.media_auth_imports", 1, attributes={"target_dc_id": dc_id})
+        _emit_client_event(
+            "client.media_auth_import", started, outcome="success", target_dc_id=dc_id
+        )
+
+    def _on_media_dc_salt(self, dc_id: int, server_salt: int) -> None:
+        cached = self._dc_auth_cache.get(dc_id)
+        if cached is not None:
+            self._dc_auth_cache[dc_id] = (cached[0], server_salt)
+
 
 class _MediaInvokeContext:
-    def __init__(self, client: Client, lane_count: int, *, kind: str) -> None:
+    def __init__(
+        self, client: Client, lane_count: int, *, kind: str, dc_id: int | None = None
+    ) -> None:
         self._client = client
         self._lane_count = lane_count
         self._kind = kind
+        self._dc_id = dc_id
         self._pool: _MediaSenderPool | None = None
 
     async def __aenter__(self) -> Callable[..., Awaitable[object]]:
         if self._lane_count <= 0:
             return self._client.invoke
         self._pool = await self._client._get_media_pool(
-            kind=self._kind, lane_count=self._lane_count
+            kind=self._kind, lane_count=self._lane_count, dc_id=self._dc_id
         )
-        return self._pool.invoke
+        await self._pool.prewarm()
+        return self._invoke
 
     async def __aexit__(
         self, exc_type: type[BaseException] | None, exc: BaseException | None, tb: object | None
     ) -> None:
         del exc_type, exc, tb
+
+    async def _invoke(self, raw_request: object, **kwargs: Any) -> object:
+        pool = self._pool
+        assert pool is not None
+        try:
+            return await pool.invoke(raw_request, **kwargs)
+        except DatacenterMigration as exc:
+            if exc.kind != "FILE":
+                raise
+            # FILE_MIGRATE_X: the file lives on another DC. Re-resolve the pool
+            # to that DC (exported-auth lanes) and retry; the main session's DC
+            # stays untouched. Subsequent parts use the migrated pool directly.
+            record_metric(
+                "client.media_file_migrations",
+                1,
+                attributes={"kind": self._kind, "target_dc_id": exc.dc_id},
+            )
+            self._pool = await self._client._get_media_pool(
+                kind=self._kind, lane_count=self._lane_count, dc_id=exc.dc_id
+            )
+            await self._pool.prewarm()
+            return await self._pool.invoke(raw_request, **kwargs)
 
 
 class _MediaSenderPool:
@@ -1038,17 +1213,53 @@ class _MediaSenderPool:
         self._client = client
         self._kind = kind
         self._dc_id = dc_id
-        self._lanes = tuple(
+        self._lanes: list[_MediaSenderLane] = [
             _MediaSenderLane(client, index, kind=kind, dc_id=dc_id)
             for index in range(max(1, lane_count))
-        )
+        ]
         self._lock = asyncio.Lock()
         self._next_lane_index = 0
+        self._idle_reaper: asyncio.Task[None] | None = None
+        self._closing = False
+        idle_close = client.config.media_idle_close
+        if idle_close is not None:
+            self._idle_reaper = asyncio.create_task(self._reap_idle_lanes(idle_close))
         record_metric(
             "client.media_lane_pool_created",
             1,
             attributes={"kind": self._kind, "dc_id": self._dc_id, "lanes": len(self._lanes)},
         )
+
+    def ensure_lanes(self, lane_count: int) -> None:
+        # Grow-only: shrinking would orphan in-flight requests; idle lanes are
+        # closed by the reaper instead.
+        while len(self._lanes) < lane_count:
+            self._lanes.append(
+                _MediaSenderLane(self._client, len(self._lanes), kind=self._kind, dc_id=self._dc_id)
+            )
+            record_metric(
+                "client.media_lane_pool_resized",
+                1,
+                attributes={"kind": self._kind, "dc_id": self._dc_id, "lanes": len(self._lanes)},
+            )
+
+    async def prewarm(self) -> None:
+        """Open all lane senders in parallel so the first requests skip connect+init."""
+        results = await asyncio.gather(
+            *(lane.ensure_sender() for lane in tuple(self._lanes)), return_exceptions=True
+        )
+        for result in results:
+            if isinstance(result, BaseException):
+                # Lazily rebuilt on first use; prewarm is best-effort.
+                record_metric(
+                    "client.media_lane_prewarm_errors",
+                    1,
+                    attributes={
+                        "kind": self._kind,
+                        "dc_id": self._dc_id,
+                        "error_type": type(result).__name__,
+                    },
+                )
 
     async def invoke(
         self,
@@ -1073,16 +1284,38 @@ class _MediaSenderPool:
                 flood_sleep_threshold=flood_sleep_threshold,
                 retry=retry,
                 without_updates=True,
+                migrate_session=False,
             )
         finally:
             await self._release_lane(lane)
 
     async def close(self) -> None:
-        await asyncio.gather(*(lane.close() for lane in self._lanes))
+        self._closing = True
+        reaper = self._idle_reaper
+        self._idle_reaper = None
+        if reaper is not None and not reaper.done():
+            reaper.cancel()
+            with suppress(asyncio.CancelledError):
+                await reaper
+        await asyncio.gather(*(lane.close() for lane in tuple(self._lanes)))
+
+    async def _reap_idle_lanes(self, idle_close: float) -> None:
+        tick = max(0.05, min(idle_close / 4, 30.0))
+        while not self._closing:
+            await asyncio.sleep(tick)
+            now = time.monotonic()
+            for lane in tuple(self._lanes):
+                if (
+                    lane.active_requests == 0
+                    and lane.has_sender
+                    and now - lane.last_used >= idle_close
+                ):
+                    await lane.drop_sender(reason="idle")
 
     async def _acquire_lane(self) -> _MediaSenderLane:
         async with self._lock:
             min_active = min(lane.active_requests for lane in self._lanes)
+            self._next_lane_index %= len(self._lanes)
             lane = self._lanes[self._next_lane_index]
             for offset in range(len(self._lanes)):
                 candidate = self._lanes[(self._next_lane_index + offset) % len(self._lanes)]
@@ -1091,11 +1324,13 @@ class _MediaSenderPool:
                     break
             self._next_lane_index = (lane.index + 1) % len(self._lanes)
             lane.active_requests += 1
+            lane.touch()
             return lane
 
     async def _release_lane(self, lane: _MediaSenderLane) -> None:
         async with self._lock:
             lane.active_requests = max(0, lane.active_requests - 1)
+            lane.touch()
 
 
 class _MediaSenderLane:
@@ -1107,10 +1342,18 @@ class _MediaSenderLane:
         self._sender: RawSender | None = None
         self._lock = asyncio.Lock()
         self.active_requests = 0
+        self.last_used = time.monotonic()
 
     @property
     def index(self) -> int:
         return self._index
+
+    @property
+    def has_sender(self) -> bool:
+        return self._sender is not None
+
+    def touch(self) -> None:
+        self.last_used = time.monotonic()
 
     async def ensure_sender(self) -> RawSender:
         sender = self._sender
@@ -1148,14 +1391,8 @@ class _MediaSenderLane:
                         "reason": "fatal" if fatal is not None else "disconnected",
                     },
                 )
-            self._sender = await build_sender_from_session(
-                self._client.config,
-                self._client._storage,
-                self._client._sender_factory,
-                fresh_session_id=True,
-                server_salt_override=self._client._latest_server_salt,
-                on_salt_change=self._client._on_salt_change,
-            )
+            self._sender = await self._client._build_media_sender(self._dc_id)
+            self.touch()
             record_metric(
                 "client.media_lane_builds",
                 1,
@@ -1216,6 +1453,37 @@ _SEND_MESSAGE_OPTION_DEFAULTS: dict[str, object] = {
     "allow_paid_stars": None,
     "suggested_post": None,
 }
+
+
+def _stored_dc_auth(metadata: Mapping[str, Any], dc_id: int) -> tuple[bytes, int] | None:
+    dc_auth = metadata.get("dc_auth")
+    if not isinstance(dc_auth, Mapping):
+        return None
+    entry = dc_auth.get(str(dc_id))
+    if not isinstance(entry, Mapping):
+        return None
+    key = entry.get("key")
+    if not isinstance(key, bytes | bytearray) or len(key) != 256:
+        return None
+    salt = entry.get("salt", 0)
+    return (bytes(key), int(salt) if isinstance(salt, int) else 0)
+
+
+def _resolve_media_dc_id(media: object) -> int | None:
+    """The DC hosting this media, when the media object knows it."""
+    resolved: Media | None
+    if isinstance(media, Media):
+        resolved = media
+    elif is_file_id(media):
+        try:
+            resolved = media_from_file_id(media)
+        except (ValueError, TypeError):
+            return None
+    else:
+        resolved = media_from_raw(media)
+    if resolved is None:
+        return None
+    return resolved.dc_id
 
 
 def _sender_is_usable(sender: RawSender) -> bool:
@@ -1288,7 +1556,7 @@ _SEND_FILE_OPTION_DEFAULTS: dict[str, object] = {
     "video_timestamp": None,
     "nosound_video": False,
     "part_size": DEFAULT_CHUNK_SIZE,
-    "concurrency": 1,
+    "concurrency": DEFAULT_UPLOAD_CONCURRENCY,
     "progress": None,
     "file_id": None,
     "max_retries": 2,
@@ -1302,7 +1570,10 @@ _SEND_FILE_OPTION_DEFAULTS: dict[str, object] = {
 _DOWNLOAD_MEDIA_OPTION_DEFAULTS: dict[str, object] = {
     "offset": 0,
     "limit": None,
-    "part_size": MAX_DOWNLOAD_CHUNK_SIZE,
+    # 2 lanes x ~3 pipelined 512 KiB..1 MiB requests within an 8 MiB rolling
+    # window (library default): the bandwidth x RTT product needed for
+    # ~16 MiB/s (mtcute ships 2x3; MTKruto 2x2x1 MiB).
+    "part_size": DEFAULT_DOWNLOAD_PART_SIZE,
     "resume": False,
     "progress": None,
     "precise": False,
@@ -1312,7 +1583,7 @@ _DOWNLOAD_MEDIA_OPTION_DEFAULTS: dict[str, object] = {
     "max_retries": 2,
     "flood_sleep_threshold": 30,
     "max_buffer_size": None,
-    "concurrency": 1,
+    "concurrency": DEFAULT_DOWNLOAD_CONCURRENCY,
     "adaptive_concurrency": True,
     "max_in_flight_bytes": None,
     "adaptive_part_size": True,
@@ -1322,7 +1593,7 @@ _DOWNLOAD_MEDIA_OPTION_DEFAULTS: dict[str, object] = {
     "range_cache_max_bytes": None,
     "read_ahead_bytes": 0,
     "file_reference_refresher": None,
-    "media_lanes": 1,
+    "media_lanes": 2,
 }
 
 

@@ -55,13 +55,13 @@ on:
         required: false
         default: "2"
       download_concurrency:
-        description: "Maximum concurrent download part requests; default 1 avoids DC4 flood/disconnect stalls"
+        description: "Maximum concurrent download part requests; default 6 pipelines ~3 requests per lane (TASK-P1-1)"
         required: true
-        default: "1"
+        default: "6"
       download_media_lanes:
-        description: "Download MTProto sender lanes; 1 was most stable in the July 2026 DC4 VPS run, 0 uses the legacy main sender"
+        description: "Download MTProto sender lanes; default 2 matches the TASK-P1-1 library default (mtcute 2x3), 0 uses the legacy main sender"
         required: false
-        default: "1"
+        default: "2"
       download_adaptive_concurrency:
         description: "Adapt download concurrency after flood waits/disconnects"
         required: true
@@ -72,7 +72,7 @@ on:
         required: true
         default: "524288"
       download_max_in_flight_bytes:
-        description: "Max in-flight download bytes; empty uses chunk_size * concurrency"
+        description: "Max in-flight download bytes; empty uses the library floor max(8 MiB, part_size * concurrency)"
         required: false
         default: ""
       download_adaptive_part_size:

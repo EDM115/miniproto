@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import socket as socket_module
 import time
 from collections.abc import Awaitable, Callable
+from contextlib import suppress
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -48,6 +50,13 @@ class Transport(Protocol):
 StreamPair = tuple[asyncio.StreamReader, asyncio.StreamWriter]
 StreamConnector = Callable[[ConnectionEndpoint, TransportConfig], Awaitable[StreamPair]]
 _LOGGER = get_logger("connection.transport")
+# 16 MiB/s at ~100 ms RTT needs ~2 MiB of TCP window; ask for 1 MiB minimum
+# per direction (best-effort, the kernel may clamp or double it).
+_MIN_SOCKET_BUFFER_BYTES = 1024 * 1024
+# Small writes (requests, acks) skip the per-packet drain()/timeout allocation;
+# anything that pushes the write buffer past this threshold still applies
+# backpressure, so 512 KiB upload parts keep their flow control.
+_WRITE_DRAIN_THRESHOLD_BYTES = 256 * 1024
 
 
 async def default_stream_connector(
@@ -133,6 +142,10 @@ class StreamTransportBase:
         self._reader: asyncio.StreamReader | None = None
         self._writer: asyncio.StreamWriter | None = None
         self._closed = True
+        self._last_activity = 0.0
+        self._reads_waiting = 0
+        self._read_timed_out = False
+        self._watchdog_task: asyncio.Task[None] | None = None
 
     @property
     def is_connected(self) -> bool:
@@ -142,8 +155,14 @@ class StreamTransportBase:
         started = time.perf_counter()
         if self.is_connected:
             return
+        await self._stop_watchdog()
         self._reader, self._writer = await self._connector(self.endpoint, self.config)
+        _apply_socket_options(self._writer)
         self._closed = False
+        self._read_timed_out = False
+        self._reads_waiting = 0
+        self._last_activity = time.monotonic()
+        self._watchdog_task = asyncio.create_task(self._watchdog_loop())
         if self.handshake_tag:
             await self._write_raw(self.handshake_tag)
         _emit_transport_event(
@@ -195,23 +214,27 @@ class StreamTransportBase:
                 level=logging.INFO,
             )
             raise TransportClosed("transport is not connected")
+        # A single idle watchdog per connection enforces the read deadline instead
+        # of allocating an asyncio.timeout context (heap timer) per packet.
+        if self._reads_waiting == 0:
+            self._last_activity = time.monotonic()
+        self._reads_waiting += 1
         try:
-            async with asyncio.timeout(self.config.read_timeout):
-                payload = await self.read_packet(self._reader)
-        except TimeoutError as exc:
-            _emit_transport_event(
-                "transport.recv",
-                started,
-                outcome="error",
-                error_type="TransportTimeout",
-                level=logging.WARNING,
-            )
-            raise TransportTimeout("transport read timed out") from exc
+            payload = await self.read_packet(self._reader)
         except asyncio.IncompleteReadError as exc:
+            self._closed = True
+            if self._read_timed_out:
+                _emit_transport_event(
+                    "transport.recv",
+                    started,
+                    outcome="error",
+                    error_type="TransportTimeout",
+                    level=logging.WARNING,
+                )
+                raise TransportTimeout("transport read timed out") from exc
             # Telegram routinely closes media connections as a throttling/load-shedding
             # signal; a server-side EOF is normal operation, not an error worth ERROR
             # logs (Telethon logs INFO, Pyrogram nothing, TDLib INFO).
-            self._closed = True
             _emit_transport_event(
                 "transport.recv",
                 started,
@@ -222,6 +245,15 @@ class StreamTransportBase:
             raise TransportClosed("transport closed while reading") from exc
         except OSError as exc:
             self._closed = True
+            if self._read_timed_out:
+                _emit_transport_event(
+                    "transport.recv",
+                    started,
+                    outcome="error",
+                    error_type="TransportTimeout",
+                    level=logging.WARNING,
+                )
+                raise TransportTimeout("transport read timed out") from exc
             _emit_transport_event(
                 "transport.recv",
                 started,
@@ -230,6 +262,9 @@ class StreamTransportBase:
                 level=logging.INFO,
             )
             raise TransportClosed(f"transport read failed: {exc}") from exc
+        finally:
+            self._reads_waiting -= 1
+            self._last_activity = time.monotonic()
         if len(payload) > self.config.max_payload_size:
             _emit_transport_event(
                 "transport.recv",
@@ -254,6 +289,7 @@ class StreamTransportBase:
         self._closed = True
         self._reader = None
         self._writer = None
+        await self._stop_watchdog()
         if writer is None:
             return
         writer.close()
@@ -268,6 +304,10 @@ class StreamTransportBase:
         if writer is None or writer.is_closing():
             raise TransportClosed("transport is not connected")
         writer.write(payload)
+        self._last_activity = time.monotonic()
+        buffered = _write_buffer_size(writer)
+        if buffered is not None and buffered <= _WRITE_DRAIN_THRESHOLD_BYTES:
+            return
         try:
             async with asyncio.timeout(self.config.write_timeout):
                 await writer.drain()
@@ -277,11 +317,75 @@ class StreamTransportBase:
             self._closed = True
             raise TransportError(f"transport write failed: {exc}") from exc
 
+    async def _watchdog_loop(self) -> None:
+        """Enforce the read deadline with one timer per connection.
+
+        Only reads that are actually waiting count against the deadline; a
+        connection with no outstanding read never times out (the sender's
+        keepalive pings guarantee regular traffic on healthy connections).
+        """
+        timeout = self.config.read_timeout
+        while not self._closed:
+            if self._reads_waiting > 0:
+                remaining = self._last_activity + timeout - time.monotonic()
+                if remaining <= 0:
+                    self._read_timed_out = True
+                    record_metric("transport.read_watchdog_timeouts", 1)
+                    writer = self._writer
+                    if writer is not None:
+                        # Aborting the connection wakes the blocked read with
+                        # EOF/reset, which recv() converts to TransportTimeout.
+                        writer.close()
+                    return
+                await asyncio.sleep(remaining)
+            else:
+                await asyncio.sleep(timeout / 2)
+
+    async def _stop_watchdog(self) -> None:
+        watchdog = self._watchdog_task
+        self._watchdog_task = None
+        if watchdog is None or watchdog.done() or watchdog is asyncio.current_task():
+            return
+        watchdog.cancel()
+        with suppress(asyncio.CancelledError):
+            await watchdog
+
     def encode_packet(self, payload: bytes) -> bytes:
         raise NotImplementedError
 
     async def read_packet(self, reader: asyncio.StreamReader) -> bytes:
         raise NotImplementedError
+
+
+def _apply_socket_options(writer: asyncio.StreamWriter) -> None:
+    """Best-effort TCP tuning: NODELAY, keepalive, and >=1 MiB buffers.
+
+    uvloop sets NODELAY by default but stdlib asyncio (notably the Windows
+    Proactor loop) does not, and default kernel buffers are too small for
+    16 MiB/s at WAN round-trip times.
+    """
+    sock = writer.get_extra_info("socket")
+    if sock is None:
+        return
+    with suppress(OSError, ValueError):
+        sock.setsockopt(socket_module.IPPROTO_TCP, socket_module.TCP_NODELAY, 1)
+    with suppress(OSError, ValueError):
+        sock.setsockopt(socket_module.SOL_SOCKET, socket_module.SO_KEEPALIVE, 1)
+    for option in (socket_module.SO_RCVBUF, socket_module.SO_SNDBUF):
+        with suppress(OSError, ValueError):
+            if sock.getsockopt(socket_module.SOL_SOCKET, option) < _MIN_SOCKET_BUFFER_BYTES:
+                sock.setsockopt(socket_module.SOL_SOCKET, option, _MIN_SOCKET_BUFFER_BYTES)
+
+
+def _write_buffer_size(writer: asyncio.StreamWriter) -> int | None:
+    transport = writer.transport
+    get_size = getattr(transport, "get_write_buffer_size", None)
+    if get_size is None:
+        return None
+    try:
+        return int(get_size())
+    except (OSError, RuntimeError):
+        return None
 
 
 async def read_exactly_bounded(

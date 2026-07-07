@@ -6,8 +6,9 @@ import io
 import logging
 import os
 import time
-from collections import OrderedDict
+from collections import OrderedDict, deque
 from collections.abc import Awaitable, Callable
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, BinaryIO, cast
@@ -41,8 +42,26 @@ type FileReferenceRefresher = Callable[[object], Awaitable[object] | object]
 type Clock = Callable[[], float]
 _LOGGER = get_logger("media.download")
 MAX_DOWNLOAD_CHUNK_SIZE = 1024 * 1024
+# 2 lanes x ~3 pipelined 512 KiB..1 MiB requests with an 8 MiB rolling byte
+# window sustains bandwidth x RTT for ~16 MiB/s at WAN latencies (mtcute ships
+# 2 conns x 3 in-flight; MTKruto 2 x 2 x 1 MiB).
+DEFAULT_DOWNLOAD_PART_SIZE = 512 * 1024
+DEFAULT_DOWNLOAD_CONCURRENCY = 6
+DEFAULT_DOWNLOAD_IN_FLIGHT_BYTES = 8 * 1024 * 1024
 DEFAULT_RANGE_CACHE_BYTES = 64 * 1024 * 1024
 DEFAULT_ADAPTIVE_PART_SIZE_MIN_BYTES = 8 * 1024 * 1024
+_MIB = 1024 * 1024
+_ALIGNMENT = 4096
+_PRECISE_ALIGNMENT = 1024
+_MAX_BACKGROUND_PREFETCHES = 32
+# mtcute's DownloadDelayGate constants: stagger request launches so opening the
+# window does not burst-fire every request in one event-loop tick (burst starts
+# reliably attract FLOOD_WAITs).
+_STAGGER_INITIAL_DELAY = 0.05
+_STAGGER_DECAY = 0.8
+_STAGGER_FLOOR = 0.003
+_PROGRESS_MIN_INTERVAL = 0.25
+_PROGRESS_MAX_PARTS = 8
 
 
 @dataclass(frozen=True, slots=True)
@@ -138,6 +157,12 @@ class DownloadRangeCache:
     def prefetch(
         self, key: str, offset: int, limit: int, fetch: Callable[[], Awaitable[bytes]]
     ) -> None:
+        if len(self._background) >= _MAX_BACKGROUND_PREFETCHES:
+            # Unbounded background fetches were 3x slower than no read-ahead at
+            # all on live benches; skip instead of queueing ever more work.
+            record_metric("media.download.range_cache_prefetch_skipped", 1)
+            return
+
         async def run() -> None:
             try:
                 await self.get_or_fetch(key, offset, limit, fetch)
@@ -165,6 +190,207 @@ class DownloadRangeCache:
 _DEFAULT_RANGE_CACHE: DownloadRangeCache | None = None
 
 
+def _legal_request_limit(offset: int, max_bytes: int, *, precise: bool) -> int | None:
+    """Largest protocol-legal ``upload.getFile`` limit at ``offset``.
+
+    Telegram rules (core.telegram.org/api/files): without ``precise``, offset and
+    limit must be divisible by 4096 and limit must divide 1 MiB; with ``precise``
+    they must be divisible by 1024. In both modes a request must never straddle
+    a 1 MiB boundary. Returns ``None`` when no legal request fits ``max_bytes``
+    (the caller defers or over-requests the tail and truncates).
+    """
+    alignment = _PRECISE_ALIGNMENT if precise else _ALIGNMENT
+    boundary_room = _MIB - (offset % _MIB)
+    allowed = min(max_bytes, boundary_room)
+    if allowed < alignment:
+        return None
+    if precise:
+        return (allowed // alignment) * alignment
+    # Non-precise limits must divide 1 MiB, i.e. be a power of two >= 4096.
+    return 1 << (allowed.bit_length() - 1)
+
+
+def _resolve_precise_mode(start_offset: int, precise: bool, part_size: int) -> bool:
+    """Auto-enable precise mode when offsets or part sizes need 1 KiB granularity.
+
+    Non-precise ``upload.getFile`` requires 4 KiB-aligned offsets and limits;
+    precise mode relaxes both to 1 KiB. Offsets below 1 KiB alignment cannot be
+    expressed at all and are rejected.
+    """
+    if start_offset % _PRECISE_ALIGNMENT != 0:
+        raise ValueError(
+            f"download offset {start_offset} must be a multiple of 1024 bytes; "
+            "truncate resumed files to a 1 KiB boundary"
+        )
+    if not precise and (start_offset % _ALIGNMENT != 0 or part_size % _ALIGNMENT != 0):
+        record_metric("media.download.precise_auto_enabled", 1)
+        return True
+    return precise
+
+
+def _is_full_file_download(offset: int, limit: int | None, total_size: int | None) -> bool:
+    if limit is None:
+        return True
+    return total_size is not None and offset + limit >= total_size
+
+
+class _TransferWindow:
+    """Slot/byte budget shared by the scheduler and in-flight part tasks.
+
+    A part task sleeping out a ``FLOOD_WAIT`` releases its budget for the whole
+    sleep and re-acquires it before retrying, so the server slowing down ONE
+    request no longer starves the pipeline (mtcute/MTKruto sleep only the
+    affected request).
+    """
+
+    def __init__(self, max_bytes: int) -> None:
+        self.max_bytes = max(1, max_bytes)
+        self.in_flight_bytes = 0
+        self.active = 0
+        self._refill = asyncio.Event()
+        self._waiters: deque[tuple[int, asyncio.Future[None]]] = deque()
+
+    def _has_room(self, nbytes: int) -> bool:
+        return self.in_flight_bytes == 0 or self.in_flight_bytes + nbytes <= self.max_bytes
+
+    def try_acquire(self, nbytes: int) -> bool:
+        if not self._has_room(nbytes):
+            return False
+        self.in_flight_bytes += nbytes
+        self.active += 1
+        return True
+
+    def release(self, nbytes: int) -> None:
+        self.in_flight_bytes = max(0, self.in_flight_bytes - nbytes)
+        self.active = max(0, self.active - 1)
+        while self._waiters and self._has_room(self._waiters[0][0]):
+            waiter_bytes, waiter = self._waiters.popleft()
+            if waiter.done():
+                continue
+            self.in_flight_bytes += waiter_bytes
+            self.active += 1
+            waiter.set_result(None)
+        self._refill.set()
+
+    async def reacquire(self, nbytes: int) -> None:
+        if self.try_acquire(nbytes):
+            return
+        waiter: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+        self._waiters.append((nbytes, waiter))
+        try:
+            await waiter
+        except asyncio.CancelledError:
+            if waiter.done() and not waiter.cancelled():
+                # The budget was granted concurrently with cancellation; refund it.
+                self.release(nbytes)
+            with suppress(ValueError):
+                self._waiters.remove((nbytes, waiter))
+            raise
+
+    async def wait_refill(self) -> None:
+        await self._refill.wait()
+        self._refill.clear()
+
+
+class _WindowLease:
+    """Tracks whether a part task currently holds its window budget.
+
+    The budget is acquired by the scheduler before the task starts, released for
+    the duration of flood sleeps, and finally released exactly once when the
+    task ends -- even when a cancellation lands mid-reacquire.
+    """
+
+    __slots__ = ("held", "nbytes", "window")
+
+    def __init__(self, window: _TransferWindow, nbytes: int) -> None:
+        self.window = window
+        self.nbytes = nbytes
+        self.held = True
+
+    def release_for_sleep(self) -> None:
+        if self.held:
+            self.held = False
+            self.window.release(self.nbytes)
+
+    async def reacquire_after_sleep(self) -> None:
+        if not self.held:
+            await self.window.reacquire(self.nbytes)
+            self.held = True
+
+    def close(self) -> None:
+        if self.held:
+            self.held = False
+            self.window.release(self.nbytes)
+
+
+class _DownloadDelayGate:
+    """Stagger request launches at transfer start (mtcute's DownloadDelayGate)."""
+
+    def __init__(
+        self,
+        *,
+        initial: float = _STAGGER_INITIAL_DELAY,
+        decay: float = _STAGGER_DECAY,
+        floor: float = _STAGGER_FLOOR,
+    ) -> None:
+        self._delay = initial
+        self._decay = decay
+        self._floor = floor
+
+    async def wait(self) -> None:
+        delay = self._delay
+        self._delay = max(self._floor, delay * self._decay)
+        if delay > 0:
+            await asyncio.sleep(delay)
+
+
+class _ProgressReporter:
+    """Coalesce progress callbacks to >=250 ms apart or every 8 parts.
+
+    Per-part callbacks add measurable latency on 512 KiB parts; the final call
+    is always delivered via ``finish()`` so consumers observe completion.
+    """
+
+    def __init__(
+        self,
+        progress: ProgressCallback | None,
+        total: int | None,
+        *,
+        min_interval: float = _PROGRESS_MIN_INTERVAL,
+        max_parts: int = _PROGRESS_MAX_PARTS,
+        clock: Clock = time.monotonic,
+    ) -> None:
+        self._progress = progress
+        self._total = total
+        self._min_interval = min_interval
+        self._max_parts = max_parts
+        self._clock = clock
+        self._last_time = float("-inf")
+        self._parts_since_report = 0
+        self._last_reported: int | None = None
+
+    async def report(self, current: int) -> None:
+        if self._progress is None:
+            return
+        self._parts_since_report += 1
+        now = self._clock()
+        if (
+            now - self._last_time < self._min_interval
+            and self._parts_since_report < self._max_parts
+        ):
+            return
+        self._last_time = now
+        self._parts_since_report = 0
+        self._last_reported = current
+        await _call_progress(self._progress, current, self._total)
+
+    async def finish(self, current: int) -> None:
+        if self._progress is None or self._last_reported == current:
+            return
+        self._last_reported = current
+        await _call_progress(self._progress, current, self._total)
+
+
 async def download_file(
     invoke: RawInvoker,
     location: object,
@@ -172,7 +398,7 @@ async def download_file(
     *,
     offset: int = 0,
     limit: int | None = None,
-    part_size: int = MAX_DOWNLOAD_CHUNK_SIZE,
+    part_size: int = DEFAULT_DOWNLOAD_PART_SIZE,
     resume: bool = False,
     progress: ProgressCallback | None = None,
     precise: bool = False,
@@ -182,7 +408,7 @@ async def download_file(
     max_retries: int = 2,
     flood_sleep_threshold: int | None = 30,
     max_buffer_size: int | None = None,
-    concurrency: int = 1,
+    concurrency: int = DEFAULT_DOWNLOAD_CONCURRENCY,
     adaptive_concurrency: bool = True,
     max_in_flight_bytes: int | None = None,
     adaptive_part_size: bool = True,
@@ -206,10 +432,24 @@ async def download_file(
         max_part_size,
         range_cache_max_bytes,
         read_ahead_bytes,
+        precise,
     )
     effective_max_in_flight_bytes = (
         max_in_flight_bytes if max_in_flight_bytes is not None else max_buffer_size
     )
+    if read_ahead_bytes > 0 and _is_full_file_download(offset, limit, total_size):
+        # Read-ahead is a streaming/repeated-range feature; racing it against a
+        # full-file transfer's own scheduler was 3x slower on live benches.
+        record_metric("media.download.read_ahead_disabled", 1)
+        emit_event(
+            _LOGGER,
+            logging.WARNING,
+            "media.download.read_ahead",
+            outcome="disabled",
+            reason="full_file_download",
+            read_ahead_bytes=read_ahead_bytes,
+        )
+        read_ahead_bytes = 0
     resolved_range_cache = _resolve_range_cache(
         range_cache, max_bytes=range_cache_max_bytes, read_ahead_bytes=read_ahead_bytes
     )
@@ -351,27 +591,38 @@ async def _download_file_sequential(
     current_offset = offset + destination_handle.existing_bytes
     downloaded = destination_handle.existing_bytes
     remaining = None if limit is None else max(0, limit - destination_handle.existing_bytes)
-    callback_total = limit
+    effective_precise = _resolve_precise_mode(current_offset, precise, part_size)
+    reporter = _ProgressReporter(progress, limit)
     part_sizer = _AdaptivePartSizer(
         initial_size=part_size,
         max_size=max_part_size,
         total_bytes=limit if limit is not None else total_size,
         enabled=adaptive_part_size,
     )
+    # Disk writes ride the same threaded writer pipeline as the concurrent path
+    # (sequential mode: in-order appends, no seeks) so they never block the loop.
+    writer = _ConcurrentDestinationWriter(
+        destination_handle, queue_size=4, preallocate_size=None, sequential=True
+    )
     try:
         while remaining is None or remaining > 0:
-            request_limit = (
+            target = (
                 part_sizer.current_size
                 if remaining is None
                 else min(part_sizer.current_size, remaining)
             )
+            wire_limit = _legal_request_limit(current_offset, target, precise=effective_precise)
+            if wire_limit is None:
+                # Tail smaller than the smallest legal request: over-request one
+                # minimal chunk and truncate (the server clamps reads at EOF).
+                wire_limit = _PRECISE_ALIGNMENT if effective_precise else _ALIGNMENT
             started = time.perf_counter()
             payload = await _download_part_cached(
                 invoke,
                 location_state=location_state,
                 offset=current_offset,
-                limit=request_limit,
-                precise=precise,
+                limit=wire_limit,
+                precise=effective_precise,
                 cdn_supported=cdn_supported,
                 request_timeout=request_timeout,
                 max_retries=max_retries,
@@ -381,25 +632,26 @@ async def _download_file_sequential(
                 reference_deduper=reference_deduper,
                 file_reference_refresher=file_reference_refresher,
             )
+            short_read = len(payload) < wire_limit
             if remaining is not None and len(payload) > remaining:
                 payload = payload[:remaining]
             if not payload:
                 break
             part_sizer.on_success(
-                requested_size=request_limit,
+                requested_size=wire_limit,
                 received_size=len(payload),
                 duration_s=max(time.perf_counter() - started, 1e-9),
             )
-            destination_handle.handle.write(payload)
+            await writer.submit(downloaded, payload)
             downloaded += len(payload)
             current_offset += len(payload)
             if remaining is not None:
                 remaining -= len(payload)
-            await _call_progress(progress, downloaded, callback_total)
+            await reporter.report(downloaded)
             _prefetch_read_ahead(
                 invoke,
                 location_state=location_state,
-                precise=precise,
+                precise=effective_precise,
                 cdn_supported=cdn_supported,
                 request_timeout=request_timeout,
                 max_retries=max_retries,
@@ -413,8 +665,11 @@ async def _download_file_sequential(
                 reference_deduper=reference_deduper,
                 file_reference_refresher=file_reference_refresher,
             )
-            if len(payload) < request_limit:
+            if short_read:
                 break
+        stats = await writer.close()
+        _record_writer_stats(stats)
+        await reporter.finish(downloaded)
         if destination_handle.should_close:
             destination_handle.handle.close()
         data = destination_handle.get_data()
@@ -426,12 +681,14 @@ async def _download_file_sequential(
             raw_location=location_state.current,
         )
     except asyncio.CancelledError:
+        await writer.abort()
         if destination_handle.should_close:
             destination_handle.handle.close()
         if destination_handle.remove_on_cancel and destination_handle.path is not None:
             destination_handle.path.unlink(missing_ok=True)
         raise
     except BaseException:
+        await writer.abort()
         if destination_handle.should_close:
             destination_handle.handle.close()
         raise
@@ -471,10 +728,14 @@ async def _download_file_concurrent(
     start_offset = offset + destination_handle.existing_bytes
     next_offset = start_offset
     end_offset = start_offset + remaining
-    pending: set[asyncio.Task[tuple[int, bytes, int]]] = set()
-    pending_limits: dict[asyncio.Task[tuple[int, bytes, int]], int] = {}
-    in_flight_bytes = 0
-    byte_window = max_in_flight_bytes or max(part_size, part_size * concurrency)
+    effective_precise = _resolve_precise_mode(start_offset, precise, part_size)
+    pending: set[asyncio.Task[tuple[int, bytes, int, int]]] = set()
+    byte_window = max_in_flight_bytes or max(
+        DEFAULT_DOWNLOAD_IN_FLIGHT_BYTES, part_size * concurrency
+    )
+    window = _TransferWindow(byte_window)
+    stagger = _DownloadDelayGate() if concurrency > 1 else None
+    reporter = _ProgressReporter(progress, callback_total)
     stopped = False
     throttle = (
         _AdaptiveDownloadThrottle(concurrency) if adaptive_concurrency and concurrency > 1 else None
@@ -489,68 +750,95 @@ async def _download_file_concurrent(
         destination_handle, queue_size=max(1, concurrency), preallocate_size=limit
     )
 
-    async def fetch(request_offset: int, request_limit: int) -> tuple[int, bytes, int]:
+    async def fetch(
+        request_offset: int, wire_limit: int, expect_limit: int
+    ) -> tuple[int, bytes, int, int]:
         started = time.perf_counter()
-        payload = await _download_part_cached(
-            invoke,
-            location_state=location_state,
-            offset=request_offset,
-            limit=request_limit,
-            precise=precise,
-            cdn_supported=cdn_supported,
-            request_timeout=request_timeout,
-            max_retries=max_retries,
-            flood_sleep_threshold=flood_sleep_threshold,
-            retry_observer=throttle.on_retry if throttle is not None else None,
-            range_cache=range_cache,
-            range_cache_key=range_cache_key,
-            reference_deduper=reference_deduper,
-            file_reference_refresher=file_reference_refresher,
-        )
+        lease = _WindowLease(window, wire_limit)
+        try:
+            payload = await _download_part_cached(
+                invoke,
+                location_state=location_state,
+                offset=request_offset,
+                limit=wire_limit,
+                precise=effective_precise,
+                cdn_supported=cdn_supported,
+                request_timeout=request_timeout,
+                max_retries=max_retries,
+                flood_sleep_threshold=flood_sleep_threshold,
+                retry_observer=throttle.on_retry if throttle is not None else None,
+                range_cache=range_cache,
+                range_cache_key=range_cache_key,
+                reference_deduper=reference_deduper,
+                file_reference_refresher=file_reference_refresher,
+                lease=lease,
+            )
+        finally:
+            lease.close()
         if throttle is not None:
             throttle.on_success()
-        if len(payload) > request_limit:
-            payload = payload[:request_limit]
+        received = len(payload)
+        if received > expect_limit:
+            payload = payload[:expect_limit]
         part_sizer.on_success(
-            requested_size=request_limit,
-            received_size=len(payload),
+            requested_size=wire_limit,
+            received_size=received,
             duration_s=max(time.perf_counter() - started, 1e-9),
         )
-        return request_offset, payload, request_limit
+        return request_offset, payload, expect_limit, wire_limit
 
-    def fill_window() -> None:
-        nonlocal next_offset, in_flight_bytes
-        allowed = concurrency if throttle is None else throttle.limit
-        while len(pending) < allowed and next_offset < end_offset and not stopped:
-            request_limit = min(part_sizer.current_size, byte_window, end_offset - next_offset)
-            if in_flight_bytes and in_flight_bytes + request_limit > byte_window:
+    async def fill_window() -> None:
+        nonlocal next_offset
+        while not stopped and next_offset < end_offset:
+            allowed = concurrency if throttle is None else min(concurrency, throttle.limit)
+            if window.active >= allowed:
+                break
+            target = min(part_sizer.current_size, window.max_bytes, end_offset - next_offset)
+            wire_limit = _legal_request_limit(next_offset, target, precise=effective_precise)
+            if wire_limit is None:
+                # Tail smaller than the smallest legal request: over-request one
+                # minimal chunk and truncate (the server clamps reads at EOF).
+                wire_limit = _PRECISE_ALIGNMENT if effective_precise else _ALIGNMENT
+            expect_limit = min(wire_limit, end_offset - next_offset)
+            if not window.try_acquire(wire_limit):
                 record_metric("media.download.byte_window_waits", 1)
                 break
-            task = asyncio.create_task(fetch(next_offset, request_limit))
+            if stagger is not None:
+                await stagger.wait()
+            task = asyncio.create_task(fetch(next_offset, wire_limit, expect_limit))
             pending.add(task)
-            pending_limits[task] = request_limit
-            in_flight_bytes += request_limit
-            record_metric("media.download.in_flight_bytes", in_flight_bytes, unit="bytes")
-            next_offset += request_limit
+            record_metric("media.download.in_flight_bytes", window.in_flight_bytes, unit="bytes")
+            next_offset += expect_limit
 
     try:
-        fill_window()
+        await fill_window()
         while pending:
-            done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+            refill_wait = asyncio.ensure_future(window.wait_refill())
+            try:
+                done, _ = await asyncio.wait(
+                    {*pending, refill_wait}, return_when=asyncio.FIRST_COMPLETED
+                )
+            finally:
+                refill_wait.cancel()
+                with suppress(asyncio.CancelledError):
+                    await refill_wait
             for task in done:
-                in_flight_bytes -= pending_limits.pop(task, 0)
-                request_offset, payload, request_limit = await task
+                if task is refill_wait:
+                    continue
+                fetch_task = cast(asyncio.Task[tuple[int, bytes, int, int]], task)
+                pending.discard(fetch_task)
+                request_offset, payload, expect_limit, _wire_limit = await fetch_task
                 if not payload:
                     stopped = True
                     continue
                 output_offset = request_offset - offset
                 await writer.submit(output_offset, payload)
                 downloaded += len(payload)
-                await _call_progress(progress, downloaded, callback_total)
+                await reporter.report(downloaded)
                 _prefetch_read_ahead(
                     invoke,
                     location_state=location_state,
-                    precise=precise,
+                    precise=effective_precise,
                     cdn_supported=cdn_supported,
                     request_timeout=request_timeout,
                     max_retries=max_retries,
@@ -560,17 +848,18 @@ async def _download_file_concurrent(
                     start_offset=request_offset + len(payload),
                     part_size=part_sizer.current_size,
                     read_ahead_bytes=read_ahead_bytes,
-                    hard_end=end_offset,
+                    # Read-ahead exists to prime the NEXT range read, so it may
+                    # run past this call's end_offset -- only EOF caps it.
+                    hard_end=total_size if total_size is not None else None,
                     reference_deduper=reference_deduper,
                     file_reference_refresher=file_reference_refresher,
                 )
-                if len(payload) < request_limit:
+                if len(payload) < expect_limit:
                     stopped = True
-            fill_window()
-        if stopped:
-            await _cancel_tasks(pending)
+            await fill_window()
         stats = await writer.close()
         _record_writer_stats(stats)
+        await reporter.finish(downloaded)
         if destination_handle.should_close:
             destination_handle.handle.close()
         data = destination_handle.get_data()
@@ -604,8 +893,18 @@ async def download_media(
         kwargs["range_cache_key"] = _range_cache_key_from_media(media)
     location = download_location_from_media(media)
     total_size = kwargs.pop("total_size", None)
-    if total_size is None and isinstance(media, Media):
-        total_size = media.size
+    if total_size is None:
+        # Resolve the size from any media shape so concurrency never silently
+        # degrades to the sequential path when the caller omits limit.
+        resolved = (
+            media
+            if isinstance(media, Media)
+            else media_from_file_id(media)
+            if is_file_id(media)
+            else media_from_raw(media)
+        )
+        if resolved is not None:
+            total_size = resolved.size
     return await download_file(invoke, location, destination, total_size=total_size, **kwargs)
 
 
@@ -747,6 +1046,7 @@ async def _download_part_cached(
     reference_deduper: _FileReferenceRefreshDeduper,
     file_reference_refresher: FileReferenceRefresher | None,
     retry_observer: DownloadRetryObserver | None = None,
+    lease: _WindowLease | None = None,
 ) -> bytes:
     async def fetch() -> bytes:
         return await _download_part_with_reference_refresh(
@@ -762,6 +1062,7 @@ async def _download_part_cached(
             retry_observer=retry_observer,
             reference_deduper=reference_deduper,
             file_reference_refresher=file_reference_refresher,
+            lease=lease,
         )
 
     if range_cache is None or range_cache_key is None:
@@ -783,6 +1084,7 @@ async def _download_part_with_reference_refresh(
     retry_observer: DownloadRetryObserver | None,
     reference_deduper: _FileReferenceRefreshDeduper,
     file_reference_refresher: FileReferenceRefresher | None,
+    lease: _WindowLease | None = None,
 ) -> bytes:
     for refresh_attempt in range(2):
         try:
@@ -797,6 +1099,7 @@ async def _download_part_with_reference_refresh(
                 max_retries=max_retries,
                 flood_sleep_threshold=flood_sleep_threshold,
                 retry_observer=retry_observer,
+                lease=lease,
             )
         except Exception as exc:
             if (
@@ -833,6 +1136,7 @@ async def _download_part(
     max_retries: int,
     flood_sleep_threshold: int | None,
     retry_observer: DownloadRetryObserver | None = None,
+    lease: _WindowLease | None = None,
 ) -> bytes:
     request = functions.UploadGetFile(
         precise=precise, cdn_supported=cdn_supported, location=location, offset=offset, limit=limit
@@ -863,7 +1167,18 @@ async def _download_part(
                 observed = retry_observer(exc, attempt + 1)
                 if inspect.isawaitable(observed):
                     await observed
-            await _sleep_before_retry(exc, attempt)
+            if lease is not None and isinstance(exc, FloodWait):
+                # The server asked only THIS request to slow down; hand the slot
+                # and byte budget back to the window for the whole sleep so the
+                # rest of the pipeline keeps flowing.
+                lease.release_for_sleep()
+                record_metric("media.download.flood_capacity_releases", 1)
+                try:
+                    await _sleep_before_retry(exc, attempt)
+                finally:
+                    await lease.reacquire_after_sleep()
+            else:
+                await _sleep_before_retry(exc, attempt)
     raise MediaDownloadError(f"download part at offset {offset} did not complete")
 
 
@@ -990,12 +1305,25 @@ def _prefetch_read_ahead(
 ) -> None:
     if range_cache is None or range_cache_key is None or read_ahead_bytes <= 0:
         return
+    alignment = _PRECISE_ALIGNMENT if precise else _ALIGNMENT
+    if start_offset % alignment != 0:
+        # A short read left the cursor on an offset Telegram cannot serve;
+        # prefetching from here would only produce protocol errors.
+        record_metric("media.download.read_ahead_unaligned_skips", 1)
+        return
     remaining = read_ahead_bytes
     current_offset = start_offset
     while remaining > 0 and (hard_end is None or current_offset < hard_end):
-        request_limit = min(part_size, remaining)
-        if hard_end is not None:
-            request_limit = min(request_limit, hard_end - current_offset)
+        request_limit = _legal_request_limit(
+            current_offset, min(part_size, remaining), precise=precise
+        )
+        if request_limit is None:
+            break
+        if hard_end is not None and current_offset + request_limit > hard_end:
+            reduced = _legal_request_limit(
+                current_offset, hard_end - current_offset, precise=precise
+            )
+            request_limit = reduced if reduced is not None else request_limit
         if request_limit <= 0:
             break
         offset_for_task = current_offset
@@ -1054,19 +1382,27 @@ def _validate_download_options(
     max_part_size: int,
     range_cache_max_bytes: int,
     read_ahead_bytes: int,
+    precise: bool = False,
 ) -> None:
+    del precise  # part sizes below 4 KiB auto-enable precise mode instead
     if offset < 0:
         raise ValueError("offset must not be negative")
     if limit is not None and limit < 0:
         raise ValueError("limit must not be negative")
-    if part_size <= 0:
-        raise ValueError("part_size must be positive")
+    if part_size < _PRECISE_ALIGNMENT:
+        raise ValueError(f"part_size must be at least {_PRECISE_ALIGNMENT} bytes")
     if part_size > MAX_DOWNLOAD_CHUNK_SIZE:
         raise ValueError("part_size must not exceed 1 MiB")
-    if max_part_size <= 0:
-        raise ValueError("max_part_size must be positive")
+    if part_size & (part_size - 1):
+        # Telegram limits must divide 1 MiB; powers of two also keep the
+        # adaptive sizer (which doubles) protocol-legal.
+        raise ValueError("part_size must be a power of two")
+    if max_part_size < _PRECISE_ALIGNMENT:
+        raise ValueError(f"max_part_size must be at least {_PRECISE_ALIGNMENT} bytes")
     if max_part_size > MAX_DOWNLOAD_CHUNK_SIZE:
         raise ValueError("max_part_size must not exceed 1 MiB")
+    if max_part_size & (max_part_size - 1):
+        raise ValueError("max_part_size must be a power of two")
     if max_part_size < part_size:
         raise ValueError("max_part_size must be greater than or equal to part_size")
     if concurrency <= 0:
@@ -1087,7 +1423,12 @@ def _validate_download_options(
 
 class _ConcurrentDestinationWriter:
     def __init__(
-        self, destination: _DestinationHandle, *, queue_size: int, preallocate_size: int | None
+        self,
+        destination: _DestinationHandle,
+        *,
+        queue_size: int,
+        preallocate_size: int | None,
+        sequential: bool = False,
     ) -> None:
         self._destination = destination
         self._queue: asyncio.Queue[tuple[int, bytes, float] | None] = asyncio.Queue(
@@ -1095,6 +1436,10 @@ class _ConcurrentDestinationWriter:
         )
         self._stats = _DownloadWriterStats()
         self._threaded = destination.path is not None
+        # Sequential transfers write strictly in order, so the writer appends at
+        # the handle's current position instead of seeking (user-supplied
+        # handles may be positioned intentionally or not be seekable at all).
+        self._sequential = sequential
         if destination.path is not None and preallocate_size is not None:
             destination.handle.truncate(preallocate_size)
         self._worker = asyncio.create_task(self._run())
@@ -1131,7 +1476,8 @@ class _ConcurrentDestinationWriter:
                 self._queue.task_done()
 
     def _write(self, offset: int, payload: bytes) -> None:
-        self._destination.handle.seek(offset)
+        if not self._sequential:
+            self._destination.handle.seek(offset)
         self._destination.handle.write(payload)
 
 
@@ -1248,6 +1594,13 @@ def _open_destination(destination: Destination, *, resume: bool) -> _Destination
         path.parent.mkdir(parents=True, exist_ok=True)
         existing = path.stat().st_size if resume and path.exists() else 0
         handle = path.open("r+b" if resume and path.exists() else "w+b")
+        aligned = (existing // _PRECISE_ALIGNMENT) * _PRECISE_ALIGNMENT
+        if aligned != existing:
+            # Telegram cannot serve sub-1 KiB-aligned offsets; drop the partial
+            # tail and re-download it instead of failing the resume.
+            handle.truncate(aligned)
+            record_metric("media.download.resume_realigned", 1)
+            existing = aligned
         handle.seek(existing)
         return _DestinationHandle(
             handle=handle,
@@ -1344,42 +1697,37 @@ async def _sleep_before_retry(exc: Exception, attempt: int = 0) -> None:
 
 
 class _AdaptiveDownloadThrottle:
+    """Reduce the request window only on connection-health signals.
+
+    ``FLOOD_WAIT`` is per-request pacing, not congestion: the affected task
+    sleeps (releasing its window budget) while everything else keeps flowing --
+    mtcute and MTKruto never reduce concurrency on floods. Floods only pause
+    growth. Disconnects/timeouts still shrink the window by one, and the
+    start-of-transfer burst is handled by ``_DownloadDelayGate``, so there is
+    no slow start either.
+    """
+
     def __init__(self, max_limit: int, *, clock: Clock = time.monotonic) -> None:
         self.max_limit = max(1, max_limit)
-        self.limit = 1
+        self.limit = self.max_limit
         self._clock = clock
         self._successes_since_change = 0
         self._cooldown_until = 0.0
-        if self.max_limit > self.limit:
-            record_metric(
-                "media.download.adaptive_throttle",
-                self.limit,
-                attributes={"reason": "slow_start", "previous_limit": self.max_limit},
-            )
-            emit_event(
-                _LOGGER,
-                logging.DEBUG,
-                "media.download.throttle",
-                outcome="slow_start",
-                previous_limit=self.max_limit,
-                current_limit=self.limit,
-                reason="slow_start",
-            )
 
     async def on_retry(self, exc: Exception, attempt: int) -> None:
         previous = self.limit
-        cooldown_s = 0.0
         if isinstance(exc, FloodWait):
-            self.limit = max(1, self.limit // 2)
-            cooldown_s = max(float(exc.seconds), 2.0)
-        elif isinstance(
+            self._successes_since_change = 0
+            self._cooldown_until = max(
+                self._cooldown_until, self._clock() + max(float(exc.seconds), 2.0)
+            )
+            return
+        if isinstance(
             exc, ClientDisconnected | RequestTimeout | RpcTimeout | TimeoutError | ConnectionError
         ):
             self.limit = max(1, self.limit - 1)
-            cooldown_s = 2.0
-        self._successes_since_change = 0
-        if cooldown_s > 0:
-            self._cooldown_until = max(self._cooldown_until, self._clock() + cooldown_s)
+            self._successes_since_change = 0
+            self._cooldown_until = max(self._cooldown_until, self._clock() + 2.0)
         if self.limit == previous:
             return
         record_metric(
@@ -1408,7 +1756,7 @@ class _AdaptiveDownloadThrottle:
         if self._clock() < self._cooldown_until:
             return
         self._successes_since_change += 1
-        if self._successes_since_change < max(8, self.limit * 8):
+        if self._successes_since_change < 8:
             return
         previous = self.limit
         self.limit = min(self.max_limit, self.limit + 1)
@@ -1430,6 +1778,9 @@ class _AdaptiveDownloadThrottle:
 
 
 __all__ = [
+    "DEFAULT_DOWNLOAD_CONCURRENCY",
+    "DEFAULT_DOWNLOAD_IN_FLIGHT_BYTES",
+    "DEFAULT_DOWNLOAD_PART_SIZE",
     "DEFAULT_RANGE_CACHE_BYTES",
     "MAX_DOWNLOAD_CHUNK_SIZE",
     "Destination",

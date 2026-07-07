@@ -65,6 +65,10 @@ class ClientConfig:
     flood_sleep_threshold: int | None = None
     media_concurrency: int | None = None
     media_max_buffer_size: int | None = None
+    # Media lanes idle-close after this many seconds without requests (mtcute
+    # closes at 60 s); keepalive pings keep them warm until then. None keeps
+    # lanes open for the client's whole lifetime.
+    media_idle_close: float | None = 120.0
 
     def __post_init__(self) -> None:
         if self.api_id <= 0:
@@ -93,3 +97,5 @@ class ClientConfig:
             raise ValueError("media_concurrency must be positive when set")
         if self.media_max_buffer_size is not None and self.media_max_buffer_size <= 0:
             raise ValueError("media_max_buffer_size must be positive when set")
+        if self.media_idle_close is not None and self.media_idle_close <= 0:
+            raise ValueError("media_idle_close must be positive when set")

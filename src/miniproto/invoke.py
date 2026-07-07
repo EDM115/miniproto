@@ -202,24 +202,42 @@ async def build_sender_from_session(
     fresh_session_id: bool = False,
     server_salt_override: int | None = None,
     on_salt_change: Callable[[int], None] | None = None,
+    dc_id_override: int | None = None,
+    auth_key_override: bytes | None = None,
+    allow_media_only: bool = False,
 ) -> RawSender:
+    """Build a sender for the session DC, or -- with overrides -- a media DC.
+
+    ``dc_id_override``/``auth_key_override`` support cross-DC media transfers:
+    the caller supplies a per-DC auth key (created via key exchange with the
+    target DC) without ever touching the main session's DC or key.
+    """
     payload = await storage.load()
     record = load_session_record(payload, config.dc_id)
+    if dc_id_override is not None and record.dc_id != dc_id_override:
+        record = replace(record, dc_id=dc_id_override)
     if factory is not None:
         produced = factory(record)
         return cast(RawSender, await produced if inspect.isawaitable(produced) else produced)
-    auth_key = record.auth_key
-    if auth_key is None:
-        raise AuthKeyNotFound("raw invocation requires an MTProto auth key")
-    dc_id = record.dc_id or auth_key.dc_id or config.dc_id
+    if auth_key_override is not None:
+        auth_key_bytes = auth_key_override
+        dc_id = dc_id_override if dc_id_override is not None else record.dc_id or config.dc_id
+    else:
+        auth_key = record.auth_key
+        if auth_key is None:
+            raise AuthKeyNotFound("raw invocation requires an MTProto auth key")
+        auth_key_bytes = auth_key.key
+        dc_id = record.dc_id or auth_key.dc_id or config.dc_id
     if not record.dc_options:
         raise InvalidDatacenter(f"no DC options stored for dc_id={dc_id}")
-    option = select_dc_option(record.dc_options, dc_id)
+    option = select_dc_option(record.dc_options, dc_id, allow_media_only=allow_media_only)
     metadata = dict(record.metadata)
     server_salt = (
         server_salt_override
         if server_salt_override is not None
         else int(metadata.get("server_salt", 0) or 0)
+        if auth_key_override is None
+        else 0
     )
     session_id = (
         secrets.randbits(64)
@@ -234,7 +252,7 @@ async def build_sender_from_session(
     return MTProtoSender(
         ConnectionEndpoint(option.ip_address, option.port),
         config.transport,
-        MTProtoState(auth_key=auth_key.key, server_salt=server_salt, session_id=session_id),
+        MTProtoState(auth_key=auth_key_bytes, server_salt=server_salt, session_id=session_id),
         reconnect_attempts=reconnect_attempts,
         max_pending_rpcs=config.max_pending_rpcs,
         on_salt_change=on_salt_change,

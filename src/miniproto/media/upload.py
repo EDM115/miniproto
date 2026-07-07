@@ -31,6 +31,12 @@ from miniproto.raw import functions, types
 DEFAULT_CHUNK_SIZE = 512 * 1024
 BIG_FILE_THRESHOLD = 10 * 1024 * 1024
 DEFAULT_UPLOAD_FLOOD_SLEEP_THRESHOLD = 30
+# Stale parts occupying a lane for the global 30 s hurt upload tails; 45 s is
+# the live-bench default that sustained 15-16 MiB/s uploads on DC4.
+DEFAULT_UPLOAD_PART_TIMEOUT = 45.0
+# mtcute reads 24 parts ahead, MTKruto 16: one window of read-ahead keeps the
+# network from ever waiting on disk without unbounded buffering.
+DEFAULT_UPLOAD_CONCURRENCY = 8
 _LOGGER = get_logger("media.upload")
 
 type ProgressCallback = Callable[[int, int | None], Awaitable[None] | None]
@@ -79,7 +85,7 @@ async def upload_file(
     *,
     file_name: str | None = None,
     part_size: int = DEFAULT_CHUNK_SIZE,
-    concurrency: int = 1,
+    concurrency: int = DEFAULT_UPLOAD_CONCURRENCY,
     progress: ProgressCallback | None = None,
     file_id: int | None = None,
     max_retries: int = 2,
@@ -90,6 +96,8 @@ async def upload_file(
     _validate_upload_options(
         part_size, concurrency, max_retries, max_buffer_size, flood_sleep_threshold
     )
+    if request_timeout is None:
+        request_timeout = DEFAULT_UPLOAD_PART_TIMEOUT
     started = time.perf_counter()
     prepared = await _prepare_upload_source(source, file_name=file_name, chunk_size=part_size)
     if prepared.size <= 0:
@@ -102,6 +110,24 @@ async def upload_file(
     completed = 0
     progress_lock = asyncio.Lock()
     pending: set[asyncio.Task[None]] = set()
+    # One window of parts is read ahead of the sends (mtcute: 24, MTKruto: 16)
+    # on a worker thread, so the event loop never blocks on disk and the
+    # network never waits for a read. Memory stays bounded by ~2 windows.
+    read_queue: asyncio.Queue[tuple[int, bytes] | None] = asyncio.Queue(maxsize=max(2, concurrency))
+
+    async def produce_parts(reader: BinaryIO) -> None:
+        try:
+            for part_index in range(total_parts):
+                payload = await _read_chunk_threaded(reader, part_size)
+                if not payload:
+                    break
+                if md5 is not None:
+                    md5.update(payload)
+                await read_queue.put((part_index, payload))
+        finally:
+            # Always unblock the consumer, even when a read fails; the awaited
+            # producer task re-raises the original error afterwards.
+            await read_queue.put(None)
 
     async def upload_part(part_index: int, payload: bytes) -> None:
         nonlocal completed
@@ -120,18 +146,20 @@ async def upload_file(
             completed += len(payload)
             await _call_progress(progress, min(completed, prepared.size), prepared.size)
 
+    producer: asyncio.Task[None] | None = None
     try:
         with prepared.open_reader() as reader:
-            for part_index in range(total_parts):
-                payload = await _read_chunk(reader, part_size)
-                if not payload:
+            producer = asyncio.create_task(produce_parts(reader))
+            while True:
+                item = await read_queue.get()
+                if item is None:
                     break
-                if md5 is not None:
-                    md5.update(payload)
+                part_index, payload = item
                 task = asyncio.create_task(upload_part(part_index, payload))
                 pending.add(task)
                 if len(pending) >= concurrency:
                     pending = await _await_some(pending)
+            await producer
             if pending:
                 await _await_all(pending)
     except BaseException:
@@ -153,6 +181,9 @@ async def upload_file(
             big=is_big,
             duration_ms=duration_ms,
         )
+        if producer is not None and not producer.done():
+            producer.cancel()
+            await asyncio.gather(producer, return_exceptions=True)
         await _cancel_pending(pending)
         raise
     finally:
@@ -328,8 +359,19 @@ async def _materialize_unknown_source(
         raise
 
 
-async def _read_chunk(reader: BinaryIO, size: int) -> bytes:
-    return _coerce_chunk(await _maybe_await(reader.read(size)))
+async def _read_chunk_threaded(reader: BinaryIO, size: int) -> bytes:
+    """Read one part without blocking the event loop.
+
+    Async readers are awaited directly; synchronous file objects (the common
+    case) do their blocking ``read()`` on a worker thread. In-memory readers
+    skip the thread hop -- their reads cannot block.
+    """
+    read = reader.read
+    if inspect.iscoroutinefunction(read):
+        return _coerce_chunk(await read(size))
+    if isinstance(reader, io.BytesIO):
+        return _coerce_chunk(read(size))
+    return _coerce_chunk(await asyncio.to_thread(read, size))
 
 
 async def _save_part(
@@ -531,7 +573,9 @@ def _emit_part_retry(
 __all__ = [
     "BIG_FILE_THRESHOLD",
     "DEFAULT_CHUNK_SIZE",
+    "DEFAULT_UPLOAD_CONCURRENCY",
     "DEFAULT_UPLOAD_FLOOD_SLEEP_THRESHOLD",
+    "DEFAULT_UPLOAD_PART_TIMEOUT",
     "FileSource",
     "MediaUploadError",
     "MediaUploadResult",

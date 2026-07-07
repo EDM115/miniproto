@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -91,6 +91,50 @@ def inner_request(wrapped: object) -> object:
         assert isinstance(wrapped.query, functions.InitConnection)
         return wrapped.query.query
     return wrapped
+
+
+def test_upload_file_defaults_to_45s_part_timeout() -> None:
+    async def scenario() -> None:
+        invoker = FakeInvoker([types.BoolTrue()])
+        await upload_file(invoker, b"payload", file_name="t.bin")
+        assert invoker.kwargs[0]["request_timeout"] == 45.0
+        # An explicit timeout still wins.
+        explicit = FakeInvoker([types.BoolTrue()])
+        await upload_file(explicit, b"payload", file_name="t.bin", request_timeout=10.0)
+        assert explicit.kwargs[0]["request_timeout"] == 10.0
+
+    run(scenario())
+
+
+def test_upload_file_propagates_reader_errors_without_hanging() -> None:
+    class ExplodingReader:
+        # Reports a two-part file; the second read explodes.
+        def __init__(self) -> None:
+            self.calls = 0
+            self.position = 0
+
+        def read(self, size: int) -> bytes:
+            self.calls += 1
+            if self.calls > 1:
+                raise OSError("disk detached")
+            return b"x" * size
+
+        def seek(self, offset: int, whence: int = 0) -> int:
+            self.position = DEFAULT_CHUNK_SIZE * 2 if whence == 2 else offset
+            return self.position
+
+        def tell(self) -> int:
+            return self.position
+
+        def seekable(self) -> bool:
+            return True
+
+    async def scenario() -> None:
+        invoker = FakeInvoker([types.BoolTrue(), types.BoolTrue()])
+        with pytest.raises(OSError, match="disk detached"):
+            await upload_file(invoker, cast(Any, ExplodingReader()), file_name="boom.bin")
+
+    run(scenario())
 
 
 def test_upload_file_uses_small_file_parts_and_md5() -> None:

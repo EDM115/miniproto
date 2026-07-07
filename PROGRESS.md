@@ -190,6 +190,8 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
   | TASK-P0-2 | Add per-sender keepalive task sending `ping_delay_disconnect(75)` on a fixed cadence (`read_timeout / 2`, 15 s at defaults) regardless of traffic, because the armed server-side timer is only reset by another ping of the same type (2026-07-06 master plan). | yes       | 2026-07-07 |
   | TASK-P0-5 | Wire the pushed-update receive path (client dispatch task feeding `UpdateManager`), unwrap top-level gzip bodies, and bound the sender `_incoming` queue with drop-oldest (2026-07-06 master plan).           | yes       | 2026-07-07 |
   | TASK-P0-6 | Handle `new_session_created` (apply + ack salt) and persist server-salt changes debounced via `on_salt_change`, so rebuilt senders start with the corrected salt (2026-07-06 master plan).                    | yes       | 2026-07-07 |
+  | TASK-P1-6 | Piggyback pending acks inside a `msg_container` with the next outgoing request (one frame, acks requeued on send failure, one RPC per container); standalone threshold/age flushes stay as backstops (2026-07-06 master plan). | yes       | 2026-07-07 |
+  | TASK-P1-9 | TCP socket tuning (NODELAY, SO_KEEPALIVE, >=1 MiB buffers best-effort), one idle-watchdog per connection replacing the per-packet `asyncio.timeout` in `recv()`, and drain-skipping for small writes under a 256 KiB buffer threshold (2026-07-06 master plan). | yes       | 2026-07-07 |
 
 ### Implementation Phase 6 - Authorization And DC Migration
 
@@ -203,6 +205,7 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
   | TASK-048 | Implement auth-key-not-found, invalid DC, transport flood, and key regeneration behavior with clear typed exceptions.                                                               | yes       | 2026-06-30 |
   | TASK-049 | Add fake-server tests in `tests/test_auth.py` for successful phone auth, successful bot auth, 2FA callback use, wrong-code failures, DC migration, and auth-key-not-found recovery. | yes       | 2026-07-02 |
   | TASK-050 | Add gated live tests under `tests/integration/test_auth_live.py` for production/test DC sign-in, bot auth, `get_me()`, and reconnect using environment-only credentials.            | yes       | 2026-07-02 |
+  | TASK-P1-5 | Cross-DC media downloads: media pools keyed by the file's DC with per-DC auth keys (key exchange + persisted `dc_auth` metadata) and `auth.exportAuthorization`/`importAuthorization` on media lanes; `FILE_MIGRATE_X` re-resolves the media pool without migrating the main session (2026-07-06 master plan). | yes       | 2026-07-07 |
 
 ### Implementation Phase 7 - Raw Invocation, Error Handling, And Flood Waits
 
@@ -258,6 +261,12 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
   | TASK-076 | Add gated live tests for upload/download to Saved Messages when `MINIPROTO_INTEGRATION=1`.                                                                                                                                       | yes       | 2026-07-02 |
   | TASK-P0-7 | Media flood handling: uploads sleep-and-retry flood waits within `flood_sleep_threshold` (default 30 s hard cap) like downloads, and both directions use jittered exponential backoff for non-flood transient retries (2026-07-06 master plan). | yes       | 2026-07-07 |
   | TASK-P0-8 | CDN download integrity: verify each decrypted 128 KiB block's SHA-256 against `file_hashes` (fetching missing hashes via `upload.getCdnFileHashes`) and raise `CdnIntegrityError` on mismatch (2026-07-06 master plan).          | yes       | 2026-07-07 |
+  | TASK-P1-1 | New download defaults: `concurrency=6`, `media_lanes=2`, 512 KiB parts growing adaptively to 1 MiB, 8 MiB rolling byte-window floor; `download_media()` resolves `total_size` from all media shapes; bench defaults updated (2026-07-06 master plan). | yes       | 2026-07-07 |
+  | TASK-P1-2 | Protocol-legal request scheduling: largest legal limit per offset (divisor-of-1MiB / 1 KiB-aligned precise), no 1 MiB boundary straddling, power-of-two part-size validation, auto-precise for 1 KiB-granularity, resume realignment, seeded property test (2026-07-06 master plan). | yes       | 2026-07-07 |
+  | TASK-P1-3 | Flood sleeps release window capacity (slot + bytes) for the whole sleep and reacquire before retrying; the adaptive throttle never reduces on `FloodWait` (growth pause only) and starts at full limit with a 50 ms -> 3 ms launch stagger replacing slow start (2026-07-06 master plan). | yes       | 2026-07-07 |
+  | TASK-P1-7 | Upload pipeline: default `concurrency=8`, one window of parts read ahead on a worker thread via a bounded producer queue, and a 45 s default media-part timeout (2026-07-06 master plan). | yes       | 2026-07-07 |
+  | TASK-P1-8 | Read-ahead quarantine: force-disabled for full-file downloads with a warning metric, background prefetches capped at 32, prefetch requests use legal sizes and skip unaligned starts; range cache stays opt-in for streaming (2026-07-06 master plan). | yes       | 2026-07-07 |
+  | TASK-P1-10 | Sequential downloads write through the threaded writer pipeline (order-preserving append mode) and both paths coalesce progress callbacks to >=250 ms or 8 parts with a guaranteed final call (2026-07-06 master plan). | yes       | 2026-07-07 |
 
 ### Implementation Phase 11 - Observability, Resource Limits, And Production Hardening
 
@@ -270,6 +279,7 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
   | TASK-080 | Add shutdown leak checks and background task supervision so disconnect waits for owned tasks and surfaces fatal runtime errors.                                                                           | yes         | 2026-07-07 |
   | TASK-081 | Add tests in `tests/test_observability.py` and `tests/test_resource_limits.py` for counters, hook calls, redacted logs, queue depth, pending RPC limit, media memory ceiling, and clean shutdown.         | yes         | 2026-07-07 |
   | TASK-P0-9 | Bound pending RPCs per sender (`ClientConfig.max_pending_rpcs`, raising `PendingRpcLimitExceeded`), supervise receive/keepalive/dispatch tasks so fatal errors surface on the next call and during disconnect, and make `disconnect()` await all owned tasks (2026-07-06 master plan). | yes         | 2026-07-07 |
+  | TASK-P1-4 | Warm media pools keyed `(kind, dc_id)` with grow-only lane resize, parallel prewarm at transfer start, and a per-pool idle reaper driven by `ClientConfig.media_idle_close` (default 120 s, `None` disables) (2026-07-06 master plan). | yes         | 2026-07-07 |
 
 ### Implementation Phase 12 - Verification, Integration, Benchmarks, And CI Expansion
 

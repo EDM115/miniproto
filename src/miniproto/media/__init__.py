@@ -1,5 +1,8 @@
 from miniproto.media.cdn import CdnError, CdnIntegrityError, CdnRedirect, decrypt_cdn_chunk
 from miniproto.media.download import (
+    DEFAULT_DOWNLOAD_CONCURRENCY,
+    DEFAULT_DOWNLOAD_IN_FLIGHT_BYTES,
+    DEFAULT_DOWNLOAD_PART_SIZE,
     DEFAULT_RANGE_CACHE_BYTES,
     MAX_DOWNLOAD_CHUNK_SIZE,
     Destination,
@@ -24,6 +27,9 @@ from miniproto.media.upload import (
 __all__ = [
     "BIG_FILE_THRESHOLD",
     "DEFAULT_CHUNK_SIZE",
+    "DEFAULT_DOWNLOAD_CONCURRENCY",
+    "DEFAULT_DOWNLOAD_IN_FLIGHT_BYTES",
+    "DEFAULT_DOWNLOAD_PART_SIZE",
     "DEFAULT_RANGE_CACHE_BYTES",
     "MAX_DOWNLOAD_CHUNK_SIZE",
     "CdnError",

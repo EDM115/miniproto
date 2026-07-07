@@ -24,6 +24,7 @@ from miniproto.mtproto.codec import (
     DecodedEncryptedMessage,
     GzipPacked,
     MessageContainer,
+    MessageContainerItem,
     MsgsAck,
     NewSessionCreated,
     Pong,
@@ -303,15 +304,40 @@ class MTProtoSender:
         self, pending: PendingRequest, *, fail_future_on_error: bool = True
     ) -> int:
         async with self._send_lock:
+            # Pending acks ride inside a msg_container with the outgoing request:
+            # one transport frame, no standalone ack round trip (grammers prepends
+            # acks into outgoing containers; mtcute/MTKruto ride acks with the next
+            # RPC the same way). Only one RPC ever shares a container, so the
+            # "never two upload.getFile per container" rule holds by construction.
+            ack_ids = self.state.pop_pending_acks(limit=DEFAULT_ACK_FLUSH_LIMIT)
+            ack_item: MessageContainerItem | None = None
+            if ack_ids:
+                ack_item = MessageContainerItem(
+                    msg_id=self.state.next_msg_id(),
+                    seq_no=self.state.next_seq_no(content_related=False),
+                    body=MsgsAck(msg_ids=ack_ids),
+                )
             msg_id = self.state.next_msg_id()
             seq_no = self.state.next_seq_no(content_related=pending.content_related)
+            body: bytes | object = pending.body
+            envelope_msg_id = msg_id
+            envelope_seq_no = seq_no
+            if ack_item is not None:
+                body = MessageContainer(
+                    messages=(
+                        ack_item,
+                        MessageContainerItem(msg_id=msg_id, seq_no=seq_no, body=pending.body),
+                    )
+                )
+                envelope_msg_id = self.state.next_msg_id()
+                envelope_seq_no = self.state.next_seq_no(content_related=False)
             payload = encode_encrypted_message(
                 self.state.auth_key,
                 self.state.server_salt,
                 self.state.session_id,
-                msg_id,
-                seq_no,
-                pending.body,
+                envelope_msg_id,
+                envelope_seq_no,
+                body,
                 client_to_server=True,
             )
             pending.attempts += 1
@@ -321,9 +347,13 @@ class MTProtoSender:
                 pending.transport = await self._send_payload(payload)
             except BaseException:
                 self._pending.pop(msg_id, None)
+                if ack_ids:
+                    self.state.requeue_acks(ack_ids)
                 if fail_future_on_error and not pending.future.done():
                     pending.future.cancel()
                 raise
+            if ack_ids:
+                record_metric("sender.acks_piggybacked", len(ack_ids))
             return msg_id
 
     async def _send_payload(self, payload: bytes) -> Transport:
@@ -347,6 +377,11 @@ class MTProtoSender:
 
     async def _receive_loop(self) -> None:
         while not self._closing:
+            if self._receive_task is not asyncio.current_task():
+                # connect() opened a fresh connection (with its own receive loop)
+                # while this loop was mid-recovery; the replacement owns the
+                # transport now, and two loops reading one stream would race.
+                return
             transport: Transport | None = None
             try:
                 transport = self._transport
