@@ -636,6 +636,26 @@ def test_sender_request_timeout_does_not_kill_sibling_requests() -> None:
     event_loop.run(run())
 
 
+def test_sender_ping_interval_is_clamped_below_transport_read_deadline() -> None:
+    state = MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID)
+    sender = MTProtoSender(
+        ConnectionEndpoint("127.0.0.1", 443),
+        TransportConfig(read_timeout=10.0),
+        state,
+        ping_interval=45.0,
+    )
+    # An idle connection must be pinged before the transport read deadline expires,
+    # otherwise recv() times out and forces a needless reconnect.
+    assert sender._ping_interval == 5.0
+    explicit = MTProtoSender(
+        ConnectionEndpoint("127.0.0.1", 443),
+        TransportConfig(read_timeout=10.0),
+        MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID),
+        ping_interval=2.0,
+    )
+    assert explicit._ping_interval == 2.0
+
+
 def test_sender_bounds_incoming_queue_with_drop_oldest() -> None:
     async def run() -> None:
         sender = MTProtoSender(

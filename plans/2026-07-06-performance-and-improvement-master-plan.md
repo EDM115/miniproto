@@ -40,7 +40,15 @@ miniproto already has: concurrency machinery, byte windows, adaptive throttle/pa
 
 ## 1. P0 — Protocol-Correctness Bugs That Cap Throughput (fix in this order)
 
-> **Status (2026-07-07): all nine P0 tasks are implemented and covered by fake-server/unit tests** (see `PROGRESS.md` Phase 5/7/10/11 rows referencing TASK-P0-*). The live-benchmark acceptance criteria (lane builds, reconnects, part_retries under real load) still need a benchmark run to confirm. Implementation notes per task are appended below as `Done:` lines.
+> **Status (2026-07-07): all nine P0 tasks are implemented and covered by fake-server/unit tests** (see `PROGRESS.md` Phase 5/7/10/11 rows referencing TASK-P0-*). Implementation notes per task are appended below as `Done:` lines.
+>
+> **Live validation (2026-07-07, user/DC4/VPS/uvloop, 2000 MiB):**
+> - Download c1/lane1/512K: 5.30 MiB/s, **media_lane_builds 1** (was 64–65), **reconnects 0**, part_retries 114 — all remaining retries are genuine server `FLOOD_WAIT`s (147 s), no connection churn. The ack death cycle is gone.
+> - Download c2/lanes2: 5.16 MiB/s, **reconnects 1** (was 145), lane builds 2.
+> - Download c4/lanes4/window4M: 5.21 MiB/s, reconnects 317 (was 838) but **sender_drops 0 / lane builds 4** — the remaining reconnects were internal transport read-deadline timeouts: flood sleeps starved lanes >30 s and the default 45 s ping interval never fired before the 30 s read deadline. Fixed post-run by clamping the keepalive interval to `read_timeout / 2` (15 s at defaults); re-run pending.
+> - Upload c8 x2: **16.25 / 15.64 MiB/s, 0 reconnects**, 291–455 flood waits absorbed by the new media-layer flood retry (previously one flood aborted the upload). **Repeat 2 reused the warm pool with 0 lane builds** — keepalive-backed warm pools confirmed live.
+> - Memory: `leak_suspected=false` on all runs, RSS delta 21–53 MB.
+> - Remaining gap to ~16 MiB/s downloads is the single-connection RTT ceiling + flood pacing — P1 territory (TASK-P1-1/P1-3), as predicted.
 
 ### TASK-P0-1: Send `msgs_ack` (acks are currently NEVER sent)
 
@@ -63,7 +71,7 @@ miniproto already has: concurrency machinery, byte windows, adaptive throttle/pa
 - Fix: start a keepalive task per connected sender (created in `connect()`, cancelled in `disconnect()`), sending `ping_delay_disconnect(disconnect_delay=75)` every ~30–55 s of send/receive inactivity. Track last-activity timestamps in the sender so busy transfers skip pings.
 - Files: `src/miniproto/connection/sender.py`.
 - Acceptance: fake-server test asserting a ping frame arrives within the window on an idle connection and that no ping is sent while requests are flowing; live check: a media pool reused after 3 minutes of idle does not rebuild lanes.
-- Done 2026-07-07: `_keepalive_loop` task per sender (started in `connect()`, cancelled in `disconnect()`), `ping_delay_disconnect(75)` after `ping_interval` (default 45 s) of send/receive inactivity tracked via `_last_activity`; the same task drives age-based ack flushes.
+- Done 2026-07-07: `_keepalive_loop` task per sender (started in `connect()`, cancelled in `disconnect()`), `ping_delay_disconnect(75)` after `ping_interval` of send/receive inactivity tracked via `_last_activity`; the same task drives age-based ack flushes. The effective interval is clamped to `transport.read_timeout / 2` (15 s at defaults) so an idle/flood-sleeping connection is pinged before the transport read deadline can kill it (live c4 run showed 317 read-deadline reconnects with the unclamped 45 s default).
 
 ### TASK-P0-3: Stop wrapping EVERY request in `InvokeWithLayer(InitConnection(...))`
 

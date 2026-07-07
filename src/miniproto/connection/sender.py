@@ -86,7 +86,10 @@ class MTProtoSender:
         self._connector = connector
         self._reconnect_attempts = reconnect_attempts
         self._ping_disconnect_delay = ping_disconnect_delay
-        self._ping_interval = max(0.05, ping_interval)
+        # The transport enforces a read deadline; an idle connection must be pinged
+        # well before that deadline or recv() times out and forces a reconnect
+        # (observed live as reconnect churn while flood sleeps starve a lane).
+        self._ping_interval = max(0.05, min(ping_interval, transport_config.read_timeout / 2))
         self._ack_flush_threshold = max(1, ack_flush_threshold)
         self._ack_max_delay = max(0.05, ack_max_delay)
         self._keepalive_tick = max(0.05, min(5.0, self._ping_interval / 4, self._ack_max_delay / 2))
