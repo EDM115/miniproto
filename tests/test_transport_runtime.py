@@ -518,7 +518,7 @@ def test_sender_flushes_acks_automatically_before_64_unacked_accumulate() -> Non
     event_loop.run(run())
 
 
-def test_sender_keepalive_pings_idle_connection_and_skips_busy_one() -> None:
+def test_sender_keepalive_pings_on_fixed_cadence_even_while_busy() -> None:
     async def run() -> None:
         pings = 0
 
@@ -537,19 +537,42 @@ def test_sender_keepalive_pings_idle_connection_and_skips_busy_one() -> None:
         async with FakeMTProtoServer(AUTH_KEY, config, handle) as server:
             sender = MTProtoSender(server.endpoint, config, state, ping_interval=0.2)
             await sender.connect()
-            # Busy phase: keep traffic flowing, no keepalive ping should fire.
-            for _ in range(6):
+            # Busy phase: ping_delay_disconnect arms a server-side timer that only a
+            # NEW ping of the same type resets, so pings must keep flowing on their
+            # cadence even while request traffic is heavy.
+            deadline = asyncio.get_running_loop().time() + 1.0
+            while asyncio.get_running_loop().time() < deadline:
                 assert await sender.request(b"req1", request_timeout=2.0) == b"ok"
-                await asyncio.sleep(0.05)
-            assert pings == 0
-            # Idle phase: a ping_delay_disconnect must arrive within the window.
+                await asyncio.sleep(0.02)
+            assert pings >= 1
+            busy_pings = pings
+            # Idle phase: pings keep arriving on the same cadence.
             for _ in range(100):
-                if pings > 0:
+                if pings > busy_pings:
                     break
                 await asyncio.sleep(0.05)
-            assert pings > 0
+            assert pings > busy_pings
             assert sender.is_connected
             await sender.disconnect()
+
+    event_loop.run(run())
+
+
+def test_sender_reconnect_skips_when_transport_was_already_replaced() -> None:
+    async def run() -> None:
+        sender = MTProtoSender(
+            ConnectionEndpoint("127.0.0.1", 443),
+            TransportConfig(),
+            MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID),
+        )
+        replacement = _ExplodingTransport()
+        stale = _ExplodingTransport()
+        sender._transport = cast(Any, replacement)
+        # A stale failure report must not close the healthy replacement transport;
+        # doing so ping-pongs reconnects between the send path and the receive loop.
+        await sender._reconnect(failed_transport=cast(Any, stale))
+        assert sender._transport is replacement
+        assert not replacement.closed
 
     event_loop.run(run())
 

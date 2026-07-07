@@ -101,7 +101,6 @@ class MTProtoSender:
         self._receive_task: asyncio.Task[None] | None = None
         self._keepalive_task: asyncio.Task[None] | None = None
         self._fatal_error: BaseException | None = None
-        self._last_activity = time.monotonic()
         self._pending: dict[int, PendingRequest] = {}
         self._acks_received: set[int] = set()
         self._incoming: asyncio.Queue[DecodedEncryptedMessage] = asyncio.Queue(
@@ -143,7 +142,6 @@ class MTProtoSender:
                 self.endpoint, self.transport_config, connector=self._connector
             )
             self.connection_initialized = False
-            self._last_activity = time.monotonic()
             self._receive_task = asyncio.create_task(self._receive_loop())
             self._keepalive_task = asyncio.create_task(self._keepalive_loop())
         _emit_sender_event(
@@ -306,7 +304,7 @@ class MTProtoSender:
     async def _send_payload(self, payload: bytes) -> None:
         transport = self._transport
         if transport is None or not transport.is_connected:
-            await self._reconnect()
+            await self._reconnect(failed_transport=transport)
             transport = self._transport
         if transport is None:
             raise TransportClosed("sender is not connected")
@@ -314,21 +312,20 @@ class MTProtoSender:
             await transport.send(payload)
         except TransportError:
             record_metric("sender.send_transport_errors", 1)
-            await self._reconnect()
+            await self._reconnect(failed_transport=transport)
             if self._transport is None:
                 raise
             await self._transport.send(payload)
-        self._last_activity = time.monotonic()
 
     async def _receive_loop(self) -> None:
         while not self._closing:
+            transport: Transport | None = None
             try:
                 transport = self._transport
                 if transport is None:
                     await asyncio.sleep(0)
                     continue
                 packet = await transport.recv()
-                self._last_activity = time.monotonic()
                 message = decode_encrypted_message(
                     self.state.auth_key, packet, client_to_server=False
                 )
@@ -346,7 +343,7 @@ class MTProtoSender:
                     return
                 record_metric("sender.receive_transport_errors", 1)
                 self._fail_pending(exc)
-                await self._reconnect()
+                await self._reconnect(failed_transport=transport)
             except Exception as exc:
                 _emit_sender_event(
                     "sender.receive_loop",
@@ -450,9 +447,14 @@ class MTProtoSender:
             )
 
     async def _keepalive_loop(self) -> None:
+        # ping_delay_disconnect arms a server-side disconnect timer that is only reset
+        # by ANOTHER message of the same type -- ordinary RPC traffic does not disarm
+        # it. Pings therefore flow on a fixed cadence regardless of how busy the
+        # connection is (MTKruto: 56 s, mtcute/Telethon: 60 s cadence).
+        last_ping = time.monotonic()
         while not self._closing:
             await asyncio.sleep(self._keepalive_tick)
-            if self._closing:
+            if self._closing or self._keepalive_task is not asyncio.current_task():
                 return
             receive_task = self._receive_task
             if receive_task is None or receive_task.done():
@@ -463,10 +465,10 @@ class MTProtoSender:
                     and self.state.oldest_pending_ack_age() >= self._ack_max_delay
                 ):
                     await self.flush_acks()
-                idle = time.monotonic() - self._last_activity
-                if idle >= self._ping_interval:
+                if time.monotonic() - last_ping >= self._ping_interval:
                     record_metric("sender.keepalive_pings", 1)
                     await self.ping()
+                    last_ping = time.monotonic()
             except asyncio.CancelledError:
                 raise
             except Exception as exc:
@@ -477,10 +479,15 @@ class MTProtoSender:
     async def _cancel_keepalive_task(self) -> None:
         keepalive_task = self._keepalive_task
         self._keepalive_task = None
-        if keepalive_task is not None and not keepalive_task.done():
-            keepalive_task.cancel()
-            with suppress(asyncio.CancelledError):
-                await keepalive_task
+        if (
+            keepalive_task is None
+            or keepalive_task.done()
+            or keepalive_task is asyncio.current_task()
+        ):
+            return
+        keepalive_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await keepalive_task
 
     async def _retry_bad_message(self, bad_msg_id: int) -> None:
         pending = self._pending.pop(bad_msg_id, None)
@@ -509,10 +516,22 @@ class MTProtoSender:
         if transport is not None:
             await transport.close()
 
-    async def _reconnect(self) -> None:
+    async def _reconnect(self, *, failed_transport: Transport | None = None) -> None:
         started = time.perf_counter()
         async with self._connect_lock:
             if self._closing:
+                return
+            current = self._transport
+            if (
+                failed_transport is not None
+                and current is not None
+                and current is not failed_transport
+                and current.is_connected
+            ):
+                # Another task already replaced the failed transport; closing the
+                # replacement here would ping-pong reconnects between the send path
+                # and the receive loop (observed live as a TransportClosed storm).
+                record_metric("sender.reconnect_skipped", 1)
                 return
             await self._close_transport()
             delay = self.transport_config.reconnect_backoff_initial
@@ -523,7 +542,6 @@ class MTProtoSender:
                         self.endpoint, self.transport_config, connector=self._connector
                     )
                     self.connection_initialized = False
-                    self._last_activity = time.monotonic()
                     record_metric("sender.reconnects", 1, attributes={"attempts": attempt + 1})
                     _emit_sender_event(
                         "sender.reconnect",
