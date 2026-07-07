@@ -5,6 +5,8 @@ import logging
 import mimetypes
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterable
+from contextlib import suppress
+from dataclasses import replace
 from typing import Any, TypeVar, overload
 
 from miniproto.auth.bootstrap import ensure_auth_key
@@ -29,6 +31,8 @@ from miniproto.invoke import (
     decode_rpc_response,
     is_retryable_request,
     load_session_record,
+    mark_sender_initialized,
+    sender_needs_init,
     should_retry_rpc_error,
     should_sleep_for_flood_wait,
     wrap_raw_request,
@@ -50,15 +54,18 @@ from miniproto.messages import (
     messages_from_history_result,
     parse_message_text,
 )
+from miniproto.mtproto.codec import GzipPacked, decode_message_body
 from miniproto.observability import emit_event, get_logger, record_metric
 from miniproto.peers import PeerCache, input_channel_from_peer, input_peer_from_peer
 from miniproto.raw import functions, types
 from miniproto.session.storage import InMemorySessionStorage, SessionStorage
+from miniproto.tl.codec import TLCodecError, decode_object
 from miniproto.types import Message, NewMessage, Peer, Update, User
 from miniproto.updates.manager import UpdateHandler, UpdateManager
 
 UpdateT = TypeVar("UpdateT", bound=Update)
 _LOGGER = get_logger("client")
+_SALT_PERSIST_DELAY = 1.0
 
 
 class Client:
@@ -79,6 +86,11 @@ class Client:
         self._sender_lock = asyncio.Lock()
         self._media_pools: dict[tuple[str, int, int], _MediaSenderPool] = {}
         self._media_pools_lock = asyncio.Lock()
+        self._receive_dispatch_task: asyncio.Task[None] | None = None
+        self._dispatch_sender: RawSender | None = None
+        self._latest_server_salt: int | None = None
+        self._salt_dirty = False
+        self._salt_persist_task: asyncio.Task[None] | None = None
 
     async def __aenter__(self) -> Client:
         await self.connect()
@@ -110,22 +122,44 @@ class Client:
         started = time.perf_counter()
         async with self._connect_lock:
             self._connected = False
-            update_error: BaseException | None = None
+            errors: list[BaseException] = []
             try:
                 await self._update_manager.stop()
             except BaseException as exc:
-                update_error = exc
-            await self._drop_sender()
-            await self._close_media_pools()
-            await self._storage.close()
-            if update_error is not None:
+                errors.append(exc)
+            dispatch_error = await self._stop_receive_dispatch()
+            if dispatch_error is not None:
+                errors.append(dispatch_error)
+            try:
+                await self._flush_server_salt()
+            except BaseException as exc:
+                errors.append(exc)
+            sender = self._sender
+            take_fatal = getattr(sender, "take_fatal_error", None)
+            if callable(take_fatal):
+                fatal = take_fatal()
+                if fatal is not None:
+                    errors.append(fatal)
+            try:
+                await self._drop_sender()
+            except BaseException as exc:
+                errors.append(exc)
+            try:
+                await self._close_media_pools()
+            except BaseException as exc:
+                errors.append(exc)
+            try:
+                await self._storage.close()
+            except BaseException as exc:
+                errors.append(exc)
+            if errors:
                 _emit_client_event(
                     "client.disconnect",
                     started,
                     outcome="error",
-                    error_type=type(update_error).__name__,
+                    error_type=type(errors[0]).__name__,
                 )
-                raise update_error
+                raise errors[0]
         _emit_client_event("client.disconnect", started, outcome="success")
 
     async def is_authorized(self) -> bool:
@@ -466,6 +500,8 @@ class Client:
 
     async def send_file(self, peer: Peer | str | int, file: FileSource, **kwargs: Any) -> Message:
         started = time.perf_counter()
+        self._apply_media_config_defaults(kwargs)
+        upload_flood_threshold_given = "flood_sleep_threshold" in kwargs
         file_options = _send_file_options(kwargs)
         resolved_peer = await self._peer_cache.resolve_peer(peer)
         file_id_source = file if is_file_id(file) else None
@@ -478,6 +514,11 @@ class Client:
                     _media_lane_count(file_options["media_lanes"], file_options["concurrency"]),
                     kind="upload",
                 ) as media_invoke:
+                    upload_kwargs: dict[str, Any] = {}
+                    if upload_flood_threshold_given:
+                        upload_kwargs["flood_sleep_threshold"] = file_options[
+                            "flood_sleep_threshold"
+                        ]
                     uploaded = await upload_file(
                         media_invoke,
                         file,
@@ -489,6 +530,7 @@ class Client:
                         max_retries=file_options["max_retries"],
                         max_buffer_size=file_options["max_buffer_size"],
                         request_timeout=file_options["request_timeout"],
+                        **upload_kwargs,
                     )
                 input_media = _uploaded_input_media(uploaded.input_file, file_options)
             else:
@@ -560,6 +602,7 @@ class Client:
         self, media: object, destination: Destination = None, **kwargs: Any
     ) -> MediaDownloadResult:
         started = time.perf_counter()
+        self._apply_media_config_defaults(kwargs)
         options = _download_media_options(kwargs)
         try:
             download_options = dict(options)
@@ -592,6 +635,12 @@ class Client:
         )
         return result
 
+    def _apply_media_config_defaults(self, kwargs: dict[str, Any]) -> None:
+        if "concurrency" not in kwargs and self.config.media_concurrency is not None:
+            kwargs["concurrency"] = self.config.media_concurrency
+        if "max_buffer_size" not in kwargs and self.config.media_max_buffer_size is not None:
+            kwargs["max_buffer_size"] = self.config.media_max_buffer_size
+
     async def invoke(
         self,
         raw_request: object,
@@ -618,11 +667,11 @@ class Client:
         request_timeout: float | None = None,
         flood_sleep_threshold: int | None = None,
         retry: bool | None = None,
+        without_updates: bool = False,
     ) -> object:
         if not self.is_connected:
             raise ConnectionError("client must be connected before invoking raw requests")
         started = time.perf_counter()
-        wrapped_request = wrap_raw_request(raw_request, self.config)
         timeout = self.config.request_timeout if request_timeout is None else request_timeout
         threshold = (
             self.config.flood_sleep_threshold
@@ -634,10 +683,18 @@ class Client:
         request_name = _request_name(raw_request)
         while True:
             sender = await ensure_sender()
+            needs_init = sender_needs_init(sender)
+            wrapped_request = wrap_raw_request(
+                raw_request,
+                self.config,
+                needs_init=needs_init,
+                without_updates=without_updates and needs_init,
+            )
             try:
                 raw_result = await sender.request(
                     wrapped_request, content_related=True, request_timeout=timeout
                 )
+                mark_sender_initialized(sender)
                 result = decode_rpc_response(raw_result, raw_request)
                 _emit_rpc_event(
                     started,
@@ -719,8 +776,9 @@ class Client:
                     and should_retry_rpc_error(typed)
                     and attempts < self.config.max_request_retries
                 ):
+                    # Server-side 5xx/timeouts are retried on the same connection; dropping
+                    # the sender here would fail every other in-flight request on the lane.
                     attempts += 1
-                    await drop_sender(sender)
                     continue
                 _emit_rpc_event(
                     started,
@@ -734,14 +792,13 @@ class Client:
                     raise typed from exc
                 raise
             except (TimeoutError, TransportError, ConnectionError) as exc:
+                # A per-request failure must not tear down the shared connection. Genuine
+                # transport failures are detected by the sender's receive loop, which
+                # reconnects internally; dead senders are replaced lazily by ensure_sender.
                 typed = wrap_transport_failure(
                     exc, raw_request, connected=self.is_connected and sender.is_connected
                 )
-                should_retry = (
-                    self.is_connected and retryable and attempts < self.config.max_request_retries
-                )
-                await drop_sender(sender)
-                if should_retry:
+                if self.is_connected and retryable and attempts < self.config.max_request_retries:
                     attempts += 1
                     continue
                 _emit_rpc_event(
@@ -795,15 +852,29 @@ class Client:
             sender = self._sender
             if sender is not None and sender.is_connected:
                 return sender
+            fatal: BaseException | None = None
             if sender is not None:
                 self._sender = None
+                take_fatal = getattr(sender, "take_fatal_error", None)
+                if callable(take_fatal):
+                    fatal = take_fatal()
+                await self._stop_receive_dispatch(for_sender=sender)
                 await sender.disconnect()
                 record_metric("client.sender_drops", 1, attributes={"reason": "disconnected"})
+                if fatal is not None:
+                    # Surface fatal receive-loop failures on the next call instead of
+                    # silently rebuilding; the follow-up call reconnects cleanly.
+                    raise fatal
             if self._sender is None:
                 self._sender = await build_sender_from_session(
-                    self.config, self._storage, self._sender_factory
+                    self.config,
+                    self._storage,
+                    self._sender_factory,
+                    server_salt_override=self._latest_server_salt,
+                    on_salt_change=self._on_salt_change,
                 )
                 record_metric("client.sender_builds", 1)
+                self._start_receive_dispatch(self._sender)
             return self._sender
 
     async def _ensure_authorization_key(self) -> None:
@@ -816,13 +887,99 @@ class Client:
         async with self._sender_lock:
             sender = self._sender
             if expected is not None and sender is not expected:
+                # A stale caller must never disconnect a sender that was already
+                # replaced; the replacement may be serving other in-flight requests.
                 record_metric("client.sender_drop_skipped", 1)
-                sender = expected
-            else:
-                self._sender = None
+                return
+            self._sender = None
         if sender is not None:
+            await self._stop_receive_dispatch(for_sender=sender)
             await sender.disconnect()
             record_metric("client.sender_drops", 1)
+
+    def _start_receive_dispatch(self, sender: RawSender) -> None:
+        recv_message = getattr(sender, "recv_message", None)
+        if not callable(recv_message):
+            return
+        self._dispatch_sender = sender
+        self._receive_dispatch_task = asyncio.create_task(self._receive_dispatch_loop(sender))
+
+    async def _stop_receive_dispatch(
+        self, *, for_sender: RawSender | None = None
+    ) -> BaseException | None:
+        task = self._receive_dispatch_task
+        if task is None:
+            return None
+        if for_sender is not None and self._dispatch_sender is not for_sender:
+            return None
+        self._receive_dispatch_task = None
+        self._dispatch_sender = None
+        if not task.done():
+            task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            return None
+        except BaseException as exc:
+            record_metric(
+                "client.receive_dispatch_errors", 1, attributes={"error_type": type(exc).__name__}
+            )
+            return exc
+        return None
+
+    async def _receive_dispatch_loop(self, sender: RawSender) -> None:
+        recv_message = getattr(sender, "recv_message")  # noqa: B009 - checked by caller
+        while True:
+            message = await recv_message()
+            try:
+                raw_update = _decode_pushed_payload(message.body)
+            except (TLCodecError, ValueError) as exc:
+                record_metric(
+                    "client.update_decode_errors", 1, attributes={"error_type": type(exc).__name__}
+                )
+                continue
+            if raw_update is None:
+                continue
+            record_metric("client.raw_updates_dispatched", 1)
+            await self._update_manager.feed_raw_update(raw_update)
+
+    def _on_salt_change(self, server_salt: int) -> None:
+        self._latest_server_salt = server_salt
+        self._salt_dirty = True
+        if self._salt_persist_task is None or self._salt_persist_task.done():
+            self._salt_persist_task = asyncio.create_task(self._persist_server_salt_later())
+
+    async def _persist_server_salt_later(self) -> None:
+        # Debounced so a burst of salt changes mid-transfer does not fsync per change.
+        try:
+            await asyncio.sleep(_SALT_PERSIST_DELAY)
+            await self._persist_server_salt()
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            record_metric(
+                "client.salt_persist_errors", 1, attributes={"error_type": type(exc).__name__}
+            )
+
+    async def _flush_server_salt(self) -> None:
+        task = self._salt_persist_task
+        self._salt_persist_task = None
+        if task is not None and not task.done():
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
+        await self._persist_server_salt()
+
+    async def _persist_server_salt(self) -> None:
+        salt = self._latest_server_salt
+        if salt is None or not self._salt_dirty:
+            return
+        self._salt_dirty = False
+        record = load_session_record(await self._storage.load(), self.config.dc_id)
+        metadata = dict(record.metadata)
+        metadata["server_salt"] = salt
+        await self._storage.save(replace(record, metadata=metadata))
+        record_metric("client.server_salt_persisted", 1)
 
     async def _get_media_pool(self, *, kind: str, lane_count: int) -> _MediaSenderPool:
         dc_id = await self._current_dc_id()
@@ -912,6 +1069,7 @@ class _MediaSenderPool:
                 request_timeout=request_timeout,
                 flood_sleep_threshold=flood_sleep_threshold,
                 retry=retry,
+                without_updates=True,
             )
         finally:
             await self._release_lane(lane)
@@ -977,6 +1135,8 @@ class _MediaSenderLane:
                 self._client._storage,
                 self._client._sender_factory,
                 fresh_session_id=True,
+                server_salt_override=self._client._latest_server_salt,
+                on_salt_change=self._client._on_salt_change,
             )
             record_metric(
                 "client.media_lane_builds",
@@ -989,6 +1149,8 @@ class _MediaSenderLane:
         async with self._lock:
             sender = self._sender
             if expected is not None and sender is not expected:
+                # The lane was already rebuilt for other requests; disconnecting the
+                # stale caller's sender here would kill the replacement's traffic.
                 record_metric(
                     "client.media_lane_drop_skipped",
                     1,
@@ -999,9 +1161,8 @@ class _MediaSenderLane:
                         "reason": reason,
                     },
                 )
-                sender = expected
-            else:
-                self._sender = None
+                return
+            self._sender = None
         if sender is not None:
             await sender.disconnect()
             record_metric(
@@ -1037,6 +1198,20 @@ _SEND_MESSAGE_OPTION_DEFAULTS: dict[str, object] = {
     "allow_paid_stars": None,
     "suggested_post": None,
 }
+
+
+def _decode_pushed_payload(data: bytes) -> object | None:
+    body = decode_message_body(data)
+    while isinstance(body, GzipPacked):
+        body = decode_message_body(body.unpack())
+    if isinstance(body, bytes | bytearray | memoryview):
+        payload = bytes(body)
+        value, offset = decode_object(payload, 0)
+        if offset != len(payload):
+            raise TLCodecError("pushed update payload has trailing bytes")
+        return value
+    # Residual service traffic is already handled (and acked) at the sender level.
+    return None
 
 
 def _send_message_options(kwargs: dict[str, Any]) -> dict[str, Any]:

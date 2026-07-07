@@ -21,13 +21,16 @@ from miniproto.connection.transport import (
     TransportTimeout,
     open_transport,
 )
+from miniproto.errors import PendingRpcLimitExceeded
 from miniproto.mtproto.codec import (
     BadMsgNotification,
     BadServerSalt,
+    DecodedEncryptedMessage,
     GzipPacked,
     MessageContainer,
     MessageContainerItem,
     MsgsAck,
+    NewSessionCreated,
     Pong,
     RpcResult,
     decode_encrypted_message,
@@ -473,6 +476,214 @@ def test_sender_retries_bad_msg_time_errors() -> None:
             sender = MTProtoSender(server.endpoint, config, state)
             assert await sender.request(b"request", request_timeout=2.0) == b"ok"
             assert attempts == 2
+            await sender.disconnect()
+
+    event_loop.run(run())
+
+
+def test_sender_flushes_acks_automatically_before_64_unacked_accumulate() -> None:
+    async def run() -> None:
+        total_requests = 200
+        sent_content = 0
+        acked = 0
+        max_unacked = 0
+
+        def handle(message):
+            nonlocal sent_content, acked, max_unacked
+            body = decode_message_body(message.body)
+            if isinstance(body, MsgsAck):
+                acked += len(body.msg_ids)
+                return None
+            sent_content += 1
+            max_unacked = max(max_unacked, sent_content - acked)
+            return RpcResult(req_msg_id=message.msg_id, result=b"ok")
+
+        config = TransportConfig(mode="tcp_intermediate", read_timeout=5.0)
+        state = MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID)
+        async with FakeMTProtoServer(AUTH_KEY, config, handle) as server:
+            sender = MTProtoSender(server.endpoint, config, state, ack_max_delay=0.2)
+            for _ in range(total_requests):
+                assert await sender.request(b"req1", request_timeout=5.0) == b"ok"
+            for _ in range(200):
+                if acked >= total_requests:
+                    break
+                await asyncio.sleep(0.05)
+            assert acked >= total_requests
+            # Telegram drops sessions after 64 unacked content messages; the automatic
+            # flush must keep the outstanding window far below that.
+            assert max_unacked < 64
+            assert state.pending_ack_count == 0
+            await sender.disconnect()
+
+    event_loop.run(run())
+
+
+def test_sender_keepalive_pings_idle_connection_and_skips_busy_one() -> None:
+    async def run() -> None:
+        pings = 0
+
+        def handle(message):
+            nonlocal pings
+            body = decode_message_body(message.body)
+            if isinstance(body, tuple) and body[0] == "ping_delay_disconnect":
+                pings += 1
+                ping_id = body[1]
+                assert isinstance(ping_id, int)
+                return Pong(msg_id=message.msg_id, ping_id=ping_id)
+            return RpcResult(req_msg_id=message.msg_id, result=b"ok")
+
+        config = TransportConfig(mode="tcp_intermediate", read_timeout=2.0)
+        state = MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID)
+        async with FakeMTProtoServer(AUTH_KEY, config, handle) as server:
+            sender = MTProtoSender(server.endpoint, config, state, ping_interval=0.2)
+            await sender.connect()
+            # Busy phase: keep traffic flowing, no keepalive ping should fire.
+            for _ in range(6):
+                assert await sender.request(b"req1", request_timeout=2.0) == b"ok"
+                await asyncio.sleep(0.05)
+            assert pings == 0
+            # Idle phase: a ping_delay_disconnect must arrive within the window.
+            for _ in range(100):
+                if pings > 0:
+                    break
+                await asyncio.sleep(0.05)
+            assert pings > 0
+            assert sender.is_connected
+            await sender.disconnect()
+
+    event_loop.run(run())
+
+
+def test_sender_applies_new_session_created_salt_and_notifies() -> None:
+    async def run() -> None:
+        new_salt = 0x0102030405060708
+        salts: list[int] = []
+
+        def handle(message):
+            return MessageContainer(
+                messages=(
+                    MessageContainerItem(
+                        msg_id=message.msg_id + 4,
+                        seq_no=1,
+                        body=NewSessionCreated(
+                            first_msg_id=message.msg_id, unique_id=7, server_salt=new_salt
+                        ),
+                    ),
+                    MessageContainerItem(
+                        msg_id=message.msg_id + 8,
+                        seq_no=3,
+                        body=RpcResult(req_msg_id=message.msg_id, result=b"ok"),
+                    ),
+                )
+            )
+
+        config = TransportConfig(mode="tcp_intermediate", read_timeout=2.0)
+        state = MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID)
+        async with FakeMTProtoServer(AUTH_KEY, config, handle) as server:
+            sender = MTProtoSender(server.endpoint, config, state)
+            sender.on_salt_change = salts.append
+            assert await sender.request(b"request", request_timeout=2.0) == b"ok"
+            assert state.server_salt == new_salt
+            assert salts == [new_salt]
+            # new_session_created is content-related and must be acknowledged.
+            assert state.pending_ack_count > 0
+            await sender.disconnect()
+
+    event_loop.run(run())
+
+
+def test_sender_handles_top_level_gzip_packed_rpc_result() -> None:
+    async def run() -> None:
+        def handle(message):
+            return gzip_pack(RpcResult(req_msg_id=message.msg_id, result=b"zipped"))
+
+        config = TransportConfig(mode="tcp_intermediate", read_timeout=2.0)
+        state = MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID)
+        async with FakeMTProtoServer(AUTH_KEY, config, handle) as server:
+            sender = MTProtoSender(server.endpoint, config, state)
+            assert await sender.request(b"request", request_timeout=2.0) == b"zipped"
+            await sender.disconnect()
+
+    event_loop.run(run())
+
+
+def test_sender_request_timeout_does_not_kill_sibling_requests() -> None:
+    async def run() -> None:
+        def handle(message):
+            body = decode_message_body(message.body)
+            if body == b"slow":
+                return None
+            return RpcResult(req_msg_id=message.msg_id, result=b"ok")
+
+        config = TransportConfig(mode="tcp_intermediate", read_timeout=5.0)
+        state = MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID)
+        async with FakeMTProtoServer(AUTH_KEY, config, handle) as server:
+            sender = MTProtoSender(server.endpoint, config, state)
+            await sender.connect()
+            transport_before = sender._transport
+            slow = asyncio.create_task(sender.request(b"slow", request_timeout=0.2))
+            fast = [
+                asyncio.create_task(sender.request(b"fast", request_timeout=2.0)) for _ in range(3)
+            ]
+            with pytest.raises(TimeoutError):
+                await slow
+            assert await asyncio.gather(*fast) == [b"ok", b"ok", b"ok"]
+            assert sender._transport is transport_before
+            assert sender.is_connected
+            assert sender.sender_state.pending_count == 0
+            await sender.disconnect()
+
+    event_loop.run(run())
+
+
+def test_sender_bounds_incoming_queue_with_drop_oldest() -> None:
+    async def run() -> None:
+        sender = MTProtoSender(
+            ConnectionEndpoint("127.0.0.1", 443),
+            TransportConfig(),
+            MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID),
+            incoming_queue_size=4,
+        )
+        for index in range(10):
+            sender._put_incoming(
+                DecodedEncryptedMessage(
+                    auth_key_id=b"\x00" * 8,
+                    server_salt=SERVER_SALT,
+                    session_id=SESSION_ID,
+                    msg_id=index,
+                    seq_no=1,
+                    body=b"payload",
+                    padding=b"",
+                )
+            )
+        assert sender._incoming.qsize() == 4
+        first = await sender.recv_message()
+        assert first.msg_id == 6
+
+    event_loop.run(run())
+
+
+def test_sender_rejects_requests_beyond_pending_rpc_limit() -> None:
+    async def run() -> None:
+        def handle(message):
+            del message
+            return None
+
+        config = TransportConfig(mode="tcp_intermediate", read_timeout=5.0)
+        state = MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID)
+        async with FakeMTProtoServer(AUTH_KEY, config, handle) as server:
+            sender = MTProtoSender(server.endpoint, config, state, max_pending_rpcs=2)
+            first = asyncio.create_task(sender.request(b"one", request_timeout=5.0))
+            second = asyncio.create_task(sender.request(b"two", request_timeout=5.0))
+            for _ in range(100):
+                if sender.sender_state.pending_count >= 2:
+                    break
+                await asyncio.sleep(0.01)
+            with pytest.raises(PendingRpcLimitExceeded):
+                await sender.request(b"three", request_timeout=5.0)
+            first.cancel()
+            second.cancel()
+            await asyncio.gather(first, second, return_exceptions=True)
             await sender.disconnect()
 
     event_loop.run(run())

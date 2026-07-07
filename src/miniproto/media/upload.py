@@ -18,16 +18,19 @@ from typing import Any, BinaryIO, cast
 
 from miniproto.errors import (
     ClientDisconnected,
+    FloodWait,
     InternalServerError,
     RequestTimeout,
     RpcError,
     RpcTimeout,
 )
+from miniproto.media.retry import backoff_delay
 from miniproto.observability import emit_event, get_logger, record_metric
 from miniproto.raw import functions, types
 
 DEFAULT_CHUNK_SIZE = 512 * 1024
 BIG_FILE_THRESHOLD = 10 * 1024 * 1024
+DEFAULT_UPLOAD_FLOOD_SLEEP_THRESHOLD = 30
 _LOGGER = get_logger("media.upload")
 
 type ProgressCallback = Callable[[int, int | None], Awaitable[None] | None]
@@ -82,8 +85,11 @@ async def upload_file(
     max_retries: int = 2,
     max_buffer_size: int | None = None,
     request_timeout: float | None = None,
+    flood_sleep_threshold: int | None = DEFAULT_UPLOAD_FLOOD_SLEEP_THRESHOLD,
 ) -> MediaUploadResult:
-    _validate_upload_options(part_size, concurrency, max_retries, max_buffer_size)
+    _validate_upload_options(
+        part_size, concurrency, max_retries, max_buffer_size, flood_sleep_threshold
+    )
     started = time.perf_counter()
     prepared = await _prepare_upload_source(source, file_name=file_name, chunk_size=part_size)
     if prepared.size <= 0:
@@ -108,6 +114,7 @@ async def upload_file(
             big=is_big,
             max_retries=max_retries,
             request_timeout=request_timeout,
+            flood_sleep_threshold=flood_sleep_threshold,
         )
         async with progress_lock:
             completed += len(payload)
@@ -204,7 +211,11 @@ async def upload_file(
 
 
 def _validate_upload_options(
-    part_size: int, concurrency: int, max_retries: int, max_buffer_size: int | None
+    part_size: int,
+    concurrency: int,
+    max_retries: int,
+    max_buffer_size: int | None,
+    flood_sleep_threshold: int | None = None,
 ) -> None:
     if part_size <= 0:
         raise ValueError("part_size must be positive")
@@ -216,6 +227,8 @@ def _validate_upload_options(
         raise ValueError("concurrency must be positive")
     if max_retries < 0:
         raise ValueError("max_retries must not be negative")
+    if flood_sleep_threshold is not None and flood_sleep_threshold < 0:
+        raise ValueError("flood_sleep_threshold must not be negative")
     ceiling = part_size * concurrency if max_buffer_size is None else max_buffer_size
     if ceiling < part_size * concurrency:
         raise ValueError("max_buffer_size is lower than the configured upload concurrency window")
@@ -329,6 +342,7 @@ async def _save_part(
     big: bool,
     max_retries: int,
     request_timeout: float | None,
+    flood_sleep_threshold: int | None = DEFAULT_UPLOAD_FLOOD_SLEEP_THRESHOLD,
 ) -> None:
     request: object
     if big:
@@ -340,9 +354,13 @@ async def _save_part(
     for attempt in range(max_retries + 1):
         try:
             record_metric("media.upload.part_requests", 1, attributes={"big": big})
-            result = await invoke(request, request_timeout=request_timeout, retry=False)
+            result = await invoke(
+                request, request_timeout=request_timeout, retry=False, flood_sleep_threshold=0
+            )
         except Exception as exc:
-            if attempt >= max_retries or not _is_transient_upload_error(exc):
+            if attempt >= max_retries or not _is_transient_upload_error(
+                exc, flood_sleep_threshold=flood_sleep_threshold
+            ):
                 raise
             _emit_part_retry(
                 part_index=part_index,
@@ -351,9 +369,9 @@ async def _save_part(
                 max_retries=max_retries,
                 big=big,
                 error_type=type(exc).__name__,
+                flood_wait_seconds=exc.seconds if isinstance(exc, FloodWait) else None,
             )
-            record_metric("media.upload.retry_sleep_seconds", 0, unit="s", attributes={"big": big})
-            await asyncio.sleep(0)
+            await _sleep_before_retry(exc, attempt, big=big)
             continue
         if _is_true(result):
             return
@@ -367,9 +385,14 @@ async def _save_part(
             big=big,
             error_type="BoolFalse",
         )
-        record_metric("media.upload.retry_sleep_seconds", 0, unit="s", attributes={"big": big})
-        await asyncio.sleep(0)
+        await _sleep_before_retry(None, attempt, big=big)
     raise MediaUploadError(f"Telegram did not accept upload part {part_index}")
+
+
+async def _sleep_before_retry(exc: Exception | None, attempt: int, *, big: bool) -> None:
+    delay = float(exc.seconds) if isinstance(exc, FloodWait) else backoff_delay(attempt)
+    record_metric("media.upload.retry_sleep_seconds", delay, unit="s", attributes={"big": big})
+    await asyncio.sleep(delay)
 
 
 async def _await_some(pending: set[asyncio.Task[None]]) -> set[asyncio.Task[None]]:
@@ -448,7 +471,13 @@ def _is_true(result: object) -> bool:
     return result is True or isinstance(result, types.BoolTrue)
 
 
-def _is_transient_upload_error(exc: Exception) -> bool:
+def _is_transient_upload_error(
+    exc: Exception, *, flood_sleep_threshold: int | None = DEFAULT_UPLOAD_FLOOD_SLEEP_THRESHOLD
+) -> bool:
+    if isinstance(exc, FloodWait):
+        # Flood waits (including FLOOD_PREMIUM_WAIT throughput throttles) are retried by
+        # sleeping inside the media layer, capped by the caller's threshold.
+        return flood_sleep_threshold is not None and exc.seconds <= flood_sleep_threshold
     if isinstance(
         exc,
         ClientDisconnected
@@ -473,26 +502,36 @@ def _is_transient_upload_error(exc: Exception) -> bool:
 
 
 def _emit_part_retry(
-    *, part_index: int, total_parts: int, attempt: int, max_retries: int, big: bool, error_type: str
+    *,
+    part_index: int,
+    total_parts: int,
+    attempt: int,
+    max_retries: int,
+    big: bool,
+    error_type: str,
+    flood_wait_seconds: int | None = None,
 ) -> None:
     record_metric("media.upload.part_retries", 1, attributes={"big": big, "error_type": error_type})
-    emit_event(
-        _LOGGER,
-        logging.WARNING,
-        "media.upload.part_retry",
-        outcome="retry",
-        part_index=part_index,
-        total_parts=total_parts,
-        attempt=attempt,
-        max_retries=max_retries,
-        big=big,
-        error_type=error_type,
-    )
+    fields: dict[str, object] = {
+        "outcome": "retry",
+        "part_index": part_index,
+        "total_parts": total_parts,
+        "attempt": attempt,
+        "max_retries": max_retries,
+        "big": big,
+        "error_type": error_type,
+    }
+    if flood_wait_seconds is not None:
+        fields["flood_wait_seconds"] = flood_wait_seconds
+        record_metric("media.upload.flood_waits", 1)
+        record_metric("media.upload.flood_wait_seconds", flood_wait_seconds, unit="s")
+    emit_event(_LOGGER, logging.WARNING, "media.upload.part_retry", **fields)
 
 
 __all__ = [
     "BIG_FILE_THRESHOLD",
     "DEFAULT_CHUNK_SIZE",
+    "DEFAULT_UPLOAD_FLOOD_SLEEP_THRESHOLD",
     "FileSource",
     "MediaUploadError",
     "MediaUploadResult",

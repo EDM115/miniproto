@@ -186,6 +186,10 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
   | TASK-041 | Add `src/miniproto/connection/sender.py` for request scheduling, correlation IDs, retry policy, reconnect locks, ping-delay-disconnect keepalive, and clean shutdown.                                         | yes       | 2026-06-30 |
   | TASK-042 | Add fake-server test utilities under `tests/support/fake_mtproto.py` for encrypted and unencrypted protocol flows.                                                                                            | yes       | 2026-06-30 |
   | TASK-043 | Add tests in `tests/test_transport_runtime.py` for transport framing, bounded reads, deadlines, reconnect throttling, ack batching, containers, gzip, bad salt, bad msg, duplicate suppression, and shutdown. | yes       | 2026-06-30 |
+  | TASK-P0-1 | Send `msgs_ack` automatically: flush pending acks from the receive path at >=16 pending and from the keepalive timer at >=10 s age, bounded per flush, with requeue on send failure (2026-07-06 master plan). | yes       | 2026-07-07 |
+  | TASK-P0-2 | Add per-sender keepalive task sending `ping_delay_disconnect` after ~45 s of send/receive inactivity, skipped while transfers are busy (2026-07-06 master plan).                                              | yes       | 2026-07-07 |
+  | TASK-P0-5 | Wire the pushed-update receive path (client dispatch task feeding `UpdateManager`), unwrap top-level gzip bodies, and bound the sender `_incoming` queue with drop-oldest (2026-07-06 master plan).           | yes       | 2026-07-07 |
+  | TASK-P0-6 | Handle `new_session_created` (apply + ack salt) and persist server-salt changes debounced via `on_salt_change`, so rebuilt senders start with the corrected salt (2026-07-06 master plan).                    | yes       | 2026-07-07 |
 
 ### Implementation Phase 6 - Authorization And DC Migration
 
@@ -211,6 +215,9 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
   | TASK-054 | Add retry classification for retryable transport failures, bad salt, bad msg, server errors, and DC migration while preventing duplicate unsafe sends when the request cannot be retried.                     | yes       | 2026-06-30 |
   | TASK-055 | Add cancellation and disconnect behavior that removes pending requests from correlation maps and surfaces deterministic exceptions.                                                                           | yes       | 2026-06-30 |
   | TASK-056 | Add tests in `tests/test_invoke.py` and `tests/test_rpc_errors.py` for successful raw calls, request/result mismatch, RPC errors, flood wait policy, cancellation, disconnect, retry, and migration behavior. | yes       | 2026-06-30 |
+  | TASK-P0-3 | Send `invokeWithLayer(initConnection(...))` only on the first request per (re)connected sender, wrap the first media-lane request in `invokeWithoutUpdates`, and serialize each request exactly once (2026-07-06 master plan). | yes       | 2026-07-07 |
+  | TASK-P0-4 | Stop dropping connections on per-request failures: timeouts and retryable RPC errors retry on the same connection, and stale `drop_sender(expected=...)` callers never disconnect a replacement sender (2026-07-06 master plan). | yes       | 2026-07-07 |
+  | TASK-P0-7 | Classify `FLOOD_WAIT_%d` as `FloodWait` (reserving `TransportFlood` for transport-level 429s) (2026-07-06 master plan).                                                                                       | yes       | 2026-07-07 |
 
 ### Implementation Phase 8 - Ordered Updates And Event Dispatch
 
@@ -249,6 +256,8 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
   | TASK-074 | Implement `Client.download_media()` as a thin protocol-core convenience over media location resolution plus download.                                                                                                            | yes       | 2026-06-30 |
   | TASK-075 | Add tests in `tests/test_media_upload.py` and `tests/test_media_download.py` for chunk sizing, small/big branch selection, streaming, retry, resume, CDN decrypt, progress callback ordering, cancellation, and memory ceilings. | yes       | 2026-06-30 |
   | TASK-076 | Add gated live tests for upload/download to Saved Messages when `MINIPROTO_INTEGRATION=1`.                                                                                                                                       | yes       | 2026-07-02 |
+  | TASK-P0-7 | Media flood handling: uploads sleep-and-retry flood waits within `flood_sleep_threshold` (default 30 s hard cap) like downloads, and both directions use jittered exponential backoff for non-flood transient retries (2026-07-06 master plan). | yes       | 2026-07-07 |
+  | TASK-P0-8 | CDN download integrity: verify each decrypted 128 KiB block's SHA-256 against `file_hashes` (fetching missing hashes via `upload.getCdnFileHashes`) and raise `CdnIntegrityError` on mismatch (2026-07-06 master plan).          | yes       | 2026-07-07 |
 
 ### Implementation Phase 11 - Observability, Resource Limits, And Production Hardening
 
@@ -257,9 +266,10 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
   | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ---------- |
   | TASK-077 | Add `src/miniproto/observability.py` with counters/hooks for bytes sent, bytes received, RPC latency, reconnect count, flood waits, update gaps, queue depth, upload throughput, and download throughput. | yes         | 2026-07-02 |
   | TASK-078 | Add structured logging calls across storage, transport, sender, auth, updates, and media using redacted `extra` payloads.                                                                                 | yes         | 2026-07-02 |
-  | TASK-079 | Add `ClientConfig` fields for request timeout, max pending RPCs, max reconnect attempts, update overflow policy, media concurrency, media memory ceiling, and flood-wait policy.                          | no          |            |
-  | TASK-080 | Add shutdown leak checks and background task supervision so disconnect waits for owned tasks and surfaces fatal runtime errors.                                                                           | no          |            |
-  | TASK-081 | Add tests in `tests/test_observability.py` and `tests/test_resource_limits.py` for counters, hook calls, redacted logs, queue depth, pending RPC limit, media memory ceiling, and clean shutdown.         | in progress | 2026-07-02 |
+  | TASK-079 | Add `ClientConfig` fields for request timeout, max pending RPCs, max reconnect attempts, update overflow policy, media concurrency, media memory ceiling, and flood-wait policy.                          | yes         | 2026-07-07 |
+  | TASK-080 | Add shutdown leak checks and background task supervision so disconnect waits for owned tasks and surfaces fatal runtime errors.                                                                           | yes         | 2026-07-07 |
+  | TASK-081 | Add tests in `tests/test_observability.py` and `tests/test_resource_limits.py` for counters, hook calls, redacted logs, queue depth, pending RPC limit, media memory ceiling, and clean shutdown.         | yes         | 2026-07-07 |
+  | TASK-P0-9 | Bound pending RPCs per sender (`ClientConfig.max_pending_rpcs`, raising `PendingRpcLimitExceeded`), supervise receive/keepalive/dispatch tasks so fatal errors surface on the next call and during disconnect, and make `disconnect()` await all owned tasks (2026-07-06 master plan). | yes         | 2026-07-07 |
 
 ### Implementation Phase 12 - Verification, Integration, Benchmarks, And CI Expansion
 

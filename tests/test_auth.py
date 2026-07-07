@@ -11,6 +11,7 @@ from miniproto import (
     ClientConfig,
     DatacenterMigration,
     DCOption,
+    FloodWait,
     InMemorySessionStorage,
     InvalidCode,
     PasswordRequired,
@@ -353,7 +354,9 @@ def test_auth_rpc_error_classification() -> None:
     assert isinstance(migration, DatacenterMigration)
     assert migration.dc_id == 4
     flood = classify_rpc_error(RpcError("FLOOD_WAIT_9", code=420))
-    assert isinstance(flood, TransportFlood)
+    assert isinstance(flood, FloodWait)
+    # Ordinary RPC flood waits are not transport-level 429s.
+    assert not isinstance(flood, TransportFlood)
     assert flood.seconds == 9
 
 

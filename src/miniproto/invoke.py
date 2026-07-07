@@ -3,6 +3,7 @@ from __future__ import annotations
 import inspect
 import secrets
 from collections.abc import Awaitable, Callable, Mapping
+from contextlib import suppress
 from dataclasses import replace
 from typing import Any, Protocol, cast, runtime_checkable
 
@@ -89,12 +90,25 @@ class RawSender(Protocol):
 SenderFactory = Callable[[SessionRecord], RawSender | Awaitable[RawSender]]
 
 
-def wrap_raw_request(raw_request: object, config: ClientConfig) -> object:
-    if _is_init_connection_envelope(raw_request):
-        _serialize_for_validation(raw_request)
+def wrap_raw_request(
+    raw_request: object,
+    config: ClientConfig,
+    *,
+    needs_init: bool = True,
+    without_updates: bool = False,
+) -> object:
+    """Wrap a raw request for transmission.
+
+    ``invokeWithLayer(initConnection(...))`` is only added when ``needs_init`` is true,
+    i.e. for the first request after a sender (re)connects. Media-lane senders
+    additionally wrap that first request in ``invokeWithoutUpdates`` so dedicated file
+    sessions never receive update traffic. Serialization happens exactly once, inside
+    the sender, when the message body is encoded.
+    """
+    if _is_init_connection_envelope(raw_request) or not needs_init:
         return raw_request
     device = config.device
-    wrapped = functions.InvokeWithLayer(
+    wrapped: object = functions.InvokeWithLayer(
         layer=TELEGRAM_LAYER,
         query=functions.InitConnection(
             api_id=config.api_id,
@@ -107,8 +121,19 @@ def wrap_raw_request(raw_request: object, config: ClientConfig) -> object:
             query=raw_request,
         ),
     )
-    _serialize_for_validation(wrapped)
+    if without_updates:
+        wrapped = functions.InvokeWithoutUpdates(query=wrapped)
     return wrapped
+
+
+def sender_needs_init(sender: object) -> bool:
+    return not getattr(sender, "connection_initialized", False)
+
+
+def mark_sender_initialized(sender: object) -> None:
+    # Test doubles with __slots__ lack the attribute and keep the always-wrap behavior.
+    with suppress(AttributeError):
+        cast(Any, sender).connection_initialized = True
 
 
 def decode_rpc_response(raw_result: object, raw_request: object) -> object:
@@ -175,6 +200,8 @@ async def build_sender_from_session(
     factory: SenderFactory | None = None,
     *,
     fresh_session_id: bool = False,
+    server_salt_override: int | None = None,
+    on_salt_change: Callable[[int], None] | None = None,
 ) -> RawSender:
     payload = await storage.load()
     record = load_session_record(payload, config.dc_id)
@@ -189,17 +216,28 @@ async def build_sender_from_session(
         raise InvalidDatacenter(f"no DC options stored for dc_id={dc_id}")
     option = select_dc_option(record.dc_options, dc_id)
     metadata = dict(record.metadata)
-    server_salt = int(metadata.get("server_salt", 0) or 0)
+    server_salt = (
+        server_salt_override
+        if server_salt_override is not None
+        else int(metadata.get("server_salt", 0) or 0)
+    )
     session_id = (
         secrets.randbits(64)
         if fresh_session_id
         else int(metadata.get("session_id", secrets.randbits(64)) or secrets.randbits(64))
     )
+    reconnect_attempts = (
+        config.max_reconnect_attempts
+        if config.max_reconnect_attempts is not None
+        else config.max_request_retries + 1
+    )
     return MTProtoSender(
         ConnectionEndpoint(option.ip_address, option.port),
         config.transport,
         MTProtoState(auth_key=auth_key.key, server_salt=server_salt, session_id=session_id),
-        reconnect_attempts=config.max_request_retries + 1,
+        reconnect_attempts=reconnect_attempts,
+        max_pending_rpcs=config.max_pending_rpcs,
+        on_salt_change=on_salt_change,
     )
 
 
@@ -285,13 +323,6 @@ def _is_init_connection_envelope(raw_request: object) -> bool:
     return str(getattr(type(raw_request), "QUALNAME", "")) in INIT_CONNECTION_ENVELOPES
 
 
-def _serialize_for_validation(raw_request: object) -> None:
-    serialize = getattr(raw_request, "serialize", None)
-    if not callable(serialize):
-        raise TypeError(f"raw request {type(raw_request).__name__} is not serializable")
-    serialize()
-
-
 def _record_from_legacy_mapping(data: Mapping[str, Any], dc_id: int) -> SessionRecord:
     payload = dict(data)
     auth_key = payload.get("auth_key")
@@ -341,7 +372,9 @@ __all__ = [
     "decode_rpc_response",
     "is_retryable_request",
     "load_session_record",
+    "mark_sender_initialized",
     "result_type_for_request",
+    "sender_needs_init",
     "should_retry_rpc_error",
     "should_sleep_for_flood_wait",
     "validate_result_type",

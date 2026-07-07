@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -20,6 +21,7 @@ from miniproto import (
 )
 from miniproto.errors import BadRequest, ClientDisconnected, TransportFlood
 from miniproto.media import (
+    CdnIntegrityError,
     DownloadRangeCache,
     MediaDownloadError,
     decrypt_cdn_chunk,
@@ -173,9 +175,16 @@ def storage_with_auth() -> InMemorySessionStorage:
 
 
 def inner_request(wrapped: object) -> object:
-    assert isinstance(wrapped, functions.InvokeWithLayer)
-    assert isinstance(wrapped.query, functions.InitConnection)
-    return wrapped.query.query
+    if isinstance(wrapped, functions.InvokeWithoutUpdates):
+        wrapped = wrapped.query
+    if isinstance(wrapped, functions.InvokeWithLayer):
+        assert isinstance(wrapped.query, functions.InitConnection)
+        return wrapped.query.query
+    return wrapped
+
+
+def cdn_file_hash(payload: bytes, offset: int = 0) -> types.FileHash:
+    return types.FileHash(offset=offset, limit=len(payload), hash=hashlib.sha256(payload).digest())
 
 
 def document_location() -> types.InputDocumentFileLocation:
@@ -563,7 +572,7 @@ def test_download_file_handles_cdn_redirect_reupload_and_decrypt() -> None:
                     file_token=b"token",
                     encryption_key=key,
                     encryption_iv=iv,
-                    file_hashes=(),
+                    file_hashes=(cdn_file_hash(plaintext),),
                 ),
                 types.UploadCdnFileReuploadNeeded(request_token=b"retry"),
                 (),
@@ -578,6 +587,86 @@ def test_download_file_handles_cdn_redirect_reupload_and_decrypt() -> None:
             "upload.reuploadCdnFile",
             "upload.getCdnFile",
         ]
+
+    run(scenario())
+
+
+def test_download_file_fetches_missing_cdn_hashes_before_verifying() -> None:
+    async def scenario() -> None:
+        key = bytes(range(32))
+        iv = bytes(range(16))
+        plaintext = b"cdn-data"
+        ciphertext = decrypt_cdn_chunk(plaintext, key=key, iv=iv, offset=0)
+        invoker = FakeInvoker(
+            [
+                types.UploadFileCdnRedirect(
+                    dc_id=4,
+                    file_token=b"token",
+                    encryption_key=key,
+                    encryption_iv=iv,
+                    file_hashes=(),
+                ),
+                types.UploadCdnFile(bytes=ciphertext),
+                (cdn_file_hash(plaintext),),
+            ]
+        )
+        result = await download_file(invoker, document_location(), part_size=1024)
+        assert result.data == plaintext
+        assert [getattr(type(request), "QUALNAME", "") for request in invoker.requests] == [
+            "upload.getFile",
+            "upload.getCdnFile",
+            "upload.getCdnFileHashes",
+        ]
+
+    run(scenario())
+
+
+def test_download_file_raises_cdn_integrity_error_on_corrupted_chunk() -> None:
+    async def scenario() -> None:
+        key = bytes(range(32))
+        iv = bytes(range(16))
+        plaintext = b"cdn-data"
+        tampered = b"cdn-dAta"
+        ciphertext = decrypt_cdn_chunk(tampered, key=key, iv=iv, offset=0)
+        invoker = FakeInvoker(
+            [
+                types.UploadFileCdnRedirect(
+                    dc_id=4,
+                    file_token=b"token",
+                    encryption_key=key,
+                    encryption_iv=iv,
+                    file_hashes=(cdn_file_hash(plaintext),),
+                ),
+                types.UploadCdnFile(bytes=ciphertext),
+            ]
+        )
+        with pytest.raises(CdnIntegrityError):
+            await download_file(invoker, document_location(), part_size=1024)
+
+    run(scenario())
+
+
+def test_download_file_raises_cdn_integrity_error_when_no_hash_covers_data() -> None:
+    async def scenario() -> None:
+        key = bytes(range(32))
+        iv = bytes(range(16))
+        plaintext = b"cdn-data"
+        ciphertext = decrypt_cdn_chunk(plaintext, key=key, iv=iv, offset=0)
+        invoker = FakeInvoker(
+            [
+                types.UploadFileCdnRedirect(
+                    dc_id=4,
+                    file_token=b"token",
+                    encryption_key=key,
+                    encryption_iv=iv,
+                    file_hashes=(),
+                ),
+                types.UploadCdnFile(bytes=ciphertext),
+                (),
+            ]
+        )
+        with pytest.raises(CdnIntegrityError, match="no CDN file hash"):
+            await download_file(invoker, document_location(), part_size=1024)
 
     run(scenario())
 

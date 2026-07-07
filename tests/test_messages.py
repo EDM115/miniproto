@@ -15,7 +15,7 @@ from miniproto import (
     SessionRecord,
     event_loop,
 )
-from miniproto.errors import TransportFlood
+from miniproto.errors import FloodWait
 from miniproto.mtproto.codec import RpcErrorBody, encode_message_body
 from miniproto.raw import functions, types
 from miniproto.session.models import PeerCacheEntry, UserIdentity, session_record_from_mapping
@@ -64,9 +64,12 @@ def storage_with_auth(
 
 
 def inner_request(wrapped: object) -> object:
-    assert isinstance(wrapped, functions.InvokeWithLayer)
-    assert isinstance(wrapped.query, functions.InitConnection)
-    return wrapped.query.query
+    if isinstance(wrapped, functions.InvokeWithoutUpdates):
+        wrapped = wrapped.query
+    if isinstance(wrapped, functions.InvokeWithLayer):
+        assert isinstance(wrapped.query, functions.InitConnection)
+        return wrapped.query.query
+    return wrapped
 
 
 def rpc_error(code: int, text: str) -> bytes:
@@ -186,7 +189,7 @@ def test_send_message_surfaces_flood_wait_errors_from_raw_invoke() -> None:
         client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage))
         client._sender = sender
         await client.connect()
-        with pytest.raises(TransportFlood) as exc_info:
+        with pytest.raises(FloodWait) as exc_info:
             await client.send_message("me", "hello")
         assert exc_info.value.seconds == 5
 

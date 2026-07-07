@@ -58,9 +58,12 @@ def storage_with_record() -> InMemorySessionStorage:
 
 
 def inner_request(wrapped: object) -> object:
-    assert isinstance(wrapped, functions.InvokeWithLayer)
-    assert isinstance(wrapped.query, functions.InitConnection)
-    return wrapped.query.query
+    if isinstance(wrapped, functions.InvokeWithoutUpdates):
+        wrapped = wrapped.query
+    if isinstance(wrapped, functions.InvokeWithLayer):
+        assert isinstance(wrapped.query, functions.InitConnection)
+        return wrapped.query.query
+    return wrapped
 
 
 def test_get_me_fetches_generated_users_get_users_and_persists_self_identity() -> None:

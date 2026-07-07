@@ -5,18 +5,25 @@ from datetime import UTC, datetime
 from typing import Any
 
 import pytest
+from tests.support.fake_mtproto import FakeMTProtoServer
 
 from miniproto import (
+    AuthKey,
     Client,
     ClientConfig,
+    DCOption,
     InMemorySessionStorage,
     NewMessage,
     SessionRecord,
+    TransportConfig,
     event_loop,
 )
+from miniproto.mtproto.codec import MessageContainer, MessageContainerItem, RpcResult
 from miniproto.raw import functions, types
 from miniproto.session.models import UpdateState, session_record_from_mapping
 from miniproto.types import Message, Peer
+
+AUTH_KEY = b"u" * 256
 
 
 def run(coro):
@@ -225,6 +232,62 @@ def test_update_short_wrapper_normalizes_inner_update() -> None:
         assert event.message is not None
         assert event.message.text == "wrapped"
         await client.disconnect()
+
+    run(scenario())
+
+
+def test_pushed_updates_from_real_sender_reach_iter_updates() -> None:
+    async def scenario() -> None:
+        pushed = types.UpdateShortMessage(
+            id=901, user_id=42, message="pushed", pts=11, pts_count=1, date=901
+        )
+
+        def handle(message):
+            if message.seq_no % 2 == 0:
+                return None
+            return MessageContainer(
+                messages=(
+                    MessageContainerItem(
+                        msg_id=message.msg_id + 4, seq_no=1, body=pushed.serialize()
+                    ),
+                    MessageContainerItem(
+                        msg_id=message.msg_id + 8,
+                        seq_no=3,
+                        body=RpcResult(
+                            req_msg_id=message.msg_id,
+                            result=types.NearestDc(
+                                country="US", this_dc=2, nearest_dc=2
+                            ).serialize(),
+                        ),
+                    ),
+                )
+            )
+
+        transport = TransportConfig(mode="tcp_intermediate", read_timeout=2.0)
+        async with FakeMTProtoServer(AUTH_KEY, transport, handle) as server:
+            endpoint = server.endpoint
+            storage = InMemorySessionStorage(
+                SessionRecord(
+                    dc_id=2,
+                    auth_key=AuthKey(dc_id=2, key=AUTH_KEY, key_id=123),
+                    dc_options=(DCOption(id=2, ip_address=endpoint.host, port=endpoint.port),),
+                    update_state=UpdateState(
+                        pts=10, qts=0, seq=0, date=datetime.fromtimestamp(1, UTC)
+                    ),
+                )
+            )
+            client = Client(
+                ClientConfig(
+                    api_id=1, api_hash="hash", session_storage=storage, transport=transport
+                )
+            )
+            await client.connect()
+            await client.invoke(functions.HelpGetNearestDc())
+            event = await asyncio.wait_for(anext(client.iter_updates()), timeout=2.0)
+            assert isinstance(event, NewMessage)
+            assert event.message is not None
+            assert event.message.text == "pushed"
+            await client.disconnect()
 
     run(scenario())
 

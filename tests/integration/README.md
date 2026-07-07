@@ -8,7 +8,7 @@ Live sessions are stored under `.tmp/miniproto-*.sqlite` using `MINIPROTO_SESSIO
 Run the five current smoke checks with:
 
 ```powershell
-uv run pytest tests/integration/test_auth_live.py tests/integration/test_messages_live.py tests/integration/test_media_live.py -q
+uv run pytest tests/integration/test_auth_live.py tests/integration/test_messages_live.py tests/integration/test_media_live.py
 ```
 
 The checks cover bot authorization plus `get_me()`, phone authorization plus `get_me()` and reconnect from persisted session, Saved Messages send plus `messages.getHistory`, and Saved Messages file upload plus download byte comparison.

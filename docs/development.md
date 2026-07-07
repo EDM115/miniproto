@@ -100,7 +100,7 @@ For a fresh user session, the workflow has an explicit `user_auth_mode=cloudflar
 
 ```powershell
 $env:MINIPROTO_STRESS = "1"
-uv run pytest tests/stress -q
+uv run pytest tests/stress
 ```
 
 Stress tests cover larger media buffers, many update emissions, repeated message sends through a cached peer, and repeated client lifecycle. Keep them opt-in so routine `uv run pytest` remains fast.
@@ -187,7 +187,7 @@ $env:MINIPROTO_BOT_TOKEN = "..."
 $env:MINIPROTO_REAL_DC_ID = "2"
 $env:MINIPROTO_REAL_PHONE = "..."
 $env:MINIPROTO_LIVE_PROMPT_CODE = "1"
-uv run pytest tests/integration/test_auth_live.py tests/integration/test_messages_live.py tests/integration/test_media_live.py -q
+uv run pytest tests/integration/test_auth_live.py tests/integration/test_messages_live.py tests/integration/test_media_live.py
 ```
 
 Bot auth can run non-interactively with `MINIPROTO_BOT_TOKEN`. Phone auth prompts for the current one-time code only when `MINIPROTO_LIVE_PROMPT_CODE=1` and pytest has an interactive stdin. Do not put phone login codes in `.env`; Telegram changes them on every login attempt. If the account has 2FA enabled, set `MINIPROTO_REAL_PASSWORD` or keep the prompt flag enabled so the test can ask for it.

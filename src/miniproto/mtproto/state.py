@@ -18,7 +18,7 @@ class MTProtoState:
     _last_msg_id: int = 0
     _content_related_count: int = 0
     _seen_msg_ids: OrderedDict[int, None] = field(default_factory=OrderedDict)
-    _pending_acks: OrderedDict[int, None] = field(default_factory=OrderedDict)
+    _pending_acks: OrderedDict[int, float] = field(default_factory=OrderedDict)
 
     def __post_init__(self) -> None:
         self.auth_key = bytes(self.auth_key)
@@ -59,12 +59,22 @@ class MTProtoState:
         while len(self._seen_msg_ids) > self.duplicate_window:
             self._seen_msg_ids.popitem(last=False)
         if content_related:
-            self._pending_acks[msg_id] = None
+            self._pending_acks[msg_id] = time.monotonic()
         self.observe_server_msg_id(msg_id)
         return True
 
     def queue_ack(self, msg_id: int) -> None:
-        self._pending_acks[msg_id] = None
+        self._pending_acks[msg_id] = time.monotonic()
+
+    @property
+    def pending_ack_count(self) -> int:
+        return len(self._pending_acks)
+
+    def oldest_pending_ack_age(self, now: float | None = None) -> float:
+        if not self._pending_acks:
+            return 0.0
+        oldest = next(iter(self._pending_acks.values()))
+        return max(0.0, (time.monotonic() if now is None else now) - oldest)
 
     def pop_pending_acks(self, *, limit: int | None = None) -> tuple[int, ...]:
         if limit is None:
@@ -74,6 +84,12 @@ class MTProtoState:
             msg_id, _value = self._pending_acks.popitem(last=False)
             msg_ids.append(msg_id)
         return tuple(msg_ids)
+
+    def requeue_acks(self, msg_ids: tuple[int, ...]) -> None:
+        now = time.monotonic()
+        for msg_id in msg_ids:
+            if msg_id not in self._pending_acks:
+                self._pending_acks[msg_id] = now
 
     def apply_server_salt(self, server_salt: int) -> None:
         self.server_salt = server_salt & 0xFFFFFFFFFFFFFFFF

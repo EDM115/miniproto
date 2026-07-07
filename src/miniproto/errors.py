@@ -261,7 +261,11 @@ class DatacenterMigration(InvalidDatacenter):
 
 
 class TransportFlood(FloodWait):
-    """Raised when Telegram asks the client to stop retrying for a bounded interval."""
+    """Raised for transport-level 429 responses, not ordinary RPC flood waits."""
+
+
+class PendingRpcLimitExceeded(MiniprotoError):
+    """Raised when a sender has too many in-flight RPCs and cannot accept more."""
 
 
 class SessionStorageError(MiniprotoError):
@@ -307,11 +311,7 @@ def classify_rpc_error(error: RpcError) -> RpcError:
         return _instantiate_migration_error(cls, migration_match, error)
     if flood_match := _FLOOD_RE.match(upper_message):
         template = f"{flood_match.group('kind')}_%d"
-        cls = (
-            TransportFlood
-            if template == "FLOOD_WAIT_%d"
-            else _ERROR_CLASS_BY_TEMPLATE.get(template, FloodWait)
-        )
+        cls = _ERROR_CLASS_BY_TEMPLATE.get(template, FloodWait)
         return _instantiate_flood_error(cls, flood_match, error)
     template, _values = _template_from_message(raw_message)
     cls = _ERROR_CLASS_BY_TEMPLATE.get(template) or _ERROR_CLASS_BY_TEMPLATE.get(upper_message)
@@ -374,9 +374,7 @@ def _instantiate_flood_error(
                 context=error.context,
             ),
         )
-    return TransportFlood(
-        seconds, message=error.message, request=error.request, context=error.context
-    )
+    return FloodWait(seconds, message=error.message, request=error.request, context=error.context)
 
 
 def _instantiate_error_class(cls: type[RpcError], error: RpcError) -> RpcError:
@@ -448,8 +446,6 @@ def _make_rpc_error_class(
 
 def _base_for_error(name: str, code: int) -> type[RpcError]:
     upper_name = _canonical_error_template(name)
-    if upper_name == "FLOOD_WAIT_%d":
-        return TransportFlood
     if _TEMPLATE_INT_RE.search(upper_name) and "_MIGRATE_" in upper_name:
         return DatacenterMigration
     if _TEMPLATE_INT_RE.search(upper_name) and upper_name.endswith("WAIT_%d"):
@@ -535,6 +531,7 @@ __all__ = tuple(
             "NotFound",
             "PasswordInvalid",
             "PasswordRequired",
+            "PendingRpcLimitExceeded",
             "RequestTimeout",
             "ResultTypeMismatch",
             "RpcError",

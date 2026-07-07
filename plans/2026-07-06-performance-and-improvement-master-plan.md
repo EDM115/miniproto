@@ -1,8 +1,8 @@
 # miniproto Performance And Improvement Master Plan
 
-Date: 2026-07-06
-Status: Actionable backlog produced by a read-only audit. No code was changed while writing this plan.
-Scope: Everything found during a full read of the repository (docs, Python source, Rust crate, benchmark logs), plus reference analysis of mtcute, MTKruto, FastTelethon, gotd, grammers, the tglib-bench harness (https://github.com/rojvv/tglib-bench, results at https://libspeed.telegram.tools/), and fresh Telegram docs (`core.telegram.org/api/files`, `core.telegram.org/mtproto/mtproto-transports`).
+Date: 2026-07-06  
+Status: Actionable backlog produced by a read-only audit.  
+Scope: Everything found during a full read of the repository (docs, Python source, Rust crate, benchmark logs), plus reference analysis of mtcute, MTKruto, FastTelethon, gotd, grammers, the tglib-bench harness (https://github.com/rojvv/tglib-bench, results at https://libspeed.telegram.tools/), and fresh Telegram docs (`core.telegram.org/api/files`, `core.telegram.org/mtproto/mtproto-transports`).  
 Audience: agent swarm. Each task is self-contained with problem, evidence, fix direction, files, and acceptance criteria. Tasks are ordered so correctness lands before tuning. Update `PROGRESS.md` and this file as tasks complete.
 
 ---
@@ -26,7 +26,7 @@ Live benchmark numbers (2000 MiB file, user account, DC4, VPS, uvloop, `tools/be
 | Upload c8 lanes8 | 10.98 MiB/s | **1332 retries, 130 reconnects** |
 | Upload c8 lanes0 (legacy) | 8.77 MiB/s | 80 sender drops |
 
-External comparison (libspeed.telegram.tools, 2 GB file, bots on DC1 from US GitHub runners, MiB/s):
+External comparison (libspeed.telegram.tools, 2 GB file, bots on DC1 from US GitHub runners, MiB/s):  
 MTKruto 16.6/16.4, TDLib 16.4/16.5, mtcute 16.7/16.1, FastTelethon 15.6/16.0, gotd 12.1/11.2, Telethon 9.2/10.3, PyrogramMod 13.3/4.2, WTelegramClient 6.2/6.1.
 
 Two key conclusions from the harness analysis:
@@ -40,6 +40,8 @@ miniproto already has: concurrency machinery, byte windows, adaptive throttle/pa
 
 ## 1. P0 — Protocol-Correctness Bugs That Cap Throughput (fix in this order)
 
+> **Status (2026-07-07): all nine P0 tasks are implemented and covered by fake-server/unit tests** (see `PROGRESS.md` Phase 5/7/10/11 rows referencing TASK-P0-*). The live-benchmark acceptance criteria (lane builds, reconnects, part_retries under real load) still need a benchmark run to confirm. Implementation notes per task are appended below as `Done:` lines.
+
 ### TASK-P0-1: Send `msgs_ack` (acks are currently NEVER sent)
 
 **This is the single most important bug in the repository.**
@@ -52,6 +54,7 @@ miniproto already has: concurrency machinery, byte windows, adaptive throttle/pa
   - Also fix the latent leak: `_pending_acks` currently grows without bound because nothing pops it.
 - Files: `src/miniproto/connection/sender.py`, `src/miniproto/mtproto/state.py`, tests in `tests/test_transport_runtime.py`.
 - Acceptance: fake-server test proving acks are emitted before 64 unacked messages accumulate under a 200-request pipelined load; live benchmark download run shows `media_lane_builds <= 2` per transfer and part_retries < 10 where it used to be >100.
+- Done 2026-07-07 (v1, containers deferred to TASK-P1-6): receive loop flushes at >=16 pending acks; keepalive timer flushes at >=10 s age; `pop_pending_acks(limit=8192)` bound; acks are requeued if the flush send fails; `_pending_acks` now stores monotonic timestamps.
 
 ### TASK-P0-2: Add ping keepalive loop per sender
 
@@ -60,6 +63,7 @@ miniproto already has: concurrency machinery, byte windows, adaptive throttle/pa
 - Fix: start a keepalive task per connected sender (created in `connect()`, cancelled in `disconnect()`), sending `ping_delay_disconnect(disconnect_delay=75)` every ~30–55 s of send/receive inactivity. Track last-activity timestamps in the sender so busy transfers skip pings.
 - Files: `src/miniproto/connection/sender.py`.
 - Acceptance: fake-server test asserting a ping frame arrives within the window on an idle connection and that no ping is sent while requests are flowing; live check: a media pool reused after 3 minutes of idle does not rebuild lanes.
+- Done 2026-07-07: `_keepalive_loop` task per sender (started in `connect()`, cancelled in `disconnect()`), `ping_delay_disconnect(75)` after `ping_interval` (default 45 s) of send/receive inactivity tracked via `_last_activity`; the same task drives age-based ack flushes.
 
 ### TASK-P0-3: Stop wrapping EVERY request in `InvokeWithLayer(InitConnection(...))`
 
@@ -70,6 +74,7 @@ miniproto already has: concurrency machinery, byte windows, adaptive throttle/pa
   - Serialize exactly once: produce bytes in the client layer and hand bytes to the sender (the sender already accepts `bytes | object`).
 - Files: `src/miniproto/invoke.py`, `src/miniproto/client.py` (`_invoke_via_sender`), `src/miniproto/connection/sender.py`.
 - Acceptance: fake-server test asserting the second request on a connection is NOT wrapped; media-lane test asserting `invokeWithoutUpdates` wraps the first media request; unit test asserting `serialize()` is called exactly once per request (spy on a TL object).
+- Done 2026-07-07: init tracked via `MTProtoSender.connection_initialized` (reset in `connect()`/`_reconnect()`, marked by the client after the first request gets a server response); media lanes wrap the first request in `invokeWithoutUpdates(invokeWithLayer(initConnection(...)))`; the throwaway `_serialize_for_validation` is gone, so each request is serialized exactly once (inside the sender's `encode_message_body`). Note: byte-level handoff to the sender was deferred to TASK-P1-6/TASK-CPU-3 (object handoff keeps single serialization and test-double compatibility).
 
 ### TASK-P0-4: Stop dropping the whole connection on per-request failures
 
@@ -80,6 +85,7 @@ miniproto already has: concurrency machinery, byte windows, adaptive throttle/pa
   - `drop_sender(expected=...)` semantics: when `sender is not expected`, currently it *still disconnects the expected sender* (`client.py:815-825`, `else` branch sets `sender = expected` then disconnects it) — double-check this logic; as written the "skip" metric is recorded but the passed-in sender still gets disconnected in `_MediaSenderLane.drop_sender` (`client.py:988-1016`) and `Client._drop_sender`. That means a stale caller can kill a lane that was already rebuilt for others. Only the CURRENT sender should ever be disconnected, and only when it is the one that failed.
 - Files: `src/miniproto/client.py`.
 - Acceptance: fake-server test with 4 pipelined requests where one times out: the other 3 must complete without reconnect; live benchmark shows `reconnects` near zero on c2/c4 downloads.
+- Done 2026-07-07: request timeouts and retryable RPC 5xx/`RpcTimeout` errors no longer call `drop_sender` (retries reuse the same connection; dead senders are replaced lazily by `ensure_sender`); `Client._drop_sender(expected=...)` and `_MediaSenderLane.drop_sender(expected=...)` now skip entirely when the sender was already replaced.
 
 ### TASK-P0-5: Wire the receive path for updates + stop the unbounded `_incoming` queue leak
 
@@ -89,6 +95,7 @@ miniproto already has: concurrency machinery, byte windows, adaptive throttle/pa
   - Media lanes: initialize with `invokeWithoutUpdates` (TASK-P0-3) and drop/ack any residual non-RPC traffic; make `_incoming` bounded with a drop-oldest policy so it can never grow unbounded.
 - Files: `src/miniproto/connection/sender.py`, `src/miniproto/client.py`, `src/miniproto/updates/manager.py`.
 - Acceptance: fake-server pushes an `updates` container; `client.iter_updates()` yields it; queue depth metric stays bounded during a 10k-message flood.
+- Done 2026-07-07: `Client._receive_dispatch_loop` consumes `recv_message()` per main sender, TL-decodes pushed bodies (including top-level gzip, which `_handle_incoming` now also unwraps for all message types) and feeds `UpdateManager.feed_raw_update()`; `_incoming` is bounded (default 256) with drop-oldest and a `sender.incoming_dropped` metric.
 
 ### TASK-P0-6: Persist server salt changes + handle `new_session_created` and salt lifecycle
 
@@ -96,6 +103,7 @@ miniproto already has: concurrency machinery, byte windows, adaptive throttle/pa
 - Fix: sender exposes a `on_salt_change` callback (or the client polls after transfer); persist new salt into session metadata (debounced — do not fsync per salt change mid-transfer, see TASK-P2-8). Handle `new_session_created` in `_handle_incoming` (update salt + ack). Optional: schedule `get_future_salts` refresh.
 - Files: `src/miniproto/connection/sender.py`, `src/miniproto/invoke.py`, `src/miniproto/session/*`.
 - Acceptance: fake-server test — after a bad_server_salt, a NEW sender built from the same storage uses the corrected salt on its first request.
+- Done 2026-07-07: sender exposes `on_salt_change` (fired on `bad_server_salt` and `new_session_created`, which is now handled + acked in `_handle_incoming`); the client debounces persistence (~1 s), flushes on disconnect, and keeps the latest salt in memory so new senders/lanes are built with `server_salt_override` without waiting for storage. `get_future_salts` refresh remains optional/open.
 
 ### TASK-P0-7: Fix retryable-flood misclassification and upload flood aborts
 
@@ -106,6 +114,7 @@ miniproto already has: concurrency machinery, byte windows, adaptive throttle/pa
 - Fix: `FLOOD_WAIT_%d` -> `FloodWait`; keep `TransportFlood` only for transport-level 429. Teach `_is_transient_upload_error` to treat `FloodWait` (including premium) as sleep-and-retry inside the media layer exactly like downloads do (sleep `seconds`, capped by the caller's threshold; media methods should allow generous thresholds — mtcute/MTKruto sleep media floods indefinitely). Add jittered exponential backoff (e.g. 0.5 s * 2^attempt +/- 20%, cap 10 s) for non-flood transient retries in both directions.
 - Files: `src/miniproto/errors.py`, `src/miniproto/media/upload.py`, `src/miniproto/media/download.py`.
 - Acceptance: unit tests for classification; fake-invoker test where part 3999 gets `FLOOD_PREMIUM_WAIT_2` and the upload still completes; retry timing test asserting backoff growth.
+- Done 2026-07-07: `FLOOD_WAIT_%d` classifies as `FloodWait` (`TransportFlood` reserved for transport-level 429); `upload_file` gained `flood_sleep_threshold` (default 30 s, a hard cap — longer floods raise) and `_save_part` sleeps-and-retries floods inside the media layer with client-level flood sleeping disabled (`flood_sleep_threshold=0`), matching downloads; both directions use `media/retry.py::backoff_delay` (0.5 s · 2^attempt ± 20 %, cap 10 s) for non-flood transient retries.
 
 ### TASK-P0-8: CDN download integrity verification (security)
 
@@ -113,6 +122,7 @@ miniproto already has: concurrency machinery, byte windows, adaptive throttle/pa
 - Fix: fetch hashes (they also arrive in `fileCdnRedirect` and `cdnFileReuploadNeeded`), verify each decrypted 128 KiB block's SHA-256, fail with a typed error on mismatch.
 - Files: `src/miniproto/media/cdn.py`, `src/miniproto/media/download.py`, tests in `tests/test_media_download.py`.
 - Acceptance: unit test with a corrupted fake CDN chunk raising `CdnIntegrityError`; happy path verified against fixture hashes.
+- Done 2026-07-07: `verify_cdn_part` checks every decrypted 128 KiB block's SHA-256 against redirect `file_hashes`, fetches missing hashes via `upload.getCdnFileHashes`, and raises `CdnIntegrityError` (exported from `miniproto`) on mismatch or unverifiable coverage.
 
 ### TASK-P0-9: Bound pending RPCs + finish Phase 11 resource limits (TASK-079/080)
 
@@ -120,6 +130,7 @@ miniproto already has: concurrency machinery, byte windows, adaptive throttle/pa
 - Fix: `ClientConfig.max_pending_rpcs` (default e.g. 512) enforced in `sender.request` (raise `PendingRpcLimitExceeded` or await a semaphore); supervise the receive/keepalive tasks so a fatal error surfaces on the next call AND during `disconnect()`; `disconnect()` must await all owned tasks (update manager, receive dispatch, keepalive, media pools) with no leaked tasks (assert via `asyncio.all_tasks()` in tests).
 - Files: `src/miniproto/config.py`, `src/miniproto/connection/sender.py`, `src/miniproto/client.py`, `tests/test_resource_limits.py`.
 - Acceptance: PROGRESS TASK-079/080/081 flip to yes with passing tests.
+- Done 2026-07-07: `ClientConfig` gained `max_pending_rpcs` (default 512, enforced in `sender.request` by raising `PendingRpcLimitExceeded`), `max_reconnect_attempts`, `media_concurrency`, and `media_max_buffer_size` (wired as `send_file`/`download_media` defaults); fatal receive-loop errors are stored and surfaced on the next call (`connect()`/`_ensure_sender`) and during `disconnect()`; `disconnect()` awaits all owned tasks (update manager, receive dispatch, keepalive, salt persist, media pools) with a no-leaked-tasks test. TASK-079/080/081 flipped to yes in `PROGRESS.md`.
 
 ---
 
@@ -337,7 +348,7 @@ These matter once the pipeline is unblocked (they are what keeps 16 MiB/s from c
 
 ---
 
-## 8. Suggested Execution Waves (for the swarm)
+## 8. Suggested Execution Waves (if using the swarm)
 
 - **Wave 1 (independent, high value)**: TASK-P0-1, TASK-P0-2, TASK-P0-3, TASK-P0-7, TASK-RUST-5, TASK-CPU-1, TASK-CPU-4. (Disjoint files except sender.py shared by P0-1/P0-2 — do them as one branch.)
 - **Wave 2 (needs wave 1)**: TASK-P0-4, TASK-P0-5, TASK-P0-6, TASK-P1-9, TASK-P1-10, TASK-CPU-5, TASK-CPU-6.
@@ -345,7 +356,8 @@ These matter once the pipeline is unblocked (they are what keeps 16 MiB/s from c
 - **Wave 4 (structural)**: TASK-P1-5 (cross-DC), TASK-P1-8, TASK-CPU-2, TASK-CPU-3, TASK-RUST-1, TASK-RUST-2.
 - **Wave 5 (completeness)**: Section 5 + Section 6 backlogs, TASK-RUST-3, Section 7 tooling.
 
-Definition of done for the speed goal: three consecutive live runs each direction (user, DC4, VPS) with download >= 14 MiB/s and upload >= 15 MiB/s, `media_lane_builds <= lanes`, `reconnects == 0`, `part_retries < 1%` of parts, RSS delta < 64 MiB — plus a tglib-bench-compatible bot run on DC1 for external comparability.
+Definition of done for the speed goal: three consecutive live runs each direction (user, DC4, VPS) with download >= 14 MiB/s and upload >= 15 MiB/s, `media_lane_builds <= lanes`, `reconnects == 0`, `part_retries < 1%` of parts, RSS delta < 64 MiB — plus a tglib-bench-compatible bot run on DC1 for external comparability.  
+A linear, non-swarm execution could also be performed.
 
 ---
 

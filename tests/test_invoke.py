@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
+from typing import Any, cast
 
 import pytest
+from tests.support.fake_mtproto import FakeMTProtoServer
 
 from miniproto import (
     AuthKey,
@@ -12,21 +14,23 @@ from miniproto import (
     DCOption,
     InMemorySessionStorage,
     SessionRecord,
+    TransportConfig,
     UserIdentity,
     event_loop,
 )
+from miniproto.connection.sender import MTProtoSender
 from miniproto.connection.transport import TransportClosed, TransportError
 from miniproto.errors import (
     AuthKeyNotFound,
     ClientDisconnected,
     FloodPremiumWait,
+    FloodWait,
     InvalidCode,
     ResultTypeMismatch,
     RpcError,
-    TransportFlood,
 )
-from miniproto.invoke import RawSender, decode_result_payload
-from miniproto.mtproto.codec import RpcErrorBody, encode_message_body
+from miniproto.invoke import RawSender, build_sender_from_session, decode_result_payload
+from miniproto.mtproto.codec import BadServerSalt, RpcErrorBody, RpcResult, encode_message_body
 from miniproto.raw import functions, types
 from miniproto.session.models import session_record_from_mapping
 
@@ -58,6 +62,37 @@ class FakeSender:
         if isinstance(response, BaseException):
             if isinstance(response, TransportClosed):
                 self.is_connected = False
+            raise response
+        return response
+
+    async def disconnect(self) -> None:
+        self.disconnected += 1
+        self.is_connected = False
+
+
+class InitTrackingSender:
+    """Fake sender exposing connection_initialized like the real MTProtoSender."""
+
+    def __init__(self, responses: list[object]) -> None:
+        self.responses = responses
+        self.requests: list[object] = []
+        self.connection_initialized = False
+        self.is_connected = True
+        self.disconnected = 0
+
+    async def request(
+        self,
+        body: bytes | object,
+        *,
+        content_related: bool = True,
+        request_timeout: float | None = None,
+    ) -> object:
+        del content_related, request_timeout
+        self.requests.append(body)
+        if not self.responses:
+            raise AssertionError("init tracking sender has no queued response")
+        response = self.responses.pop(0)
+        if isinstance(response, BaseException):
             raise response
         return response
 
@@ -204,6 +239,164 @@ def test_invoke_wraps_request_with_layer_and_init_connection_then_decodes_result
     run(scenario())
 
 
+def test_invoke_wraps_only_the_first_request_on_an_initializable_sender() -> None:
+    async def scenario() -> None:
+        sender = InitTrackingSender([nearest_dc().serialize(), nearest_dc().serialize()])
+        client = await connected_client(sender)
+        await client.invoke(functions.HelpGetNearestDc())
+        await client.invoke(functions.HelpGetNearestDc())
+        assert len(sender.requests) == 2
+        first, second = sender.requests
+        assert isinstance(first, functions.InvokeWithLayer)
+        assert isinstance(first.query, functions.InitConnection)
+        assert isinstance(first.query.query, functions.HelpGetNearestDc)
+        # The connection is initialized after the first successful request; subsequent
+        # requests must go out unwrapped.
+        assert isinstance(second, functions.HelpGetNearestDc)
+
+    run(scenario())
+
+
+def test_invoke_rewraps_after_sender_reports_reconnect() -> None:
+    async def scenario() -> None:
+        sender = InitTrackingSender([nearest_dc().serialize(), nearest_dc().serialize()])
+        client = await connected_client(sender)
+        await client.invoke(functions.HelpGetNearestDc())
+        sender.connection_initialized = False  # simulates a sender-side reconnect
+        await client.invoke(functions.HelpGetNearestDc())
+        assert all(isinstance(request, functions.InvokeWithLayer) for request in sender.requests)
+
+    run(scenario())
+
+
+def test_media_lane_wraps_first_request_in_invoke_without_updates() -> None:
+    async def scenario() -> None:
+        sender = InitTrackingSender([nearest_dc().serialize(), nearest_dc().serialize()])
+        client = await connected_client(sender)
+
+        async def ensure_sender() -> RawSender:
+            return sender
+
+        async def drop_sender(_sender: RawSender) -> None:
+            return None
+
+        await client._invoke_via_sender(
+            functions.HelpGetNearestDc(),
+            ensure_sender=ensure_sender,
+            drop_sender=drop_sender,
+            without_updates=True,
+        )
+        await client._invoke_via_sender(
+            functions.HelpGetNearestDc(),
+            ensure_sender=ensure_sender,
+            drop_sender=drop_sender,
+            without_updates=True,
+        )
+        first, second = sender.requests
+        assert isinstance(first, functions.InvokeWithoutUpdates)
+        assert isinstance(first.query, functions.InvokeWithLayer)
+        assert isinstance(first.query.query, functions.InitConnection)
+        assert isinstance(first.query.query.query, functions.HelpGetNearestDc)
+        assert isinstance(second, functions.HelpGetNearestDc)
+
+    run(scenario())
+
+
+def fake_server_storage(server: FakeMTProtoServer) -> InMemorySessionStorage:
+    endpoint = server.endpoint
+    return InMemorySessionStorage(
+        SessionRecord(
+            dc_id=2,
+            auth_key=AuthKey(dc_id=2, key=AUTH_KEY, key_id=123),
+            dc_options=(DCOption(id=2, ip_address=endpoint.host, port=endpoint.port),),
+        )
+    )
+
+
+def test_invoke_against_real_sender_inits_once_and_serializes_once() -> None:
+    async def scenario() -> None:
+        constructor_ids: list[int] = []
+
+        def handle(message):
+            constructor_ids.append(int.from_bytes(message.body[:4], "little"))
+            return RpcResult(req_msg_id=message.msg_id, result=nearest_dc().serialize())
+
+        transport = TransportConfig(mode="tcp_intermediate", read_timeout=2.0)
+        async with FakeMTProtoServer(AUTH_KEY, transport, handle) as server:
+            config = ClientConfig(
+                api_id=1,
+                api_hash="hash",
+                session_storage=fake_server_storage(server),
+                transport=transport,
+            )
+            client = Client(config)
+            await client.connect()
+            serialize_calls = 0
+            original_serialize = functions.InvokeWithLayer.serialize
+
+            def counting_serialize(self: Any) -> bytes:
+                nonlocal serialize_calls
+                serialize_calls += 1
+                return original_serialize(self)
+
+            cast(Any, functions.InvokeWithLayer).serialize = counting_serialize
+            try:
+                assert await client.invoke(functions.HelpGetNearestDc()) == nearest_dc()
+                assert await client.invoke(functions.HelpGetNearestDc()) == nearest_dc()
+            finally:
+                cast(Any, functions.InvokeWithLayer).serialize = original_serialize
+            assert constructor_ids == [
+                functions.InvokeWithLayer.CONSTRUCTOR_ID,
+                functions.HelpGetNearestDc.CONSTRUCTOR_ID,
+            ]
+            # The wrapped first request is serialized exactly once (no throwaway
+            # validation serialization).
+            assert serialize_calls == 1
+            await client.disconnect()
+
+    run(scenario())
+
+
+def test_bad_server_salt_is_persisted_and_used_by_new_senders() -> None:
+    async def scenario() -> None:
+        new_salt = 0x0102030405060708
+        content_messages = 0
+
+        def handle(message):
+            nonlocal content_messages
+            if message.seq_no % 2 == 0:
+                return None
+            content_messages += 1
+            if content_messages == 1:
+                return BadServerSalt(
+                    bad_msg_id=message.msg_id,
+                    bad_msg_seq_no=message.seq_no,
+                    error_code=48,
+                    new_server_salt=new_salt,
+                )
+            return RpcResult(req_msg_id=message.msg_id, result=nearest_dc().serialize())
+
+        transport = TransportConfig(mode="tcp_intermediate", read_timeout=2.0)
+        async with FakeMTProtoServer(AUTH_KEY, transport, handle) as server:
+            storage = fake_server_storage(server)
+            config = ClientConfig(
+                api_id=1, api_hash="hash", session_storage=storage, transport=transport
+            )
+            client = Client(config)
+            await client.connect()
+            assert await client.invoke(functions.HelpGetNearestDc()) == nearest_dc()
+            await client.disconnect()
+            loaded = await storage.load()
+            assert loaded is not None
+            record = session_record_from_mapping(loaded)
+            assert record.metadata["server_salt"] == new_salt
+            rebuilt = await build_sender_from_session(config, storage)
+            assert isinstance(rebuilt, MTProtoSender)
+            assert rebuilt.state.server_salt == new_salt
+
+    run(scenario())
+
+
 def test_decode_result_payload_accepts_namespaced_abstract_result_type() -> None:
     user = types.User(id=42, access_hash=99, first_name="miniproto test")
     authorization = types.AuthAuthorization(user=user)
@@ -260,7 +453,7 @@ def test_invoke_raises_flood_wait_by_default_without_sleeping() -> None:
     async def scenario() -> None:
         sender = FakeSender([rpc_error(420, "FLOOD_WAIT_5")])
         client = await connected_client(sender)
-        with pytest.raises(TransportFlood) as exc_info:
+        with pytest.raises(FloodWait) as exc_info:
             await client.invoke(functions.HelpGetNearestDc())
         assert exc_info.value.seconds == 5
         assert len(sender.requests) == 1
@@ -277,7 +470,7 @@ def test_invoke_retries_retryable_transport_failures_for_read_requests() -> None
         result = await client.invoke(functions.HelpGetNearestDc())
         assert result == nearest_dc()
         assert len(sender.requests) == 2
-        assert sender.disconnected == 1
+        assert sender.disconnected == 0
 
     run(scenario())
 
@@ -307,7 +500,7 @@ def test_invoke_does_not_retry_unsafe_requests_after_transport_failure() -> None
         with pytest.raises(RpcError, match="after send"):
             await client.invoke(request)
         assert len(sender.requests) == 1
-        assert sender.disconnected == 1
+        assert sender.disconnected == 0
 
     run(scenario())
 
@@ -320,7 +513,7 @@ def test_invoke_classifies_transport_failure_from_dead_sender_as_client_disconne
         )
         with pytest.raises(ClientDisconnected):
             await client.invoke(functions.HelpGetNearestDc())
-        assert sender.disconnected == 1
+        assert sender.disconnected == 0
 
     run(scenario())
 
@@ -338,7 +531,9 @@ def test_invoke_does_not_drop_replacement_sender_from_stale_failure() -> None:
         first.release.set()
         result = await task
         assert result == nearest_dc()
-        assert first.disconnected == 1
+        # Per-request failures never tear down connections anymore; the stale sender
+        # is simply left alone and the retry proceeds on the replacement.
+        assert first.disconnected == 0
         assert second.disconnected == 0
         assert len(second.requests) == 1
 

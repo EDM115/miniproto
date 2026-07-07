@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 from dataclasses import dataclass, field
 from typing import Any
@@ -12,6 +13,7 @@ from miniproto import (
     ClientConfig,
     ClientDisconnected,
     DCOption,
+    FloodWait,
     InMemorySessionStorage,
     Peer,
     RpcError,
@@ -19,7 +21,9 @@ from miniproto import (
     encode_file_id,
     event_loop,
 )
+from miniproto.errors import classify_rpc_error
 from miniproto.media import BIG_FILE_THRESHOLD, DEFAULT_CHUNK_SIZE, MediaUploadError, upload_file
+from miniproto.media.retry import backoff_delay
 from miniproto.raw import functions, types
 from miniproto.session.models import PeerCacheEntry
 
@@ -30,12 +34,17 @@ AUTH_KEY = b"m" * 256
 class FakeInvoker:
     responses: list[object]
     requests: list[Any] = field(default_factory=list)
+    kwargs: list[dict[str, object]] = field(default_factory=list)
 
     async def __call__(self, request: object, **kwargs: object) -> object:
         self.requests.append(request)
+        self.kwargs.append(dict(kwargs))
         if not self.responses:
             raise AssertionError("fake invoker has no queued response")
-        return self.responses.pop(0)
+        response = self.responses.pop(0)
+        if isinstance(response, BaseException):
+            raise response
+        return response
 
 
 @dataclass(slots=True)
@@ -76,9 +85,12 @@ def storage_with_auth() -> InMemorySessionStorage:
 
 
 def inner_request(wrapped: object) -> object:
-    assert isinstance(wrapped, functions.InvokeWithLayer)
-    assert isinstance(wrapped.query, functions.InitConnection)
-    return wrapped.query.query
+    if isinstance(wrapped, functions.InvokeWithoutUpdates):
+        wrapped = wrapped.query
+    if isinstance(wrapped, functions.InvokeWithLayer):
+        assert isinstance(wrapped.query, functions.InitConnection)
+        return wrapped.query.query
+    return wrapped
 
 
 def test_upload_file_uses_small_file_parts_and_md5() -> None:
@@ -170,6 +182,82 @@ def test_upload_file_does_not_retry_non_transient_rpc_errors() -> None:
         with pytest.raises(RpcError, match="FILE_PART_INVALID"):
             await upload_file(invoke, b"abc", part_size=1024, max_retries=3)
         assert len(requests) == 1
+
+    run(scenario())
+
+
+def test_upload_file_sleeps_and_retries_flood_waits_within_threshold() -> None:
+    async def scenario() -> None:
+        invoker = FakeInvoker(
+            [classify_rpc_error(RpcError("FLOOD_PREMIUM_WAIT_0", code=420)), types.BoolTrue()]
+        )
+        result = await upload_file(invoker, b"abc", part_size=1024, max_retries=1, file_id=9)
+        assert result.size == 3
+        assert [request.file_part for request in invoker.requests] == [0, 0]
+        # The media layer owns flood sleeping: client-level sleeping must be disabled.
+        assert all(kwargs["flood_sleep_threshold"] == 0 for kwargs in invoker.kwargs)
+
+    run(scenario())
+
+
+def test_upload_file_aborts_on_flood_wait_beyond_threshold() -> None:
+    async def scenario() -> None:
+        invoker = FakeInvoker([FloodWait(60)])
+        with pytest.raises(FloodWait):
+            await upload_file(invoker, b"abc", part_size=1024, max_retries=3)
+        assert len(invoker.requests) == 1
+
+    run(scenario())
+
+
+def test_upload_file_flood_threshold_is_a_hard_cap_override() -> None:
+    async def scenario() -> None:
+        invoker = FakeInvoker([FloodWait(0)])
+        with pytest.raises(FloodWait):
+            await upload_file(
+                invoker, b"abc", part_size=1024, max_retries=3, flood_sleep_threshold=None
+            )
+        assert len(invoker.requests) == 1
+
+    run(scenario())
+
+
+def test_backoff_delay_grows_exponentially_with_jitter_and_cap() -> None:
+    for _ in range(50):
+        first = backoff_delay(0)
+        second = backoff_delay(1)
+        third = backoff_delay(2)
+        capped = backoff_delay(30)
+        assert 0.4 <= first <= 0.6
+        assert 0.8 <= second <= 1.2
+        assert 1.6 <= third <= 2.4
+        assert capped <= 12.0
+
+
+def test_upload_retry_backoff_sleeps_nonzero_delay(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def scenario() -> None:
+        sleeps: list[float] = []
+
+        original_sleep = asyncio.sleep
+
+        async def recording_sleep(delay: float) -> None:
+            sleeps.append(delay)
+            await original_sleep(0)
+
+        monkeypatch.setattr("miniproto.media.upload.asyncio.sleep", recording_sleep)
+        invoker = FakeInvoker(
+            [
+                ClientDisconnected("sender disconnected"),
+                ClientDisconnected("sender disconnected"),
+                types.BoolTrue(),
+            ]
+        )
+        result = await upload_file(invoker, b"abc", part_size=1024, max_retries=2, file_id=10)
+        assert result.size == 3
+        retry_sleeps = [delay for delay in sleeps if delay > 0]
+        assert len(retry_sleeps) == 2
+        # Second retry must back off further than the first (0.5s * 2^attempt +/- 20%).
+        assert retry_sleeps[1] > retry_sleeps[0]
 
     run(scenario())
 

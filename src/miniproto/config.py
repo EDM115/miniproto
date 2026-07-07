@@ -60,7 +60,11 @@ class ClientConfig:
     test_mode: bool = False
     request_timeout: float = 30.0
     max_request_retries: int = 2
+    max_reconnect_attempts: int | None = None
+    max_pending_rpcs: int = 512
     flood_sleep_threshold: int | None = None
+    media_concurrency: int | None = None
+    media_max_buffer_size: int | None = None
 
     def __post_init__(self) -> None:
         if self.api_id <= 0:
@@ -79,5 +83,13 @@ class ClientConfig:
             raise ValueError("request_timeout must be positive")
         if self.max_request_retries < 0:
             raise ValueError("max_request_retries must not be negative")
+        if self.max_reconnect_attempts is not None and self.max_reconnect_attempts <= 0:
+            raise ValueError("max_reconnect_attempts must be positive when set")
+        if self.max_pending_rpcs <= 0:
+            raise ValueError("max_pending_rpcs must be positive")
         if self.flood_sleep_threshold is not None and self.flood_sleep_threshold < 0:
             raise ValueError("flood_sleep_threshold must not be negative")
+        if self.media_concurrency is not None and self.media_concurrency <= 0:
+            raise ValueError("media_concurrency must be positive when set")
+        if self.media_max_buffer_size is not None and self.media_max_buffer_size <= 0:
+            raise ValueError("media_max_buffer_size must be positive when set")

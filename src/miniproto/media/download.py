@@ -22,6 +22,7 @@ from miniproto.errors import (
 )
 from miniproto.file_id import is_file_id, media_from_file_id
 from miniproto.media.cdn import cdn_redirect_from_raw, get_cdn_file_part
+from miniproto.media.retry import backoff_delay
 from miniproto.media.upload import ProgressCallback
 from miniproto.observability import emit_event, get_logger, record_metric
 from miniproto.raw import functions, types
@@ -862,7 +863,7 @@ async def _download_part(
                 observed = retry_observer(exc, attempt + 1)
                 if inspect.isawaitable(observed):
                     await observed
-            await _sleep_before_retry(exc)
+            await _sleep_before_retry(exc, attempt)
     raise MediaDownloadError(f"download part at offset {offset} did not complete")
 
 
@@ -1335,8 +1336,8 @@ def _emit_part_retry(
     emit_event(_LOGGER, logging.WARNING, "media.download.part_retry", **fields)
 
 
-async def _sleep_before_retry(exc: Exception) -> None:
-    delay = exc.seconds if isinstance(exc, FloodWait) else 0
+async def _sleep_before_retry(exc: Exception, attempt: int = 0) -> None:
+    delay = float(exc.seconds) if isinstance(exc, FloodWait) else backoff_delay(attempt)
     if delay > 0:
         record_metric("media.download.retry_sleep_seconds", delay, unit="s")
     await asyncio.sleep(delay)

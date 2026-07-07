@@ -4,6 +4,7 @@ import asyncio
 import logging
 import secrets
 import time
+from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
 
@@ -16,12 +17,15 @@ from miniproto.connection.transport import (
     TransportError,
     open_transport,
 )
+from miniproto.errors import PendingRpcLimitExceeded
 from miniproto.mtproto.codec import (
     BadMsgNotification,
     BadServerSalt,
     DecodedEncryptedMessage,
+    GzipPacked,
     MessageContainer,
     MsgsAck,
+    NewSessionCreated,
     Pong,
     RpcResult,
     decode_encrypted_message,
@@ -32,6 +36,12 @@ from miniproto.mtproto.codec import (
 )
 from miniproto.mtproto.state import MTProtoState
 from miniproto.observability import emit_event, get_logger, record_metric
+
+DEFAULT_ACK_FLUSH_THRESHOLD = 16
+DEFAULT_ACK_MAX_DELAY = 10.0
+DEFAULT_ACK_FLUSH_LIMIT = 8192
+DEFAULT_PING_INTERVAL = 45.0
+DEFAULT_INCOMING_QUEUE_SIZE = 256
 
 _LOGGER = get_logger("connection.sender")
 
@@ -61,21 +71,39 @@ class MTProtoSender:
         connector: StreamConnector | None = None,
         reconnect_attempts: int = 3,
         ping_disconnect_delay: int = 75,
+        ping_interval: float = DEFAULT_PING_INTERVAL,
+        ack_flush_threshold: int = DEFAULT_ACK_FLUSH_THRESHOLD,
+        ack_max_delay: float = DEFAULT_ACK_MAX_DELAY,
+        max_pending_rpcs: int | None = None,
+        incoming_queue_size: int = DEFAULT_INCOMING_QUEUE_SIZE,
+        on_salt_change: Callable[[int], None] | None = None,
     ) -> None:
         self.endpoint = endpoint
         self.transport_config = transport_config
         self.state = state
+        self.connection_initialized = False
+        self.on_salt_change = on_salt_change
         self._connector = connector
         self._reconnect_attempts = reconnect_attempts
         self._ping_disconnect_delay = ping_disconnect_delay
+        self._ping_interval = max(0.05, ping_interval)
+        self._ack_flush_threshold = max(1, ack_flush_threshold)
+        self._ack_max_delay = max(0.05, ack_max_delay)
+        self._keepalive_tick = max(0.05, min(5.0, self._ping_interval / 4, self._ack_max_delay / 2))
+        self._max_pending_rpcs = max_pending_rpcs
         self._transport: Transport | None = None
         self._connect_lock = asyncio.Lock()
         self._send_lock = asyncio.Lock()
         self._closing = False
         self._receive_task: asyncio.Task[None] | None = None
+        self._keepalive_task: asyncio.Task[None] | None = None
+        self._fatal_error: BaseException | None = None
+        self._last_activity = time.monotonic()
         self._pending: dict[int, PendingRequest] = {}
         self._acks_received: set[int] = set()
-        self._incoming: asyncio.Queue[DecodedEncryptedMessage] = asyncio.Queue()
+        self._incoming: asyncio.Queue[DecodedEncryptedMessage] = asyncio.Queue(
+            maxsize=max(1, incoming_queue_size)
+        )
 
     @property
     def is_connected(self) -> bool:
@@ -101,12 +129,20 @@ class MTProtoSender:
         async with self._connect_lock:
             if self.is_connected:
                 return
+            fatal = self._fatal_error
+            if fatal is not None:
+                self._fatal_error = None
+                raise fatal
+            await self._cancel_keepalive_task()
             await self._close_transport()
             self._closing = False
             self._transport = await open_transport(
                 self.endpoint, self.transport_config, connector=self._connector
             )
+            self.connection_initialized = False
+            self._last_activity = time.monotonic()
             self._receive_task = asyncio.create_task(self._receive_loop())
+            self._keepalive_task = asyncio.create_task(self._keepalive_loop())
         _emit_sender_event(
             "sender.connect",
             started,
@@ -118,6 +154,7 @@ class MTProtoSender:
     async def disconnect(self) -> None:
         started = time.perf_counter()
         self._closing = True
+        await self._cancel_keepalive_task()
         receive_task = self._receive_task
         self._receive_task = None
         if receive_task is not None:
@@ -133,6 +170,11 @@ class MTProtoSender:
         self._pending.clear()
         _emit_sender_event("sender.disconnect", started, outcome="success")
 
+    def take_fatal_error(self) -> BaseException | None:
+        fatal = self._fatal_error
+        self._fatal_error = None
+        return fatal
+
     async def request(
         self,
         body: bytes | object,
@@ -141,6 +183,12 @@ class MTProtoSender:
         request_timeout: float | None = None,
     ) -> object:
         started = time.perf_counter()
+        if self._max_pending_rpcs is not None and len(self._pending) >= self._max_pending_rpcs:
+            record_metric("sender.pending_rpc_limit_exceeded", 1)
+            raise PendingRpcLimitExceeded(
+                f"sender already has {len(self._pending)} pending RPCs "
+                f"(max_pending_rpcs={self._max_pending_rpcs})"
+            )
         await self.connect()
         loop = asyncio.get_running_loop()
         future: asyncio.Future[object] = loop.create_future()
@@ -216,10 +264,16 @@ class MTProtoSender:
         return msg_id in self._acks_received
 
     async def flush_acks(self) -> int | None:
-        msg_ids = self.state.pop_pending_acks()
+        msg_ids = self.state.pop_pending_acks(limit=DEFAULT_ACK_FLUSH_LIMIT)
         if not msg_ids:
             return None
-        return await self.send(MsgsAck(msg_ids=msg_ids), content_related=False)
+        try:
+            msg_id = await self.send(MsgsAck(msg_ids=msg_ids), content_related=False)
+        except BaseException:
+            self.state.requeue_acks(msg_ids)
+            raise
+        record_metric("sender.acks_flushed", len(msg_ids))
+        return msg_id
 
     async def _send_pending(self, pending: PendingRequest) -> int:
         async with self._send_lock:
@@ -261,6 +315,7 @@ class MTProtoSender:
             if self._transport is None:
                 raise
             await self._transport.send(payload)
+        self._last_activity = time.monotonic()
 
     async def _receive_loop(self) -> None:
         while not self._closing:
@@ -270,6 +325,7 @@ class MTProtoSender:
                     await asyncio.sleep(0)
                     continue
                 packet = await transport.recv()
+                self._last_activity = time.monotonic()
                 message = decode_encrypted_message(
                     self.state.auth_key, packet, client_to_server=False
                 )
@@ -278,6 +334,8 @@ class MTProtoSender:
                 ):
                     continue
                 await self._handle_incoming(message)
+                if self.state.pending_ack_count >= self._ack_flush_threshold:
+                    await self._flush_acks_safely()
             except asyncio.CancelledError:
                 raise
             except TransportError as exc:
@@ -294,12 +352,15 @@ class MTProtoSender:
                     error_type=type(exc).__name__,
                     pending_count=len(self._pending),
                 )
+                self._fatal_error = exc
                 self._fail_pending(exc)
                 await self._close_transport()
                 return
 
     async def _handle_incoming(self, message: DecodedEncryptedMessage) -> None:
         body = decode_message_body(message.body)
+        while isinstance(body, GzipPacked):
+            body = decode_message_body(body.unpack())
         if isinstance(body, MessageContainer):
             for item in body.messages:
                 nested = DecodedEncryptedMessage(
@@ -321,7 +382,13 @@ class MTProtoSender:
             return
         if isinstance(body, BadServerSalt):
             self.state.apply_server_salt(body.new_server_salt)
+            self._notify_salt_change()
             await self._retry_bad_message(body.bad_msg_id)
+            return
+        if isinstance(body, NewSessionCreated):
+            self.state.apply_server_salt(body.server_salt)
+            self._notify_salt_change()
+            record_metric("sender.new_session_created", 1)
             return
         if isinstance(body, BadMsgNotification):
             if body.error_code in {16, 17}:
@@ -343,7 +410,74 @@ class MTProtoSender:
             if pending is not None and not pending.future.done():
                 pending.future.set_result(body.result)
             return
-        await self._incoming.put(message)
+        self._put_incoming(message)
+
+    def _put_incoming(self, message: DecodedEncryptedMessage) -> None:
+        queue = self._incoming
+        while True:
+            try:
+                queue.put_nowait(message)
+                return
+            except asyncio.QueueFull:
+                try:
+                    queue.get_nowait()
+                except asyncio.QueueEmpty:
+                    continue
+                record_metric("sender.incoming_dropped", 1)
+
+    def _notify_salt_change(self) -> None:
+        callback = self.on_salt_change
+        if callback is None:
+            return
+        try:
+            callback(self.state.server_salt)
+        except Exception as exc:
+            record_metric(
+                "sender.salt_callback_errors", 1, attributes={"error_type": type(exc).__name__}
+            )
+
+    async def _flush_acks_safely(self) -> None:
+        try:
+            await self.flush_acks()
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            record_metric(
+                "sender.ack_flush_errors", 1, attributes={"error_type": type(exc).__name__}
+            )
+
+    async def _keepalive_loop(self) -> None:
+        while not self._closing:
+            await asyncio.sleep(self._keepalive_tick)
+            if self._closing:
+                return
+            receive_task = self._receive_task
+            if receive_task is None or receive_task.done():
+                return
+            try:
+                if (
+                    self.state.pending_ack_count > 0
+                    and self.state.oldest_pending_ack_age() >= self._ack_max_delay
+                ):
+                    await self.flush_acks()
+                idle = time.monotonic() - self._last_activity
+                if idle >= self._ping_interval:
+                    record_metric("sender.keepalive_pings", 1)
+                    await self.ping()
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                record_metric(
+                    "sender.keepalive_errors", 1, attributes={"error_type": type(exc).__name__}
+                )
+
+    async def _cancel_keepalive_task(self) -> None:
+        keepalive_task = self._keepalive_task
+        self._keepalive_task = None
+        if keepalive_task is not None and not keepalive_task.done():
+            keepalive_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await keepalive_task
 
     async def _retry_bad_message(self, bad_msg_id: int) -> None:
         pending = self._pending.pop(bad_msg_id, None)
@@ -385,6 +519,8 @@ class MTProtoSender:
                     self._transport = await open_transport(
                         self.endpoint, self.transport_config, connector=self._connector
                     )
+                    self.connection_initialized = False
+                    self._last_activity = time.monotonic()
                     record_metric("sender.reconnects", 1, attributes={"attempts": attempt + 1})
                     _emit_sender_event(
                         "sender.reconnect",

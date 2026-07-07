@@ -20,6 +20,7 @@ from miniproto.errors import (
     NotFound,
     PasswordInvalid,
     PasswordRequired,
+    PendingRpcLimitExceeded,
     RequestTimeout,
     ResultTypeMismatch,
     RpcError,
@@ -40,7 +41,7 @@ from miniproto.file_id import (
     media_from_file_id,
     try_encode_file_id,
 )
-from miniproto.media import MediaDownloadResult, MediaUploadResult
+from miniproto.media import CdnIntegrityError, MediaDownloadResult, MediaUploadResult
 from miniproto.observability import (
     InMemoryMetrics,
     LogFormat,
@@ -86,6 +87,7 @@ __all__ = [
     "AuthKeyRegenerationRequired",
     "AuthService",
     "BadRequest",
+    "CdnIntegrityError",
     "Client",
     "ClientConfig",
     "ClientDisconnected",
@@ -117,6 +119,7 @@ __all__ = [
     "PasswordRequired",
     "Peer",
     "PeerCacheEntry",
+    "PendingRpcLimitExceeded",
     "RequestTimeout",
     "ResourceSnapshot",
     "ResultTypeMismatch",
