@@ -846,18 +846,21 @@ class Client:
 
     async def _ensure_sender(self) -> RawSender:
         sender = self._sender
-        if sender is not None and sender.is_connected:
+        if sender is not None and _sender_is_usable(sender) and not _sender_fatal_pending(sender):
             return sender
         async with self._sender_lock:
             sender = self._sender
-            if sender is not None and sender.is_connected:
-                return sender
             fatal: BaseException | None = None
             if sender is not None:
-                self._sender = None
                 take_fatal = getattr(sender, "take_fatal_error", None)
                 if callable(take_fatal):
                     fatal = take_fatal()
+                if fatal is None and _sender_is_usable(sender):
+                    # A momentarily-disconnected sender self-heals on the next
+                    # request; rebuilding it here would churn sessions every time
+                    # Telegram sheds a connection.
+                    return sender
+                self._sender = None
                 await self._stop_receive_dispatch(for_sender=sender)
                 await sender.disconnect()
                 record_metric("client.sender_drops", 1, attributes={"reason": "disconnected"})
@@ -1111,13 +1114,28 @@ class _MediaSenderLane:
 
     async def ensure_sender(self) -> RawSender:
         sender = self._sender
-        if sender is not None and sender.is_connected:
+        if sender is not None and _sender_is_usable(sender) and not _sender_fatal_pending(sender):
             return sender
         async with self._lock:
             sender = self._sender
-            if sender is not None and sender.is_connected:
-                return sender
             if sender is not None:
+                take_fatal = getattr(sender, "take_fatal_error", None)
+                fatal = take_fatal() if callable(take_fatal) else None
+                if fatal is None and _sender_is_usable(sender):
+                    # Mid-reconnect senders self-heal on the next request; rebuilding
+                    # the lane would churn sessions on every server-side close.
+                    return sender
+                if fatal is not None:
+                    record_metric(
+                        "client.media_lane_fatal_errors",
+                        1,
+                        attributes={
+                            "kind": self._kind,
+                            "dc_id": self._dc_id,
+                            "lane": self._index,
+                            "error_type": type(fatal).__name__,
+                        },
+                    )
                 self._sender = None
                 await sender.disconnect()
                 record_metric(
@@ -1127,7 +1145,7 @@ class _MediaSenderLane:
                         "kind": self._kind,
                         "dc_id": self._dc_id,
                         "lane": self._index,
-                        "reason": "disconnected",
+                        "reason": "fatal" if fatal is not None else "disconnected",
                     },
                 )
             self._sender = await build_sender_from_session(
@@ -1198,6 +1216,17 @@ _SEND_MESSAGE_OPTION_DEFAULTS: dict[str, object] = {
     "allow_paid_stars": None,
     "suggested_post": None,
 }
+
+
+def _sender_is_usable(sender: RawSender) -> bool:
+    usable = getattr(sender, "is_usable", None)
+    if usable is None:
+        return sender.is_connected
+    return bool(usable)
+
+
+def _sender_fatal_pending(sender: RawSender) -> bool:
+    return bool(getattr(sender, "has_fatal_error", False))
 
 
 def _decode_pushed_payload(data: bytes) -> object | None:

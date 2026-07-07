@@ -311,8 +311,10 @@ def test_sender_transport_receive_timeout_resends_then_fails_after_retry_limit()
             # after the retry limit is exhausted does the caller see the failure.
             with pytest.raises(TransportError, match="retry limit"):
                 await sender.request(b"request", request_timeout=5.0)
-            assert sender.sender_state.pending_count == 0
             await sender.disconnect()
+            # The failed request left no pending entry behind (keepalive pings may
+            # race this assertion before disconnect, so check afterwards).
+            assert sender.sender_state.pending_count == 0
 
     event_loop.run(run())
 

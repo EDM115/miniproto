@@ -155,6 +155,46 @@ def test_disconnect_leaves_no_background_tasks_behind() -> None:
     run(scenario())
 
 
+def test_client_reuses_self_healing_sender_instead_of_rebuilding() -> None:
+    async def scenario() -> None:
+        def handle(message):
+            if message.seq_no % 2 == 0:
+                return None
+            return RpcResult(req_msg_id=message.msg_id, result=nearest_dc().serialize())
+
+        transport = TransportConfig(mode="tcp_intermediate", read_timeout=2.0)
+        async with FakeMTProtoServer(AUTH_KEY, transport, handle) as server:
+            config = ClientConfig(
+                api_id=1,
+                api_hash="hash",
+                session_storage=fake_server_storage(server),
+                transport=transport,
+            )
+            client = Client(config)
+            await client.connect()
+            assert await client.invoke(functions.HelpGetNearestDc()) == nearest_dc()
+            first = client._sender
+            assert isinstance(first, MTProtoSender)
+            # Simulate a routine server-side close: the transport dies but the sender
+            # can self-heal, so ensure_sender must return the SAME sender instead of
+            # rebuilding a fresh session (which would churn lanes on every close).
+            transport_obj = first._transport
+            assert transport_obj is not None
+            await transport_obj.close()
+            assert not first.is_connected
+            assert first.is_usable
+            reused = await client._ensure_sender()
+            assert reused is first
+            # And the sender still serves requests after healing.
+            assert await client.invoke(functions.HelpGetNearestDc()) == nearest_dc()
+            assert client._sender is first
+            await client.disconnect()
+            # After an explicit disconnect the sender is terminally unusable.
+            assert not first.is_usable
+
+    run(scenario())
+
+
 def test_sender_fatal_error_surfaces_on_next_call_then_recovers() -> None:
     async def scenario() -> None:
         sender = MTProtoSender(

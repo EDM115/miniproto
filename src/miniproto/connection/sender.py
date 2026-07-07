@@ -125,6 +125,18 @@ class MTProtoSender:
         )
 
     @property
+    def is_usable(self) -> bool:
+        """Whether this sender can serve requests, now or after self-healing.
+
+        A sender whose transport is momentarily down (mid-reconnect, or awaiting the
+        reconnect cooldown after a routine server-side close) self-heals on the next
+        ``request()`` via ``connect()``; tearing it down and rebuilding a fresh
+        session instead would churn lanes and lose the paced-reconnect state.
+        Only an explicitly disconnected sender is unusable.
+        """
+        return not self._closing
+
+    @property
     def sender_state(self) -> SenderState:
         return SenderState(
             pending_count=len(self._pending),
@@ -177,6 +189,10 @@ class MTProtoSender:
                 pending.future.set_exception(TransportClosed("sender disconnected"))
         self._pending.clear()
         _emit_sender_event("sender.disconnect", started, outcome="success")
+
+    @property
+    def has_fatal_error(self) -> bool:
+        return self._fatal_error is not None
 
     def take_fatal_error(self) -> BaseException | None:
         fatal = self._fatal_error
