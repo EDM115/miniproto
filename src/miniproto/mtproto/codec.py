@@ -27,6 +27,7 @@ _BAD_SERVER_SALT_ID = 0xEDAB447B
 _NEW_SESSION_CREATED_ID = 0x9EC20908
 _RPC_RESULT_ID = 0xF35C6D01
 _RPC_ERROR_ID = 0x2144CA19
+type ByteBuffer = bytes | memoryview
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,14 +37,14 @@ class DecodedEncryptedMessage:
     session_id: int
     msg_id: int
     seq_no: int
-    body: bytes
-    padding: bytes
+    body: ByteBuffer
+    padding: ByteBuffer
 
 
 @dataclass(frozen=True, slots=True)
 class UnencryptedMessage:
     msg_id: int
-    body: bytes
+    body: ByteBuffer
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,7 +56,7 @@ class MsgsAck:
 class MessageContainerItem:
     msg_id: int
     seq_no: int
-    body: bytes | object
+    body: ByteBuffer | object
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,7 +66,7 @@ class MessageContainer:
 
 @dataclass(frozen=True, slots=True)
 class GzipPacked:
-    packed_data: bytes
+    packed_data: ByteBuffer
 
     def unpack(self) -> bytes:
         return gzip.decompress(self.packed_data)
@@ -108,7 +109,7 @@ class RpcErrorBody:
 @dataclass(frozen=True, slots=True)
 class RpcResult:
     req_msg_id: int
-    result: bytes | object
+    result: ByteBuffer | object
 
 
 def encode_unencrypted_message(msg_id: int, body: bytes | object) -> bytes:
@@ -116,16 +117,17 @@ def encode_unencrypted_message(msg_id: int, body: bytes | object) -> bytes:
     return b"\x00" * 8 + _pack_i64(msg_id) + encode_int(len(body_bytes)) + body_bytes
 
 
-def decode_unencrypted_message(packet: bytes) -> UnencryptedMessage:
+def decode_unencrypted_message(packet: ByteBuffer) -> UnencryptedMessage:
+    packet_view = memoryview(packet)
     if len(packet) < 20:
         raise ValueError("unencrypted MTProto packet is too short")
-    if packet[:8] != b"\x00" * 8:
+    if packet_view[:8] != b"\x00" * 8:
         raise ValueError("unencrypted MTProto packet must have auth_key_id=0")
     msg_id = _unpack_i64(packet, 8)
     body_len, offset = decode_int(packet, 16)
     if body_len < 0 or offset + body_len > len(packet):
         raise ValueError("unencrypted MTProto packet body length is invalid")
-    return UnencryptedMessage(msg_id=msg_id, body=packet[offset : offset + body_len])
+    return UnencryptedMessage(msg_id=msg_id, body=packet_view[offset : offset + body_len])
 
 
 def encode_encrypted_message(
@@ -154,14 +156,16 @@ def encode_encrypted_message(
 
 
 def decode_encrypted_message(
-    auth_key: bytes, packet: bytes, *, client_to_server: bool = False
+    auth_key: bytes, packet: ByteBuffer, *, client_to_server: bool = False
 ) -> DecodedEncryptedMessage:
+    packet_view = memoryview(packet)
     if len(packet) < 24:
         raise ValueError("encrypted MTProto packet is too short")
-    auth_key_id = packet[:8]
-    msg_key = packet[8:24]
-    ciphertext = packet[24:]
+    auth_key_id = packet_view[:8].tobytes()
+    msg_key = packet_view[8:24].tobytes()
+    ciphertext = packet_view[24:]
     plaintext = decrypt_payload(auth_key, msg_key, ciphertext, client_to_server=client_to_server)
+    plaintext_view = memoryview(plaintext)
     if len(plaintext) < 32:
         raise ValueError("encrypted MTProto plaintext is too short")
     server_salt = _unpack_u64(plaintext, 0)
@@ -171,8 +175,8 @@ def decode_encrypted_message(
     body_len, offset = decode_int(plaintext, offset)
     if body_len < 0 or offset + body_len > len(plaintext):
         raise ValueError("encrypted MTProto body length is invalid")
-    body = plaintext[offset : offset + body_len]
-    padding = plaintext[offset + body_len :]
+    body = plaintext_view[offset : offset + body_len]
+    padding = plaintext_view[offset + body_len :]
     return DecodedEncryptedMessage(
         auth_key_id=auth_key_id,
         server_salt=server_salt,
@@ -184,9 +188,11 @@ def decode_encrypted_message(
     )
 
 
-def encode_message_body(body: bytes | object) -> bytes:
+def encode_message_body(body: ByteBuffer | object) -> bytes:
     if isinstance(body, bytes):
         return body
+    if isinstance(body, bytearray | memoryview):
+        return bytes(body)
     serialize = getattr(body, "serialize", None)
     if callable(serialize):
         return serialize()
@@ -204,7 +210,7 @@ def encode_message_body(body: bytes | object) -> bytes:
                 output.extend(body_bytes)
             return bytes(output)
         case GzipPacked(packed_data=packed_data):
-            return encode_constructor_id(_GZIP_PACKED_ID) + encode_bytes(packed_data)
+            return encode_constructor_id(_GZIP_PACKED_ID) + encode_bytes(bytes(packed_data))
         case Pong(msg_id=msg_id, ping_id=ping_id):
             return encode_constructor_id(_PONG_ID) + _pack_i64(msg_id) + _pack_i64(ping_id)
         case BadServerSalt(
@@ -254,7 +260,8 @@ def encode_message_body(body: bytes | object) -> bytes:
             raise TypeError(f"cannot encode MTProto body {type(body).__name__}")
 
 
-def decode_message_body(data: bytes) -> bytes | object:
+def decode_message_body(data: ByteBuffer) -> ByteBuffer | object:
+    data_view = memoryview(data)
     constructor_id, offset = decode_constructor_id(data, 0)
     if constructor_id == _MSGS_ACK_ID:
         msg_ids, offset = _decode_long_vector(data, offset)
@@ -272,13 +279,9 @@ def decode_message_body(data: bytes) -> bytes | object:
             body_len, offset = decode_int(data, offset)
             if body_len < 0 or offset + body_len > len(data):
                 raise ValueError("MTProto container item length is invalid")
-            body_bytes = data[offset : offset + body_len]
+            body_bytes = data_view[offset : offset + body_len]
             offset += body_len
-            messages.append(
-                MessageContainerItem(
-                    msg_id=msg_id, seq_no=seq_no, body=decode_message_body(body_bytes)
-                )
-            )
+            messages.append(MessageContainerItem(msg_id=msg_id, seq_no=seq_no, body=body_bytes))
         _require_consumed(data, offset)
         return MessageContainer(messages=tuple(messages))
     if constructor_id == _GZIP_PACKED_ID:
@@ -334,7 +337,7 @@ def decode_message_body(data: bytes) -> bytes | object:
         return RpcErrorBody(error_code=error_code, error_message=error_message)
     if constructor_id == _RPC_RESULT_ID:
         req_msg_id = _unpack_i64(data, offset)
-        return RpcResult(req_msg_id=req_msg_id, result=data[offset + 8 :])
+        return RpcResult(req_msg_id=req_msg_id, result=data_view[offset + 8 :])
     return data
 
 
@@ -350,11 +353,11 @@ def encode_ping_delay_disconnect(ping_id: int, disconnect_delay: int) -> bytes:
     )
 
 
-def gzip_pack(body: bytes | object) -> GzipPacked:
+def gzip_pack(body: ByteBuffer | object) -> GzipPacked:
     return GzipPacked(packed_data=gzip.compress(encode_message_body(body)))
 
 
-def _decode_long_vector(data: bytes, offset: int) -> tuple[tuple[int, ...], int]:
+def _decode_long_vector(data: ByteBuffer, offset: int) -> tuple[tuple[int, ...], int]:
     constructor_id, offset = decode_constructor_id(data, offset)
     if constructor_id != 0x1CB5C415:
         raise ValueError("expected TL vector constructor")
@@ -376,22 +379,22 @@ def _pack_u64(value: int) -> bytes:
     return int(value & 0xFFFFFFFFFFFFFFFF).to_bytes(8, "little", signed=False)
 
 
-def _unpack_i64(data: bytes, offset: int) -> int:
+def _unpack_i64(data: ByteBuffer, offset: int) -> int:
     _require_length(data, offset, 8)
     return int.from_bytes(data[offset : offset + 8], "little", signed=True)
 
 
-def _unpack_u64(data: bytes, offset: int) -> int:
+def _unpack_u64(data: ByteBuffer, offset: int) -> int:
     _require_length(data, offset, 8)
     return int.from_bytes(data[offset : offset + 8], "little", signed=False)
 
 
-def _require_length(data: bytes, offset: int, length: int) -> None:
+def _require_length(data: ByteBuffer, offset: int, length: int) -> None:
     if offset < 0 or offset + length > len(data):
         raise ValueError("MTProto payload ended before the requested field")
 
 
-def _require_consumed(data: bytes, offset: int) -> None:
+def _require_consumed(data: ByteBuffer, offset: int) -> None:
     if offset != len(data):
         raise ValueError("MTProto body has trailing bytes")
 

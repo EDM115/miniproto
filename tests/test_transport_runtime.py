@@ -7,6 +7,8 @@ from typing import Any, cast
 import pytest
 from tests.support.fake_mtproto import FakeMTProtoServer
 
+import miniproto.connection.sender as sender_module
+import miniproto.connection.transport as transport_module
 from miniproto import event_loop
 from miniproto.config import TransportConfig, TransportMode
 from miniproto.connection.sender import MTProtoSender, PendingRequest
@@ -277,12 +279,83 @@ def test_container_and_gzip_service_messages_roundtrip() -> None:
         )
     )
     decoded = decode_message_body(encode_message_body(container))
-    assert decoded == container
+    assert isinstance(decoded, MessageContainer)
+    assert len(decoded.messages) == 2
+    first_body = decoded.messages[0].body
+    second_body = decoded.messages[1].body
+    assert isinstance(first_body, memoryview)
+    assert isinstance(second_body, memoryview)
+    assert decode_message_body(first_body) == MsgsAck(msg_ids=(7,))
+    assert decode_message_body(second_body) == RpcResult(req_msg_id=99, result=memoryview(b"ok"))
     packed = gzip_pack(container)
     decoded_packed = decode_message_body(encode_message_body(packed))
     assert isinstance(decoded_packed, GzipPacked)
     assert decoded_packed == packed
-    assert decode_message_body(decoded_packed.unpack()) == container
+    unpacked = decode_message_body(decoded_packed.unpack())
+    assert isinstance(unpacked, MessageContainer)
+    unpacked_body = unpacked.messages[0].body
+    assert isinstance(unpacked_body, memoryview)
+    assert decode_message_body(unpacked_body) == MsgsAck(msg_ids=(7,))
+
+
+def test_decode_rpc_result_keeps_result_as_view() -> None:
+    result = b"answer"
+    decoded = decode_message_body(encode_message_body(RpcResult(req_msg_id=99, result=result)))
+    assert isinstance(decoded, RpcResult)
+    assert isinstance(decoded.result, memoryview)
+    assert decoded.result.tobytes() == result
+
+
+def test_sender_handles_container_without_reencoding_nested_bodies(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def run() -> None:
+        sender = MTProtoSender(
+            ConnectionEndpoint("127.0.0.1", 443),
+            TransportConfig(mode="tcp_intermediate", read_timeout=2.0),
+            MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID),
+        )
+        future = asyncio.get_running_loop().create_future()
+        sender._pending[99] = PendingRequest(body=b"request", content_related=True, future=future)
+        container = MessageContainer(
+            messages=(
+                MessageContainerItem(
+                    msg_id=11, seq_no=3, body=RpcResult(req_msg_id=99, result=b"ok")
+                ),
+            )
+        )
+        message = DecodedEncryptedMessage(
+            auth_key_id=b"k" * 8,
+            server_salt=SERVER_SALT,
+            session_id=SESSION_ID,
+            msg_id=7,
+            seq_no=3,
+            body=encode_message_body(container),
+            padding=b"",
+        )
+
+        def fail_encode(_body: bytes | object) -> bytes:
+            raise AssertionError("container handling should use raw nested body bytes")
+
+        monkeypatch.setattr(sender_module, "encode_message_body", fail_encode)
+        await sender._handle_incoming(message)
+        assert bytes(future.result()) == b"ok"
+
+    event_loop.run(run())
+
+
+def test_transport_event_skips_safe_repr_when_logging_disabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(transport_module._LOGGER, "disabled", True)
+
+    def fail_safe_repr(_value: object) -> str:
+        raise AssertionError("safe_repr should not run for disabled transport logs")
+
+    monkeypatch.setattr(transport_module, "safe_repr", fail_safe_repr)
+    transport_module._emit_transport_event(
+        "transport.recv", 0.0, outcome="success", level=10, payload_bytes=4
+    )
 
 
 def test_sender_ping_works_against_fake_server_for_each_transport_mode() -> None:

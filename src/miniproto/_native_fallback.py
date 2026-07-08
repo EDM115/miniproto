@@ -85,7 +85,9 @@ def mtproto_decrypt_payload(
 def xor_bytes(left: bytes, right: bytes) -> bytes:
     if len(left) != len(right):
         raise ValueError("xor inputs must have the same length")
-    return bytes(a ^ b for a, b in zip(left, right, strict=True))
+    return (int.from_bytes(left, "little") ^ int.from_bytes(right, "little")).to_bytes(
+        len(left), "little"
+    )
 
 
 def aes_256_ige_encrypt(plaintext: bytes, key: bytes, iv: bytes) -> bytes:
@@ -387,15 +389,15 @@ def _factor(value: int) -> int:
         c += 1
 
 
-def _checked_offset(data: bytes, offset: int, length: int) -> int:
+def _checked_offset(data: bytes | bytearray | memoryview, offset: int, length: int) -> int:
     _read(data, offset, length)
     return offset
 
 
-def _read(data: bytes, offset: int, length: int) -> bytes:
+def _read(data: bytes | bytearray | memoryview, offset: int, length: int) -> bytes:
     if offset < 0 or offset + length > len(data):
         raise ValueError("TL data ended before the requested value could be decoded")
-    return data[offset : offset + length]
+    return bytes(data[offset : offset + length])
 
 
 def _int_to_unsigned_le(value: int, width: int) -> bytes:

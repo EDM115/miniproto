@@ -74,7 +74,13 @@ from miniproto.mtproto.codec import GzipPacked, decode_message_body
 from miniproto.observability import emit_event, get_logger, record_metric
 from miniproto.peers import PeerCache, input_channel_from_peer, input_peer_from_peer
 from miniproto.raw import functions, types
-from miniproto.session.storage import InMemorySessionStorage, SessionStorage
+from miniproto.session.storage import (
+    InMemorySessionStorage,
+    SessionPayload,
+    SessionStorage,
+    deserialize_session_data,
+    serialize_session_data,
+)
 from miniproto.tl.codec import TLCodecError, decode_object
 from miniproto.types import Media, Message, NewMessage, Peer, Update, User
 from miniproto.updates.manager import UpdateHandler, UpdateManager
@@ -82,6 +88,35 @@ from miniproto.updates.manager import UpdateHandler, UpdateManager
 UpdateT = TypeVar("UpdateT", bound=Update)
 _LOGGER = get_logger("client")
 _SALT_PERSIST_DELAY = 1.0
+_SESSION_CACHE_EMPTY = object()
+
+
+class _CachedSessionStorage:
+    def __init__(self, storage: SessionStorage) -> None:
+        self._storage = storage
+        self._cached: Mapping[str, Any] | None | object = _SESSION_CACHE_EMPTY
+
+    async def load(self) -> Mapping[str, Any] | None:
+        if self._cached is _SESSION_CACHE_EMPTY:
+            self._cached = await self._storage.load()
+        return _copy_session_payload(self._cached)
+
+    async def save(self, data: SessionPayload) -> None:
+        await self._storage.save(data)
+        self._cached = _copy_session_payload(data)
+
+    async def clear(self) -> None:
+        await self._storage.clear()
+        self._cached = None
+
+    async def close(self) -> None:
+        await self._storage.close()
+
+
+def _copy_session_payload(data: SessionPayload | object | None) -> Mapping[str, Any] | None:
+    if data is None or data is _SESSION_CACHE_EMPTY:
+        return None
+    return deserialize_session_data(serialize_session_data(cast(SessionPayload, data)))
 
 
 class Client:
@@ -92,7 +127,9 @@ class Client:
 
     def __init__(self, config: ClientConfig) -> None:
         self.config = config
-        self._storage: SessionStorage = config.session_storage or InMemorySessionStorage()
+        self._storage: SessionStorage = _CachedSessionStorage(
+            config.session_storage or InMemorySessionStorage()
+        )
         self._connected = False
         self._connect_lock = asyncio.Lock()
         self._peer_cache = PeerCache(config, self._storage, self.invoke)
@@ -183,7 +220,10 @@ class Client:
 
     async def is_authorized(self) -> bool:
         state = await self._storage.load()
-        return bool(state and (state.get("auth_key") or state.get("user")))
+        if state is None:
+            return False
+        record = load_session_record(state, self.config.dc_id)
+        return record.auth_key is not None or record.user is not None
 
     async def sign_in_phone(
         self,

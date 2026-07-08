@@ -227,7 +227,9 @@ def _render_entries_module(entries: Sequence[Any], *, module_kind: str) -> str:
         else f"TLField, TLFlagGroup, {base_class}"
     )
     ruff_noqa = (
-        "# ruff: noqa: N801,N815,RUF022" if module_kind == "types" else "# ruff: noqa: N801,RUF022"
+        "# ruff: noqa: F401,N801,N806,N815,RUF022,RUF059"
+        if module_kind == "types"
+        else "# ruff: noqa: F401,N801,RUF022"
     )
     lines: list[str] = [
         _HEADER.rstrip(),
@@ -235,9 +237,35 @@ def _render_entries_module(entries: Sequence[Any], *, module_kind: str) -> str:
         "from __future__ import annotations",
         "",
         "from dataclasses import dataclass",
-        "from typing import Any, ClassVar",
+        "from typing import Any, ClassVar, Self",
         "",
         f"from miniproto.raw.base import {base_import}",
+        "from miniproto.tl.codec import (",
+        "    TLCodecError,",
+        "    decode_bool,",
+        "    decode_bytes,",
+        "    decode_constructor_id,",
+        "    decode_double,",
+        "    decode_int,",
+        "    decode_int128,",
+        "    decode_int256,",
+        "    decode_long,",
+        "    decode_object,",
+        "    decode_string,",
+        "    decode_value,",
+        "    decode_vector,",
+        "    encode_bool,",
+        "    encode_bytes,",
+        "    encode_constructor_id,",
+        "    encode_double,",
+        "    encode_int,",
+        "    encode_int128,",
+        "    encode_int256,",
+        "    encode_long,",
+        "    encode_string,",
+        "    encode_value,",
+        "    encode_vector,",
+        ")",
         "",
         "",
     ]
@@ -261,6 +289,8 @@ def _render_entries_module(entries: Sequence[Any], *, module_kind: str) -> str:
                 f"    RESULT_TYPE: ClassVar[str] = {entry.result_type!r}",
                 f"    TL_FIELDS: ClassVar[tuple[TLField, ...]] = {_fields_tuple(fields)}",
                 f"    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = {_flag_groups_tuple(entry.params)}",
+                "",
+                *_codec_methods(fields, entry.params),
                 "",
                 "",
             ]
@@ -365,6 +395,198 @@ def _flag_groups_tuple(params: Sequence[TLParameter]) -> str:
         )
     lines.append(")")
     return "\n".join(lines)
+
+
+def _codec_methods(fields: Sequence[TLParameter], params: Sequence[TLParameter]) -> list[str]:
+    lines: list[str] = [
+        "    def serialize(self) -> bytes:",
+        "        return self._serialize(boxed=True)",
+        "",
+        "    def _serialize(self, *, boxed: bool = True) -> bytes:",
+        "        output = bytearray()",
+        "        if boxed:",
+        "            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))",
+    ]
+    flag_groups = _flag_group_specs(params)
+    for _name, python_name, _before_field_index in flag_groups:
+        lines.append(f"        {python_name} = 0")
+    for field in fields:
+        if not field.is_optional or field.flag is None or field.flag_index is None:
+            continue
+        flag_var = _flag_var(field, flag_groups)
+        if field.is_true_flag:
+            lines.extend(
+                [
+                    f"        if self.{field.python_name}:",
+                    f"            {flag_var} |= {1 << field.flag_index}",
+                ]
+            )
+        else:
+            lines.extend(
+                [
+                    f"        if self.{field.python_name} is not None:",
+                    f"            {flag_var} |= {1 << field.flag_index}",
+                ]
+            )
+    groups_by_index = _flag_groups_by_index(flag_groups)
+    for index, field in enumerate(fields):
+        for _name, python_name, _before_field_index in groups_by_index.get(index, ()):
+            lines.append(f"        output.extend(encode_int({python_name}))")
+        if field.is_optional:
+            if field.is_true_flag:
+                continue
+            lines.extend(
+                [
+                    f"        if self.{field.python_name} is not None:",
+                    f"            output.extend({_encode_expr(field, f'self.{field.python_name}')})",
+                ]
+            )
+        else:
+            lines.append(
+                f"        output.extend({_encode_expr(field, f'self.{field.python_name}')})"
+            )
+    for _name, python_name, _before_field_index in groups_by_index.get(len(fields), ()):
+        lines.append(f"        output.extend(encode_int({python_name}))")
+    lines.extend(
+        [
+            "        return bytes(output)",
+            "",
+            "    @classmethod",
+            "    def deserialize(cls, data: bytes | memoryview) -> Self:",
+            "        obj, offset = cls._deserialize(data)",
+            "        if offset != len(data):",
+            "            raise TLCodecError('TL object payload has trailing bytes')",
+            "        return obj",
+            "",
+            "    @classmethod",
+            "    def _deserialize(",
+            "        cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True",
+            "    ) -> tuple[Self, int]:",
+            "        raw_data = data",
+            "        cursor = offset",
+            "        if boxed:",
+            "            constructor_id, cursor = decode_constructor_id(raw_data, cursor)",
+            "            if constructor_id != cls.CONSTRUCTOR_ID:",
+            "                raise TLCodecError(",
+            "                    f'expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}'",
+            "                )",
+        ]
+    )
+    for _name, python_name, _before_field_index in flag_groups:
+        lines.append(f"        {python_name} = 0")
+    for index, field in enumerate(fields):
+        for _name, python_name, _before_field_index in groups_by_index.get(index, ()):
+            lines.append(f"        {python_name}, cursor = decode_int(raw_data, cursor)")
+        field_var = _field_value_var(field)
+        if field.is_optional:
+            flag_var = _flag_var(field, flag_groups)
+            present_expr = f"bool({flag_var} & {1 << int(field.flag_index or 0)})"
+            if field.is_true_flag:
+                lines.append(f"        {field_var} = {present_expr}")
+                continue
+            lines.extend(
+                [
+                    f"        if {present_expr}:",
+                    f"            {field_var}, cursor = {_decode_expr(field)}",
+                    "        else:",
+                    f"            {field_var} = None",
+                ]
+            )
+        else:
+            lines.append(f"        {field_var}, cursor = {_decode_expr(field)}")
+    for _name, python_name, _before_field_index in groups_by_index.get(len(fields), ()):
+        lines.append(f"        {python_name}, cursor = decode_int(raw_data, cursor)")
+    if fields:
+        lines.append("        return cls(")
+        for field in fields:
+            lines.append(f"            {field.python_name}={_field_value_var(field)},")
+        lines.extend(["        ), cursor"])
+    else:
+        lines.append("        return cls(), cursor")
+    return lines
+
+
+def _flag_group_specs(params: Sequence[TLParameter]) -> list[tuple[str, str, int]]:
+    groups: list[tuple[str, str, int]] = []
+    public_index = 0
+    for param in params:
+        if param.is_flags_marker:
+            groups.append((param.name, param.python_name, public_index))
+        elif not param.is_template and not param.is_bare:
+            public_index += 1
+    return groups
+
+
+def _flag_groups_by_index(
+    groups: Sequence[tuple[str, str, int]],
+) -> dict[int, tuple[tuple[str, str, int], ...]]:
+    grouped: dict[int, list[tuple[str, str, int]]] = {}
+    for group in groups:
+        grouped.setdefault(group[2], []).append(group)
+    return {index: tuple(items) for index, items in grouped.items()}
+
+
+def _flag_var(field: TLParameter, groups: Sequence[tuple[str, str, int]]) -> str:
+    for name, python_name, _before_field_index in groups:
+        if name == field.flag:
+            return python_name
+    return str(field.flag)
+
+
+def _field_value_var(field: TLParameter) -> str:
+    return f"_value_{field.python_name}"
+
+
+def _encode_expr(field: TLParameter, value_expr: str) -> str:
+    if field.is_vector:
+        return f"encode_vector({value_expr}, {field.vector_item_type!r})"
+    match field.type:
+        case "int" | "#":
+            return f"encode_int({value_expr})"
+        case "long":
+            return f"encode_long({value_expr})"
+        case "int128":
+            return f"encode_int128({value_expr})"
+        case "int256":
+            return f"encode_int256({value_expr})"
+        case "double":
+            return f"encode_double({value_expr})"
+        case "bytes":
+            return f"encode_bytes({value_expr})"
+        case "string":
+            return f"encode_string({value_expr})"
+        case "Bool" | "bool":
+            return f"encode_bool({value_expr})"
+        case "true":
+            return "b''"
+        case _:
+            return f"encode_value({field.type!r}, {value_expr})"
+
+
+def _decode_expr(field: TLParameter) -> str:
+    if field.is_vector:
+        return f"decode_vector(raw_data, cursor, {field.vector_item_type!r})"
+    match field.type:
+        case "int" | "#":
+            return "decode_int(raw_data, cursor)"
+        case "long":
+            return "decode_long(raw_data, cursor)"
+        case "int128":
+            return "decode_int128(raw_data, cursor)"
+        case "int256":
+            return "decode_int256(raw_data, cursor)"
+        case "double":
+            return "decode_double(raw_data, cursor)"
+        case "bytes":
+            return "decode_bytes(raw_data, cursor)"
+        case "string":
+            return "decode_string(raw_data, cursor)"
+        case "Bool" | "bool":
+            return "decode_bool(raw_data, cursor)"
+        case "true":
+            return "True, cursor"
+        case _:
+            return f"decode_value({field.type!r}, raw_data, cursor)"
 
 
 def _namespace_classes(entries: Sequence[Any]) -> tuple[list[str], list[str]]:

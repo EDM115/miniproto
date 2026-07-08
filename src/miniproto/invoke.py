@@ -5,6 +5,7 @@ import secrets
 from collections.abc import Awaitable, Callable, Mapping
 from contextlib import suppress
 from dataclasses import replace
+from functools import cache
 from typing import Any, Protocol, cast, runtime_checkable
 
 from miniproto.auth.dc import select_dc_option
@@ -150,8 +151,10 @@ def decode_rpc_response(raw_result: object, raw_request: object) -> object:
 
 
 def decode_result_payload(raw_result: object, expected_type: str | None = None) -> object:
-    if isinstance(raw_result, bytes | bytearray | memoryview):
-        return _decode_result_bytes(bytes(raw_result), expected_type)
+    if isinstance(raw_result, bytes | memoryview):
+        return _decode_result_bytes(raw_result, expected_type)
+    if isinstance(raw_result, bytearray):
+        return _decode_result_bytes(memoryview(raw_result), expected_type)
     if isinstance(raw_result, GzipPacked):
         return decode_result_payload(raw_result.unpack(), expected_type)
     return raw_result
@@ -172,7 +175,12 @@ def result_type_for_request(raw_request: object) -> str | None:
 def is_retryable_request(raw_request: object, override: bool | None = None) -> bool:
     if override is not None:
         return override
-    qualname = str(getattr(type(_innermost_request(raw_request)), "QUALNAME", "")).lower()
+    return _is_retryable_request_type(type(_innermost_request(raw_request)))
+
+
+@cache
+def _is_retryable_request_type(request_type: type[object]) -> bool:
+    qualname = str(getattr(request_type, "QUALNAME", "")).lower()
     return qualname.startswith(_SAFE_RETRY_PREFIXES)
 
 
@@ -275,7 +283,7 @@ def wrap_transport_failure(exc: BaseException, raw_request: object, *, connected
     return RpcError(str(exc) or type(exc).__name__, request=raw_request)
 
 
-def _decode_result_bytes(data: bytes, expected_type: str | None) -> object:
+def _decode_result_bytes(data: bytes | memoryview, expected_type: str | None) -> object:
     body = decode_message_body(data)
     if isinstance(body, GzipPacked):
         return decode_result_payload(body.unpack(), expected_type)
@@ -292,7 +300,7 @@ def _decode_result_bytes(data: bytes, expected_type: str | None) -> object:
     return value
 
 
-def _starts_with_constructor(data: bytes, constructor_id: int) -> bool:
+def _starts_with_constructor(data: bytes | memoryview, constructor_id: int) -> bool:
     return len(data) >= 4 and int.from_bytes(data[:4], "little", signed=False) == constructor_id
 
 

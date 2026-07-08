@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterable
+from functools import cache
 from typing import Any, cast
 
 from miniproto.crypto import native as _native
@@ -34,7 +35,7 @@ def encode_int(value: int) -> bytes:
 
 
 def decode_int(data: bytes | memoryview, offset: int = 0) -> tuple[int, int]:
-    return _native.tl_decode_int(bytes(data), offset)
+    return _native.tl_decode_int(data, offset)
 
 
 def encode_uint(value: int) -> bytes:
@@ -42,7 +43,7 @@ def encode_uint(value: int) -> bytes:
 
 
 def decode_uint(data: bytes | memoryview, offset: int = 0) -> tuple[int, int]:
-    return _native.tl_decode_uint(bytes(data), offset)
+    return _native.tl_decode_uint(data, offset)
 
 
 def encode_constructor_id(value: int) -> bytes:
@@ -58,7 +59,7 @@ def encode_long(value: int) -> bytes:
 
 
 def decode_long(data: bytes | memoryview, offset: int = 0) -> tuple[int, int]:
-    return _native.tl_decode_long(bytes(data), offset)
+    return _native.tl_decode_long(data, offset)
 
 
 def encode_int128(value: int) -> bytes:
@@ -66,7 +67,7 @@ def encode_int128(value: int) -> bytes:
 
 
 def decode_int128(data: bytes | memoryview, offset: int = 0) -> tuple[int, int]:
-    return _native.tl_decode_int128(bytes(data), offset)
+    return _native.tl_decode_int128(data, offset)
 
 
 def encode_int256(value: int) -> bytes:
@@ -74,7 +75,7 @@ def encode_int256(value: int) -> bytes:
 
 
 def decode_int256(data: bytes | memoryview, offset: int = 0) -> tuple[int, int]:
-    return _native.tl_decode_int256(bytes(data), offset)
+    return _native.tl_decode_int256(data, offset)
 
 
 def encode_double(value: float) -> bytes:
@@ -82,7 +83,7 @@ def encode_double(value: float) -> bytes:
 
 
 def decode_double(data: bytes | memoryview, offset: int = 0) -> tuple[float, int]:
-    return _native.tl_decode_double(bytes(data), offset)
+    return _native.tl_decode_double(data, offset)
 
 
 def encode_bytes(value: bytes) -> bytes:
@@ -90,7 +91,7 @@ def encode_bytes(value: bytes) -> bytes:
 
 
 def decode_bytes(data: bytes | memoryview, offset: int = 0) -> tuple[bytes, int]:
-    return _native.tl_decode_bytes(bytes(data), offset)
+    return _native.tl_decode_bytes(data, offset)
 
 
 def encode_string(value: str) -> bytes:
@@ -98,7 +99,7 @@ def encode_string(value: str) -> bytes:
 
 
 def decode_string(data: bytes | memoryview, offset: int = 0) -> tuple[str, int]:
-    return _native.tl_decode_string(bytes(data), offset)
+    return _native.tl_decode_string(data, offset)
 
 
 def encode_bool(value: bool) -> bytes:
@@ -133,9 +134,9 @@ def decode_vector(
 ) -> tuple[tuple[Any, ...], int]:
     clean_item_type = _clean_type(item_type)
     if clean_item_type in {"int", "#"}:
-        return _native.tl_decode_int_vector(bytes(data), offset)
+        return _native.tl_decode_int_vector(data, offset)
     if clean_item_type == "long":
-        return _native.tl_decode_long_vector(bytes(data), offset)
+        return _native.tl_decode_long_vector(data, offset)
     constructor_id, offset = decode_constructor_id(data, offset)
     if constructor_id != VECTOR_CONSTRUCTOR_ID:
         raise TLCodecError(f"expected Vector constructor, got 0x{constructor_id:08x}")
@@ -153,6 +154,9 @@ def serialize_object(obj: Any, *, boxed: bool = True) -> bytes:
     cls = type(obj)
     if not _looks_like_tl_class(cls):
         raise TLCodecError(f"expected TL object, got {type(obj).__name__}")
+    generated_serialize = getattr(obj, "_serialize", None)
+    if callable(generated_serialize):
+        return cast(bytes, generated_serialize(boxed=boxed))
     output = bytearray()
     if boxed:
         output.extend(encode_constructor_id(int(cls.CONSTRUCTOR_ID)))
@@ -165,6 +169,9 @@ def deserialize_object[TLObjectT](
 ) -> tuple[TLObjectT, int]:
     if not _looks_like_tl_class(cls):
         raise TLCodecError(f"expected TL object class, got {cls!r}")
+    generated_deserialize = getattr(cls, "_deserialize", None)
+    if callable(generated_deserialize):
+        return cast(tuple[TLObjectT, int], generated_deserialize(data, offset, boxed=boxed))
     if boxed:
         constructor_id, offset = decode_constructor_id(data, offset)
         expected = int(cast(Any, cls).CONSTRUCTOR_ID)
@@ -187,6 +194,9 @@ def decode_object(
     cls = _constructor_maps().get(constructor_id)
     if cls is None:
         raise TLCodecError(f"unknown TL constructor 0x{constructor_id:08x}")
+    generated_deserialize = getattr(cls, "_deserialize", None)
+    if callable(generated_deserialize):
+        return generated_deserialize(data, value_offset, boxed=False)
     values, new_offset = _deserialize_fields(cls, data, value_offset)
     return cls(**values), new_offset
 
@@ -318,6 +328,7 @@ def _flag_groups_by_index(flag_groups: tuple[Any, ...]) -> dict[int, tuple[Any, 
     return {index: tuple(groups) for index, groups in grouped.items()}
 
 
+@cache
 def _constructor_maps() -> dict[int, type[Any]]:
     from miniproto.raw import functions, types
 

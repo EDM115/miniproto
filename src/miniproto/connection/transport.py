@@ -411,6 +411,8 @@ def _emit_transport_event(
     record_metric(f"{event}.duration", duration_ms, unit="ms", attributes={"outcome": outcome})
     if level is None:
         level = logging.ERROR if outcome == "error" else logging.DEBUG
+    if not _LOGGER.isEnabledFor(level):
+        return
     emit_event(
         _LOGGER,
         level,

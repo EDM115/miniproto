@@ -4,6 +4,7 @@ import os
 from dataclasses import dataclass
 
 from miniproto.crypto.native import (
+    BytesLike,
     aes_256_cbc_decrypt,
     aes_256_cbc_encrypt,
     aes_256_ctr_crypt,
@@ -27,7 +28,7 @@ def auth_key_id(auth_key: bytes) -> bytes:
 
 
 def message_key(
-    auth_key: bytes, plaintext_with_padding: bytes, *, client_to_server: bool = True
+    auth_key: bytes, plaintext_with_padding: BytesLike, *, client_to_server: bool = True
 ) -> bytes:
     return mtproto_message_key(auth_key, plaintext_with_padding, client_to_server=client_to_server)
 
@@ -40,7 +41,7 @@ def derive_aes_key_iv(
 
 def encrypt_payload(
     auth_key: bytes,
-    plaintext: bytes,
+    plaintext: BytesLike,
     *,
     client_to_server: bool = True,
     padding: bytes | None = None,
@@ -48,7 +49,7 @@ def encrypt_payload(
     if padding is None:
         padding = os.urandom(_padding_length(len(plaintext)))
     _validate_padding(len(plaintext), padding)
-    padded = plaintext + padding
+    padded = bytes(plaintext) + padding
     key_id, msg_key, ciphertext = mtproto_encrypt_payload(
         auth_key, padded, client_to_server=client_to_server
     )
@@ -56,12 +57,12 @@ def encrypt_payload(
 
 
 def decrypt_payload(
-    auth_key: bytes, msg_key: bytes, ciphertext: bytes, *, client_to_server: bool = False
+    auth_key: bytes, msg_key: bytes, ciphertext: BytesLike, *, client_to_server: bool = False
 ) -> bytes:
     return mtproto_decrypt_payload(auth_key, msg_key, ciphertext, client_to_server=client_to_server)
 
 
-def media_ctr_crypt(data: bytes, key: bytes, iv: bytes) -> bytes:
+def media_ctr_crypt(data: BytesLike, key: bytes, iv: bytes) -> bytes:
     return aes_256_ctr_crypt(data, key, iv)
 
 
@@ -69,7 +70,7 @@ def media_cbc_encrypt(plaintext: bytes, key: bytes, iv: bytes) -> bytes:
     return aes_256_cbc_encrypt(plaintext, key, iv)
 
 
-def media_cbc_decrypt(ciphertext: bytes, key: bytes, iv: bytes) -> bytes:
+def media_cbc_decrypt(ciphertext: BytesLike, key: bytes, iv: bytes) -> bytes:
     return aes_256_cbc_decrypt(ciphertext, key, iv)
 
 

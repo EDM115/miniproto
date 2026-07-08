@@ -45,6 +45,7 @@ DEFAULT_PING_INTERVAL = 45.0
 DEFAULT_INCOMING_QUEUE_SIZE = 256
 DEFAULT_RECONNECT_COOLDOWN = 1.0
 RECONNECT_FLAP_WINDOW = 10.0
+_GZIP_THREAD_THRESHOLD_BYTES = 64 * 1024
 
 _LOGGER = get_logger("connection.sender")
 
@@ -427,7 +428,7 @@ class MTProtoSender:
     async def _handle_incoming(self, message: DecodedEncryptedMessage) -> None:
         body = decode_message_body(message.body)
         while isinstance(body, GzipPacked):
-            body = decode_message_body(body.unpack())
+            body = decode_message_body(await _unpack_gzip(body))
         if isinstance(body, MessageContainer):
             for item in body.messages:
                 nested = DecodedEncryptedMessage(
@@ -436,7 +437,7 @@ class MTProtoSender:
                     session_id=message.session_id,
                     msg_id=item.msg_id,
                     seq_no=item.seq_no,
-                    body=encode_message_body(item.body),
+                    body=_message_body_bytes(item.body),
                     padding=b"",
                 )
                 if self.state.record_incoming(
@@ -694,3 +695,17 @@ def _emit_sender_event(event: str, started: float, *, outcome: str, **fields: ob
         duration_ms=duration_ms,
         **fields,
     )
+
+
+async def _unpack_gzip(body: GzipPacked) -> bytes:
+    if len(body.packed_data) >= _GZIP_THREAD_THRESHOLD_BYTES:
+        return await asyncio.to_thread(body.unpack)
+    return body.unpack()
+
+
+def _message_body_bytes(body: bytes | bytearray | memoryview | object) -> bytes | memoryview:
+    if isinstance(body, bytes | memoryview):
+        return body
+    if isinstance(body, bytearray):
+        return memoryview(body)
+    return encode_message_body(body)

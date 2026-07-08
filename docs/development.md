@@ -76,7 +76,7 @@ uv run python tools/bench/benchmark_native_fallback_crypto.py
 uv run python tools/bench/benchmark_runtime_paths.py
 ```
 
-These compare native-extension timings with the pure Python fallback for crypto and TL primitive paths, then benchmark async runtime paths such as update dispatch, media transfer, and synthetic concurrent request scheduling. The commands are smoke checks, not absolute timing gates.
+These compare native-extension timings with the pure Python fallback for crypto and TL primitive paths, then benchmark async runtime paths such as update dispatch, media transfer, generated TL `upload.getFile` request encoding, generated TL `upload.File` result decoding, and synthetic concurrent request scheduling. The commands are smoke checks, not absolute timing gates. Keep Rust implementations and Python fallbacks in parity even when the public wrapper intentionally prefers the Python fallback; `benchmark_native_fallback_crypto.py` is the evidence source for those routing choices.
 
 ## Live Media-Limit Benchmark
 

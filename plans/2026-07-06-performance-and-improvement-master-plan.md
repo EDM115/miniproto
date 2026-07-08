@@ -252,6 +252,7 @@ These matter once the pipeline is unblocked (they are what keeps 16 MiB/s from c
 - Problem: `tl/codec.py::_constructor_maps()` (line 321-327) builds a fresh dict of **all 2206 constructors on every `decode_object()` call** — i.e., for every RPC result including every 512 KiB chunk.
 - Fix: module-level `functools.cache` (invalidate never — generated maps are static) or have `tools/schema/generate.py` emit a single merged `CONSTRUCTOR_ID_MAP`.
 - Acceptance: micro-bench of `decode_object` on `upload.File` improves ~10-100x for small results; profile shows the dict-build gone.
+- Done 2026-07-08: `_constructor_maps()` is `functools.cache` backed and covered by `tests/test_tl_codec.py`, so dynamic decode no longer rebuilds the merged raw constructor map per object.
 
 ### TASK-CPU-2: Generate specialized (de)serializers instead of interpretive field walking
 
@@ -259,6 +260,7 @@ These matter once the pipeline is unblocked (they are what keeps 16 MiB/s from c
 - Fix: extend `tools/schema/generate.py` to emit concrete `serialize()` and `deserialize()` method bodies per class (straight-line struct packs, no string dispatch), keeping the generic path as fallback for tests. Precompute vector item types and flag masks at generation time.
 - Files: `tools/schema/generate.py`, regenerate `src/miniproto/raw/*`, keep `tl/codec.py` for service types.
 - Acceptance: TL round-trip micro-bench (existing `tools/bench/benchmark_runtime_paths.py`) improves >=5x on `upload.getFile` request encode + `upload.File` decode; schema `--check` stays deterministic.
+- Done 2026-07-08: `tools/schema/generate.py` emits per-class `serialize()`/`_serialize()` and `deserialize()`/`_deserialize()` bodies for generated raw types/functions, while `tl/codec.py` keeps the generic `TL_FIELDS` walker as a fallback. `tools/bench/benchmark_runtime_paths.py` now includes explicit `tl_upload_get_file_encode_10k` and `tl_upload_file_decode_100` cases.
 
 ### TASK-CPU-3: Reduce per-chunk payload copies (target <= 2 copies)
 
@@ -266,12 +268,14 @@ These matter once the pipeline is unblocked (they are what keeps 16 MiB/s from c
 - Fix: thread `memoryview`s through decode (TL decoders accept `bytes|memoryview` already; stop calling `bytes(data)` in `tl/codec.py` wrappers — for bytes input it is free, but for memoryview it copies the WHOLE buffer per primitive read); make `RpcResult.result` a memoryview; only materialize the final `bytes` once for the chunk payload. In Rust, decrypt into a buffer exposed as `PyBytes` created with `PyBytes::new_with` (single allocation, no Vec->bytes recopy).
 - Files: `src/miniproto/tl/codec.py`, `src/miniproto/mtproto/codec.py`, `src/miniproto/invoke.py`, `rust/miniproto/src/lib.rs`.
 - Acceptance: allocation profile (tracemalloc) during a 100-chunk fake download shows <= 2 large allocations per chunk.
+- Done 2026-07-08: `DecodedEncryptedMessage.body`, unencrypted bodies, container item bodies, and `RpcResult.result` now carry `memoryview`s where practical; result decoding preserves bytes-like buffers until the final typed TL bytes decode. PyO3 currently rejects `memoryview` for native `&[u8]`, so TL primitive decode dispatches memoryviews through the Python fallback, which copies only the requested primitive/payload instead of the whole source buffer. The Rust `PyBytes::new_with` decrypt handoff is deferred to TASK-RUST-2.
 
 ### TASK-CPU-4: Make observability free when disabled
 
 - Problem: `_emit_transport_event` computes `safe_repr(fields)` (regex redaction + repr) on EVERY send/recv even when logging is disabled (`transport.py:278-295` builds `details=safe_repr(fields)` before `emit_event` checks `isEnabledFor`). Sender/client paths call `record_metric`+`emit_event` 5-10x per part.
 - Fix: check `logger.isEnabledFor(level)` BEFORE building fields/safe_repr (pass a lazy callable or inline the guard); audit all `emit_event` call sites on per-packet/per-part paths; keep metrics (cheap when sink is None) but batch counter increments in tight loops (e.g. accumulate per-transfer and flush at end where per-event resolution isn't needed).
 - Acceptance: profile of a fake 1000-chunk download with logging off shows redaction/repr functions at ~0%.
+- Done 2026-07-08: `_emit_transport_event()` returns before `safe_repr(fields)` when the transport logger is disabled for the event level; `emit_event()` already short-circuits structured event construction globally.
 
 ### TASK-CPU-5: Container/gzip decode cleanups
 
@@ -279,6 +283,7 @@ These matter once the pipeline is unblocked (they are what keeps 16 MiB/s from c
 - Fix: make container decoding keep raw item bytes (don't parse then re-encode; parse lazily in `_handle_incoming`), and decompress large gzip payloads in a thread (`asyncio.to_thread` above ~64 KiB).
 - Files: `src/miniproto/mtproto/codec.py`, `src/miniproto/connection/sender.py`.
 - Acceptance: unit tests keep passing; no re-encode in profile.
+- Done 2026-07-08: message containers now store raw nested body views, sender handling re-enters on those views without `encode_message_body(item.body)`, the fake server mirrors that lazy unwrap path, and gzip bodies >=64 KiB decompress via `asyncio.to_thread`.
 
 ### TASK-CPU-6: Sundry hot-path items
 
@@ -288,6 +293,7 @@ These matter once the pipeline is unblocked (they are what keeps 16 MiB/s from c
 - `is_retryable_request` lowercases QUALNAME and scans a 31-tuple of prefixes per invoke (`invoke.py:147-151`); precompute a per-class bool (cache keyed on type).
 - `Client.is_authorized()` reads raw mapping keys instead of `load_session_record` (`client.py:131-133`) — works but bypasses the typed path.
 - `xor_bytes` fallback is a per-byte generator (`_native_fallback.py:85-88`); use `int.from_bytes`/XOR/`to_bytes` or numpy-free slicing trick — only matters when native is missing, but auth handshake uses it.
+- Done 2026-07-08: public crypto wrappers now document and apply the measured native-vs-fallback selection policy (`benchmark_native_fallback_crypto.py` keeps Rust parity exposed but allows C-backed fallback wins), including fallback hashes/message-key/auth-key-id/CTR/CBC/XOR and fallback scalar TL encoders while keeping native MTProto encrypt/KDF/IGE and TL vector paths where the benchmark shows native wins. `Client` wraps session storage in a load cache invalidated on save/clear, `is_retryable_request()` caches per innermost request class, `Client.is_authorized()` uses typed session records, and fallback `xor_bytes()` uses `int.from_bytes`/XOR/`to_bytes`. The Rust `mtproto_encrypt_payload` auth-key-id recomputation is intentionally deferred to TASK-RUST-2 instead of adding a temporary native API.
 
 ---
 

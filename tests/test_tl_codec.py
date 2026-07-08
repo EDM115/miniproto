@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from miniproto.raw import functions, types
+from miniproto.raw.base import TLObject
+from miniproto.tl import codec as tl_codec
 from miniproto.tl import (
     decode_object,
     decode_vector,
@@ -76,6 +78,18 @@ def test_generated_nested_object_and_vector_request_roundtrip() -> None:
     dynamic, offset = decode_object(encoded)
     assert dynamic == request
     assert offset == len(encoded)
+
+
+def test_decode_object_reuses_constructor_map() -> None:
+    cache_clear = getattr(tl_codec._constructor_maps, "cache_clear", None)
+    if callable(cache_clear):
+        cache_clear()
+    assert tl_codec._constructor_maps() is tl_codec._constructor_maps()
+
+
+def test_generated_hot_raw_classes_have_specialized_codec_methods() -> None:
+    assert functions.UploadGetFile.serialize is not TLObject.serialize
+    assert hasattr(functions.UploadGetFile, "_deserialize")
 
 
 def test_deserialize_object_can_decode_unboxed_payload_for_known_class() -> None:

@@ -121,8 +121,14 @@ class FakeMTProtoServer:
             yield incoming
             return
         for item in body.messages:
-            if isinstance(item.body, MsgsAck):
-                self.acks_received.extend(item.body.msg_ids)
+            body_bytes = (
+                item.body
+                if isinstance(item.body, bytes | memoryview)
+                else encode_message_body(item.body)
+            )
+            nested_body = decode_message_body(body_bytes)
+            if isinstance(nested_body, MsgsAck):
+                self.acks_received.extend(nested_body.msg_ids)
                 continue
             self.containered_bodies += 1
             yield DecodedEncryptedMessage(
@@ -131,7 +137,7 @@ class FakeMTProtoServer:
                 session_id=incoming.session_id,
                 msg_id=item.msg_id,
                 seq_no=item.seq_no,
-                body=encode_message_body(item.body),
+                body=body_bytes,
                 padding=b"",
             )
 

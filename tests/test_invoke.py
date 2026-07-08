@@ -29,10 +29,16 @@ from miniproto.errors import (
     ResultTypeMismatch,
     RpcError,
 )
-from miniproto.invoke import RawSender, build_sender_from_session, decode_result_payload
+from miniproto.invoke import (
+    RawSender,
+    build_sender_from_session,
+    decode_result_payload,
+    is_retryable_request,
+)
 from miniproto.mtproto.codec import BadServerSalt, RpcErrorBody, RpcResult, encode_message_body
 from miniproto.raw import functions, types
 from miniproto.session.models import session_record_from_mapping
+from miniproto.session.storage import SessionPayload
 
 AUTH_KEY = b"k" * 256
 
@@ -179,6 +185,16 @@ class GateFailSender:
         self.is_connected = False
 
 
+class CountingSessionStorage(InMemorySessionStorage):
+    def __init__(self, initial: SessionPayload | None = None) -> None:
+        super().__init__(initial)
+        self.loads = 0
+
+    async def load(self):
+        self.loads += 1
+        return await super().load()
+
+
 def nearest_dc() -> types.NearestDc:
     return types.NearestDc(country="US", this_dc=2, nearest_dc=2)
 
@@ -265,6 +281,50 @@ def test_invoke_rewraps_after_sender_reports_reconnect() -> None:
         sender.connection_initialized = False  # simulates a sender-side reconnect
         await client.invoke(functions.HelpGetNearestDc())
         assert all(isinstance(request, functions.InvokeWithLayer) for request in sender.requests)
+
+    run(scenario())
+
+
+def test_retryable_request_classification_is_cached_per_request_class() -> None:
+    class CountingQualName:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def __str__(self) -> str:
+            self.calls += 1
+            return "help.getNearestDc"
+
+    class DummyRequest:
+        QUALNAME = CountingQualName()
+
+    assert is_retryable_request(DummyRequest())
+    assert is_retryable_request(DummyRequest())
+    assert DummyRequest.QUALNAME.calls == 1
+
+
+def test_client_session_storage_loads_are_cached_and_invalidated_on_save() -> None:
+    async def scenario() -> None:
+        storage = CountingSessionStorage(
+            SessionRecord(
+                dc_id=2,
+                auth_key=AuthKey(dc_id=2, key=AUTH_KEY, key_id=123),
+                dc_options=(DCOption(id=2, ip_address="127.0.0.1", port=443),),
+            )
+        )
+        client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage))
+        assert await client._current_dc_id() == 2
+        assert await client._current_dc_id() == 2
+        assert storage.loads == 1
+
+        await client._storage.save(
+            SessionRecord(
+                dc_id=4,
+                auth_key=AuthKey(dc_id=4, key=AUTH_KEY, key_id=123),
+                dc_options=(DCOption(id=4, ip_address="127.0.0.1", port=444),),
+            )
+        )
+        assert await client._current_dc_id() == 4
+        assert storage.loads == 1
 
     run(scenario())
 

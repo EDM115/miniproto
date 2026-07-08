@@ -10,6 +10,7 @@ from miniproto import ClientConfig, event_loop
 from miniproto.media import DEFAULT_CHUNK_SIZE, download_file, upload_file
 from miniproto.raw import functions, types
 from miniproto.session.storage import InMemorySessionStorage
+from miniproto.tl import decode_object
 from miniproto.types import Update
 from miniproto.updates.manager import UpdateManager
 
@@ -76,6 +77,10 @@ async def _main() -> int:
         AsyncBenchmarkCase("update_dispatch_10k", lambda: _bench_update_dispatch(10_000)),
         AsyncBenchmarkCase("media_upload_8m_concurrency_8", lambda: _bench_upload(payload)),
         AsyncBenchmarkCase("media_download_8m", lambda: _bench_download(payload)),
+        AsyncBenchmarkCase(
+            "tl_upload_get_file_encode_10k", lambda: _bench_tl_upload_get_file_encode(10_000)
+        ),
+        AsyncBenchmarkCase("tl_upload_file_decode_100", lambda: _bench_tl_upload_file_decode(100)),
         AsyncBenchmarkCase("synthetic_pending_requests_1k", lambda: _bench_pending_requests(1_000)),
     )
     for case in cases:
@@ -142,6 +147,35 @@ async def _bench_download(payload: bytes) -> int:
         invoker, location, limit=len(payload), part_size=DEFAULT_CHUNK_SIZE, total_size=len(payload)
     )
     return result.bytes_downloaded
+
+
+async def _bench_tl_upload_get_file_encode(count: int) -> int:
+    request = functions.UploadGetFile(
+        precise=True,
+        cdn_supported=True,
+        location=types.InputDocumentFileLocation(
+            id=1, access_hash=2, file_reference=b"ref", thumb_size=""
+        ),
+        offset=0,
+        limit=DEFAULT_CHUNK_SIZE,
+    )
+    total = 0
+    for _ in range(count):
+        total += len(request.serialize())
+    return total
+
+
+async def _bench_tl_upload_file_decode(count: int) -> int:
+    encoded = types.UploadFile(
+        type=types.StorageFileUnknown(), mtime=1_700_000_000, bytes=b"x" * DEFAULT_CHUNK_SIZE
+    ).serialize()
+    total = 0
+    for _ in range(count):
+        decoded, offset = decode_object(encoded)
+        if offset != len(encoded) or not isinstance(decoded, types.UploadFile):
+            raise AssertionError("upload.File decode benchmark produced an unexpected object")
+        total += len(decoded.bytes)
+    return total
 
 
 async def _bench_pending_requests(count: int) -> int:
