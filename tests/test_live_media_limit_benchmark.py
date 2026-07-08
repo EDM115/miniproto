@@ -382,6 +382,10 @@ def test_transfer_counters_aggregate_metrics() -> None:
     metrics.record_metric("media.download.byte_window_waits", 3)
     metrics.record_metric("media.download.writer_queue_seconds", 0.5)
     metrics.record_metric("media.download.writer_write_seconds", 0.25)
+    metrics.record_metric("media.download.launch_pace_wait_seconds", 0.25)
+    metrics.record_metric("media.download.launch_pace_wait_seconds", 0.5)
+    metrics.record_metric("media.download.launch_pace_rate", 4.0)
+    metrics.record_metric("media.download.launch_pace_rate", 2.0)
     metrics.record_metric("media.download.adaptive_part_size", 1048576)
     metrics.record_metric("media.download.range_cache_hits", 2)
     metrics.record_metric("media.download.range_cache_misses", 3)
@@ -404,6 +408,11 @@ def test_transfer_counters_aggregate_metrics() -> None:
     assert counters.byte_window_waits == 3
     assert counters.writer_queue_seconds == 0.5
     assert counters.writer_write_seconds == 0.25
+    assert counters.launch_pace_waits == 2
+    assert counters.launch_pace_wait_seconds == 0.75
+    assert counters.launch_pace_rate_updates == 2
+    assert counters.launch_pace_last_rate_per_s == 2.0
+    assert counters.launch_pace_min_rate_per_s == 2.0
     assert counters.adaptive_part_size_changes == 1
     assert counters.range_cache_hits == 2
     assert counters.range_cache_misses == 3

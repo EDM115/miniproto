@@ -89,6 +89,11 @@ class TransferCounters:
     byte_window_waits: int
     writer_queue_seconds: float
     writer_write_seconds: float
+    launch_pace_waits: int
+    launch_pace_wait_seconds: float
+    launch_pace_rate_updates: int
+    launch_pace_last_rate_per_s: float
+    launch_pace_min_rate_per_s: float
     adaptive_part_size_changes: int
     range_cache_hits: int
     range_cache_misses: int
@@ -1082,6 +1087,7 @@ def transfer_counters(
     metrics: InMemoryMetrics, operation: Literal["upload", "download"], duration_s: float
 ) -> TransferCounters:
     part_requests = int(metric_sum(metrics, f"media.{operation}.part_requests"))
+    launch_pace_rates = metric_values(metrics, f"media.{operation}.launch_pace_rate")
     return TransferCounters(
         part_requests=part_requests,
         part_retries=int(metric_sum(metrics, f"media.{operation}.part_retries")),
@@ -1119,6 +1125,11 @@ def transfer_counters(
         byte_window_waits=int(metric_sum(metrics, f"media.{operation}.byte_window_waits")),
         writer_queue_seconds=metric_sum(metrics, f"media.{operation}.writer_queue_seconds"),
         writer_write_seconds=metric_sum(metrics, f"media.{operation}.writer_write_seconds"),
+        launch_pace_waits=metric_count(metrics, f"media.{operation}.launch_pace_wait_seconds"),
+        launch_pace_wait_seconds=metric_sum(metrics, f"media.{operation}.launch_pace_wait_seconds"),
+        launch_pace_rate_updates=len(launch_pace_rates),
+        launch_pace_last_rate_per_s=launch_pace_rates[-1] if launch_pace_rates else 0.0,
+        launch_pace_min_rate_per_s=min(launch_pace_rates) if launch_pace_rates else 0.0,
         adaptive_part_size_changes=metric_count(metrics, f"media.{operation}.adaptive_part_size"),
         range_cache_hits=int(metric_sum(metrics, f"media.{operation}.range_cache_hits")),
         range_cache_misses=int(metric_sum(metrics, f"media.{operation}.range_cache_misses")),
@@ -1129,6 +1140,10 @@ def transfer_counters(
 
 def metric_sum(metrics: InMemoryMetrics, name: str) -> float:
     return sum(event.value for event in metrics.events if event.name == name)
+
+
+def metric_values(metrics: InMemoryMetrics, name: str) -> list[float]:
+    return [event.value for event in metrics.events if event.name == name]
 
 
 def metric_sum_by_attr(metrics: InMemoryMetrics, name: str, attr: str) -> dict[str, float]:
@@ -1249,6 +1264,11 @@ def print_transfer(summary: TransferSummary) -> None:
         f"byte_window_waits={summary.counters.byte_window_waits} "
         f"writer_queue_seconds={summary.counters.writer_queue_seconds:g} "
         f"writer_write_seconds={summary.counters.writer_write_seconds:g} "
+        f"launch_pace_waits={summary.counters.launch_pace_waits} "
+        f"launch_pace_wait_seconds={summary.counters.launch_pace_wait_seconds:g} "
+        f"launch_pace_rate_updates={summary.counters.launch_pace_rate_updates} "
+        f"launch_pace_last_rate_per_s={summary.counters.launch_pace_last_rate_per_s:g} "
+        f"launch_pace_min_rate_per_s={summary.counters.launch_pace_min_rate_per_s:g} "
         f"adaptive_part_size_changes={summary.counters.adaptive_part_size_changes} "
         f"range_cache_hits={summary.counters.range_cache_hits} "
         f"range_cache_misses={summary.counters.range_cache_misses} "

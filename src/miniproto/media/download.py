@@ -62,6 +62,8 @@ _MAX_BACKGROUND_PREFETCHES = 32
 MAX_FLOOD_RETRIES_PER_PART = 16
 _MIN_FLOOD_SLEEP_S = 1.0
 _FLOOD_SLEEP_JITTER_S = 0.3
+_PREMIUM_FLOOD_LAUNCH_RATE_MULTIPLIER = 0.15
+_PREMIUM_FLOOD_MAX_LAUNCH_RATE_PER_S = 1.5
 # mtcute's DownloadDelayGate constants: stagger request launches so opening the
 # window does not burst-fire every request in one event-loop tick (burst starts
 # reliably attract FLOOD_WAITs).
@@ -351,6 +353,12 @@ class _DownloadLaunchPacer:
             self._stagger.reset()
         self._clean_successes = 0
         target_rate = self._target_rate()
+        if type(exc).__name__ == "FloodPremiumWait":
+            target_rate = min(
+                target_rate * _PREMIUM_FLOOD_LAUNCH_RATE_MULTIPLIER,
+                _PREMIUM_FLOOD_MAX_LAUNCH_RATE_PER_S,
+            )
+            target_rate = max(1.0, target_rate)
         interval = 1.0 / target_rate
         if self._min_interval > 0:
             interval = max(interval, self._min_interval * 1.25)
@@ -361,6 +369,12 @@ class _DownloadLaunchPacer:
             1.0 / self._min_interval,
             attributes={"reason": type(exc).__name__},
         )
+
+    @property
+    def current_rate_per_s(self) -> float:
+        if self._min_interval <= 0:
+            return 0.0
+        return 1.0 / self._min_interval
 
     def _target_rate(self) -> float:
         now = self._clock()
