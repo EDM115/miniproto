@@ -3,7 +3,8 @@ from __future__ import annotations
 import gzip
 from dataclasses import dataclass
 
-from miniproto.crypto.mtproto import decrypt_payload, encrypt_payload
+from miniproto.crypto.native import mtproto_decode_message as _mtproto_decode_message
+from miniproto.crypto.native import mtproto_encode_message as _mtproto_encode_message
 from miniproto.tl import (
     decode_bytes,
     decode_constructor_id,
@@ -142,49 +143,32 @@ def encode_encrypted_message(
     padding: bytes | None = None,
 ) -> bytes:
     body_bytes = encode_message_body(body)
-    plaintext = bytearray()
-    plaintext.extend(_pack_u64(server_salt))
-    plaintext.extend(_pack_u64(session_id))
-    plaintext.extend(_pack_i64(msg_id))
-    plaintext.extend(encode_int(seq_no))
-    plaintext.extend(encode_int(len(body_bytes)))
-    plaintext.extend(body_bytes)
-    encrypted = encrypt_payload(
-        auth_key, bytes(plaintext), client_to_server=client_to_server, padding=padding
+    return _mtproto_encode_message(
+        auth_key,
+        server_salt,
+        session_id,
+        msg_id,
+        seq_no,
+        body_bytes,
+        client_to_server=client_to_server,
+        padding=padding,
     )
-    return encrypted.auth_key_id + encrypted.msg_key + encrypted.ciphertext
 
 
 def decode_encrypted_message(
     auth_key: bytes, packet: ByteBuffer, *, client_to_server: bool = False
 ) -> DecodedEncryptedMessage:
-    packet_view = memoryview(packet)
-    if len(packet) < 24:
-        raise ValueError("encrypted MTProto packet is too short")
-    auth_key_id = packet_view[:8].tobytes()
-    msg_key = packet_view[8:24].tobytes()
-    ciphertext = packet_view[24:]
-    plaintext = decrypt_payload(auth_key, msg_key, ciphertext, client_to_server=client_to_server)
-    plaintext_view = memoryview(plaintext)
-    if len(plaintext) < 32:
-        raise ValueError("encrypted MTProto plaintext is too short")
-    server_salt = _unpack_u64(plaintext, 0)
-    session_id = _unpack_u64(plaintext, 8)
-    msg_id = _unpack_i64(plaintext, 16)
-    seq_no, offset = decode_int(plaintext, 24)
-    body_len, offset = decode_int(plaintext, offset)
-    if body_len < 0 or offset + body_len > len(plaintext):
-        raise ValueError("encrypted MTProto body length is invalid")
-    body = plaintext_view[offset : offset + body_len]
-    padding = plaintext_view[offset + body_len :]
+    auth_key_id, server_salt, session_id, msg_id, seq_no, body, padding = _mtproto_decode_message(
+        auth_key, packet, client_to_server=client_to_server
+    )
     return DecodedEncryptedMessage(
         auth_key_id=auth_key_id,
         server_salt=server_salt,
         session_id=session_id,
         msg_id=msg_id,
         seq_no=seq_no,
-        body=body,
-        padding=padding,
+        body=memoryview(body),
+        padding=memoryview(padding),
     )
 
 

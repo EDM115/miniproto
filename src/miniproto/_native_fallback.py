@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import math
+import os
 import struct
 from hmac import compare_digest
 
@@ -12,6 +13,9 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 _AES_BLOCK_SIZE = 16
 _MT_PROTO_AUTH_KEY_SIZE = 256
 _MT_PROTO_MSG_KEY_SIZE = 16
+_MT_PROTO_ENVELOPE_HEADER_SIZE = 32
+_MT_PROTO_MIN_PADDING = 12
+_MT_PROTO_MAX_PADDING = 1024
 _TL_VECTOR_CONSTRUCTOR_ID = 0x1CB5C415
 
 
@@ -80,6 +84,70 @@ def mtproto_decrypt_payload(
     if not compare_digest(expected_msg_key, msg_key):
         raise ValueError("MTProto msg_key verification failed")
     return plaintext_with_padding
+
+
+def mtproto_encode_message(
+    auth_key: bytes,
+    server_salt: int,
+    session_id: int,
+    msg_id: int,
+    seq_no: int,
+    body: bytes,
+    client_to_server: bool = True,
+    padding: bytes | None = None,
+) -> bytes:
+    body = bytes(body)
+    if len(body) > 0x7FFFFFFF:
+        raise ValueError("MTProto message body is too large")
+    plaintext = bytearray()
+    plaintext.extend(int(server_salt & 0xFFFFFFFFFFFFFFFF).to_bytes(8, "little", signed=False))
+    plaintext.extend(int(session_id & 0xFFFFFFFFFFFFFFFF).to_bytes(8, "little", signed=False))
+    plaintext.extend(int(msg_id).to_bytes(8, "little", signed=True))
+    plaintext.extend(int(seq_no).to_bytes(4, "little", signed=True))
+    plaintext.extend(len(body).to_bytes(4, "little", signed=True))
+    plaintext.extend(body)
+    if padding is None:
+        padding = os.urandom(_mtproto_padding_length(len(plaintext)))
+    _validate_mtproto_padding(len(plaintext), padding)
+    plaintext.extend(padding)
+    auth_key_id, msg_key, ciphertext = mtproto_encrypt_payload(
+        auth_key, bytes(plaintext), client_to_server
+    )
+    return auth_key_id + msg_key + ciphertext
+
+
+def mtproto_decode_message(
+    auth_key: bytes, packet: bytes, client_to_server: bool = False
+) -> tuple[bytes, int, int, int, int, bytes, bytes]:
+    packet = bytes(packet)
+    if len(packet) < 24:
+        raise ValueError("encrypted MTProto packet is too short")
+    auth_key_id = packet[:8]
+    msg_key = packet[8:24]
+    ciphertext = packet[24:]
+    plaintext = mtproto_decrypt_payload(auth_key, msg_key, ciphertext, client_to_server)
+    if len(plaintext) < _MT_PROTO_ENVELOPE_HEADER_SIZE:
+        raise ValueError("encrypted MTProto plaintext is too short")
+    server_salt = int.from_bytes(plaintext[0:8], "little", signed=False)
+    session_id = int.from_bytes(plaintext[8:16], "little", signed=False)
+    msg_id = int.from_bytes(plaintext[16:24], "little", signed=True)
+    seq_no = int.from_bytes(plaintext[24:28], "little", signed=True)
+    body_len = int.from_bytes(plaintext[28:32], "little", signed=True)
+    if body_len < 0:
+        raise ValueError("encrypted MTProto body length is invalid")
+    body_offset = _MT_PROTO_ENVELOPE_HEADER_SIZE
+    padding_offset = body_offset + body_len
+    if padding_offset > len(plaintext):
+        raise ValueError("encrypted MTProto body length is invalid")
+    return (
+        auth_key_id,
+        server_salt,
+        session_id,
+        msg_id,
+        seq_no,
+        plaintext[body_offset:padding_offset],
+        plaintext[padding_offset:],
+    )
 
 
 def xor_bytes(left: bytes, right: bytes) -> bytes:
@@ -302,6 +370,21 @@ def _validate_msg_key(msg_key: bytes) -> None:
 
 def _direction_offset(client_to_server: bool) -> int:
     return 0 if client_to_server else 8
+
+
+def _mtproto_padding_length(plaintext_length: int) -> int:
+    return (
+        _MT_PROTO_MIN_PADDING
+        + (_AES_BLOCK_SIZE - ((plaintext_length + _MT_PROTO_MIN_PADDING) % _AES_BLOCK_SIZE))
+        % _AES_BLOCK_SIZE
+    )
+
+
+def _validate_mtproto_padding(plaintext_length: int, padding: bytes) -> None:
+    if not _MT_PROTO_MIN_PADDING <= len(padding) <= _MT_PROTO_MAX_PADDING:
+        raise ValueError("MTProto 2.0 padding must be between 12 and 1024 bytes")
+    if (plaintext_length + len(padding)) % _AES_BLOCK_SIZE:
+        raise ValueError("MTProto padded payload length must be a multiple of 16 bytes")
 
 
 def _validate_aes_key(key: bytes) -> None:

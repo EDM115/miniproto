@@ -36,6 +36,17 @@ def main() -> int:
     payload_1m = bytes((index * 31) % 256 for index in range(1024 * 1024))
     padded_payload = payload + (b"p" * 16)
     padded_payload_1m = payload_1m + (b"p" * 16)
+    envelope_padding = b"p" * 16
+    envelope_packet = python_impl.mtproto_encode_message(
+        auth_key,
+        0x0102030405060708,
+        0x1112131415161718,
+        0x2122232425262728,
+        3,
+        payload,
+        True,
+        envelope_padding,
+    )
     int_values = tuple(range(10_000))
     long_values = tuple(index * 10_000_000_000 for index in range(2_000))
 
@@ -89,6 +100,36 @@ def main() -> int:
             "mtproto_encrypt_payload_16k",
             _call(native_impl, "mtproto_encrypt_payload", auth_key, padded_payload, True),
             lambda: python_impl.mtproto_encrypt_payload(auth_key, padded_payload, True),
+        ),
+        BenchmarkCase(
+            "mtproto_encode_message_16k",
+            _call(
+                native_impl,
+                "mtproto_encode_message",
+                auth_key,
+                0x0102030405060708,
+                0x1112131415161718,
+                0x2122232425262728,
+                3,
+                payload,
+                True,
+                envelope_padding,
+            ),
+            lambda: python_impl.mtproto_encode_message(
+                auth_key,
+                0x0102030405060708,
+                0x1112131415161718,
+                0x2122232425262728,
+                3,
+                payload,
+                True,
+                envelope_padding,
+            ),
+        ),
+        BenchmarkCase(
+            "mtproto_decode_message_16k",
+            _call(native_impl, "mtproto_decode_message", auth_key, envelope_packet, True),
+            lambda: python_impl.mtproto_decode_message(auth_key, envelope_packet, True),
         ),
         BenchmarkCase(
             "mtproto_encrypt_payload_1m",

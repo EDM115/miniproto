@@ -286,6 +286,9 @@ Current baseline on 2026-06-30: repository scaffolding, package metadata, PyO3 c
   | TASK-CPU-4 | Guard transport `safe_repr(fields)` behind the effective logger level so disabled logging does not spend CPU on redaction/repr work in per-packet paths (2026-07-06 master plan). | yes         | 2026-07-08 |
   | TASK-CPU-5 | Decode msg_container items lazily from raw body views without re-encoding nested bodies, mirror that path in the fake server, and offload large gzip unpacking to a worker thread (2026-07-06 master plan). | yes         | 2026-07-08 |
   | TASK-CPU-6 | Add cheap hot-path cleanups: documented benchmark-driven native/fallback crypto and scalar TL encoder selection, cached client session storage loads with save/clear invalidation, cached retryability classification, typed `Client.is_authorized()`, and faster fallback `xor_bytes()`; defer Rust auth-key-id caching to TASK-RUST-2 (2026-07-06 master plan). | yes         | 2026-07-08 |
+  | TASK-RUST-1 | Split the native crate into `crypto`, `tl`, and `mtproto` modules, add Rust unit tests for native primitives, and release the GIL with PyO3 `Python::detach` around heavyweight Rust-native crypto and vector TL paths after copying inputs into Rust-owned buffers (2026-07-06 master plan). | yes         | 2026-07-08 |
+  | TASK-RUST-2 | Add single-call Rust MTProto encrypted envelope encode/decode with Rust-side OS random padding, deterministic explicit-padding support, Python fallback parity, and `mtproto/codec.py` wiring through the native envelope API (2026-07-06 master plan). | yes         | 2026-07-08 |
+  | TASK-RUST-5 | Make native availability observable by emitting a structured ERROR when the Rust extension is missing or incomplete while gracefully falling back to Python, and add top-level `native_available` to live benchmark JSON (2026-07-06 master plan). | yes         | 2026-07-08 |
 
 ### Implementation Phase 12 - Verification, Integration, Benchmarks, And CI Expansion
 

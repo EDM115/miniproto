@@ -28,6 +28,36 @@ native = pytest.importorskip("miniproto._native")
         ),
         ("mtproto_encrypt_payload", (bytes(range(256)), b"x" * 64, True)),
         (
+            "mtproto_encode_message",
+            (
+                bytes(range(256)),
+                0x0102030405060708,
+                0x1112131415161718,
+                0x2122232425262728,
+                3,
+                b"body",
+                True,
+                b"\x00" * 12,
+            ),
+        ),
+        (
+            "mtproto_decode_message",
+            (
+                bytes(range(256)),
+                fallback.mtproto_encode_message(
+                    bytes(range(256)),
+                    0x0102030405060708,
+                    0x1112131415161718,
+                    0x2122232425262728,
+                    3,
+                    b"body",
+                    True,
+                    b"\x00" * 12,
+                ),
+                True,
+            ),
+        ),
+        (
             "mtproto_decrypt_payload",
             (
                 bytes(range(256)),
@@ -99,3 +129,9 @@ def _normalize_result(name: str, value: object) -> object:
 def test_public_native_module_prefers_compiled_extension_when_available() -> None:
     public = import_module("miniproto.crypto.native")
     assert public.native_available() is True
+
+
+def test_public_crypto_package_exports_envelope_helpers() -> None:
+    public = import_module("miniproto.crypto")
+    assert callable(public.mtproto_encode_message)
+    assert callable(public.mtproto_decode_message)

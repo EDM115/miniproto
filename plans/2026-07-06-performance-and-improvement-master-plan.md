@@ -304,6 +304,7 @@ These matter once the pipeline is unblocked (they are what keeps 16 MiB/s from c
 - Problem: no `py.allow_threads` anywhere in `rust/miniproto/src/lib.rs` — a 512 KiB AES-IGE encrypt/decrypt (~0.3-0.5 ms with AES-NI) blocks the entire event loop on every chunk, serializing crypto with I/O scheduling. At 32 chunks/s that's 1-2% loop stall today, but it linearly throttles higher speeds and multi-transfer clients.
 - Fix: accept `Python<'_>` + `py.allow_threads(|| ...)` around IGE/CTR/CBC/SHA loops for inputs > ~4 KiB; needs buffers copied in first (already the case via `&[u8]` borrow — use `PyBackedBytes` or copy under the GIL then release).
 - Acceptance: loop-lag probe during decrypt-heavy fake transfer shows no stalls; `cargo clippy` clean.
+- Done 2026-07-08: split the native crate into `crypto.rs`, `tl.rs`, and `mtproto.rs`; copied heavy Python inputs into Rust-owned `Vec<u8>` and used PyO3 0.29 `Python::detach` for SHA, MTProto payload encrypt/decrypt, AES-IGE/CBC/CTR, PQ factorization, and vector TL paths above the 4 KiB threshold. Added Rust unit tests for crypto, MTProto payload, TL bytes/vectors, and native envelope behavior.
 
 ### TASK-RUST-2: Single-call MTProto envelope encode/decode in Rust
 
@@ -311,6 +312,7 @@ These matter once the pipeline is unblocked (they are what keeps 16 MiB/s from c
 - Fix: add `mtproto_encode_message(auth_key, salt, session_id, msg_id, seq_no, body: &[u8]) -> PyBytes` and `mtproto_decode_message(auth_key, packet: &[u8]) -> (salt, session_id, msg_id, seq_no, PyBytes body)` doing padding-gen, key derivation, IGE, msg_key verify in one native call with one output allocation (and GIL released). Keep the granular functions for parity tests.
 - Files: `rust/miniproto/src/lib.rs` (split into modules per PAT-003: `crypto/`, `tl/`), `src/miniproto/mtproto/codec.py` uses it when native available.
 - Acceptance: parity tests native vs fallback; envelope micro-bench >= 3x faster than the current chain.
+- Done 2026-07-08: added Rust-backed `mtproto_encode_message`/`mtproto_decode_message` with Rust-side OS random padding via `getrandom`, deterministic explicit-padding support for tests, Python fallback parity functions, and `mtproto/codec.py` wiring through the single native envelope API. `benchmark_native_fallback_crypto.py` now includes `mtproto_encode_message_16k` and `mtproto_decode_message_16k`.
 
 ### TASK-RUST-3: Rust transport framing + frame pump (phase 2)
 
@@ -327,6 +329,7 @@ These matter once the pipeline is unblocked (they are what keeps 16 MiB/s from c
 - Fix: log once at import (INFO) with backend name/version; add `native_available` to bench summary JSON and to `Client` debug info; optionally add `MINIPROTO_REQUIRE_NATIVE=1` fail-fast env for production/benchmarks.
 - Files: `src/miniproto/crypto/native.py`, `tools/bench/benchmark_live_media_limit.py`.
 - Acceptance: bench JSON contains `"native_available": true` on CI runs; forcing fallback flips it.
+- Done 2026-07-08: native loader now gracefully falls back to Python while emitting a structured ERROR event (`crypto.native.fallback`) when importing the extension fails or required symbols are missing; live media benchmark JSON now includes top-level `native_available`. We intentionally did not add `MINIPROTO_REQUIRE_NATIVE` fail-fast behavior because benchmark and production runs should remain graceful when Rust is unavailable.
 
 ---
 

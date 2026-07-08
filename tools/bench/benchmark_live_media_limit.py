@@ -34,6 +34,7 @@ from miniproto import (
     get_metrics_sink,
     set_metrics_sink,
 )
+from miniproto.crypto import native_available
 from miniproto.file_id import encode_file_id, media_from_file_id
 from miniproto.invoke import load_session_record
 from miniproto.media import DEFAULT_CHUNK_SIZE, MAX_DOWNLOAD_CHUNK_SIZE
@@ -158,6 +159,7 @@ class BenchmarkSummary:
     download_part_retries: int
     download_flood_sleep_threshold: int | None
     event_loop_backend: str
+    native_available: bool
     repeat_count: int
     results: tuple[TransferSummary, ...]
     memory: MemorySummary | None = None
@@ -695,6 +697,7 @@ async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int
         download_part_retries=args.download_part_retries,
         download_flood_sleep_threshold=args.download_flood_sleep_threshold,
         event_loop_backend=event_loop.backend_name(),
+        native_available=native_available(),
         repeat_count=args.repeat,
         results=tuple(results),
         memory=memory,

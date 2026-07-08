@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterable
 from importlib import import_module
 from typing import Protocol, cast
 
+from miniproto.observability import emit_event, get_logger
+
 type BytesLike = bytes | bytearray | memoryview
+_LOGGER = get_logger("crypto.native")
 
 
 class _NativeModule(Protocol):
@@ -24,6 +28,20 @@ class _NativeModule(Protocol):
     def mtproto_decrypt_payload(
         self, auth_key: bytes, msg_key: bytes, ciphertext: BytesLike, client_to_server: bool
     ) -> bytes: ...
+    def mtproto_encode_message(
+        self,
+        auth_key: bytes,
+        server_salt: int,
+        session_id: int,
+        msg_id: int,
+        seq_no: int,
+        body: BytesLike,
+        client_to_server: bool,
+        padding: bytes | None = None,
+    ) -> bytes: ...
+    def mtproto_decode_message(
+        self, auth_key: bytes, packet: BytesLike, client_to_server: bool
+    ) -> tuple[bytes, int, int, int, int, bytes, bytes]: ...
     def xor_bytes(self, left: bytes, right: bytes) -> bytes: ...
     def aes_256_ige_encrypt(self, plaintext: bytes, key: bytes, iv: bytes) -> bytes: ...
     def aes_256_ige_decrypt(self, ciphertext: bytes, key: bytes, iv: bytes) -> bytes: ...
@@ -64,6 +82,8 @@ _REQUIRED_NATIVE_NAMES = (
     "mtproto_derive_aes_key_iv",
     "mtproto_encrypt_payload",
     "mtproto_decrypt_payload",
+    "mtproto_encode_message",
+    "mtproto_decode_message",
     "xor_bytes",
     "aes_256_ige_encrypt",
     "aes_256_ige_decrypt",
@@ -94,18 +114,43 @@ _REQUIRED_NATIVE_NAMES = (
 )
 
 
-def _load_native_impl() -> _NativeModule:
+def _load_native_impl() -> tuple[_NativeModule, str | None]:
     try:
         native_impl = import_module("miniproto._native")
-    except ImportError:
-        return cast(_NativeModule, import_module("miniproto._native_fallback"))
-    if not all(hasattr(native_impl, name) for name in _REQUIRED_NATIVE_NAMES):
-        return cast(_NativeModule, import_module("miniproto._native_fallback"))
-    return cast(_NativeModule, native_impl)
+    except Exception as exc:
+        return (
+            cast(_NativeModule, import_module("miniproto._native_fallback")),
+            f"{type(exc).__name__}: {exc}",
+        )
+    missing = tuple(name for name in _REQUIRED_NATIVE_NAMES if not hasattr(native_impl, name))
+    if missing:
+        return (
+            cast(_NativeModule, import_module("miniproto._native_fallback")),
+            f"missing native symbols: {', '.join(missing)}",
+        )
+    return cast(_NativeModule, native_impl), None
 
 
-_native_impl = _load_native_impl()
+def _emit_native_fallback_error(error: str) -> None:
+    emit_event(_LOGGER, logging.ERROR, "crypto.native.fallback", outcome="fallback", error=error)
+
+
+def _emit_native_loaded(available: bool) -> None:
+    emit_event(
+        _LOGGER,
+        logging.INFO,
+        "crypto.native.loaded",
+        outcome="success",
+        backend="rust" if available else "python",
+        native_available=available,
+    )
+
+
+_native_impl, _NATIVE_LOAD_ERROR = _load_native_impl()
 _fallback_impl = cast(_NativeModule, import_module("miniproto._native_fallback"))
+if _NATIVE_LOAD_ERROR is not None:
+    _emit_native_fallback_error(_NATIVE_LOAD_ERROR)
+_emit_native_loaded(bool(_native_impl.native_available()))
 
 
 def native_available() -> bool:
@@ -158,6 +203,41 @@ def mtproto_decrypt_payload(
 ) -> bytes:
     return bytes(
         _native_impl.mtproto_decrypt_payload(auth_key, msg_key, bytes(ciphertext), client_to_server)
+    )
+
+
+def mtproto_encode_message(
+    auth_key: bytes,
+    server_salt: int,
+    session_id: int,
+    msg_id: int,
+    seq_no: int,
+    body: BytesLike,
+    *,
+    client_to_server: bool = True,
+    padding: bytes | None = None,
+) -> bytes:
+    return bytes(
+        _native_impl.mtproto_encode_message(
+            auth_key, server_salt, session_id, msg_id, seq_no, body, client_to_server, padding
+        )
+    )
+
+
+def mtproto_decode_message(
+    auth_key: bytes, packet: BytesLike, *, client_to_server: bool = False
+) -> tuple[bytes, int, int, int, int, bytes, bytes]:
+    auth_key_id, server_salt, session_id, msg_id, seq_no, body, padding = (
+        _native_impl.mtproto_decode_message(auth_key, bytes(packet), client_to_server)
+    )
+    return (
+        bytes(auth_key_id),
+        int(server_salt),
+        int(session_id),
+        int(msg_id),
+        int(seq_no),
+        bytes(body),
+        bytes(padding),
     )
 
 

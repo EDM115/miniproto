@@ -13,6 +13,7 @@ from tools.bench.benchmark_live_media_limit import (
     DEFAULT_CHUNK_SIZE,
     MAX_DOWNLOAD_CHUNK_SIZE,
     TELEGRAM_DEFAULT_LIMIT_BYTES,
+    BenchmarkSummary,
     TransferRecorder,
     benchmark_peer_for_actor,
     deterministic_chunk,
@@ -39,6 +40,10 @@ def test_parse_size_accepts_telegram_default_and_units() -> None:
     assert parse_size("2000mib") == 2000 * 1024 * 1024
     assert parse_size("512kb") == 512_000
     assert parse_size("524288") == DEFAULT_CHUNK_SIZE
+
+
+def test_benchmark_summary_reports_native_availability() -> None:
+    assert "native_available" in BenchmarkSummary.__dataclass_fields__
 
 
 def test_default_benchmark_file_name_follows_requested_size() -> None:
