@@ -12,14 +12,6 @@ on:
           - user
           - bot
           - both
-      user_auth_mode:
-        description: "How user login is supplied when no user session secret is restored"
-        required: true
-        default: "session"
-        type: choice
-        options:
-          - session
-          - cloudflared-code
       operation:
         description: "Transfer operation to run"
         required: true
@@ -32,7 +24,7 @@ on:
       repeat:
         description: "Repeat each selected actor/profile; use >1 for noisy Telegram lane A/B runs"
         required: true
-        default: "1"
+        default: 1
         type: number
       file_id:
         description: "miniproto file id for download-only runs"
@@ -45,23 +37,23 @@ on:
       dc_id:
         description: "Production DC id for the benchmark sessions"
         required: true
-        default: "4"
+        default: 4
       upload_concurrency:
         description: "Concurrent upload part requests"
         required: true
-        default: "8"
+        default: 8
       upload_media_lanes:
         description: "Upload MTProto sender lanes; 2 was fastest in the July 2026 DC4 VPS run, 0 uses the legacy main sender"
         required: false
-        default: "2"
+        default: 2
       download_concurrency:
         description: "Maximum concurrent download part requests; default 6 pipelines ~3 requests per lane (TASK-P1-1)"
         required: true
-        default: "6"
+        default: 6
       download_media_lanes:
         description: "Download MTProto sender lanes; default 2 matches the TASK-P1-1 library default (mtcute 2x3), 0 uses the legacy main sender"
         required: false
-        default: "2"
+        default: 2
       download_adaptive_concurrency:
         description: "Enable download pacing/throttle: pace launches after flood waits and shrink only on disconnects/timeouts"
         required: true
@@ -70,7 +62,7 @@ on:
       download_chunk_size:
         description: "upload.getFile chunk size in bytes; 524288 is stable, 1048576 tests the 1 MiB path"
         required: true
-        default: "524288"
+        default: 524288
       download_max_in_flight_bytes:
         description: "Max in-flight download bytes; empty uses the library floor max(8 MiB, part_size * concurrency)"
         required: false
@@ -83,27 +75,27 @@ on:
       download_max_chunk_size:
         description: "Largest adaptive upload.getFile chunk size to try"
         required: true
-        default: "1048576"
+        default: 1048576
       download_read_ahead_bytes:
         description: "Optional range-cache read-ahead bytes; 0 disables read-ahead"
         required: true
-        default: "0"
+        default: 0
       download_range_cache_bytes:
         description: "Optional in-memory range cache bytes; 0 disables range caching"
         required: true
-        default: "0"
+        default: 0
       request_timeout:
         description: "Client transport/request timeout in seconds"
         required: true
-        default: "120"
+        default: 120
       upload_request_timeout:
         description: "Upload part timeout in seconds"
         required: false
-        default: "45"
+        default: 45
       download_request_timeout:
         description: "Download part timeout in seconds"
         required: true
-        default: "30"
+        default: 30
       verify_digest:
         description: "Hash source and download after each transfer"
         required: true
@@ -189,38 +181,12 @@ jobs:
           }
           restore_session "user" "${MINIPROTO_LIVE_BENCH_USER_SESSION_B64:-}"
           restore_session "bot" "${MINIPROTO_LIVE_BENCH_BOT_SESSION_B64:-}"
-      - name: Prepare optional user code tunnel
-        if: ${{ inputs.actor != 'bot' && inputs.user_auth_mode == 'cloudflared-code' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p .tmp/live-bench-results
-          token="$(uv run python -c "import secrets; print(secrets.token_urlsafe(24))")"
-          echo "MINIPROTO_LIVE_BENCH_CODE_PROMPT=http" >> "${GITHUB_ENV}"
-          echo "MINIPROTO_LIVE_BENCH_HTTP_CODE_TOKEN=${token}" >> "${GITHUB_ENV}"
-          curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o .tmp/cloudflared
-          chmod 700 .tmp/cloudflared
-          .tmp/cloudflared tunnel --url "http://127.0.0.1:${MINIPROTO_LIVE_BENCH_HTTP_CODE_PORT}" --no-autoupdate > .tmp/live-bench-results/cloudflared.log 2>&1 &
-          echo "$!" > .tmp/live-bench-results/cloudflared.pid
-          for _ in $(seq 1 60); do
-            tunnel_url="$(grep -Eo 'https://[-a-zA-Z0-9]+\.trycloudflare\.com' .tmp/live-bench-results/cloudflared.log | head -n 1 || true)"
-            if [ -n "${tunnel_url}" ]; then
-              echo "MINIPROTO_LIVE_BENCH_HTTP_CODE_PUBLIC_BASE_URL=${tunnel_url}" >> "${GITHUB_ENV}"
-              echo "Telegram login code form will be available for 15 minutes once the benchmark asks for a code:"
-              echo "${tunnel_url}/${token}"
-              exit 0
-            fi
-            sleep 1
-          done
-          echo "::error::cloudflared did not print a trycloudflare URL in time"
-          cat .tmp/live-bench-results/cloudflared.log || true
-          exit 2
       - name: Check non-interactive session requirements
         shell: bash
         run: |
           set -euo pipefail
-          if [ "${{ inputs.actor }}" != "bot" ] && [ ! -s ".tmp/miniproto-live-bench-user-dc${{ inputs.dc_id }}.sqlite" ] && [ "${{ inputs.user_auth_mode }}" != "cloudflared-code" ]; then
-            echo "::error::User benchmarks on GitHub-hosted runners need MINIPROTO_LIVE_BENCH_USER_SESSION_B64 unless user_auth_mode is cloudflared-code."
+          if [ "${{ inputs.actor }}" != "bot" ] && [ ! -s ".tmp/miniproto-live-bench-user-dc${{ inputs.dc_id }}.sqlite" ] ]; then
+            echo "::error::User benchmarks on GitHub-hosted runners need MINIPROTO_LIVE_BENCH_USER_SESSION_B64."
             exit 2
           fi
       - name: Run live media benchmark
@@ -281,5 +247,4 @@ jobs:
           path: |
             .tmp/live-bench-results/summary.json
             .tmp/live-bench-results/live-media-bench.log
-            .tmp/live-bench-results/cloudflared.log
           if-no-files-found: warn
