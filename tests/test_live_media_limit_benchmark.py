@@ -3,6 +3,7 @@ from __future__ import annotations
 import socket
 import time
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from urllib.error import URLError
 from urllib.parse import urlencode
 from urllib.request import urlopen
@@ -23,6 +24,7 @@ from tools.bench.benchmark_live_media_limit import (
     parse_args,
     parse_size,
     prompt_code_http,
+    resolved_benchmark_file,
     sample_stats,
     should_use_http_code_prompt,
     transfer_counters,
@@ -37,6 +39,28 @@ def test_parse_size_accepts_telegram_default_and_units() -> None:
     assert parse_size("2000mib") == 2000 * 1024 * 1024
     assert parse_size("512kb") == 512_000
     assert parse_size("524288") == DEFAULT_CHUNK_SIZE
+
+
+def test_default_benchmark_file_name_follows_requested_size() -> None:
+    args = parse_args(["--actor", "user", "--size", "1000mib"], {})
+    assert resolved_benchmark_file(args, {}) == Path(".tmp/miniproto-live-bench-1000mib.bin")
+
+
+def test_explicit_benchmark_file_name_is_preserved() -> None:
+    args = parse_args(["--actor", "user", "--size", "1000mib", "--file", ".tmp/custom.bin"], {})
+    assert resolved_benchmark_file(args, {}) == Path(".tmp/custom.bin")
+    env_args = parse_args(
+        ["--actor", "user", "--size", "1000mib"], {"MINIPROTO_LIVE_BENCH_FILE": ".tmp/from-env.bin"}
+    )
+    assert resolved_benchmark_file(env_args, {}) == Path(".tmp/from-env.bin")
+
+
+def test_legacy_example_benchmark_file_env_does_not_pin_smaller_size() -> None:
+    args = parse_args(
+        ["--actor", "user", "--size", "1000mib"],
+        {"MINIPROTO_LIVE_BENCH_FILE": ".tmp/miniproto-live-bench-2000mib.bin"},
+    )
+    assert resolved_benchmark_file(args, {}) == Path(".tmp/miniproto-live-bench-1000mib.bin")
 
 
 def test_deterministic_chunk_is_stable_and_indexed() -> None:

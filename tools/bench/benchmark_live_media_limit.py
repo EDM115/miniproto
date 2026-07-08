@@ -41,6 +41,8 @@ from miniproto.media import DEFAULT_CHUNK_SIZE, MAX_DOWNLOAD_CHUNK_SIZE
 TELEGRAM_DEFAULT_UPLOAD_PARTS = 4000
 TELEGRAM_DEFAULT_LIMIT_BYTES = TELEGRAM_DEFAULT_UPLOAD_PARTS * DEFAULT_CHUNK_SIZE
 BENCH_GUARD_ENV = "MINIPROTO_LIVE_BENCH"
+DEFAULT_BENCHMARK_FILE_DIR = Path(".tmp")
+LEGACY_DEFAULT_BENCHMARK_FILE = DEFAULT_BENCHMARK_FILE_DIR / "miniproto-live-bench-2000mib.bin"
 DEFAULT_UPLOAD_REQUEST_TIMEOUT = 45.0
 DEFAULT_UPLOAD_MEDIA_LANES = 2
 # Library defaults post TASK-P1-1: 2 lanes x ~3 pipelined requests inside an
@@ -325,11 +327,8 @@ def parse_args(
     parser.add_argument(
         "--file",
         type=Path,
-        default=Path(
-            env_value(values, "MINIPROTO_LIVE_BENCH_FILE", ".tmp/miniproto-live-bench-2000mib.bin")
-            or ".tmp/miniproto-live-bench-2000mib.bin"
-        ),
-        help="path to the deterministic benchmark payload",
+        default=benchmark_file_arg_default(values),
+        help="path to the deterministic benchmark payload; defaults to .tmp/miniproto-live-bench-<size>.bin",
     )
     parser.add_argument(
         "--download-dir",
@@ -597,23 +596,24 @@ def parse_args(
 async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int:
     limit_parts = upload_limit_parts_from_env_or_default(env, args.dc_id)
     size = parse_size(args.size, default_bytes=limit_parts * DEFAULT_CHUNK_SIZE)
+    payload_file = resolved_benchmark_file(args, env)
     upload_needed = args.operation in {"both", "upload"}
     if upload_needed or args.prepare_only:
         print(
-            f"payload: path={args.file} bytes={size} chunks={math.ceil(size / DEFAULT_CHUNK_SIZE)} "
+            f"payload: path={payload_file} bytes={size} chunks={math.ceil(size / DEFAULT_CHUNK_SIZE)} "
             f"chunk_size={DEFAULT_CHUNK_SIZE}"
         )
         ensure_benchmark_file(
-            args.file, size=size, chunk_size=DEFAULT_CHUNK_SIZE, force=args.force_regenerate
+            payload_file, size=size, chunk_size=DEFAULT_CHUNK_SIZE, force=args.force_regenerate
         )
     else:
         print(
-            f"payload: operation=download source_file={args.file} fallback_bytes={size} "
+            f"payload: operation=download source_file={payload_file} fallback_bytes={size} "
             "local payload generation skipped"
         )
     if args.prepare_only:
         if upload_needed:
-            print(f"prepared {args.file} ({size} bytes)")
+            print(f"prepared {payload_file} ({size} bytes)")
         else:
             print("download-only mode does not prepare a local payload")
         return 0
@@ -639,7 +639,7 @@ async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int
                         operation=args.operation,
                         repeat_index=repeat_index,
                         peer=peer,
-                        source=args.file,
+                        source=payload_file,
                         benchmark_size=size,
                         download_dir=args.download_dir,
                         dc_id=args.dc_id,
@@ -668,7 +668,7 @@ async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int
             await client.disconnect()
     memory = memory_summary(memory_monitor.finish())
     summary = BenchmarkSummary(
-        generated_file=str(args.file),
+        generated_file=str(payload_file),
         generated_file_bytes=size,
         chunk_size=DEFAULT_CHUNK_SIZE,
         download_chunk_size=args.download_chunk_size,
@@ -1153,6 +1153,40 @@ def metric_sum_where(
         for event in metrics.events
         if event.name == name and predicate(event.attributes)
     )
+
+
+def benchmark_file_arg_default(env: Mapping[str, str]) -> Path | None:
+    file_path = env_value(env, "MINIPROTO_LIVE_BENCH_FILE")
+    if file_path is None:
+        return None
+    path = Path(file_path)
+    if path == LEGACY_DEFAULT_BENCHMARK_FILE:
+        return None
+    return path
+
+
+def resolved_benchmark_file(args: argparse.Namespace, env: Mapping[str, str]) -> Path:
+    if args.file is not None:
+        return args.file
+    limit_parts = upload_limit_parts_from_env_or_default(env, args.dc_id)
+    size = parse_size(args.size, default_bytes=limit_parts * DEFAULT_CHUNK_SIZE)
+    return default_benchmark_file(size)
+
+
+def default_benchmark_file(size: int) -> Path:
+    return DEFAULT_BENCHMARK_FILE_DIR / f"miniproto-live-bench-{size_slug(size)}.bin"
+
+
+def size_slug(size: int) -> str:
+    if size % (1024**2) == 0:
+        return f"{size // (1024**2)}mib"
+    if size % (1000**2) == 0:
+        return f"{size // (1000**2)}mb"
+    if size % 1024 == 0:
+        return f"{size // 1024}kib"
+    if size % 1000 == 0:
+        return f"{size // 1000}kb"
+    return f"{size}b"
 
 
 def parse_size(value: str, *, default_bytes: int = TELEGRAM_DEFAULT_LIMIT_BYTES) -> int:
