@@ -7,6 +7,7 @@ from typing import Any, cast
 
 import pytest
 
+import miniproto.media.upload as media_upload
 from miniproto import (
     AuthKey,
     Client,
@@ -254,6 +255,32 @@ def test_upload_file_floods_do_not_consume_the_transient_retry_budget() -> None:
         result = await upload_file(invoker, b"abc", part_size=1024, max_retries=1, file_id=9)
         assert result.size == 3
         assert [request.file_part for request in invoker.requests] == [0, 0, 0, 0, 0]
+
+    run(scenario())
+
+
+def test_upload_flood_retry_sleep_only_uses_large_floor_for_zero_wait(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def scenario() -> None:
+        sleeps: list[float] = []
+
+        async def sleep(delay: float) -> None:
+            sleeps.append(delay)
+
+        jitter_args: list[tuple[float, float]] = []
+
+        def uniform(low: float, high: float) -> float:
+            jitter_args.append((low, high))
+            return high
+
+        monkeypatch.setattr("miniproto.media.upload.asyncio.sleep", sleep)
+        monkeypatch.setattr("miniproto.media.upload.random.uniform", uniform)
+        await media_upload._sleep_before_retry(FloodWait(2), 0, big=True)
+        await media_upload._sleep_before_retry(FloodWait(0), 0, big=True)
+        assert jitter_args == [(0.0, 0.3), (0.0, 0.3)]
+        assert sleeps[0] == pytest.approx(2.3)
+        assert sleeps[1] == pytest.approx(1.3)
 
     run(scenario())
 

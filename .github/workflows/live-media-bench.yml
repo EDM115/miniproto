@@ -63,7 +63,7 @@ on:
         required: false
         default: "2"
       download_adaptive_concurrency:
-        description: "Adapt download concurrency after flood waits/disconnects"
+        description: "Enable download pacing/throttle: pace launches after flood waits and shrink only on disconnects/timeouts"
         required: true
         default: true
         type: boolean

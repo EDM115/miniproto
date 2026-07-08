@@ -7,7 +7,7 @@ import logging
 import os
 import random
 import time
-from collections import OrderedDict
+from collections import OrderedDict, deque
 from collections.abc import Awaitable, Callable
 from contextlib import suppress
 from dataclasses import dataclass
@@ -41,6 +41,7 @@ type RawInvoker = Callable[..., Awaitable[object]]
 type DownloadRetryObserver = Callable[[Exception, int], Awaitable[None] | None]
 type FileReferenceRefresher = Callable[[object], Awaitable[object] | object]
 type Clock = Callable[[], float]
+type SleepFunc = Callable[[float], Awaitable[None]]
 _LOGGER = get_logger("media.download")
 MAX_DOWNLOAD_CHUNK_SIZE = 1024 * 1024
 # 2 lanes x ~3 pipelined 512 KiB..1 MiB requests with an 8 MiB rolling byte
@@ -60,7 +61,7 @@ _MAX_BACKGROUND_PREFETCHES = 32
 # storms (16 x <=30 s worst case per part).
 MAX_FLOOD_RETRIES_PER_PART = 16
 _MIN_FLOOD_SLEEP_S = 1.0
-_FLOOD_SLEEP_JITTER_S = 1.0
+_FLOOD_SLEEP_JITTER_S = 0.3
 # mtcute's DownloadDelayGate constants: stagger request launches so opening the
 # window does not burst-fire every request in one event-loop tick (burst starts
 # reliably attract FLOOD_WAITs).
@@ -302,6 +303,73 @@ class _DownloadDelayGate:
     def reset(self) -> None:
         """Re-arm the full stagger after a flood so launches stop bursting."""
         self._delay = self._initial
+
+
+class _DownloadLaunchPacer:
+    """Pace launches after floods without reducing the fixed request slots."""
+
+    def __init__(
+        self, *, concurrency: int, clock: Clock = time.monotonic, sleep: SleepFunc = asyncio.sleep
+    ) -> None:
+        self._concurrency = max(1, concurrency)
+        self._clock = clock
+        self._sleep = sleep
+        self._stagger = _DownloadDelayGate() if self._concurrency > 1 else None
+        self._success_times: deque[float] = deque(maxlen=64)
+        self._min_interval = 0.0
+        self._next_launch_at = 0.0
+        self._clean_successes = 0
+
+    async def wait(self) -> None:
+        if self._min_interval > 0:
+            now = self._clock()
+            wait_s = max(0.0, self._next_launch_at - now)
+            if wait_s > 0:
+                record_metric("media.download.launch_pace_wait_seconds", wait_s, unit="s")
+                await self._sleep(wait_s)
+                now = self._clock()
+            self._next_launch_at = max(self._next_launch_at, now) + self._min_interval
+        if self._stagger is not None:
+            await self._stagger.wait()
+
+    def on_success(self) -> None:
+        self._success_times.append(self._clock())
+        if self._min_interval <= 0:
+            return
+        self._clean_successes += 1
+        if self._clean_successes < max(4, self._concurrency * 2):
+            return
+        self._clean_successes = 0
+        self._min_interval *= 0.9
+        if self._min_interval < _STAGGER_FLOOR:
+            self._min_interval = 0.0
+        if self._min_interval > 0:
+            record_metric("media.download.launch_pace_rate", 1.0 / self._min_interval)
+
+    def on_flood(self, exc: FloodWait) -> None:
+        if self._stagger is not None:
+            self._stagger.reset()
+        self._clean_successes = 0
+        target_rate = self._target_rate()
+        interval = 1.0 / target_rate
+        if self._min_interval > 0:
+            interval = max(interval, self._min_interval * 1.25)
+        self._min_interval = min(1.0, interval)
+        self._next_launch_at = max(self._next_launch_at, self._clock() + self._min_interval)
+        record_metric(
+            "media.download.launch_pace_rate",
+            1.0 / self._min_interval,
+            attributes={"reason": type(exc).__name__},
+        )
+
+    def _target_rate(self) -> float:
+        now = self._clock()
+        while self._success_times and now - self._success_times[0] > 10.0:
+            self._success_times.popleft()
+        if len(self._success_times) >= 2:
+            span = max(now - self._success_times[0], 1e-9)
+            return max(1.0, len(self._success_times) / span * 0.9)
+        return max(1.0, float(self._concurrency))
 
 
 class _ProgressReporter:
@@ -694,7 +762,7 @@ async def _download_file_concurrent(
         DEFAULT_DOWNLOAD_IN_FLIGHT_BYTES, part_size * concurrency
     )
     window = _TransferWindow(byte_window)
-    stagger = _DownloadDelayGate() if concurrency > 1 else None
+    launch_pacer = _DownloadLaunchPacer(concurrency=concurrency) if concurrency > 1 else None
     reporter = _ProgressReporter(progress, callback_total)
     stopped = False
     throttle = (
@@ -711,8 +779,8 @@ async def _download_file_concurrent(
     )
 
     async def on_part_retry(exc: Exception, attempt: int) -> None:
-        if stagger is not None and isinstance(exc, FloodWait):
-            stagger.reset()
+        if launch_pacer is not None and isinstance(exc, FloodWait):
+            launch_pacer.on_flood(exc)
         if throttle is not None:
             await throttle.on_retry(exc, attempt)
 
@@ -741,6 +809,8 @@ async def _download_file_concurrent(
             window.release(wire_limit)
         if throttle is not None:
             throttle.on_success()
+        if launch_pacer is not None:
+            launch_pacer.on_success()
         received = len(payload)
         if received > expect_limit:
             payload = payload[:expect_limit]
@@ -767,8 +837,8 @@ async def _download_file_concurrent(
             if not window.try_acquire(wire_limit):
                 record_metric("media.download.byte_window_waits", 1)
                 break
-            if stagger is not None:
-                await stagger.wait()
+            if launch_pacer is not None:
+                await launch_pacer.wait()
             task = asyncio.create_task(fetch(next_offset, wire_limit, expect_limit))
             pending.add(task)
             record_metric("media.download.in_flight_bytes", window.in_flight_bytes, unit="bytes")
@@ -1646,20 +1716,21 @@ def _emit_part_retry(
     }
     if flood_wait_seconds is not None:
         fields["flood_wait_seconds"] = flood_wait_seconds
-        record_metric("media.download.flood_waits", 1)
-        record_metric("media.download.flood_wait_seconds", flood_wait_seconds, unit="s")
+        attrs = {"error_type": error_type}
+        record_metric("media.download.flood_waits", 1, attributes=attrs)
+        record_metric(
+            "media.download.flood_wait_seconds", flood_wait_seconds, unit="s", attributes=attrs
+        )
     emit_event(_LOGGER, logging.WARNING, "media.download.part_retry", **fields)
 
 
 async def _sleep_before_retry(exc: Exception, attempt: int = 0) -> None:
     if isinstance(exc, FloodWait):
-        # FLOOD_WAIT_0/1 retried instantly just re-triggers the flood, and
-        # requests flooded in the same tick would otherwise retry in lockstep
-        # (observed live as an escalation to 10-15 s waits): enforce a floor
-        # and jitter to de-synchronize the wakers.
-        delay = max(float(exc.seconds), _MIN_FLOOD_SLEEP_S) + random.uniform(  # noqa: S311
-            0.0, _FLOOD_SLEEP_JITTER_S
-        )
+        # FLOOD_WAIT_0 retried instantly just re-triggers the flood. Positive
+        # waits already carry server pacing, so only add tight jitter to
+        # desynchronize lockstep wakers without over-sleeping at scale.
+        base = _MIN_FLOOD_SLEEP_S if exc.seconds <= 0 else float(exc.seconds)
+        delay = base + random.uniform(0.0, _FLOOD_SLEEP_JITTER_S)  # noqa: S311
     else:
         delay = backoff_delay(attempt)
     if delay > 0:
@@ -1671,10 +1742,10 @@ class _AdaptiveDownloadThrottle:
     """Reduce the request window only on connection-health signals.
 
     ``FLOOD_WAIT`` is per-request pacing, not congestion: the affected task
-    sleeps (releasing its window budget) while everything else keeps flowing --
-    mtcute and MTKruto never reduce concurrency on floods. Floods only pause
-    growth. Disconnects/timeouts still shrink the window by one, and the
-    start-of-transfer burst is handled by ``_DownloadDelayGate``, so there is
+    sleeps while holding its fixed slot, so pressure drops naturally while
+    everything else keeps flowing. Floods only pause growth and feed the launch
+    pacer. Disconnects/timeouts still shrink the window by one, and the
+    start-of-transfer burst is handled by ``_DownloadLaunchPacer``, so there is
     no slow start either.
     """
 

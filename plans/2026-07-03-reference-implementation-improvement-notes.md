@@ -4,6 +4,8 @@ Date: 2026-07-03
 Scope: Preserve findings from read-only reference analysis of Pyroblack, Telethon, grammers, mtcute, and Telegram Web K/tweb while continuing to keep `miniproto` as the MTProto SDK layer and future `mpgram` as the framework layer.
 Method: Pyroblack, Telethon, grammers, mtcute and Web K were cloned into temporary directories outside the `miniproto` workspace by dedicated read-only subagents. No reference source was copied into `miniproto`; these notes capture behavior and improvement ideas only.
 
+Current-status note (2026-07-08): the live P0/P1 follow-up in `plans/2026-07-06-performance-and-improvement-master-plan.md` supersedes this file's July 3/6 implementation-status bullets where they describe download defaults and adaptive throttling. Current defaults are download `concurrency=6`, `media_lanes=2`, fixed flood-held slots, no concurrency reduction on `FLOOD_WAIT`, flood-aware launch pacing after floods, and per-flood-type benchmark counters.
+
 ## References Reviewed
 
 | Implementation | Snapshot                                                            | Strongest Signal                                                                                                                       |

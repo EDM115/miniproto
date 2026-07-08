@@ -669,6 +669,56 @@ def test_download_file_flood_sleeps_hold_their_slot_without_backfill(tmp_path) -
     run(scenario())
 
 
+def test_download_launch_pacer_rate_limits_after_flood() -> None:
+    async def scenario() -> None:
+        now = [0.0]
+        sleeps: list[float] = []
+
+        async def sleep(delay: float) -> None:
+            sleeps.append(delay)
+            now[0] += delay
+
+        pacer = media_download._DownloadLaunchPacer(
+            concurrency=6, clock=lambda: now[0], sleep=sleep
+        )
+        for _ in range(10):
+            pacer.on_success()
+            now[0] += 0.1
+        pacer.on_flood(FloodWait(1))
+        await pacer.wait()
+        await pacer.wait()
+        assert sleeps
+        assert max(sleeps) >= 1 / 9
+
+    run(scenario())
+
+
+def test_download_flood_retry_sleep_only_uses_large_floor_for_zero_wait(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def scenario() -> None:
+        sleeps: list[float] = []
+
+        async def sleep(delay: float) -> None:
+            sleeps.append(delay)
+
+        jitter_args: list[tuple[float, float]] = []
+
+        def uniform(low: float, high: float) -> float:
+            jitter_args.append((low, high))
+            return high
+
+        monkeypatch.setattr("miniproto.media.download.asyncio.sleep", sleep)
+        monkeypatch.setattr("miniproto.media.download.random.uniform", uniform)
+        await media_download._sleep_before_retry(FloodWait(2))
+        await media_download._sleep_before_retry(FloodWait(0))
+        assert jitter_args == [(0.0, 0.3), (0.0, 0.3)]
+        assert sleeps[0] == pytest.approx(2.3)
+        assert sleeps[1] == pytest.approx(1.3)
+
+    run(scenario())
+
+
 def test_download_file_disables_read_ahead_for_full_file_downloads() -> None:
     async def scenario() -> None:
         payload = b"a" * 2048

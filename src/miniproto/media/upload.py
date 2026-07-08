@@ -36,7 +36,7 @@ DEFAULT_UPLOAD_FLOOD_SLEEP_THRESHOLD = 30
 # the transient-failure budget; this cap only bounds pathological storms.
 MAX_FLOOD_RETRIES_PER_PART = 16
 _MIN_FLOOD_SLEEP_S = 1.0
-_FLOOD_SLEEP_JITTER_S = 1.0
+_FLOOD_SLEEP_JITTER_S = 0.3
 # Stale parts occupying a lane for the global 30 s hurt upload tails; 45 s is
 # the live-bench default that sustained 15-16 MiB/s uploads on DC4.
 DEFAULT_UPLOAD_PART_TIMEOUT = 45.0
@@ -454,11 +454,11 @@ async def _save_part(
 
 async def _sleep_before_retry(exc: Exception | None, attempt: int, *, big: bool) -> None:
     if isinstance(exc, FloodWait):
-        # Floor + jitter: instant retries of FLOOD_WAIT_0/1 re-trigger the
-        # flood, and parts flooded together must not retry in lockstep.
-        delay = max(float(exc.seconds), _MIN_FLOOD_SLEEP_S) + random.uniform(  # noqa: S311
-            0.0, _FLOOD_SLEEP_JITTER_S
-        )
+        # FLOOD_WAIT_0 retried instantly just re-triggers the flood. Positive
+        # waits already carry server pacing, so only add tight jitter to
+        # desynchronize lockstep wakers without over-sleeping at scale.
+        base = _MIN_FLOOD_SLEEP_S if exc.seconds <= 0 else float(exc.seconds)
+        delay = base + random.uniform(0.0, _FLOOD_SLEEP_JITTER_S)  # noqa: S311
     else:
         delay = backoff_delay(attempt)
     record_metric("media.upload.retry_sleep_seconds", delay, unit="s", attributes={"big": big})
@@ -593,8 +593,11 @@ def _emit_part_retry(
     }
     if flood_wait_seconds is not None:
         fields["flood_wait_seconds"] = flood_wait_seconds
-        record_metric("media.upload.flood_waits", 1)
-        record_metric("media.upload.flood_wait_seconds", flood_wait_seconds, unit="s")
+        attrs = {"error_type": error_type}
+        record_metric("media.upload.flood_waits", 1, attributes=attrs)
+        record_metric(
+            "media.upload.flood_wait_seconds", flood_wait_seconds, unit="s", attributes=attrs
+        )
     emit_event(_LOGGER, logging.WARNING, "media.upload.part_retry", **fields)
 
 

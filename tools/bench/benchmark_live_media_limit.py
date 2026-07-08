@@ -74,6 +74,8 @@ class TransferCounters:
     part_retries: int
     flood_waits: int
     flood_wait_seconds: float
+    flood_waits_by_type: dict[str, int]
+    flood_wait_seconds_by_type: dict[str, float]
     retry_sleep_seconds: float
     reconnects: int
     sender_drops: int
@@ -1085,6 +1087,19 @@ def transfer_counters(
         part_retries=int(metric_sum(metrics, f"media.{operation}.part_retries")),
         flood_waits=int(metric_sum(metrics, f"media.{operation}.flood_waits")),
         flood_wait_seconds=metric_sum(metrics, f"media.{operation}.flood_wait_seconds"),
+        flood_waits_by_type={
+            key: int(value)
+            for key, value in sorted(
+                metric_sum_by_attr(metrics, f"media.{operation}.flood_waits", "error_type").items()
+            )
+        },
+        flood_wait_seconds_by_type=dict(
+            sorted(
+                metric_sum_by_attr(
+                    metrics, f"media.{operation}.flood_wait_seconds", "error_type"
+                ).items()
+            )
+        ),
         retry_sleep_seconds=metric_sum(metrics, f"media.{operation}.retry_sleep_seconds"),
         reconnects=int(metric_sum(metrics, "sender.reconnects")),
         sender_drops=int(metric_sum(metrics, "client.sender_drops")),
@@ -1114,6 +1129,16 @@ def transfer_counters(
 
 def metric_sum(metrics: InMemoryMetrics, name: str) -> float:
     return sum(event.value for event in metrics.events if event.name == name)
+
+
+def metric_sum_by_attr(metrics: InMemoryMetrics, name: str, attr: str) -> dict[str, float]:
+    totals: dict[str, float] = {}
+    for event in metrics.events:
+        if event.name != name:
+            continue
+        key = str(event.attributes.get(attr, "unknown"))
+        totals[key] = totals.get(key, 0.0) + event.value
+    return totals
 
 
 def metric_count(metrics: InMemoryMetrics, name: str) -> int:
@@ -1179,6 +1204,8 @@ def print_transfer(summary: TransferSummary) -> None:
         f"window_samples={summary.samples.samples} media_dc={summary.media_dc_id} "
         f"part_requests={summary.counters.part_requests} part_retries={summary.counters.part_retries} "
         f"flood_waits={summary.counters.flood_waits} flood_wait_seconds={summary.counters.flood_wait_seconds:g} "
+        f"flood_waits_by_type={summary.counters.flood_waits_by_type} "
+        f"flood_wait_seconds_by_type={summary.counters.flood_wait_seconds_by_type} "
         f"retry_sleep_seconds={summary.counters.retry_sleep_seconds:g} reconnects={summary.counters.reconnects} "
         f"sender_drops={summary.counters.sender_drops} sender_drop_skips={summary.counters.sender_drop_skips} "
         f"media_lane_builds={summary.counters.media_lane_builds} "

@@ -337,8 +337,16 @@ def test_transfer_counters_aggregate_metrics() -> None:
     metrics = InMemoryMetrics()
     metrics.record_metric("media.download.part_requests", 4)
     metrics.record_metric("media.download.part_retries", 2)
-    metrics.record_metric("media.download.flood_waits", 1)
-    metrics.record_metric("media.download.flood_wait_seconds", 3)
+    metrics.record_metric("media.download.flood_waits", 1, attributes={"error_type": "FloodWait"})
+    metrics.record_metric(
+        "media.download.flood_waits", 2, attributes={"error_type": "FloodPremiumWait"}
+    )
+    metrics.record_metric(
+        "media.download.flood_wait_seconds", 3, attributes={"error_type": "FloodWait"}
+    )
+    metrics.record_metric(
+        "media.download.flood_wait_seconds", 5, attributes={"error_type": "FloodPremiumWait"}
+    )
     metrics.record_metric("media.download.retry_sleep_seconds", 3)
     metrics.record_metric("sender.reconnects", 1)
     metrics.record_metric("client.sender_drops", 1)
@@ -357,8 +365,10 @@ def test_transfer_counters_aggregate_metrics() -> None:
     counters = transfer_counters(metrics, "download", 2.0)
     assert counters.part_requests == 4
     assert counters.part_retries == 2
-    assert counters.flood_waits == 1
-    assert counters.flood_wait_seconds == 3
+    assert counters.flood_waits == 3
+    assert counters.flood_wait_seconds == 8
+    assert counters.flood_waits_by_type == {"FloodPremiumWait": 2, "FloodWait": 1}
+    assert counters.flood_wait_seconds_by_type == {"FloodPremiumWait": 5, "FloodWait": 3}
     assert counters.retry_sleep_seconds == 3
     assert counters.reconnects == 1
     assert counters.sender_drops == 1
