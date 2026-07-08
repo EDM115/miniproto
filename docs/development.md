@@ -25,7 +25,15 @@ Use `uv sync --extra dev` for normal development. Use `uv lock` after dependency
 uv run python -m tools.schema.generate
 ```
 
-Run this after changing `tools/schema/schema.tl`, `tools/schema/rpc-errors.json`, `tools/schema/generate.py`, or `tools/schema/parser.py`.
+Run this after changing `tools/schema/schema.json`, `tools/schema/schema.tl`, `tools/schema/rpc-errors.json`, `tools/schema/generate.py`, or `tools/schema/parser.py`.
+
+## Update Pinned Schema Inputs
+
+```powershell
+uv run python -m tools.schema.update
+```
+
+This fetches the current official Telegram schema JSON, schema page, layer changelog, and RPC error JSON, then rewrites `tools/schema/schema.json`, `tools/schema/schema.tl`, `tools/schema/rpc-errors.json`, and `tools/schema/schema-metadata.json`. Run `uv run python -m tools.schema.generate` afterwards to refresh generated raw modules and docs.
 
 ## Schema Freshness Check
 
@@ -34,6 +42,14 @@ uv run python -m tools.schema.generate --check
 ```
 
 This fails when committed raw API files or schema metadata drift from the pinned schema inputs.
+
+## Upstream Schema Freshness Check
+
+```powershell
+uv run python -m tools.schema.update --check-upstream
+```
+
+This network-dependent check fails when the upstream Telegram schema or RPC error database differs from the pinned inputs. Use it manually or in a scheduled workflow; routine CI should keep using the offline generation check above.
 
 ## Format
 

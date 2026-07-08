@@ -76,3 +76,49 @@ def test_native_loaded_event_is_logged(caplog: pytest.LogCaptureFixture) -> None
     assert event["event"] == "crypto.native.loaded"
     assert event["backend"] == "rust"
     assert event["native_available"] is True
+
+
+def test_mtproto_encode_message_prefers_native_impl(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[tuple[bytes, bool, bytes | None]] = []
+
+    class NativeImpl:
+        def mtproto_encode_message(
+            self,
+            auth_key: bytes,
+            server_salt: int,
+            session_id: int,
+            msg_id: int,
+            seq_no: int,
+            body: bytes,
+            client_to_server: bool,
+            padding: bytes | None,
+        ) -> bytes:
+            del auth_key, server_salt, session_id, msg_id, seq_no
+            calls.append((body, client_to_server, padding))
+            return b"native"
+
+    class FallbackImpl:
+        def mtproto_encode_message(
+            self,
+            auth_key: bytes,
+            server_salt: int,
+            session_id: int,
+            msg_id: int,
+            seq_no: int,
+            body: bytes,
+            client_to_server: bool,
+            padding: bytes | None,
+        ) -> bytes:
+            del auth_key, server_salt, session_id, msg_id, seq_no, body, client_to_server, padding
+            raise AssertionError("fallback encoder should not be used when native is loaded")
+
+    monkeypatch.setattr(native_module, "_native_impl", NativeImpl())
+    monkeypatch.setattr(native_module, "_fallback_impl", FallbackImpl())
+
+    assert (
+        native_module.mtproto_encode_message(
+            b"k" * 256, 1, 2, 3, 4, b"payload", client_to_server=False, padding=b"\0" * 12
+        )
+        == b"native"
+    )
+    assert calls == [(b"payload", False, b"\0" * 12)]

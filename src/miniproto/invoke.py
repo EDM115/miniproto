@@ -27,11 +27,12 @@ from miniproto.errors import (
 from miniproto.mtproto.codec import GzipPacked, RpcErrorBody, decode_message_body
 from miniproto.mtproto.state import MTProtoState
 from miniproto.raw import functions, types
+from miniproto.raw.base import RAW_API_LAYER
 from miniproto.session.models import SessionRecord, session_record_from_mapping
 from miniproto.session.storage import SessionStorage
 from miniproto.tl.codec import TLCodecError, decode_object, decode_value
 
-TELEGRAM_LAYER = 214
+TELEGRAM_LAYER = RAW_API_LAYER
 INIT_CONNECTION_ENVELOPES = {
     "invokeAfterMsg",
     "invokeAfterMsgs",

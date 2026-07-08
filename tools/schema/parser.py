@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import json
 import keyword
 import re
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 SchemaKind = Literal["type", "function"]
 
@@ -76,7 +77,11 @@ class TLSchemaParseError(ValueError):
 
 
 def parse_schema_file(path: str | Path) -> TLSchema:
-    return parse_schema(Path(path).read_text(encoding="utf-8"))
+    schema_path = Path(path)
+    text = schema_path.read_text(encoding="utf-8")
+    if schema_path.suffix == ".json":
+        return parse_schema_json(json.loads(text))
+    return parse_schema(text)
 
 
 def parse_schema(text: str) -> TLSchema:
@@ -112,6 +117,34 @@ def parse_schema(text: str) -> TLSchema:
     return TLSchema(entries=tuple(entries), rpc_errors=tuple(errors))
 
 
+def parse_schema_json_file(path: str | Path) -> TLSchema:
+    return parse_schema_json(json.loads(Path(path).read_text(encoding="utf-8")))
+
+
+def parse_schema_json(data: Mapping[str, Any]) -> TLSchema:
+    constructors = data.get("constructors", ())
+    methods = data.get("methods", ())
+    if not isinstance(constructors, Sequence) or isinstance(constructors, str):
+        raise TLSchemaParseError("JSON schema constructors must be an array")
+    if not isinstance(methods, Sequence) or isinstance(methods, str):
+        raise TLSchemaParseError("JSON schema methods must be an array")
+    entries: list[TLEntry] = []
+    for index, item in enumerate(constructors, start=1):
+        entries.append(_parse_json_entry(item, kind="type", line_number=index))
+    function_offset = len(entries) + 2
+    for index, item in enumerate(methods, start=function_offset):
+        entries.append(_parse_json_entry(item, kind="function", line_number=index))
+    _validate_unique_entries(entries)
+    return TLSchema(entries=tuple(entries))
+
+
+def schema_to_tl(schema: TLSchema) -> str:
+    lines: list[str] = [entry.source_line for entry in schema.constructors]
+    lines.append("---functions---")
+    lines.extend(entry.source_line for entry in schema.functions)
+    return "\n".join(lines) + "\n"
+
+
 def _parse_entry(
     line: str, *, kind: SchemaKind, line_number: int, comments: tuple[str, ...]
 ) -> TLEntry:
@@ -137,6 +170,66 @@ def _parse_entry(
         line_number=line_number,
         comments=comments,
     )
+
+
+def _parse_json_entry(item: object, *, kind: SchemaKind, line_number: int) -> TLEntry:
+    if not isinstance(item, Mapping):
+        raise TLSchemaParseError(f"JSON schema entry {line_number}: expected object")
+    name_key = "predicate" if kind == "type" else "method"
+    raw_name = item.get(name_key)
+    result_type = item.get("type")
+    raw_id = item.get("id")
+    raw_params = item.get("params", ())
+    if not isinstance(raw_name, str) or not raw_name:
+        raise TLSchemaParseError(f"JSON schema entry {line_number}: missing {name_key}")
+    if not isinstance(result_type, str) or not result_type:
+        raise TLSchemaParseError(f"JSON schema entry {line_number}: missing result type")
+    if not isinstance(raw_params, Sequence) or isinstance(raw_params, str):
+        raise TLSchemaParseError(f"JSON schema entry {line_number}: params must be an array")
+    try:
+        constructor_id = int(str(raw_id)) & 0xFFFFFFFF
+    except (TypeError, ValueError) as exc:
+        raise TLSchemaParseError(f"JSON schema entry {line_number}: invalid id {raw_id!r}") from exc
+    namespace, short_name = _split_qualified_name(raw_name)
+    params = tuple(_parse_json_param(param, line_number=line_number) for param in raw_params)
+    constructor_id_hex = f"{constructor_id:08x}"
+    source_line = _json_entry_source_line(raw_name, constructor_id_hex, params, result_type)
+    return TLEntry(
+        kind=kind,
+        name=raw_name,
+        namespace=namespace,
+        short_name=short_name,
+        python_class_name=_python_class_name(raw_name),
+        constructor_id=constructor_id,
+        constructor_id_hex=constructor_id_hex,
+        result_type=result_type,
+        params=params,
+        source_line=source_line,
+        line_number=line_number,
+    )
+
+
+def _parse_json_param(item: object, *, line_number: int) -> TLParameter:
+    if not isinstance(item, Mapping):
+        raise TLSchemaParseError(f"JSON schema entry {line_number}: parameter must be an object")
+    name = item.get("name")
+    type_name = item.get("type")
+    if not isinstance(name, str) or not name:
+        raise TLSchemaParseError(f"JSON schema entry {line_number}: parameter missing name")
+    if not isinstance(type_name, str) or not type_name:
+        raise TLSchemaParseError(
+            f"JSON schema entry {line_number}: parameter {name!r} missing type"
+        )
+    return _parse_param(f"{name}:{type_name}")
+
+
+def _json_entry_source_line(
+    name: str, constructor_id_hex: str, params: Sequence[TLParameter], result_type: str
+) -> str:
+    body = " ".join(f"{param.name}:{param.type}" for param in params)
+    if body:
+        return f"{name}#{constructor_id_hex} {body} = {result_type};"
+    return f"{name}#{constructor_id_hex} = {result_type};"
 
 
 def _parse_param(part: str) -> TLParameter:

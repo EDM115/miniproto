@@ -210,6 +210,7 @@ def test_get_history_returns_normalized_messages_and_remembers_entities() -> Non
                     messages=(raw_message,),
                     chats=(),
                     users=(types.User(id=7, access_hash=99, username="alice2"),),
+                    topics=(),
                 )
             ]
         )

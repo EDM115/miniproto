@@ -1,18 +1,20 @@
 # Raw API
 
-Status: generated documentation stub for Telegram Layer 214.
+Status: generated documentation stub for Telegram Schema Layer 223.
 
 ## Source
 
-The raw API classes are generated from the official Telegram TL schema at [https://core.telegram.org/schema](https://core.telegram.org/schema). The pinned schema lives at `tools/schema/schema.tl` with SHA-256 `74c5d1aea2997b179283e4069a0019f4c09f5cffda665b3a7083a8bf0d071517`.
+The raw API classes are generated from the official Telegram JSON schema at [https://core.telegram.org/schema/json](https://core.telegram.org/schema/json). The pinned canonical schema lives at `tools/schema/schema.json` with SHA-256 `7440a69d834e495fb0be30cb4ee0e4dd101199f83574aa5ece64598c5b8ea1ac`. A mirrored TL schema is kept at `tools/schema/schema.tl` with SHA-256 `e91d38be1709d0af9ae28bfd41ffa0c04e5092bc62dba0ad560f1660ca098ef5`.
 
-RPC error metadata is generated from Telegram's error database linked from [https://core.telegram.org/api/errors](https://core.telegram.org/api/errors). The pinned JSON lives at `tools/schema/rpc-errors.json` with SHA-256 `de6aa3cbdb92f1bda9562964ff1312abce0b3db7f966b7e03440193b569f0e0f`.
+RPC error metadata is generated from Telegram's error database linked from [https://core.telegram.org/api/errors](https://core.telegram.org/api/errors). The pinned JSON lives at `tools/schema/rpc-errors.json` with SHA-256 `7cb5ea5c8574e61b300c538e75290b742760d595a879552a5d0b613cd9fdf029`.
 
 ## Generated Surface
 
-- Constructors: 1479
-- Functions: 727
-- RPC errors: 753
+- Constructors: 1546
+- Functions: 757
+- RPC errors: 818
+- RPC errors layer: 227
+- Latest changelog layer observed during update: 225
 - Generated files: src/miniproto/raw/base.py, src/miniproto/raw/types.py, src/miniproto/raw/functions.py, src/miniproto/raw/errors.py, docs/raw-api.md
 
 ## Usage Shape
@@ -31,4 +33,4 @@ Phase 4 implements binary TL primitive encoding, generated object serialization/
 
 Early generated type constructors include: boolFalse, boolTrue, true, vector, error, null, inputPeerEmpty, inputPeerSelf.
 
-Early generated functions include: invokeAfterMsg, invokeAfterMsgs, initConnection, invokeWithLayer, invokeWithoutUpdates, invokeWithMessagesRange, invokeWithTakeout, invokeWithBusinessConnection.
+Early generated functions include: invokeAfterMsg, invokeAfterMsgs, auth.sendCode, auth.signUp, auth.signIn, auth.logOut, auth.resetAuthorizations, auth.exportAuthorization.

@@ -30,6 +30,7 @@ from miniproto.errors import (
     RpcError,
 )
 from miniproto.invoke import (
+    TELEGRAM_LAYER,
     RawSender,
     build_sender_from_session,
     decode_result_payload,
@@ -247,7 +248,7 @@ def test_invoke_wraps_request_with_layer_and_init_connection_then_decodes_result
         assert len(sender.requests) == 1
         wrapped = sender.requests[0]
         assert isinstance(wrapped, functions.InvokeWithLayer)
-        assert wrapped.layer == 214
+        assert wrapped.layer == TELEGRAM_LAYER
         assert isinstance(wrapped.query, functions.InitConnection)
         assert wrapped.query.api_id == 1
         assert isinstance(wrapped.query.query, functions.HelpGetNearestDc)
