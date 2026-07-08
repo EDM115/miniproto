@@ -62,8 +62,7 @@ _MAX_BACKGROUND_PREFETCHES = 32
 MAX_FLOOD_RETRIES_PER_PART = 16
 _MIN_FLOOD_SLEEP_S = 1.0
 _FLOOD_SLEEP_JITTER_S = 0.3
-_PREMIUM_FLOOD_LAUNCH_RATE_MULTIPLIER = 0.15
-_PREMIUM_FLOOD_MAX_LAUNCH_RATE_PER_S = 1.5
+_MAX_LAUNCH_PACE_INTERVAL_S = 0.25
 # mtcute's DownloadDelayGate constants: stagger request launches so opening the
 # window does not burst-fire every request in one event-loop tick (burst starts
 # reliably attract FLOOD_WAITs).
@@ -353,22 +352,23 @@ class _DownloadLaunchPacer:
             self._stagger.reset()
         self._clean_successes = 0
         target_rate = self._target_rate()
-        if type(exc).__name__ == "FloodPremiumWait":
-            target_rate = min(
-                target_rate * _PREMIUM_FLOOD_LAUNCH_RATE_MULTIPLIER,
-                _PREMIUM_FLOOD_MAX_LAUNCH_RATE_PER_S,
-            )
-            target_rate = max(1.0, target_rate)
         interval = 1.0 / target_rate
         if self._min_interval > 0:
             interval = max(interval, self._min_interval * 1.25)
-        self._min_interval = min(1.0, interval)
+        self._min_interval = min(_MAX_LAUNCH_PACE_INTERVAL_S, interval)
         self._next_launch_at = max(self._next_launch_at, self._clock() + self._min_interval)
         record_metric(
             "media.download.launch_pace_rate",
             1.0 / self._min_interval,
             attributes={"reason": type(exc).__name__},
         )
+
+    def reset(self) -> None:
+        if self._stagger is not None:
+            self._stagger.reset()
+        self._min_interval = 0.0
+        self._next_launch_at = 0.0
+        self._clean_successes = 0
 
     @property
     def current_rate_per_s(self) -> float:
@@ -793,10 +793,16 @@ async def _download_file_concurrent(
     )
 
     async def on_part_retry(exc: Exception, attempt: int) -> None:
-        if launch_pacer is not None and isinstance(exc, FloodWait):
-            launch_pacer.on_flood(exc)
         if throttle is not None:
             await throttle.on_retry(exc, attempt)
+            if launch_pacer is not None and throttle.limit <= 1:
+                launch_pacer.reset()
+        if (
+            launch_pacer is not None
+            and isinstance(exc, FloodWait)
+            and (throttle is None or throttle.limit > 1)
+        ):
+            launch_pacer.on_flood(exc)
 
     async def fetch(
         request_offset: int, wire_limit: int, expect_limit: int
@@ -851,7 +857,7 @@ async def _download_file_concurrent(
             if not window.try_acquire(wire_limit):
                 record_metric("media.download.byte_window_waits", 1)
                 break
-            if launch_pacer is not None:
+            if launch_pacer is not None and allowed > 1:
                 await launch_pacer.wait()
             task = asyncio.create_task(fetch(next_offset, wire_limit, expect_limit))
             pending.add(task)
@@ -1684,6 +1690,10 @@ async def _call_progress(
         await result
 
 
+def _is_premium_flood(exc: Exception) -> bool:
+    return isinstance(exc, FloodWait) and type(exc).__name__ == "FloodPremiumWait"
+
+
 def _is_transient_download_error(exc: Exception, *, flood_sleep_threshold: int | None = 30) -> bool:
     if isinstance(exc, FloodWait):
         return flood_sleep_threshold is not None and exc.seconds <= flood_sleep_threshold
@@ -1769,6 +1779,7 @@ class _AdaptiveDownloadThrottle:
         self._clock = clock
         self._successes_since_change = 0
         self._cooldown_until = 0.0
+        self._premium_fallback = False
 
     async def on_retry(self, exc: Exception, attempt: int) -> None:
         previous = self.limit
@@ -1777,6 +1788,34 @@ class _AdaptiveDownloadThrottle:
             self._cooldown_until = max(
                 self._cooldown_until, self._clock() + max(float(exc.seconds), 2.0)
             )
+            if _is_premium_flood(exc):
+                self._premium_fallback = True
+                self.limit = 1
+                record_metric(
+                    "media.download.premium_flood_fallback",
+                    1,
+                    attributes={"attempt": attempt, "previous_limit": previous},
+                )
+            if self.limit != previous:
+                record_metric(
+                    "media.download.adaptive_throttle",
+                    self.limit,
+                    attributes={
+                        "reason": type(exc).__name__,
+                        "attempt": attempt,
+                        "previous_limit": previous,
+                    },
+                )
+                emit_event(
+                    _LOGGER,
+                    logging.WARNING,
+                    "media.download.throttle",
+                    outcome="premium_fallback",
+                    previous_limit=previous,
+                    current_limit=self.limit,
+                    reason=type(exc).__name__,
+                    attempt=attempt,
+                )
             return
         if isinstance(
             exc, ClientDisconnected | RequestTimeout | RpcTimeout | TimeoutError | ConnectionError
@@ -1807,6 +1846,8 @@ class _AdaptiveDownloadThrottle:
         )
 
     def on_success(self) -> None:
+        if self._premium_fallback:
+            return
         if self.limit >= self.max_limit:
             return
         if self._clock() < self._cooldown_until:

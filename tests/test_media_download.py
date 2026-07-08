@@ -596,6 +596,19 @@ def test_adaptive_download_throttle_reduces_only_on_disconnects() -> None:
     run(scenario())
 
 
+def test_adaptive_download_throttle_falls_back_to_single_slot_on_premium_flood() -> None:
+    async def scenario() -> None:
+        throttle = media_download._AdaptiveDownloadThrottle(4, clock=lambda: 100.0)
+        assert throttle.limit == 4
+        await throttle.on_retry(FloodPremiumWait(3), 1)
+        assert throttle.limit == 1
+        for _ in range(20):
+            throttle.on_success()
+        assert throttle.limit == 1
+
+    run(scenario())
+
+
 def test_download_requests_always_satisfy_telegram_alignment_rules() -> None:
     # Seeded property test: every emitted upload.getFile request must satisfy
     # the documented constraints regardless of offsets/limits/windows.
@@ -694,22 +707,27 @@ def test_download_launch_pacer_rate_limits_after_flood() -> None:
     run(scenario())
 
 
-def test_download_launch_pacer_premium_flood_uses_stricter_rate() -> None:
+def test_download_launch_pacer_keeps_flood_pacing_from_dominating_runtime() -> None:
     now = [0.0]
 
     async def sleep(delay: float) -> None:
         now[0] += delay
 
-    regular = media_download._DownloadLaunchPacer(concurrency=6, clock=lambda: now[0], sleep=sleep)
-    premium = media_download._DownloadLaunchPacer(concurrency=6, clock=lambda: now[0], sleep=sleep)
+    pacer = media_download._DownloadLaunchPacer(concurrency=6, clock=lambda: now[0], sleep=sleep)
     for _ in range(10):
-        regular.on_success()
-        premium.on_success()
+        pacer.on_success()
         now[0] += 0.1
-    regular.on_flood(FloodWait(1))
-    premium.on_flood(FloodPremiumWait(1))
-    assert premium.current_rate_per_s < regular.current_rate_per_s
-    assert premium.current_rate_per_s <= 1.5
+    for _ in range(10):
+        pacer.on_flood(FloodPremiumWait(3))
+    assert pacer.current_rate_per_s >= 4.0
+
+
+def test_download_launch_pacer_reset_clears_wait_state_after_single_slot_fallback() -> None:
+    pacer = media_download._DownloadLaunchPacer(concurrency=6)
+    pacer.on_flood(FloodWait(1))
+    assert pacer.current_rate_per_s > 0
+    pacer.reset()
+    assert pacer.current_rate_per_s == 0
 
 
 def test_download_flood_retry_sleep_only_uses_large_floor_for_zero_wait(
