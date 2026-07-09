@@ -94,6 +94,29 @@ def test_stale_pinned_files_reports_only_changed_inputs(tmp_path: Path) -> None:
     assert stale_pinned_files(files) == (tmp_path / "tools/schema/rpc-errors.json",)
 
 
+def test_stale_pinned_files_ignores_metadata_fetch_date(tmp_path: Path) -> None:
+    def fetch_url(url: str) -> bytes:
+        return {
+            "https://core.telegram.org/schema/json": SCHEMA_JSON,
+            "https://core.telegram.org/schema": SCHEMA_HTML_WITH_TL,
+            "https://core.telegram.org/api/errors.json": ERRORS_JSON,
+            "https://core.telegram.org/api/layers": LAYERS_HTML,
+        }[url]
+
+    snapshot = build_upstream_snapshot(fetch_url=fetch_url, fetch_date="2026-07-08")
+    files = render_pinned_files(snapshot, root=tmp_path)
+    for path, content in files.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+
+    metadata_path = tmp_path / "tools/schema/schema-metadata.json"
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    metadata["fetch_date"] = "2026-07-09"
+    metadata_path.write_text(json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    assert stale_pinned_files(files) == ()
+
+
 def test_fetch_url_falls_back_to_curl_after_urllib_failures(monkeypatch) -> None:
     def fail_urlopen(*_args, **_kwargs):
         raise urllib.error.URLError("reset")

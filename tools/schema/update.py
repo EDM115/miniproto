@@ -149,9 +149,22 @@ def write_pinned_files(files: Mapping[Path, str]) -> None:
 def stale_pinned_files(files: Mapping[Path, str]) -> tuple[Path, ...]:
     stale: list[Path] = []
     for path, expected in files.items():
-        if not path.exists() or path.read_text(encoding="utf-8") != expected:
+        if not path.exists() or not _pinned_file_matches(path, expected):
             stale.append(path)
     return tuple(stale)
+
+
+def _pinned_file_matches(path: Path, expected: str) -> bool:
+    actual = path.read_text(encoding="utf-8")
+    if path.name != "schema-metadata.json":
+        return actual == expected
+    actual_metadata = json.loads(actual)
+    expected_metadata = json.loads(expected)
+    if not isinstance(actual_metadata, dict) or not isinstance(expected_metadata, dict):
+        return actual == expected
+    actual_metadata.pop("fetch_date", None)
+    expected_metadata.pop("fetch_date", None)
+    return actual_metadata == expected_metadata
 
 
 def _fetch_url(url: str) -> bytes:
