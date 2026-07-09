@@ -182,7 +182,11 @@ def is_retryable_request(raw_request: object, override: bool | None = None) -> b
 @cache
 def _is_retryable_request_type(request_type: type[object]) -> bool:
     qualname = str(getattr(request_type, "QUALNAME", "")).lower()
-    return qualname.startswith(_SAFE_RETRY_PREFIXES)
+    if qualname.startswith(_SAFE_RETRY_PREFIXES):
+        return True
+    # Telegram de-duplicates these writes by random_id, so retrying after a
+    # timeout/transport failure is safe in the same way as reference clients.
+    return qualname in {"messages.sendmessage", "messages.sendmedia"}
 
 
 def should_retry_rpc_error(error: RpcError) -> bool:
@@ -248,11 +252,11 @@ async def build_sender_from_session(
         if auth_key_override is None
         else 0
     )
-    session_id = (
-        secrets.randbits(64)
-        if fresh_session_id
-        else int(metadata.get("session_id", secrets.randbits(64)) or secrets.randbits(64))
-    )
+    # Session IDs are cheap server-side state. Reusing a persisted session_id with
+    # fresh seq/msg counters after process restart can trigger bad_msg_notification
+    # 32/33 storms, so every sender build starts a fresh MTProto session while
+    # preserving the persisted salt/auth key.
+    session_id = secrets.randbits(64)
     reconnect_attempts = (
         config.max_reconnect_attempts
         if config.max_reconnect_attempts is not None

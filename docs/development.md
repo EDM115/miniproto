@@ -94,6 +94,11 @@ uv run python tools/bench/benchmark_runtime_paths.py
 
 These compare native-extension timings with the pure Python fallback for crypto, TL primitive paths, and single-call MTProto encrypted envelope encode/decode, then benchmark async runtime paths such as update dispatch, media transfer, generated TL `upload.getFile` request encoding, generated TL `upload.File` result decoding, and synthetic concurrent request scheduling. The commands are smoke checks, not absolute timing gates. Keep Rust implementations and Python fallbacks in parity even when the public wrapper intentionally prefers the Python fallback; `benchmark_native_fallback_crypto.py` is the evidence source for those routing choices.
 
+## Protocol Robustness Notes
+
+`TransportConfig.proxy` supports stdlib HTTP CONNECT and SOCKS5 URLs in the default connector. Use `http://host:port`, `http://user:pass@host:port`, `socks5://host:port`, or `socks5://user:pass@host:port`; custom connectors still override the built-in path.
+Quick ack is intentionally documented as a later transport feature rather than enabled in v1. The next implementation step is to add transport-level quick-ack frame decoding, correlate those acks to pending requests separately from normal `msgs_ack`, and prove with fake-server plus live traces that it improves latency without hiding ordinary response/error handling. The current runtime handles regular MTProto service messages (`msgs_state_req`, `msgs_state_info`, and `msg_resend_req`) and keeps quick ack out of behavioral paths until those protocol-specific frames are decoded explicitly.
+
 ## Live Media-Limit Benchmark
 
 The heavy live benchmark is intentionally separate from smoke checks. It creates a deterministic, non-random payload at Telegram's standard MTProto default upload ceiling (`4000 * 512 KiB = 2,097,152,000 bytes`, also 2000 MiB), uploads it, downloads the same media from Telegram, and reports overall throughput plus fixed-window average, median, p01, p05, p95, p99, fastest 5%, slowest 1%, min, max, and standard deviation. Telegram exposes the actual max uploadable parts through app config; override `MINIPROTO_LIVE_BENCH_UPLOAD_PARTS` or `MINIPROTO_LIVE_BENCH_SIZE` when testing Premium or server-side changes.

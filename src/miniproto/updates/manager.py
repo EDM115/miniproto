@@ -28,6 +28,8 @@ UpdateT = TypeVar("UpdateT", bound=Update)
 UpdateHandler = Callable[[UpdateT], Awaitable[None] | None]
 UpdateInvoker = Callable[[object], Awaitable[object]]
 _MAX_DIFFERENCE_ROUNDS = 10
+_MAX_CHANNEL_DIFFERENCE_ROUNDS = 10
+POSSIBLE_GAP_GRACE_SECONDS = 0.5
 _LOGGER = get_logger("updates")
 
 
@@ -192,7 +194,9 @@ class UpdateManager:
             user=record.user,
             update_state=cursor.to_update_state(),
             peers=merge_peer_cache_entries(record.peers, cursor.entities),
-            metadata=metadata_with_duplicate_keys(record.metadata, cursor.duplicate_keys),
+            metadata=metadata_with_duplicate_keys(
+                record.metadata, cursor.duplicate_keys, cursor.channel_cursors
+            ),
         )
         await self._storage.save(updated)
 
@@ -209,10 +213,17 @@ class UpdateManager:
         if isinstance(raw_update, types.UpdatesTooLong):
             return await self._recover_gap()
         events: list[Update] = []
+        channel_gaps = self._channel_pts_gaps(raw_update)
         if self._sequence_gap(raw_update) or self._pts_gap(raw_update):
             events.extend(await self._recover_gap())
+        for channel_id in channel_gaps:
+            events.extend(await self._recover_channel_gap(channel_id))
         for unit in _iter_update_units(raw_update):
-            if self._pts_gap(unit.raw):
+            unit_channel_gaps = self._channel_pts_gaps(unit.raw)
+            if unit_channel_gaps:
+                for channel_id in unit_channel_gaps:
+                    events.extend(await self._recover_channel_gap(channel_id))
+            elif self._pts_gap(unit.raw):
                 events.extend(await self._recover_gap())
             events.extend(self._apply_update_unit(unit))
         self._apply_sequence(raw_update)
@@ -254,6 +265,62 @@ class UpdateManager:
         )
         raise RuntimeError("updates.getDifference did not converge")
 
+    async def _recover_channel_gap(self, channel_id: int) -> list[Update]:
+        started = time.perf_counter()
+        input_channel = self._input_channel_for_channel(channel_id)
+        if input_channel is None:
+            _emit_update_event(
+                "updates.recover_channel_gap",
+                started,
+                outcome="error",
+                error_type="MissingChannelAccessHash",
+                channel_id=channel_id,
+            )
+            return []
+        if POSSIBLE_GAP_GRACE_SECONDS > 0:
+            await asyncio.sleep(POSSIBLE_GAP_GRACE_SECONDS)
+        record_metric("updates.channel_gaps", 1)
+        recovered: list[Update] = []
+        for round_index in range(_MAX_CHANNEL_DIFFERENCE_ROUNDS):
+            cursor = self._current_cursor().channel_cursor(channel_id)
+            difference = await self._invoke(
+                functions.UpdatesGetChannelDifference(
+                    channel=input_channel,
+                    filter=types.ChannelMessagesFilterEmpty(),
+                    pts=cursor.pts,
+                    limit=100,
+                )
+            )
+            if not isinstance(
+                difference,
+                types.UpdatesChannelDifferenceEmpty
+                | types.UpdatesChannelDifference
+                | types.UpdatesChannelDifferenceTooLong,
+            ):
+                raise TypeError(
+                    "updates.getChannelDifference returned a non-channel difference result"
+                )
+            recovered.extend(self._apply_channel_difference(channel_id, difference))
+            if getattr(difference, "final", True):
+                events = _ordered_events(recovered)
+                _emit_update_event(
+                    "updates.recover_channel_gap",
+                    started,
+                    outcome="success",
+                    channel_id=channel_id,
+                    rounds=round_index + 1,
+                    emitted=len(events),
+                )
+                return events
+        _emit_update_event(
+            "updates.recover_channel_gap",
+            started,
+            outcome="error",
+            error_type="NoConvergence",
+            channel_id=channel_id,
+        )
+        raise RuntimeError("updates.getChannelDifference did not converge")
+
     def _apply_difference(self, difference: object) -> list[Update]:
         self._remember_entities(_extract_entity_references(difference))
         if isinstance(difference, types.UpdatesDifferenceEmpty):
@@ -284,12 +351,42 @@ class UpdateManager:
             return _ordered_events(events)
         return []
 
+    def _apply_channel_difference(self, channel_id: int, difference: object) -> list[Update]:
+        self._remember_entities(_extract_entity_references(difference))
+        if isinstance(difference, types.UpdatesChannelDifferenceEmpty):
+            self._set_cursor(
+                self._current_cursor().with_channel_state(channel_id, pts=difference.pts)
+            )
+            return []
+        if isinstance(difference, types.UpdatesChannelDifference):
+            events: list[Update] = []
+            for message in difference.new_messages:
+                events.extend(self._apply_update_unit(RawUpdateUnit(raw=message)))
+            for update in difference.other_updates:
+                events.extend(self._apply_update_unit(RawUpdateUnit(raw=update)))
+            self._set_cursor(
+                self._current_cursor().with_channel_state(channel_id, pts=difference.pts)
+            )
+            return _ordered_events(events)
+        if isinstance(difference, types.UpdatesChannelDifferenceTooLong):
+            events = [
+                event
+                for message in difference.messages
+                for event in self._apply_update_unit(RawUpdateUnit(raw=message))
+            ]
+            return _ordered_events(events)
+        return []
+
     def _apply_update_unit(self, unit: RawUpdateUnit) -> list[Update]:
         raw = unit.raw
         key = _raw_update_key(raw)
         cursor = self._current_cursor()
         pts = _optional_int_attr(raw, "pts")
-        if pts is not None and pts <= cursor.pts:
+        channel_id = _channel_id_from_update(raw)
+        comparison_pts = (
+            cursor.channel_cursor(channel_id).pts if channel_id is not None else cursor.pts
+        )
+        if pts is not None and pts <= comparison_pts:
             self._duplicates.add(key)
             return []
         if key in self._duplicates:
@@ -299,7 +396,9 @@ class UpdateManager:
         qts = _optional_int_attr(raw, "qts")
         date = _raw_date(raw, unit.date)
         next_cursor = cursor
-        if pts is not None and pts > next_cursor.pts:
+        if pts is not None and channel_id is not None and pts > comparison_pts:
+            next_cursor = next_cursor.with_channel_state(channel_id, pts=pts, date=date)
+        elif pts is not None and pts > next_cursor.pts:
             next_cursor = next_cursor.with_state(pts=pts, date=date)
         if qts is not None and qts > next_cursor.qts:
             next_cursor = next_cursor.with_state(qts=qts, date=date)
@@ -311,6 +410,8 @@ class UpdateManager:
         cursor = self._current_cursor()
         expected_pts = cursor.pts
         for unit in _iter_update_units(raw_update):
+            if _channel_id_from_update(unit.raw) is not None:
+                continue
             pts = _optional_int_attr(unit.raw, "pts")
             pts_count = _optional_int_attr(unit.raw, "pts_count")
             if pts is None or pts_count is None:
@@ -323,6 +424,29 @@ class UpdateManager:
             if pts > expected_pts:
                 expected_pts = pts
         return False
+
+    def _channel_pts_gaps(self, raw_update: object) -> tuple[int, ...]:
+        gaps: list[int] = []
+        expected_by_channel: dict[int, int] = {}
+        for unit in _iter_update_units(raw_update):
+            channel_id = _channel_id_from_update(unit.raw)
+            if channel_id is None:
+                continue
+            pts = _optional_int_attr(unit.raw, "pts")
+            pts_count = _optional_int_attr(unit.raw, "pts_count")
+            if pts is None or pts_count is None:
+                continue
+            expected_pts = expected_by_channel.get(
+                channel_id, self._current_cursor().channel_cursor(channel_id).pts
+            )
+            if expected_pts == 0:
+                expected_by_channel[channel_id] = max(expected_pts, pts)
+                continue
+            if pts > expected_pts + pts_count:
+                gaps.append(channel_id)
+            if pts > expected_pts:
+                expected_by_channel[channel_id] = pts
+        return tuple(dict.fromkeys(gaps))
 
     def _sequence_gap(self, raw_update: object) -> bool:
         cursor = self._current_cursor()
@@ -392,6 +516,16 @@ class UpdateManager:
     def _set_cursor(self, cursor: UpdateCursor) -> None:
         self._cursor = cursor.with_duplicate_keys(self._duplicates.keys())
 
+    def _input_channel_for_channel(self, channel_id: int) -> object | None:
+        for entity in self._current_cursor().entities:
+            if (
+                entity.kind == "channel"
+                and entity.id == channel_id
+                and entity.access_hash is not None
+            ):
+                return types.InputChannel(channel_id=channel_id, access_hash=entity.access_hash)
+        return None
+
 
 def _iter_update_units(raw_update: object) -> tuple[RawUpdateUnit, ...]:
     if isinstance(raw_update, types.UpdateShort):
@@ -455,6 +589,17 @@ def _peer_from_raw_peer(raw_peer: object) -> Peer:
     return Peer(id=0, kind="self")
 
 
+def _channel_id_from_update(raw: object) -> int | None:
+    direct_channel_id = getattr(raw, "channel_id", None)
+    if isinstance(direct_channel_id, int):
+        return direct_channel_id
+    raw_message = getattr(raw, "message", raw)
+    peer_id = getattr(raw_message, "peer_id", None)
+    if isinstance(peer_id, types.PeerChannel):
+        return peer_id.channel_id
+    return None
+
+
 def _extract_entity_references(raw: object) -> tuple[EntityReference, ...]:
     entities: list[EntityReference] = []
     for user in _iter_attr_tuple(raw, "users"):
@@ -463,7 +608,7 @@ def _extract_entity_references(raw: object) -> tuple[EntityReference, ...]:
                 EntityReference(
                     id=user.id,
                     kind="user",
-                    access_hash=user.access_hash,
+                    access_hash=None if user.min else user.access_hash,
                     username=user.username,
                     phone=user.phone,
                     title=" ".join(part for part in (user.first_name, user.last_name) if part)
@@ -478,7 +623,7 @@ def _extract_entity_references(raw: object) -> tuple[EntityReference, ...]:
                 EntityReference(
                     id=chat.id,
                     kind="channel",
-                    access_hash=chat.access_hash,
+                    access_hash=None if chat.min else chat.access_hash,
                     username=chat.username,
                     title=chat.title,
                 )

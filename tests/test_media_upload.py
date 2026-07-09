@@ -138,6 +138,35 @@ def test_upload_file_propagates_reader_errors_without_hanging() -> None:
     run(scenario())
 
 
+def test_upload_file_cancels_pending_part_tasks_when_outer_upload_is_cancelled() -> None:
+    async def scenario() -> None:
+        started = asyncio.Event()
+        active = 0
+        cancelled = 0
+
+        async def invoke(request: object, **kwargs: object) -> object:
+            nonlocal active, cancelled
+            del request, kwargs
+            active += 1
+            if active >= 2:
+                started.set()
+            try:
+                await asyncio.sleep(60)
+            finally:
+                cancelled += 1
+
+        task = asyncio.create_task(
+            upload_file(invoke, b"x" * (4 * 1024), part_size=1024, concurrency=2)
+        )
+        await asyncio.wait_for(started.wait(), timeout=1.0)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        assert cancelled >= 2
+
+    run(scenario())
+
+
 def test_upload_file_uses_small_file_parts_and_md5() -> None:
     async def scenario() -> None:
         payload = b"a" * (DEFAULT_CHUNK_SIZE + 3)
@@ -186,6 +215,46 @@ def test_upload_file_uses_big_file_branch() -> None:
         )
         assert invoker.requests[0].file_total_parts == parts
         assert invoker.requests[-1].file_part == parts - 1
+
+    run(scenario())
+
+
+def test_upload_file_grows_part_size_to_respect_max_file_parts() -> None:
+    async def scenario() -> None:
+        payload = b"c" * (5 * 1024)
+        invoker = FakeInvoker([types.BoolTrue(), types.BoolTrue(), types.BoolTrue()])
+        result = await upload_file(
+            invoker, payload, file_name="capped.bin", part_size=1024, max_file_parts=4, file_id=12
+        )
+        assert result.part_size == 2048
+        assert result.parts == 3
+        assert [len(request.bytes) for request in invoker.requests] == [2048, 2048, 1024]
+
+    run(scenario())
+
+
+def test_client_reads_upload_limit_parts_from_app_config() -> None:
+    async def scenario() -> None:
+        config = types.HelpAppConfig(
+            hash=123,
+            config=types.JsonObject(
+                value=(
+                    types.JsonObjectValue(
+                        key="upload_max_fileparts", value=types.JsonNumber(value=4096.0)
+                    ),
+                )
+            ),
+        )
+        sender = FakeSender([config])
+        client = Client(
+            ClientConfig(api_id=1, api_hash="hash", session_storage=storage_with_auth())
+        )
+        client._sender = sender
+        await client.connect()
+        assert await client._upload_limit_parts_from_app_config() == 4096
+        request = inner_request(sender.requests[0])
+        assert isinstance(request, functions.HelpGetAppConfig)
+        assert request.hash == 0
 
     run(scenario())
 

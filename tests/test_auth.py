@@ -178,6 +178,8 @@ def test_phone_sign_in_uses_generated_requests_and_persists_user_identity() -> N
                 assert request.phone_code_hash == "hash-1"
                 assert request.phone_code == "22222"
                 return user_authorization(user_id=42)
+            if isinstance(request, functions.UpdatesGetState):
+                return types.UpdatesState(pts=10, qts=0, date=1_700_000_000, seq=4, unread_count=0)
             raise AssertionError(f"unexpected request {request!r}")
 
         client = FakeAuthClient(
@@ -195,6 +197,7 @@ def test_phone_sign_in_uses_generated_requests_and_persists_user_identity() -> N
         assert [type(request) for request in client.requests] == [
             functions.AuthSendCode,
             functions.AuthSignIn,
+            functions.UpdatesGetState,
         ]
 
     run(scenario())
@@ -215,6 +218,8 @@ def test_phone_sign_in_uses_password_callback_for_2fa() -> None:
             if isinstance(request, functions.AuthCheckPassword):
                 assert isinstance(request.password, types.InputCheckPasswordEmpty)
                 return user_authorization(user_id=77)
+            if isinstance(request, functions.UpdatesGetState):
+                return types.UpdatesState(pts=11, qts=0, date=1_700_000_002, seq=6, unread_count=0)
             raise AssertionError(f"unexpected request {request!r}")
 
         async def password_callback() -> str:
@@ -236,6 +241,7 @@ def test_phone_sign_in_uses_password_callback_for_2fa() -> None:
             functions.AuthSignIn,
             functions.AccountGetPassword,
             functions.AuthCheckPassword,
+            functions.UpdatesGetState,
         ]
 
     run(scenario())
@@ -284,6 +290,8 @@ def test_bot_sign_in_uses_generated_import_bot_authorization_and_persists_bot_us
                 assert request.api_hash == "hash"
                 assert request.bot_auth_token == _sample_bot_token()
                 return user_authorization(user_id=123, bot=True)
+            if isinstance(request, functions.UpdatesGetState):
+                return types.UpdatesState(pts=22, qts=0, date=1_700_000_001, seq=5, unread_count=0)
             raise AssertionError(f"unexpected request {request!r}")
 
         client = FakeAuthClient(
@@ -296,6 +304,11 @@ def test_bot_sign_in_uses_generated_import_bot_authorization_and_persists_bot_us
         assert record.user is not None
         assert record.user.is_bot
         assert record.user.username == "phase6bot"
+        assert record.update_state.pts == 22
+        assert [type(request) for request in client.requests] == [
+            functions.AuthImportBotAuthorization,
+            functions.UpdatesGetState,
+        ]
 
     run(scenario())
 

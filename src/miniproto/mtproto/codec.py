@@ -18,6 +18,9 @@ from miniproto.tl import (
 )
 
 _MSGS_ACK_ID = 0x62D6B459
+_MSGS_STATE_REQ_ID = 0xDA69FB52
+_MSGS_STATE_INFO_ID = 0x04DEB57D
+_MSG_RESEND_REQ_ID = 0x7D861A08
 _MSG_CONTAINER_ID = 0x73F1F8DC
 _GZIP_PACKED_ID = 0x3072CFA1
 _PING_ID = 0x7ABE77EC
@@ -50,6 +53,22 @@ class UnencryptedMessage:
 
 @dataclass(frozen=True, slots=True)
 class MsgsAck:
+    msg_ids: tuple[int, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class MsgsStateReq:
+    msg_ids: tuple[int, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class MsgsStateInfo:
+    req_msg_id: int
+    info: bytes
+
+
+@dataclass(frozen=True, slots=True)
+class MsgResendReq:
     msg_ids: tuple[int, ...]
 
 
@@ -183,6 +202,16 @@ def encode_message_body(body: ByteBuffer | object) -> bytes:
     match body:
         case MsgsAck(msg_ids=msg_ids):
             return encode_constructor_id(_MSGS_ACK_ID) + encode_vector(msg_ids, "long")
+        case MsgsStateReq(msg_ids=msg_ids):
+            return encode_constructor_id(_MSGS_STATE_REQ_ID) + encode_vector(msg_ids, "long")
+        case MsgsStateInfo(req_msg_id=req_msg_id, info=info):
+            return (
+                encode_constructor_id(_MSGS_STATE_INFO_ID)
+                + _pack_i64(req_msg_id)
+                + encode_bytes(info)
+            )
+        case MsgResendReq(msg_ids=msg_ids):
+            return encode_constructor_id(_MSG_RESEND_REQ_ID) + encode_vector(msg_ids, "long")
         case MessageContainer(messages=messages):
             output = bytearray(encode_constructor_id(_MSG_CONTAINER_ID))
             output.extend(encode_int(len(messages)))
@@ -251,6 +280,19 @@ def decode_message_body(data: ByteBuffer) -> ByteBuffer | object:
         msg_ids, offset = _decode_long_vector(data, offset)
         _require_consumed(data, offset)
         return MsgsAck(msg_ids=msg_ids)
+    if constructor_id == _MSGS_STATE_REQ_ID:
+        msg_ids, offset = _decode_long_vector(data, offset)
+        _require_consumed(data, offset)
+        return MsgsStateReq(msg_ids=msg_ids)
+    if constructor_id == _MSGS_STATE_INFO_ID:
+        req_msg_id = _unpack_i64(data, offset)
+        info, offset = decode_bytes(data, offset + 8)
+        _require_consumed(data, offset)
+        return MsgsStateInfo(req_msg_id=req_msg_id, info=bytes(info))
+    if constructor_id == _MSG_RESEND_REQ_ID:
+        msg_ids, offset = _decode_long_vector(data, offset)
+        _require_consumed(data, offset)
+        return MsgResendReq(msg_ids=msg_ids)
     if constructor_id == _MSG_CONTAINER_ID:
         count, offset = decode_int(data, offset)
         if count < 0:
@@ -390,7 +432,10 @@ __all__ = [
     "GzipPacked",
     "MessageContainer",
     "MessageContainerItem",
+    "MsgResendReq",
     "MsgsAck",
+    "MsgsStateInfo",
+    "MsgsStateReq",
     "NewSessionCreated",
     "Pong",
     "RpcResult",

@@ -469,6 +469,17 @@ def test_download_file_does_not_retry_non_transient_get_file_failure() -> None:
     run(scenario())
 
 
+def test_download_file_raises_on_empty_payload_before_explicit_limit_is_satisfied() -> None:
+    async def scenario() -> None:
+        invoker = FakeInvoker([upload_file_part(b"")])
+        with pytest.raises(MediaDownloadError, match="empty payload"):
+            await download_file(
+                invoker, document_location(), part_size=1024, limit=1024, concurrency=1
+            )
+
+    run(scenario())
+
+
 def test_download_file_concurrent_retries_transient_chunk_failure(tmp_path) -> None:
     async def scenario() -> None:
         payload = bytes(range(256)) * 20  # 5 KiB
@@ -1137,6 +1148,71 @@ def test_client_download_media_uses_generated_get_file_request() -> None:
         assert request.location == document_location()
         assert request.cdn_supported is True
         assert result.data == b"abc"
+
+    run(scenario())
+
+
+def test_client_download_media_refreshes_message_backed_file_references() -> None:
+    async def scenario() -> None:
+        old_document = types.Document(
+            id=100,
+            access_hash=200,
+            file_reference=b"old-ref",
+            date=1_700_000_000,
+            mime_type="application/octet-stream",
+            size=3,
+            dc_id=2,
+            attributes=(types.DocumentAttributeFilename(file_name="file.bin"),),
+        )
+        new_document = types.Document(
+            id=100,
+            access_hash=200,
+            file_reference=b"new-ref",
+            date=1_700_000_001,
+            mime_type="application/octet-stream",
+            size=3,
+            dc_id=2,
+            attributes=(types.DocumentAttributeFilename(file_name="file.bin"),),
+        )
+        raw_message = types.Message(
+            id=55,
+            peer_id=types.PeerUser(user_id=7),
+            date=1_700_000_000,
+            message="file",
+            media=types.MessageMediaDocument(document=old_document),
+        )
+        refreshed_message = types.Message(
+            id=55,
+            peer_id=types.PeerUser(user_id=7),
+            date=1_700_000_001,
+            message="file",
+            media=types.MessageMediaDocument(document=new_document),
+        )
+        sender = FakeSender(
+            [
+                BadRequest("FILE_REFERENCE_EXPIRED"),
+                types.MessagesMessages(
+                    messages=(refreshed_message,), topics=(), chats=(), users=()
+                ),
+                upload_file_part(b"abc"),
+            ]
+        )
+        client = Client(
+            ClientConfig(api_id=1, api_hash="hash", session_storage=storage_with_auth())
+        )
+        client._sender = sender
+        await client.connect()
+        result = await client.download_media(raw_message, media_lanes=0)
+        assert result.data == b"abc"
+        first = inner_request(sender.requests[0])
+        refresh = inner_request(sender.requests[1])
+        second = inner_request(sender.requests[2])
+        assert isinstance(first, functions.UploadGetFile)
+        assert first.location.file_reference == b"old-ref"
+        assert isinstance(refresh, functions.MessagesGetMessages)
+        assert refresh.id == (types.InputMessageID(id=55),)
+        assert isinstance(second, functions.UploadGetFile)
+        assert second.location.file_reference == b"new-ref"
 
     run(scenario())
 

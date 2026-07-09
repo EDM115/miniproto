@@ -352,6 +352,8 @@ These matter once the pipeline is unblocked (they are what keeps 16 MiB/s from c
 15. **Premium part-count ceiling**: `upload_max_fileparts_*` from `help.getAppConfig` not consulted; >2000 MiB premium uploads will fail at 4000 parts. Read app config and raise the cap when allowed (bench already overrides via env).
 16. **Bot workload check**: `messages.sendMedia` after upload uses main sender w/ `retry=None` -> non-retryable (correct, has random_id — could safely retry on timeout since random_id dedupes; classify it as such).
 
+Done 2026-07-09: implemented the selected P2 protocol-completeness slice. Fresh sender session IDs are generated per connection while preserving salt/auth key; `AUTH_KEY_DUPLICATED` drops the sender without clearing the stored key; login bootstraps update state with `updates.getState`; per-channel cursors are persisted under update metadata and recover channel gaps with `updates.getChannelDifference` after the possible-gap grace; message-backed `Client.download_media()` refreshes expired file references; min peer/access hashes are not persisted and stale usernames refresh after 24 h; upload/download cancellation, `_seen_msg_ids` bounds, empty explicit-download payloads, transport `-429`, `msgs_state_req`/`msg_resend_req`/`msgs_state_info`, split encrypted SQLite session domains, HTTP CONNECT/SOCKS5 proxy dialing, retry-safe `messages.sendMessage`/`messages.sendMedia`, and upload part ceilings are covered by focused tests. Quick ack remains v1 documentation-only: the next work is transport-level quick-ack frame decoding, correlation, and live/fake-server validation before enabling behavior.
+
 ---
 
 ## 6. P2 — API/Feature Gaps (from PROGRESS.md phases 11-13 + boundary docs)

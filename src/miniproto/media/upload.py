@@ -98,9 +98,10 @@ async def upload_file(
     max_buffer_size: int | None = None,
     request_timeout: float | None = None,
     flood_sleep_threshold: int | None = DEFAULT_UPLOAD_FLOOD_SLEEP_THRESHOLD,
+    max_file_parts: int | None = 4000,
 ) -> MediaUploadResult:
     _validate_upload_options(
-        part_size, concurrency, max_retries, max_buffer_size, flood_sleep_threshold
+        part_size, concurrency, max_retries, max_buffer_size, flood_sleep_threshold, max_file_parts
     )
     if request_timeout is None:
         request_timeout = DEFAULT_UPLOAD_PART_TIMEOUT
@@ -109,6 +110,7 @@ async def upload_file(
     if prepared.size <= 0:
         prepared.cleanup()
         raise ValueError("empty file upload is not supported")
+    part_size = _part_size_for_part_limit(prepared.size, part_size, max_file_parts)
     actual_file_id = secrets.randbits(63) or 1 if file_id is None else int(file_id)
     total_parts = math.ceil(prepared.size / part_size)
     is_big = prepared.size > BIG_FILE_THRESHOLD
@@ -253,6 +255,7 @@ def _validate_upload_options(
     max_retries: int,
     max_buffer_size: int | None,
     flood_sleep_threshold: int | None = None,
+    max_file_parts: int | None = None,
 ) -> None:
     if part_size <= 0:
         raise ValueError("part_size must be positive")
@@ -266,9 +269,26 @@ def _validate_upload_options(
         raise ValueError("max_retries must not be negative")
     if flood_sleep_threshold is not None and flood_sleep_threshold < 0:
         raise ValueError("flood_sleep_threshold must not be negative")
+    if max_file_parts is not None and max_file_parts <= 0:
+        raise ValueError("max_file_parts must be positive")
     ceiling = part_size * concurrency if max_buffer_size is None else max_buffer_size
     if ceiling < part_size * concurrency:
         raise ValueError("max_buffer_size is lower than the configured upload concurrency window")
+
+
+def _part_size_for_part_limit(size: int, part_size: int, max_file_parts: int | None) -> int:
+    if max_file_parts is None:
+        return part_size
+    total_parts = math.ceil(size / part_size)
+    if total_parts <= max_file_parts:
+        return part_size
+    required = math.ceil(size / max_file_parts)
+    adjusted = math.ceil(required / 1024) * 1024
+    if adjusted > DEFAULT_CHUNK_SIZE:
+        raise MediaUploadError(
+            f"file requires more than {max_file_parts} upload parts at the maximum part size"
+        )
+    return max(part_size, adjusted)
 
 
 async def _prepare_upload_source(

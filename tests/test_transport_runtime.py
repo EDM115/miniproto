@@ -22,9 +22,10 @@ from miniproto.connection.transport import (
     TransportClosed,
     TransportError,
     TransportTimeout,
+    default_stream_connector,
     open_transport,
 )
-from miniproto.errors import PendingRpcLimitExceeded
+from miniproto.errors import PendingRpcLimitExceeded, TransportFlood
 from miniproto.mtproto.codec import (
     BadMsgNotification,
     BadServerSalt,
@@ -32,7 +33,10 @@ from miniproto.mtproto.codec import (
     GzipPacked,
     MessageContainer,
     MessageContainerItem,
+    MsgResendReq,
     MsgsAck,
+    MsgsStateInfo,
+    MsgsStateReq,
     NewSessionCreated,
     Pong,
     RpcResult,
@@ -248,6 +252,17 @@ def test_mtproto_state_msg_id_seq_no_ack_and_duplicate_tracking() -> None:
     assert state.record_incoming(123, content_related=True)
     assert not state.record_incoming(123, content_related=True)
     assert state.pop_pending_acks() == (123,)
+
+
+def test_mtproto_state_bounds_seen_message_ids_to_duplicate_window() -> None:
+    state = MTProtoState(
+        auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID, duplicate_window=3
+    )
+    for msg_id in range(1, 8):
+        assert state.record_incoming(msg_id) is True
+    assert tuple(state._seen_msg_ids) == (5, 6, 7)
+    assert state.record_incoming(4) is True
+    assert tuple(state._seen_msg_ids) == (6, 7, 4)
 
 
 def test_encrypted_and_unencrypted_message_envelopes_roundtrip() -> None:
@@ -949,5 +964,184 @@ def test_sender_rejects_requests_beyond_pending_rpc_limit() -> None:
             second.cancel()
             await asyncio.gather(first, second, return_exceptions=True)
             await sender.disconnect()
+
+    event_loop.run(run())
+
+
+def test_sender_replies_to_msgs_state_req_with_state_info() -> None:
+    async def run() -> None:
+        seen_state_info: list[MsgsStateInfo] = []
+
+        def handle(message):
+            body = decode_message_body(message.body)
+            if isinstance(body, MsgsStateInfo):
+                seen_state_info.append(body)
+                return None
+            return MessageContainer(
+                messages=(
+                    MessageContainerItem(
+                        msg_id=message.msg_id + 4,
+                        seq_no=1,
+                        body=MsgsStateReq(msg_ids=(message.msg_id, 1234)),
+                    ),
+                    MessageContainerItem(
+                        msg_id=message.msg_id + 8,
+                        seq_no=3,
+                        body=RpcResult(req_msg_id=message.msg_id, result=b"answer"),
+                    ),
+                )
+            )
+
+        config = TransportConfig(mode="tcp_intermediate", read_timeout=5.0)
+        state = MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID)
+        async with FakeMTProtoServer(AUTH_KEY, config, handle) as server:
+            sender = MTProtoSender(server.endpoint, config, state)
+            assert await sender.request(b"question", request_timeout=2.0) == b"answer"
+            for _ in range(50):
+                if seen_state_info:
+                    break
+                await asyncio.sleep(0.01)
+            assert seen_state_info
+            assert seen_state_info[0].info == b"\x00\x00"
+            await sender.disconnect()
+
+    event_loop.run(run())
+
+
+def test_sender_resends_pending_request_on_msg_resend_req() -> None:
+    async def run() -> None:
+        attempts = 0
+
+        def handle(message):
+            nonlocal attempts
+            attempts += 1
+            if attempts == 1:
+                return MsgResendReq(msg_ids=(message.msg_id,))
+            return RpcResult(req_msg_id=message.msg_id, result=b"ok")
+
+        config = TransportConfig(mode="tcp_intermediate", read_timeout=5.0)
+        state = MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID)
+        async with FakeMTProtoServer(AUTH_KEY, config, handle) as server:
+            sender = MTProtoSender(server.endpoint, config, state)
+            assert await sender.request(b"retry-me", request_timeout=2.0) == b"ok"
+            assert attempts == 2
+            await sender.disconnect()
+
+    event_loop.run(run())
+
+
+def test_intermediate_transport_maps_negative_429_frame_to_transport_flood() -> None:
+    async def run() -> None:
+        reader = asyncio.StreamReader()
+        reader.feed_data((-429).to_bytes(4, "little", signed=True))
+        reader.feed_eof()
+        transport = TcpIntermediateTransport(
+            ConnectionEndpoint("127.0.0.1", 443), TransportConfig(mode="tcp_intermediate")
+        )
+        with pytest.raises(TransportFlood):
+            await transport.read_packet(reader)
+
+    event_loop.run(run())
+
+
+def test_default_stream_connector_supports_http_connect_proxy() -> None:
+    async def run() -> None:
+        seen: list[bytes] = []
+
+        async def handle(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+            seen.append(await reader.readuntil(b"\r\n\r\n"))
+            writer.write(b"HTTP/1.1 200 Connection Established\r\n\r\n")
+            await writer.drain()
+            await asyncio.sleep(0.05)
+            writer.close()
+            await writer.wait_closed()
+
+        server = await asyncio.start_server(handle, "127.0.0.1", 0)
+        server_socket = server.sockets[0]
+        host, port = server_socket.getsockname()[:2]
+        reader, writer = await default_stream_connector(
+            ConnectionEndpoint("149.154.167.51", 443),
+            TransportConfig(proxy=f"http://{host}:{port}", connect_timeout=2.0),
+        )
+        del reader
+        writer.close()
+        await writer.wait_closed()
+        server.close()
+        await server.wait_closed()
+        assert seen
+        assert seen[0].startswith(b"CONNECT 149.154.167.51:443 HTTP/1.1\r\n")
+        assert b"Host: 149.154.167.51:443\r\n" in seen[0]
+
+    event_loop.run(run())
+
+
+def test_default_stream_connector_supports_socks5_proxy() -> None:
+    async def run() -> None:
+        seen: list[bytes] = []
+
+        async def handle(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+            seen.append(await reader.readexactly(3))
+            writer.write(b"\x05\x00")
+            request = await reader.readexactly(4)
+            assert request[:3] == b"\x05\x01\x00"
+            if request[3] == 1:
+                host_bytes = await reader.readexactly(4)
+            elif request[3] == 3:
+                length = (await reader.readexactly(1))[0]
+                host_bytes = await reader.readexactly(length)
+            else:
+                raise AssertionError(f"unexpected socks address type {request[3]}")
+            port_bytes = await reader.readexactly(2)
+            seen.append(host_bytes + port_bytes)
+            writer.write(b"\x05\x00\x00\x01\x00\x00\x00\x00\x00\x00")
+            await writer.drain()
+            await asyncio.sleep(0.05)
+            writer.close()
+            await writer.wait_closed()
+
+        server = await asyncio.start_server(handle, "127.0.0.1", 0)
+        server_socket = server.sockets[0]
+        host, port = server_socket.getsockname()[:2]
+        reader, writer = await default_stream_connector(
+            ConnectionEndpoint("149.154.167.51", 443),
+            TransportConfig(proxy=f"socks5://{host}:{port}", connect_timeout=2.0),
+        )
+        del reader
+        writer.close()
+        await writer.wait_closed()
+        server.close()
+        await server.wait_closed()
+        assert seen[0] == b"\x05\x01\x00"
+        assert seen[1] == socket.inet_aton("149.154.167.51") + (443).to_bytes(2, "big")
+
+    event_loop.run(run())
+
+
+def test_abridged_transport_maps_negative_429_frame_to_transport_flood() -> None:
+    async def run() -> None:
+        reader = asyncio.StreamReader()
+        reader.feed_data((-429).to_bytes(4, "little", signed=True))
+        reader.feed_eof()
+        transport = TcpAbridgedTransport(
+            ConnectionEndpoint("127.0.0.1", 443), TransportConfig(mode="tcp_abridged")
+        )
+        with pytest.raises(TransportFlood):
+            await transport.read_packet(reader)
+
+    event_loop.run(run())
+
+
+def test_abridged_transport_does_not_treat_payload_prefix_as_error_frame() -> None:
+    async def run() -> None:
+        reader = asyncio.StreamReader()
+        payload = (
+            b"\x00\x00\x80!"  # negative if combined with the length byte, but not a real error code
+        )
+        reader.feed_data(bytes([len(payload) // 4]) + payload)
+        reader.feed_eof()
+        transport = TcpAbridgedTransport(
+            ConnectionEndpoint("127.0.0.1", 443), TransportConfig(mode="tcp_abridged")
+        )
+        assert await transport.read_packet(reader) == payload
 
     event_loop.run(run())

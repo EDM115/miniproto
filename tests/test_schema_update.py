@@ -112,7 +112,9 @@ def test_stale_pinned_files_ignores_metadata_fetch_date(tmp_path: Path) -> None:
     metadata_path = tmp_path / "tools/schema/schema-metadata.json"
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
     metadata["fetch_date"] = "2026-07-09"
-    metadata_path.write_text(json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    metadata_path.write_text(
+        json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
 
     assert stale_pinned_files(files) == ()
 

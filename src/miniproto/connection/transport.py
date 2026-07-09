@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import logging
 import socket as socket_module
 import time
@@ -8,8 +9,10 @@ from collections.abc import Awaitable, Callable
 from contextlib import suppress
 from dataclasses import dataclass
 from typing import Protocol
+from urllib.parse import unquote, urlsplit
 
 from miniproto.config import TransportConfig
+from miniproto.errors import TransportFlood
 from miniproto.observability import emit_event, get_logger, record_metric
 from miniproto.security.redaction import safe_repr
 
@@ -63,13 +66,13 @@ async def default_stream_connector(
     endpoint: ConnectionEndpoint, config: TransportConfig
 ) -> StreamPair:
     started = time.perf_counter()
-    if config.proxy is not None:
-        raise TransportError(
-            "TransportConfig.proxy requires a custom StreamConnector; built-in proxy dialing is a later integration hook"
-        )
     try:
         async with asyncio.timeout(config.connect_timeout):
-            pair = await asyncio.open_connection(endpoint.host, endpoint.port)
+            pair = (
+                await _open_proxy_connection(endpoint, config.proxy)
+                if config.proxy is not None
+                else await asyncio.open_connection(endpoint.host, endpoint.port)
+            )
     except TimeoutError as exc:
         _emit_transport_event(
             "transport.connect",
@@ -99,6 +102,136 @@ async def default_stream_connector(
         mode=config.mode,
     )
     return pair
+
+
+@dataclass(frozen=True, slots=True)
+class _ProxyConfig:
+    scheme: str
+    host: str
+    port: int
+    username: str | None = None
+    password: str | None = None
+
+
+async def _open_proxy_connection(endpoint: ConnectionEndpoint, proxy_url: str) -> StreamPair:
+    proxy = _parse_proxy_url(proxy_url)
+    reader, writer = await asyncio.open_connection(proxy.host, proxy.port)
+    try:
+        match proxy.scheme:
+            case "http" | "https":
+                await _handshake_http_connect(reader, writer, endpoint, proxy)
+            case "socks5" | "socks":
+                await _handshake_socks5(reader, writer, endpoint, proxy)
+            case _:
+                raise TransportError(f"unsupported proxy scheme: {proxy.scheme}")
+    except BaseException:
+        writer.close()
+        with suppress(Exception):
+            await writer.wait_closed()
+        raise
+    return reader, writer
+
+
+def _parse_proxy_url(proxy_url: str) -> _ProxyConfig:
+    parsed = urlsplit(proxy_url)
+    if not parsed.scheme or parsed.hostname is None:
+        raise TransportError("proxy must be a URL such as socks5://host:1080 or http://host:8080")
+    default_port = 1080 if parsed.scheme in {"socks", "socks5"} else 8080
+    return _ProxyConfig(
+        scheme=parsed.scheme.casefold(),
+        host=parsed.hostname,
+        port=parsed.port or default_port,
+        username=None if parsed.username is None else unquote(parsed.username),
+        password=None if parsed.password is None else unquote(parsed.password),
+    )
+
+
+async def _handshake_http_connect(
+    reader: asyncio.StreamReader,
+    writer: asyncio.StreamWriter,
+    endpoint: ConnectionEndpoint,
+    proxy: _ProxyConfig,
+) -> None:
+    target = f"{endpoint.host}:{endpoint.port}"
+    lines = [f"CONNECT {target} HTTP/1.1", f"Host: {target}", "Proxy-Connection: Keep-Alive"]
+    if proxy.username is not None:
+        password = proxy.password or ""
+        token = base64.b64encode(f"{proxy.username}:{password}".encode()).decode("ascii")
+        lines.append(f"Proxy-Authorization: Basic {token}")
+    request = ("\r\n".join(lines) + "\r\n\r\n").encode("ascii")
+    writer.write(request)
+    await writer.drain()
+    response = await reader.readuntil(b"\r\n\r\n")
+    status_line = response.split(b"\r\n", 1)[0]
+    parts = status_line.split(maxsplit=2)
+    if len(parts) < 2 or parts[1] != b"200":
+        rendered = status_line.decode("ascii", errors="replace")
+        raise TransportError(f"http proxy CONNECT failed: {rendered}")
+
+
+async def _handshake_socks5(
+    reader: asyncio.StreamReader,
+    writer: asyncio.StreamWriter,
+    endpoint: ConnectionEndpoint,
+    proxy: _ProxyConfig,
+) -> None:
+    wants_auth = proxy.username is not None
+    methods = b"\x00\x02" if wants_auth else b"\x00"
+    writer.write(b"\x05" + bytes([len(methods)]) + methods)
+    await writer.drain()
+    version, method = await reader.readexactly(2)
+    if version != 5 or method == 0xFF:
+        raise TransportError("socks5 proxy did not accept an authentication method")
+    if method == 2:
+        if proxy.username is None:
+            raise TransportError("socks5 proxy unexpectedly requested username authentication")
+        username = proxy.username.encode()
+        password = (proxy.password or "").encode()
+        if len(username) > 255 or len(password) > 255:
+            raise TransportError("socks5 proxy credentials are too long")
+        writer.write(
+            b"\x01" + bytes([len(username)]) + username + bytes([len(password)]) + password
+        )
+        await writer.drain()
+        auth_version, status = await reader.readexactly(2)
+        if auth_version != 1 or status != 0:
+            raise TransportError("socks5 proxy authentication failed")
+    elif method != 0:
+        raise TransportError(f"socks5 proxy selected unsupported authentication method {method}")
+    address_type, address = _socks5_address(endpoint.host)
+    writer.write(
+        b"\x05\x01\x00" + bytes([address_type]) + address + int(endpoint.port).to_bytes(2, "big")
+    )
+    await writer.drain()
+    header = await reader.readexactly(4)
+    if header[0] != 5:
+        raise TransportError("socks5 proxy returned an invalid response")
+    if header[1] != 0:
+        raise TransportError(f"socks5 proxy CONNECT failed with status {header[1]}")
+    await _read_socks5_bound_address(reader, header[3])
+
+
+def _socks5_address(host: str) -> tuple[int, bytes]:
+    for family, address_type in ((socket_module.AF_INET, 1), (socket_module.AF_INET6, 4)):
+        with suppress(OSError):
+            return address_type, socket_module.inet_pton(family, host)
+    encoded = host.encode("idna")
+    if len(encoded) > 255:
+        raise TransportError("socks5 proxy target host is too long")
+    return 3, bytes([len(encoded)]) + encoded
+
+
+async def _read_socks5_bound_address(reader: asyncio.StreamReader, address_type: int) -> None:
+    if address_type == 1:
+        await reader.readexactly(4)
+    elif address_type == 4:
+        await reader.readexactly(16)
+    elif address_type == 3:
+        length = (await reader.readexactly(1))[0]
+        await reader.readexactly(length)
+    else:
+        raise TransportError(f"socks5 proxy returned unsupported address type {address_type}")
+    await reader.readexactly(2)
 
 
 async def open_transport(
@@ -396,6 +529,13 @@ async def read_exactly_bounded(
     if length > max_payload_size:
         raise TransportError("transport frame length exceeds configured maximum")
     return await reader.readexactly(length)
+
+
+def raise_transport_error_frame(code: int) -> None:
+    rendered = abs(int(code))
+    if rendered == 429:
+        raise TransportFlood(0, message="transport flood", code=429)
+    raise TransportError(f"transport error code={rendered}")
 
 
 def _emit_transport_event(

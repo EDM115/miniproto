@@ -3,6 +3,7 @@ from __future__ import annotations
 import inspect
 from collections.abc import Awaitable, Iterable, Mapping
 from dataclasses import replace
+from datetime import UTC, datetime, timedelta
 from typing import Any, Protocol, cast
 
 from miniproto.config import ClientConfig
@@ -12,6 +13,8 @@ from miniproto.raw import functions, types
 from miniproto.session.models import PeerCacheEntry, SessionRecord, UserIdentity
 from miniproto.session.storage import SessionStorage
 from miniproto.types import Peer, PeerKind, User
+
+USERNAME_CACHE_TTL = timedelta(hours=24)
 
 
 class PeerInvoker(Protocol):
@@ -213,7 +216,7 @@ def _entry_from_user(user: types.User, *, force_self: bool = False) -> PeerCache
     return PeerCacheEntry(
         id=user.id,
         kind="self" if force_self or user.self_ else "user",
-        access_hash=user.access_hash,
+        access_hash=None if user.min else user.access_hash,
         username=primary_username,
         phone=user.phone,
         raw=_compact_raw(
@@ -233,7 +236,7 @@ def _entry_from_channel(channel: types.Channel | types.ChannelForbidden) -> Peer
     return PeerCacheEntry(
         id=channel.id,
         kind="channel",
-        access_hash=channel.access_hash,
+        access_hash=None if getattr(channel, "min", False) else channel.access_hash,
         username=getattr(channel, "username", None),
         raw=_compact_raw(title=channel.title, usernames=_raw_usernames(channel)),
     )
@@ -407,7 +410,10 @@ def _find_username_entry(entries: Iterable[PeerCacheEntry], username: str) -> Pe
     normalized = _normalize_username(username)
     if normalized is None:
         return None
+    now = datetime.now(UTC)
     for entry in entries:
+        if now - entry.updated_at > USERNAME_CACHE_TTL:
+            continue
         if _entry_has_username(entry, normalized):
             return entry
     return None

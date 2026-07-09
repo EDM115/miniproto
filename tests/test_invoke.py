@@ -7,6 +7,7 @@ from typing import Any, cast
 import pytest
 from tests.support.fake_mtproto import FakeMTProtoServer
 
+import miniproto.invoke as invoke_module
 from miniproto import (
     AuthKey,
     Client,
@@ -22,6 +23,7 @@ from miniproto.connection.sender import MTProtoSender
 from miniproto.connection.transport import TransportClosed, TransportError
 from miniproto.errors import (
     AuthKeyNotFound,
+    AuthKeyRegenerationRequired,
     ClientDisconnected,
     FloodPremiumWait,
     FloodWait,
@@ -458,6 +460,52 @@ def test_bad_server_salt_is_persisted_and_used_by_new_senders() -> None:
     run(scenario())
 
 
+def test_build_sender_uses_fresh_session_id_while_preserving_server_salt(monkeypatch) -> None:
+    async def scenario() -> None:
+        storage = storage_with_auth()
+        loaded = await storage.load()
+        assert loaded is not None
+        record = session_record_from_mapping(loaded)
+        await storage.save(
+            SessionRecord(
+                dc_id=record.dc_id,
+                auth_key=record.auth_key,
+                dc_options=record.dc_options,
+                metadata={"session_id": 0xAAAAAAAAAAAAAAAA, "server_salt": 0x1234},
+            )
+        )
+        generated = iter((0x1111111111111111, 0x2222222222222222))
+        monkeypatch.setattr(invoke_module.secrets, "randbits", lambda _bits: next(generated))
+        config = ClientConfig(api_id=1, api_hash="hash", session_storage=storage)
+
+        first = await build_sender_from_session(config, storage)
+        second = await build_sender_from_session(config, storage)
+
+        assert isinstance(first, MTProtoSender)
+        assert isinstance(second, MTProtoSender)
+        assert first.state.server_salt == 0x1234
+        assert second.state.server_salt == 0x1234
+        assert first.state.session_id == 0x1111111111111111
+        assert second.state.session_id == 0x2222222222222222
+
+    run(scenario())
+
+
+def test_auth_key_duplicated_drops_sender_without_clearing_stored_key() -> None:
+    async def scenario() -> None:
+        storage = storage_with_auth()
+        sender = FakeSender([rpc_error(406, "AUTH_KEY_DUPLICATED")])
+        client = await connected_client(sender, storage=storage)
+        with pytest.raises(AuthKeyRegenerationRequired):
+            await client.invoke(functions.HelpGetNearestDc())
+        loaded = await storage.load()
+        assert loaded is not None
+        assert session_record_from_mapping(loaded).auth_key is not None
+        assert sender.disconnected == 1
+
+    run(scenario())
+
+
 def test_decode_result_payload_accepts_namespaced_abstract_result_type() -> None:
     user = types.User(id=42, access_hash=99, first_name="miniproto test")
     authorization = types.AuthAuthorization(user=user)
@@ -555,12 +603,28 @@ def test_invoke_does_not_retry_unsafe_requests_after_transport_failure() -> None
         client = Client(ClientConfig(api_id=1, api_hash="hash", max_request_retries=1))
         client._sender_factory = lambda _record: sender
         await client.connect()
-        request = functions.MessagesSendMessage(
-            peer=types.InputPeerSelf(), message="hi", random_id=1
-        )
+        request = functions.MessagesEditMessage(peer=types.InputPeerSelf(), id=1, message="hi")
         with pytest.raises(RpcError, match="after send"):
             await client.invoke(request)
         assert len(sender.requests) == 1
+        assert sender.disconnected == 0
+
+    run(scenario())
+
+
+def test_invoke_retries_random_id_message_requests_after_transport_failure() -> None:
+    async def scenario() -> None:
+        response = types.UpdateShortSentMessage(id=10, pts=1, pts_count=1, date=1_700_000_000)
+        sender = FakeSender([TransportError("after send"), response.serialize()])
+        client = Client(ClientConfig(api_id=1, api_hash="hash", max_request_retries=1))
+        client._sender_factory = lambda _record: sender
+        await client.connect()
+        request = functions.MessagesSendMessage(
+            peer=types.InputPeerSelf(), message="hi", random_id=1
+        )
+        assert is_retryable_request(request)
+        assert await client.invoke(request) == response
+        assert len(sender.requests) == 2
         assert sender.disconnected == 0
 
     run(scenario())

@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import asyncio
 
-from miniproto.connection.transport import StreamTransportBase, TransportError, read_exactly_bounded
+from miniproto.connection.transport import (
+    StreamTransportBase,
+    TransportError,
+    raise_transport_error_frame,
+    read_exactly_bounded,
+)
 
 
 class TcpIntermediateTransport(StreamTransportBase):
@@ -19,6 +24,8 @@ class TcpIntermediateTransport(StreamTransportBase):
             "little",
             signed=True,
         )
+        if length < 0:
+            raise_transport_error_frame(length)
         return await read_exactly_bounded(reader, length, self.config.max_payload_size)
 
 

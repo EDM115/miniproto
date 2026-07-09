@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -147,6 +148,37 @@ def test_resolve_username_uses_case_insensitive_cache() -> None:
     run(scenario())
 
 
+def test_resolve_username_refreshes_stale_cached_usernames() -> None:
+    async def scenario() -> None:
+        old = datetime.now(UTC) - timedelta(days=2)
+        storage = InMemorySessionStorage(
+            SessionRecord(
+                peers=(
+                    PeerCacheEntry(
+                        id=7, kind="user", access_hash=77, username="Alice", updated_at=old
+                    ),
+                )
+            )
+        )
+        sender = FakeSender(
+            [
+                types.ContactsResolvedPeer(
+                    peer=types.PeerUser(user_id=8),
+                    users=(types.User(id=8, access_hash=88, username="Alice"),),
+                    chats=(),
+                )
+            ]
+        )
+        client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage))
+        client._sender = sender
+        await client.connect()
+        assert await client.resolve_peer("@alice") == Peer(id=8, kind="user", access_hash=88)
+        request = inner_request(sender.requests[0])
+        assert isinstance(request, functions.ContactsResolveUsername)
+
+    run(scenario())
+
+
 def test_resolve_username_fetches_contacts_resolve_username_and_caches_access_hash() -> None:
     async def scenario() -> None:
         storage = storage_with_record()
@@ -172,6 +204,57 @@ def test_resolve_username_fetches_contacts_resolve_username_and_caches_access_ha
         record = session_record_from_mapping(loaded)
         assert record.peers[0].username == "Bob"
         assert record.peers[0].access_hash == 88
+
+    run(scenario())
+
+
+def test_min_user_and_channel_entities_do_not_poison_cached_access_hashes() -> None:
+    async def scenario() -> None:
+        storage = InMemorySessionStorage()
+        client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage))
+        await client._peer_cache.remember_raw_entities(
+            types.ContactsResolvedPeer(
+                peer=types.PeerUser(user_id=7),
+                users=(types.User(id=7, access_hash=77, min=True, username="alice"),),
+                chats=(
+                    types.Channel(
+                        id=123,
+                        access_hash=999,
+                        min=True,
+                        title="Channel",
+                        photo=types.ChatPhotoEmpty(),
+                        date=1_700_000_000,
+                        username="channel",
+                    ),
+                ),
+            )
+        )
+        loaded = await storage.load()
+        assert loaded is not None
+        record = session_record_from_mapping(loaded)
+        assert any(peer.id == 7 and peer.access_hash is None for peer in record.peers)
+        assert any(peer.id == 123 and peer.access_hash is None for peer in record.peers)
+        await client._peer_cache.remember_raw_entities(
+            types.ContactsResolvedPeer(
+                peer=types.PeerUser(user_id=7),
+                users=(types.User(id=7, access_hash=78, username="alice"),),
+                chats=(
+                    types.Channel(
+                        id=123,
+                        access_hash=1000,
+                        title="Channel",
+                        photo=types.ChatPhotoEmpty(),
+                        date=1_700_000_001,
+                        username="channel",
+                    ),
+                ),
+            )
+        )
+        loaded = await storage.load()
+        assert loaded is not None
+        record = session_record_from_mapping(loaded)
+        assert any(peer.id == 7 and peer.access_hash == 78 for peer in record.peers)
+        assert any(peer.id == 123 and peer.access_hash == 1000 for peer in record.peers)
 
     run(scenario())
 

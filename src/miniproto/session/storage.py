@@ -37,6 +37,14 @@ CREATE TABLE IF NOT EXISTS session_records (
     updated_at TEXT NOT NULL
 )
 """
+_DOMAIN_TABLE_SCHEMA = """
+CREATE TABLE IF NOT EXISTS session_domains (
+    domain TEXT PRIMARY KEY,
+    envelope BLOB NOT NULL,
+    updated_at TEXT NOT NULL
+)
+"""
+_KNOWN_SESSION_DOMAINS = ("auth", "peers", "update_state", "metadata", "payload")
 _LOGGER = get_logger("session.storage")
 
 
@@ -116,9 +124,12 @@ class EncryptedSQLiteSessionStorage:
 
     async def save(self, data: SessionPayload) -> None:
         started = time.perf_counter()
-        envelope = self._encrypt(serialize_session_data(data))
+        envelopes = {
+            domain: self._encrypt(serialize_session_data(payload))
+            for domain, payload in _split_session_domains(data).items()
+        }
         try:
-            await asyncio.to_thread(self._save_sync, envelope)
+            await asyncio.to_thread(self._save_sync, envelopes)
         except BaseException as exc:
             _emit_storage_event(
                 "session.save",
@@ -154,6 +165,14 @@ class EncryptedSQLiteSessionStorage:
         try:
             with self._connect() as connection:
                 _ensure_schema(connection)
+                domain_rows = connection.execute(
+                    "SELECT domain, envelope FROM session_domains ORDER BY domain"
+                ).fetchall()
+                if domain_rows:
+                    merged: dict[str, Any] = {}
+                    for _domain, envelope in domain_rows:
+                        merged.update(self._decrypt(bytes(envelope)))
+                    return merged
                 row = connection.execute(
                     "SELECT envelope FROM session_records WHERE name = ?", (_DEFAULT_RECORD_NAME,)
                 ).fetchone()
@@ -163,20 +182,27 @@ class EncryptedSQLiteSessionStorage:
             return None
         return self._decrypt(bytes(row[0]))
 
-    def _save_sync(self, envelope: bytes) -> None:
+    def _save_sync(self, envelopes: Mapping[str, bytes]) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         connection = self._connect()
         try:
             _ensure_schema(connection)
             connection.execute("BEGIN IMMEDIATE")
+            now = datetime.now(UTC).isoformat()
             connection.execute(
-                """
-                INSERT INTO session_records (name, envelope, updated_at)
-                VALUES (?, ?, ?)
-                ON CONFLICT(name) DO UPDATE SET envelope = excluded.envelope, updated_at = excluded.updated_at
-                """,
-                (_DEFAULT_RECORD_NAME, envelope, datetime.now(UTC).isoformat()),
+                "DELETE FROM session_records WHERE name = ?", (_DEFAULT_RECORD_NAME,)
             )
+            for stale_domain in set(_KNOWN_SESSION_DOMAINS) - set(envelopes):
+                connection.execute("DELETE FROM session_domains WHERE domain = ?", (stale_domain,))
+            for domain, envelope in envelopes.items():
+                connection.execute(
+                    """
+                    INSERT INTO session_domains (domain, envelope, updated_at)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT(domain) DO UPDATE SET envelope = excluded.envelope, updated_at = excluded.updated_at
+                    """,
+                    (domain, envelope, now),
+                )
             connection.commit()
         except sqlite3.Error as exc:
             connection.rollback()
@@ -194,6 +220,7 @@ class EncryptedSQLiteSessionStorage:
             connection.execute(
                 "DELETE FROM session_records WHERE name = ?", (_DEFAULT_RECORD_NAME,)
             )
+            connection.execute("DELETE FROM session_domains")
             connection.commit()
         except sqlite3.Error as exc:
             connection.rollback()
@@ -268,6 +295,24 @@ def _normalize_session_payload(data: SessionPayload) -> Mapping[str, Any]:
     raise TypeError("session data must be a mapping or SessionRecord")
 
 
+def _split_session_domains(data: SessionPayload) -> dict[str, Mapping[str, Any]]:
+    if not isinstance(data, SessionRecord):
+        return {"payload": _normalize_session_payload(data)}
+    payload = dict(session_record_to_mapping(data))
+    return {
+        "auth": {
+            "version": payload.get("version"),
+            "dc_id": payload.get("dc_id"),
+            "auth_key": payload.get("auth_key"),
+            "dc_options": payload.get("dc_options", ()),
+            "user": payload.get("user"),
+        },
+        "peers": {"peers": payload.get("peers", ())},
+        "update_state": {"update_state": payload.get("update_state")},
+        "metadata": {"metadata": payload.get("metadata", {})},
+    }
+
+
 def _encode_json_value(value: object) -> object:
     if isinstance(value, bytes | bytearray | memoryview):
         return {_JSON_TYPE_KEY: "bytes", "value": _b64encode(bytes(value))}
@@ -321,6 +366,7 @@ def _decode_envelope(envelope_bytes: bytes) -> Mapping[str, Any]:
 
 def _ensure_schema(connection: sqlite3.Connection) -> None:
     connection.execute(_TABLE_SCHEMA)
+    connection.execute(_DOMAIN_TABLE_SCHEMA)
 
 
 def _derive_keys(key_material: bytes) -> tuple[bytes, bytes]:

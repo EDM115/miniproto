@@ -25,7 +25,10 @@ from miniproto.mtproto.codec import (
     GzipPacked,
     MessageContainer,
     MessageContainerItem,
+    MsgResendReq,
     MsgsAck,
+    MsgsStateInfo,
+    MsgsStateReq,
     NewSessionCreated,
     Pong,
     RpcResult,
@@ -447,6 +450,18 @@ class MTProtoSender:
             return
         if isinstance(body, MsgsAck):
             self._acks_received.update(body.msg_ids)
+            return
+        if isinstance(body, MsgsStateReq):
+            await self.send(
+                MsgsStateInfo(req_msg_id=message.msg_id, info=b"\x00" * len(body.msg_ids)),
+                content_related=False,
+            )
+            return
+        if isinstance(body, MsgsStateInfo):
+            return
+        if isinstance(body, MsgResendReq):
+            for msg_id in body.msg_ids:
+                await self._retry_bad_message(msg_id)
             return
         if isinstance(body, BadServerSalt):
             self.state.apply_server_salt(body.new_server_salt)

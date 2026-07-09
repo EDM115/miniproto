@@ -1,0 +1,7 @@
+# AI Agents guidelines
+
+- At the end of each turn (when you're about to give your final answer), check the [`THOUGHTS.md`](docs/THOUGHTS.md). Read it, if there's a section for you (current date + model name) append to it, edit/remove no longer necessary bits but never remove important info or bits from other entries. Add a section if there's none. When doing so, don't read other files and only fill this from your context and memory. Feel free to fill that also when compaction is near to not lose important context. Quoted titles are the conversation titles and not a summary of the convo.
+- Agents should NEVER run stash/commit/revert/... unless **explicitly** asked to. Only the User is allowed to run these commands.
+- `miniproto` is in heavy alpha development. What is referred to as "v1" so far will be the first publicly released version, likely as `0.1.0`.
+- Performance is the absolute key in this project, speedups are the primary goal
+- The main developer (`EDM115`) might be wrong. AI Agents might be wrong. Authoritative sources are either official Telegram documentations or other referenced projects.

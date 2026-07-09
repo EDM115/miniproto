@@ -20,7 +20,7 @@ from miniproto import (
 )
 from miniproto.mtproto.codec import MessageContainer, MessageContainerItem, RpcResult
 from miniproto.raw import functions, types
-from miniproto.session.models import UpdateState, session_record_from_mapping
+from miniproto.session.models import PeerCacheEntry, UpdateState, session_record_from_mapping
 from miniproto.types import Message, Peer
 
 AUTH_KEY = b"u" * 256
@@ -65,9 +65,35 @@ def storage_with_state(
     )
 
 
+def storage_with_channel_state(*, channel_id: int = 123, pts: int = 10) -> InMemorySessionStorage:
+    return InMemorySessionStorage(
+        SessionRecord(
+            peers=(PeerCacheEntry(id=channel_id, kind="channel", access_hash=999),),
+            metadata={
+                "updates": {
+                    "channels": {
+                        str(channel_id): {
+                            "pts": pts,
+                            "date": datetime.fromtimestamp(50, UTC).isoformat(),
+                        }
+                    }
+                }
+            },
+        )
+    )
+
+
 def raw_message(message_id: int, text: str, *, user_id: int = 42, date: int = 100) -> types.Message:
     return types.Message(
         id=message_id, peer_id=types.PeerUser(user_id=user_id), date=date, message=text
+    )
+
+
+def raw_channel_message(
+    message_id: int, text: str, *, channel_id: int = 123, date: int = 100
+) -> types.Message:
+    return types.Message(
+        id=message_id, peer_id=types.PeerChannel(channel_id=channel_id), date=date, message=text
     )
 
 
@@ -171,6 +197,65 @@ def test_gap_recovery_fetches_difference_before_emitting_current_update() -> Non
         record = session_record_from_mapping(loaded)
         assert record.update_state.pts == 13
         assert any(peer.id == 42 and peer.access_hash == 9000 for peer in record.peers)
+        await client.disconnect()
+
+    run(scenario())
+
+
+def test_channel_gap_recovery_uses_channel_difference_and_persists_channel_cursor(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def scenario() -> None:
+        monkeypatch.setattr("miniproto.updates.manager.POSSIBLE_GAP_GRACE_SECONDS", 0.0)
+        channel_id = 123
+        storage = storage_with_channel_state(channel_id=channel_id, pts=10)
+        difference = types.UpdatesChannelDifference(
+            final=True,
+            pts=12,
+            new_messages=(raw_channel_message(111, "missing", channel_id=channel_id, date=100),),
+            other_updates=(),
+            chats=(
+                types.Channel(
+                    id=channel_id,
+                    access_hash=999,
+                    title="Channel",
+                    photo=types.ChatPhotoEmpty(),
+                    date=1_700_000_000,
+                ),
+            ),
+            users=(),
+        )
+        client = FakeUpdateClient(
+            ClientConfig(api_id=1, api_hash="hash", session_storage=storage), [difference]
+        )
+        await client.connect()
+        iterator = client.iter_updates()
+        await client._handle_raw_update(
+            types.UpdateNewChannelMessage(
+                message=raw_channel_message(112, "current", channel_id=channel_id, date=101),
+                pts=13,
+                pts_count=1,
+            )
+        )
+        first = await anext(iterator)
+        second = await anext(iterator)
+        assert isinstance(first, NewMessage)
+        assert isinstance(second, NewMessage)
+        assert first.message is not None
+        assert second.message is not None
+        assert [first.message.text, second.message.text] == ["missing", "current"]
+        assert len(client.update_requests) == 1
+        request = client.update_requests[0]
+        assert isinstance(request, functions.UpdatesGetChannelDifference)
+        assert isinstance(request.channel, types.InputChannel)
+        assert request.channel.channel_id == channel_id
+        assert request.channel.access_hash == 999
+        assert isinstance(request.filter, types.ChannelMessagesFilterEmpty)
+        assert request.pts == 10
+        loaded = await storage.load()
+        assert loaded is not None
+        channels = loaded["metadata"]["updates"]["channels"]
+        assert channels[str(channel_id)]["pts"] == 13
         await client.disconnect()
 
     run(scenario())

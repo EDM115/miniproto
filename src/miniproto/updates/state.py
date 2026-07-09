@@ -11,6 +11,7 @@ from miniproto.types import PeerKind
 
 UPDATE_METADATA_KEY = "updates"
 UPDATE_DUPLICATE_KEYS_KEY = "recent_update_keys"
+UPDATE_CHANNELS_KEY = "channels"
 DEFAULT_DUPLICATE_WINDOW = 2048
 
 
@@ -52,11 +53,19 @@ class EntityReference:
 
 
 @dataclass(frozen=True, slots=True)
+class ChannelUpdateCursor:
+    channel_id: int
+    pts: int = 0
+    date: datetime = field(default_factory=utc_now)
+
+
+@dataclass(frozen=True, slots=True)
 class UpdateCursor:
     pts: int = 0
     qts: int = 0
     seq: int = 0
     date: datetime = field(default_factory=utc_now)
+    channel_cursors: tuple[ChannelUpdateCursor, ...] = ()
     entities: tuple[EntityReference, ...] = ()
     duplicate_keys: tuple[str, ...] = ()
 
@@ -72,6 +81,7 @@ class UpdateCursor:
             qts=record.update_state.qts,
             seq=record.update_state.seq,
             date=record.update_state.date,
+            channel_cursors=_channel_cursors_from_metadata(metadata),
             entities=tuple(entity_reference_from_peer(peer) for peer in record.peers),
             duplicate_keys=keys,
         )
@@ -92,6 +102,33 @@ class UpdateCursor:
             qts=self.qts if qts is None else qts,
             seq=self.seq if seq is None else seq,
             date=self.date if date is None else coerce_update_datetime(date),
+            channel_cursors=self.channel_cursors,
+            entities=self.entities,
+            duplicate_keys=self.duplicate_keys,
+        )
+
+    def channel_cursor(self, channel_id: int) -> ChannelUpdateCursor:
+        for cursor in self.channel_cursors:
+            if cursor.channel_id == channel_id:
+                return cursor
+        return ChannelUpdateCursor(channel_id=channel_id)
+
+    def with_channel_state(
+        self, channel_id: int, *, pts: int, date: datetime | int | float | str | None = None
+    ) -> UpdateCursor:
+        updated = ChannelUpdateCursor(
+            channel_id=channel_id,
+            pts=pts,
+            date=self.date if date is None else coerce_update_datetime(date),
+        )
+        cursors = {cursor.channel_id: cursor for cursor in self.channel_cursors}
+        cursors[channel_id] = updated
+        return UpdateCursor(
+            pts=self.pts,
+            qts=self.qts,
+            seq=self.seq,
+            date=self.date,
+            channel_cursors=tuple(cursors.values()),
             entities=self.entities,
             duplicate_keys=self.duplicate_keys,
         )
@@ -103,6 +140,7 @@ class UpdateCursor:
             qts=self.qts,
             seq=self.seq,
             date=self.date,
+            channel_cursors=self.channel_cursors,
             entities=tuple(merged.values()),
             duplicate_keys=self.duplicate_keys,
         )
@@ -113,6 +151,7 @@ class UpdateCursor:
             qts=self.qts,
             seq=self.seq,
             date=self.date,
+            channel_cursors=self.channel_cursors,
             entities=self.entities,
             duplicate_keys=tuple(duplicate_keys),
         )
@@ -154,13 +193,42 @@ def update_metadata(metadata: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def metadata_with_duplicate_keys(
-    metadata: Mapping[str, Any], keys: Iterable[str]
+    metadata: Mapping[str, Any],
+    keys: Iterable[str],
+    channel_cursors: Iterable[ChannelUpdateCursor] = (),
 ) -> dict[str, Any]:
     updated = dict(metadata)
     update_values = update_metadata(updated)
     update_values[UPDATE_DUPLICATE_KEYS_KEY] = list(keys)
+    cursors = tuple(channel_cursors)
+    if cursors:
+        update_values[UPDATE_CHANNELS_KEY] = {
+            str(cursor.channel_id): {"pts": cursor.pts, "date": cursor.date.isoformat()}
+            for cursor in cursors
+        }
     updated[UPDATE_METADATA_KEY] = update_values
     return updated
+
+
+def _channel_cursors_from_metadata(metadata: Mapping[str, Any]) -> tuple[ChannelUpdateCursor, ...]:
+    raw_channels = metadata.get(UPDATE_CHANNELS_KEY)
+    if not isinstance(raw_channels, Mapping):
+        return ()
+    cursors: list[ChannelUpdateCursor] = []
+    for raw_channel_id, raw_cursor in raw_channels.items():
+        if not isinstance(raw_cursor, Mapping):
+            continue
+        try:
+            channel_id = int(raw_channel_id)
+            pts = int(raw_cursor.get("pts", 0))
+        except (TypeError, ValueError):
+            continue
+        cursors.append(
+            ChannelUpdateCursor(
+                channel_id=channel_id, pts=pts, date=coerce_update_datetime(raw_cursor.get("date"))
+            )
+        )
+    return tuple(cursors)
 
 
 def merge_entity_references(

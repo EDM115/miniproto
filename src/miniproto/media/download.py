@@ -678,6 +678,10 @@ async def _download_file_sequential(
             if remaining is not None and len(payload) > remaining:
                 payload = payload[:remaining]
             if not payload:
+                if remaining is not None and remaining > 0:
+                    raise MediaDownloadError(
+                        f"download returned empty payload with {remaining} bytes remaining"
+                    )
                 break
             part_sizer.on_success(
                 requested_size=wire_limit,

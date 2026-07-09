@@ -88,6 +88,29 @@ def test_encrypted_sqlite_storage_load_save_clear_close(tmp_path) -> None:
     run(scenario())
 
 
+def test_encrypted_sqlite_storage_splits_encrypted_rows_by_session_domain(tmp_path) -> None:
+    async def scenario() -> None:
+        path = tmp_path / "session.sqlite"
+        storage = EncryptedSQLiteSessionStorage(path, key="x" * 32)
+        expected = sample_record()
+        await storage.save(expected)
+        with sqlite3.connect(path) as connection:
+            rows = connection.execute(
+                "SELECT domain, envelope FROM session_domains ORDER BY domain"
+            ).fetchall()
+        assert [row[0] for row in rows] == ["auth", "metadata", "peers", "update_state"]
+        assert all(isinstance(row[1], bytes) and row[1].startswith(b"{") for row in rows)
+        loaded = await storage.load()
+        assert loaded is not None
+        assert session_record_from_mapping(loaded) == expected
+        await storage.clear()
+        with sqlite3.connect(path) as connection:
+            count = connection.execute("SELECT count(*) FROM session_domains").fetchone()[0]
+        assert count == 0
+
+    run(scenario())
+
+
 def test_encrypted_sqlite_storage_uses_environment_key(tmp_path, monkeypatch) -> None:
     async def scenario() -> None:
         monkeypatch.setenv("MINIPROTO_SESSION_KEY", "env-key-material-that-is-long-enough")
@@ -117,7 +140,7 @@ def test_encrypted_sqlite_storage_rejects_corrupted_envelope(tmp_path) -> None:
         await storage.save({"auth_key": b"secret"})
         with sqlite3.connect(path) as connection:
             connection.execute(
-                "UPDATE session_records SET envelope = ? WHERE name = ?", (b"not-json", "default")
+                "UPDATE session_domains SET envelope = ? WHERE domain = ?", (b"not-json", "payload")
             )
         with pytest.raises(SessionEnvelopeError, match="not valid JSON"):
             await storage.load()
@@ -134,7 +157,7 @@ def test_encrypted_sqlite_storage_atomic_overwrite(tmp_path) -> None:
         assert await storage.load() == {"auth_key": b"new", "dc_id": 2}
         with sqlite3.connect(path) as connection:
             count = connection.execute(
-                "SELECT count(*) FROM session_records WHERE name = ?", ("default",)
+                "SELECT count(*) FROM session_domains WHERE domain = ?", ("payload",)
             ).fetchone()[0]
         assert count == 1
 

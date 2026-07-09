@@ -58,6 +58,7 @@ from miniproto.media import (
     Destination,
     FileSource,
     MediaDownloadResult,
+    download_location_from_media,
     media_from_raw,
     upload_file,
 )
@@ -147,6 +148,8 @@ class Client:
         self._latest_server_salt: int | None = None
         self._salt_dirty = False
         self._salt_persist_task: asyncio.Task[None] | None = None
+        self._app_config_hash = 0
+        self._upload_limit_parts_cache: int | None = None
 
     async def __aenter__(self) -> Client:
         await self.connect()
@@ -238,6 +241,7 @@ class Client:
             result = await AuthService(
                 self.config, self._storage, self._invoke_auth_request
             ).sign_in_phone(phone, code_callback, password_callback)
+            await self._update_manager.sync_state()
         except BaseException as exc:
             _emit_client_event(
                 "client.sign_in_phone",
@@ -260,6 +264,7 @@ class Client:
             result = await AuthService(
                 self.config, self._storage, self._invoke_auth_request
             ).sign_in_bot(token)
+            await self._update_manager.sync_state()
         except BaseException as exc:
             _emit_client_event(
                 "client.sign_in_bot",
@@ -578,6 +583,13 @@ class Client:
                         upload_kwargs["flood_sleep_threshold"] = file_options[
                             "flood_sleep_threshold"
                         ]
+                    upload_limit_parts = file_options["upload_limit_parts"]
+                    if upload_limit_parts == "app_config":
+                        upload_kwargs[
+                            "max_file_parts"
+                        ] = await self._upload_limit_parts_from_app_config()
+                    elif upload_limit_parts is not None:
+                        upload_kwargs["max_file_parts"] = int(upload_limit_parts)
                     uploaded = await upload_file(
                         media_invoke,
                         file,
@@ -666,6 +678,10 @@ class Client:
         try:
             download_options = dict(options)
             download_options.pop("media_lanes", None)
+            if download_options.get("file_reference_refresher") is None:
+                download_options["file_reference_refresher"] = (
+                    self._message_file_reference_refresher(media)
+                )
             async with _MediaInvokeContext(
                 self,
                 _media_lane_count(options["media_lanes"], options["concurrency"]),
@@ -694,6 +710,52 @@ class Client:
             concurrency=options["concurrency"],
         )
         return result
+
+    async def _upload_limit_parts_from_app_config(self) -> int | None:
+        if self._upload_limit_parts_cache is not None:
+            return self._upload_limit_parts_cache
+        result = await self.invoke(functions.HelpGetAppConfig(hash=self._app_config_hash))
+        if isinstance(result, types.HelpAppConfig):
+            self._app_config_hash = result.hash
+            value = _json_object_int(result.config, "upload_max_fileparts")
+            if value is not None:
+                self._upload_limit_parts_cache = value
+            return value
+        if isinstance(result, types.HelpAppConfigNotModified):
+            return self._upload_limit_parts_cache
+        return None
+
+    def _message_file_reference_refresher(
+        self, media: object
+    ) -> Callable[[object], Awaitable[object]] | None:
+        raw_message = _raw_message_from_media(media)
+        if raw_message is None:
+            return None
+
+        async def refresh(_location: object) -> object:
+            refreshed = await self._refresh_message_media(raw_message)
+            return download_location_from_media(refreshed)
+
+        return refresh
+
+    async def _refresh_message_media(self, message: types.Message) -> object:
+        input_message = types.InputMessageID(id=message.id)
+        peer_id = message.peer_id
+        if isinstance(peer_id, types.PeerChannel):
+            peer = await self._peer_cache.resolve_peer(Peer(id=peer_id.channel_id, kind="channel"))
+            request: object = functions.ChannelsGetMessages(
+                channel=input_channel_from_peer(peer), id=(input_message,)
+            )
+        else:
+            request = functions.MessagesGetMessages(id=(input_message,))
+        result = await self.invoke(request)
+        await self._peer_cache.remember_raw_entities(result)
+        for candidate in _iter_result_messages(result):
+            if isinstance(candidate, types.Message) and candidate.id == message.id:
+                return candidate
+        raise RpcError(
+            "refreshed message did not include the requested media", request="messages.getMessages"
+        )
 
     def _apply_media_config_defaults(self, kwargs: dict[str, Any]) -> None:
         if "concurrency" not in kwargs and self.config.media_concurrency is not None:
@@ -835,7 +897,18 @@ class Client:
                     error_type=type(exc).__name__,
                 )
                 raise
-            except (AuthKeyNotFound, AuthKeyRegenerationRequired):
+            except AuthKeyRegenerationRequired:
+                await drop_sender(sender)
+                _emit_rpc_event(
+                    started,
+                    outcome="error",
+                    request=request_name,
+                    attempts=attempts + 1,
+                    retryable=retryable,
+                    error_type="AuthKeyRegenerationRequired",
+                )
+                raise
+            except AuthKeyNotFound:
                 await clear_invalid_auth_key(self._storage, self.config)
                 await drop_sender(sender)
                 _emit_rpc_event(
@@ -1609,6 +1682,7 @@ _SEND_FILE_OPTION_DEFAULTS: dict[str, object] = {
     "flood_sleep_threshold": None,
     "retry": None,
     "media_lanes": 2,
+    "upload_limit_parts": None,
 }
 
 _DOWNLOAD_MEDIA_OPTION_DEFAULTS: dict[str, object] = {
@@ -1657,12 +1731,46 @@ def _send_file_options(kwargs: dict[str, Any]) -> dict[str, Any]:
     options["part_size"] = int(options["part_size"])
     options["concurrency"] = int(options["concurrency"])
     options["max_retries"] = int(options["max_retries"])
+    if options["upload_limit_parts"] is not None and options["upload_limit_parts"] != "app_config":
+        options["upload_limit_parts"] = int(options["upload_limit_parts"])
     if options["media_lanes"] is not None:
         options["media_lanes"] = int(options["media_lanes"])
     options["send_options"] = {
         name: kwargs.get(name, default) for name, default in _SEND_MEDIA_OPTION_DEFAULTS.items()
     }
     return options
+
+
+def _json_object_int(raw: object, key: str) -> int | None:
+    if not isinstance(raw, types.JsonObject):
+        return None
+    for item in raw.value:
+        if not isinstance(item, types.JsonObjectValue) or item.key != key:
+            continue
+        value = item.value
+        if isinstance(value, types.JsonNumber):
+            return int(value.value)
+        if isinstance(value, types.JsonString):
+            with suppress(ValueError):
+                return int(value.value)
+    return None
+
+
+def _raw_message_from_media(media: object) -> types.Message | None:
+    if isinstance(media, types.Message):
+        return media
+    if isinstance(media, Media):
+        return _raw_message_from_media(media.raw)
+    return None
+
+
+def _iter_result_messages(result: object) -> tuple[object, ...]:
+    messages = getattr(result, "messages", ())
+    if isinstance(messages, tuple):
+        return messages
+    if isinstance(messages, list):
+        return tuple(messages)
+    return ()
 
 
 def _download_media_options(kwargs: dict[str, Any]) -> dict[str, Any]:
