@@ -87,3 +87,75 @@ Information already present elsewhere (README, AGENTS, PLAN, PROGRESS, plans fol
 - Split encrypted SQLite domains cut write amplification, but the compatibility contract matters: arbitrary legacy mapping payloads still round-trip through a generic payload domain, while typed `SessionRecord` gets auth/peers/update/metadata domains. Future migrations should preserve that exact-map escape hatch until a deliberate storage-version bump removes it.
 - Upload part ceilings are not just a constant. The historical 4000-part default remains the conservative SDK fallback, but premium/server-side app config can raise it. Growing a too-small caller `part_size` toward 512 KiB is a convenience, not a license to accept arbitrary part geometry; Telegram alignment and part-count legality still need to be validated before upload starts.
 - Live integration tests acted as an encrypted-traffic parser fuzzer in this wave. The ordinary unit suite passed before the abridged parser fix, but live auth/message/media calls all failed with the same reconnect-limit symptom. When a transport parser changes, keep one live smoke run in the verification matrix if credentials are available; otherwise explicitly mark the gap.
+
+## 2026-07-09 - EDM115 - "Download speed improvements"
+Currently, uploads are -/+ on-par with top libs but downloads are 3x worst.  
+Before I can actually come up with a fix for that, I had an idea.  
+Every user can open multiple sessions, right ? (ex phone and laptop). Bots too afaik.  
+Wouldn't it be possible to just split the download across multiple sessions ? The sole requirements is to see if FloodWait's are correlated to a session or account, and to which degree (ex being rate-limited on session1 doesn't auto rate-limit you on session2 but increases your likelihood so you don't just open 400 sessions at once).  
+Since we download a file in chunks, we could just create a pool of multiple sessions (workers). We would need to check first the file size, for ex a file < 100 MiB might not require more than 1 session but a 2 GiB might benefit from 4, idk.  
+Then, we have the queue of all chunks. Let's say we have 3 sessions in the pool. We split equally the chunks to all 3 sessions. There's actually 2 sub-queues : one that is the worker's immediate pool that it can grab into, containing let's say 25 chunks, and a secondary pool with the rest of its work, planned for later. We would also need to know if requesting non-contiguous chunks is worst in perf than same-block chunks (read : do we randomize the queue or keep it sorted).  
+Then, there's an orchestrator that distributes the content of the secondary queue into the worker's primary queues as they ingest and complete work. It monitors for FloodWait's and pauses the primary queue ingestion when a worker encounters it, and moves parts of its secondary queue equally to other's secondary queues to level the work time across all workers.
+When worker2 have no more work left in the secondary queue and worker1 is in rate-limit, any task of worker1's secondary queue can be split equally by time it'll take on other worker's secondary queues. If worker2 have no more tasks at all, it can ingest remaining tasks from all other queues given that it doesn't perform worse than potential non-contiguous blocks penalties.  
+Uploads will probably never benefit from this as I don't believe you can upload chunks of the same file from multiple sessions.  
+This behavior wouldn't be the default but rather an option that users can toggle on or not.
+
+```text
+┌────────────────────────────── Optional multi-session download ───────────────────────────────┐
+│                                                                                              │
+│  Large file                                                                                  │
+│  ┌────────────────────────────────────────────────────────────────────────────────────────┐  │
+│  │ [00][01][02][03][04][05][06][07][08][09][10][11][12][13][14][15][16][17] ... [NN]      │  │
+│  └────────────────────────────────────────────────────────────────────────────────────────┘  │
+│                                           │                                                  │
+│                                           ▼                                                  │
+│                                ┌────────────────────┐                                        │
+│                                │    Orchestrator    │                                        │
+│                                │ split / monitor /  │                                        │
+│                                │ refill / rebalance │                                        │
+│                                └─────────┬──────────┘                                        │
+│             ┌────────────────────────────┼────────────────────────────┐                      │
+│             ▼                            ▼                            ▼                      │
+│  ┌──────────────────────┐     ┌──────────────────────┐     ┌──────────────────────┐          │
+│  │ Session A            │     │ Session B            │     │ Session C            │          │
+│  │                      │     │                      │     │                      │          │
+│  │ now:   [00][01][02]  │     │ now:   [06][07][08]  │     │ now:   [12][13][14]  │          │
+│  │ later: [03][04][05]  │     │ later: [09][10][11]  │     │ later: [15][16][17]  │          │
+│  │                      │     │                      │     │                      │          │
+│  │ status: downloading  │     │ status: downloading  │     │ status: downloading  │          │
+│  └──────────┬───────────┘     └──────────┬───────────┘     └──────────┬───────────┘          │
+│             │                            │                            │                      │
+│             ▼                            ▼                            ▼                      │
+│        ┌─────────┐                  ┌─────────┐                  ┌─────────┐                 │
+│        │ chunks  │                  │ chunks  │                  │ chunks  │                 │
+│        └────┬────┘                  └────┬────┘                  └────┬────┘                 │
+│             │                            │                            │                      │
+│             └──────────────┬─────────────┴─────────────┬──────────────┘                      │
+│                            ▼                           ▼                                     │
+│                  ┌────────────────────────────────────────┐                                  │
+│                  │             Final assembler            │                                  │
+│                  │       place chunks back by offset      │                                  │
+│                  └────────────────────┬───────────────────┘                                  │
+│                                       ▼                                                      │
+│                              ┌─────────────────┐                                             │
+│                              │ Downloaded file │                                             │
+│                              └─────────────────┘                                             │
+│                                                                                              │
+│  Example disturbance:                                                                        │
+│    Session B hits FloodWait                                                                  │
+│              │                                                                               │
+│              ▼                                                                               │
+│        ┌───────────┐                                                                         │
+│        │ B paused  │                                                                         │
+│        └─────┬─────┘                                                                         │
+│              │                                                                               │
+│              └──────────► Orchestrator shifts B's remaining work to A/C when beneficial      │
+│                                                                                              │
+└──────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+## 2026-07-09 - GPT-5 - Codex - "Download speed improvements feasibility"
+- Same-auth-key multi-session downloads are already the current miniproto shape, not a missing novel lever: `Client.download_media()` defaults to `media_lanes=2` and `concurrency=6`, each media lane builds a fresh sender session ID, and refs checked here (mtcute 2x3, MTKruto 2x2, grammers 4 workers, gotd `WithThreads(6)`) all split one file across concurrent `upload.getFile` requests.
+- The unproven/risky variant is multiple independent permanent auth keys/device sessions for one actor. Telegram docs and live notes both point at account-tier/method/DC pacing (`FLOOD_PREMIUM_WAIT`, generic `upload.getFile` budgets), so treat it as a benchmark-only experiment with pre-existing session files and hard caps, not public API/default behavior.
+- Recommended next lever stays measurement-first pacing: record flood error names per worker/session, standalone bot/user cold downloads, 512 KiB vs 1 MiB under post-fix conditions, and only then test multi-client auth-key sharding for scaling.
+- Implemented the experiment as `tools/bench/benchmark_multi_session_download.py` with a second explicit guard (`MINIPROTO_MULTI_SESSION_DOWNLOAD_BENCH=1` plus `MINIPROTO_LIVE_BENCH=1`), contiguous 1 MiB-aligned shard planning, per-session default `concurrency=1`/`media_lanes=1` to isolate auth-key scaling, duplicate auth-key detection that aborts by default, aggregate flood counters, JSON output, optional assembly, and offline tests in `tests/test_multi_session_download_benchmark.py`.
