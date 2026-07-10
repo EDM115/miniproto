@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import logging
 import mimetypes
+import tempfile
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterable, Mapping
 from contextlib import suppress
 from dataclasses import replace
+from pathlib import Path
 from typing import Any, TypeVar, cast, overload
 
 from miniproto.auth.bootstrap import (
@@ -63,6 +66,11 @@ from miniproto.media import (
     upload_file,
 )
 from miniproto.media import download_media as download_media_file
+from miniproto.media.multi_session import (
+    assemble_download_parts,
+    download_session_count,
+    plan_download_ranges,
+)
 from miniproto.media.upload import DEFAULT_UPLOAD_CONCURRENCY
 from miniproto.messages import (
     make_random_id,
@@ -126,11 +134,12 @@ class Client:
     This implementation wires lifecycle, auth, raw invocation, updates, peer/message helpers, and protocol-core media transfer primitives while keeping framework-level behavior out of the SDK.
     """
 
-    def __init__(self, config: ClientConfig) -> None:
+    def __init__(self, config: ClientConfig, *, _updates_enabled: bool = True) -> None:
         self.config = config
-        self._storage: SessionStorage = _CachedSessionStorage(
-            config.session_storage or InMemorySessionStorage()
-        )
+        self._session_storage_backend = config.session_storage or InMemorySessionStorage()
+        self._storage: SessionStorage = _CachedSessionStorage(self._session_storage_backend)
+        self._updates_enabled = _updates_enabled
+        self._bot_token = config.bot_token
         self._connected = False
         self._connect_lock = asyncio.Lock()
         self._peer_cache = PeerCache(config, self._storage, self.invoke)
@@ -150,6 +159,8 @@ class Client:
         self._salt_persist_task: asyncio.Task[None] | None = None
         self._app_config_hash = 0
         self._upload_limit_parts_cache: int | None = None
+        self._auxiliary_download_clients: dict[int, Client] = {}
+        self._multi_session_download_lock = asyncio.Lock()
 
     async def __aenter__(self) -> Client:
         await self.connect()
@@ -168,7 +179,8 @@ class Client:
         started = time.perf_counter()
         async with self._connect_lock:
             self._connected = True
-            await self._update_manager.start()
+            if self._updates_enabled:
+                await self._update_manager.start()
         _emit_client_event(
             "client.connect",
             started,
@@ -182,10 +194,11 @@ class Client:
         async with self._connect_lock:
             self._connected = False
             errors: list[BaseException] = []
-            try:
-                await self._update_manager.stop()
-            except BaseException as exc:
-                errors.append(exc)
+            if self._updates_enabled:
+                try:
+                    await self._update_manager.stop()
+                except BaseException as exc:
+                    errors.append(exc)
             dispatch_error = await self._stop_receive_dispatch()
             if dispatch_error is not None:
                 errors.append(dispatch_error)
@@ -205,6 +218,12 @@ class Client:
                 errors.append(exc)
             try:
                 await self._close_media_pools()
+            except BaseException as exc:
+                errors.append(exc)
+            try:
+                await self._disconnect_auxiliary_download_clients(
+                    tuple(self._auxiliary_download_clients.values())
+                )
             except BaseException as exc:
                 errors.append(exc)
             try:
@@ -258,13 +277,15 @@ class Client:
 
     async def sign_in_bot(self, token: str) -> object:
         started = time.perf_counter()
+        self._bot_token = token
         await self.connect()
         await self._ensure_authorization_key()
         try:
             result = await AuthService(
                 self.config, self._storage, self._invoke_auth_request
             ).sign_in_bot(token)
-            await self._update_manager.sync_state()
+            if self._updates_enabled:
+                await self._update_manager.sync_state()
         except BaseException as exc:
             _emit_client_event(
                 "client.sign_in_bot",
@@ -676,21 +697,25 @@ class Client:
         self._apply_media_config_defaults(kwargs)
         options = _download_media_options(kwargs)
         try:
-            download_options = dict(options)
-            download_options.pop("media_lanes", None)
-            if download_options.get("file_reference_refresher") is None:
-                download_options["file_reference_refresher"] = (
-                    self._message_file_reference_refresher(media)
-                )
-            async with _MediaInvokeContext(
-                self,
-                _media_lane_count(options["media_lanes"], options["concurrency"]),
-                kind="download",
-                dc_id=_resolve_media_dc_id(media),
-            ) as media_invoke:
-                result = await download_media_file(
-                    media_invoke, media, destination, **download_options
-                )
+            use_multi_session = bool(options.pop("multi_session"))
+            total_size = _resolve_download_total_size(media, options.get("total_size"))
+            if use_multi_session and await self._can_use_multi_session_download(
+                options, total_size
+            ):
+                assert total_size is not None
+                session_count = download_session_count(total_size)
+                if session_count > 1:
+                    result = await self._download_media_multi_session(
+                        media,
+                        destination,
+                        options,
+                        total_size=total_size,
+                        session_count=session_count,
+                    )
+                else:
+                    result = await self._download_media_single(media, destination, options)
+            else:
+                result = await self._download_media_single(media, destination, options)
         except BaseException as exc:
             _emit_client_event(
                 "client.download_media",
@@ -710,6 +735,221 @@ class Client:
             concurrency=options["concurrency"],
         )
         return result
+
+    async def _download_media_single(
+        self, media: object, destination: Destination, options: Mapping[str, Any]
+    ) -> MediaDownloadResult:
+        download_options = dict(options)
+        download_options.pop("media_lanes", None)
+        if download_options.get("file_reference_refresher") is None:
+            download_options["file_reference_refresher"] = self._message_file_reference_refresher(
+                media
+            )
+        async with _MediaInvokeContext(
+            self,
+            _media_lane_count(options["media_lanes"], options["concurrency"]),
+            kind="download",
+            dc_id=_resolve_media_dc_id(media),
+        ) as media_invoke:
+            return await download_media_file(media_invoke, media, destination, **download_options)
+
+    async def _can_use_multi_session_download(
+        self, options: Mapping[str, Any], total_size: int | None
+    ) -> bool:
+        record = load_session_record(await self._storage.load(), self.config.dc_id)
+        if record.user is None or not record.user.is_bot:
+            _emit_multi_session_ignored("account_is_not_bot")
+            return False
+        if total_size is None or total_size <= 0:
+            _emit_multi_session_ignored("unknown_file_size")
+            return False
+        if int(options["offset"]) != 0 or options["limit"] is not None or bool(options["resume"]):
+            _emit_multi_session_ignored("partial_or_resumed_download")
+            return False
+        return True
+
+    async def _download_media_multi_session(
+        self,
+        media: object,
+        destination: Destination,
+        options: Mapping[str, Any],
+        *,
+        total_size: int,
+        session_count: int,
+    ) -> MediaDownloadResult:
+        async with self._multi_session_download_lock:
+            auxiliaries = await self._ensure_auxiliary_download_clients(session_count)
+            available = 1 + len(auxiliaries)
+            active_count = (
+                4 if session_count == 4 and available >= 4 else 2 if available >= 2 else 1
+            )
+            if active_count < session_count:
+                _emit_multi_session_ignored(
+                    "auxiliary_sessions_unavailable",
+                    requested_sessions=session_count,
+                    active_sessions=active_count,
+                )
+            active_auxiliaries = auxiliaries[: active_count - 1]
+            if active_count == 1:
+                return await self._download_media_single(media, destination, options)
+            clients = (self, *active_auxiliaries)
+            ranges = plan_download_ranges(total_size, session_count=active_count)
+            progress = options.get("progress")
+            progress_by_worker = [0] * active_count
+            progress_lock = asyncio.Lock()
+
+            async def report(worker_index: int, current: int, _total: int | None) -> None:
+                if progress is None:
+                    return
+                async with progress_lock:
+                    progress_by_worker[worker_index] = current
+                    aggregate = sum(progress_by_worker)
+                callback_result = progress(aggregate, total_size)
+                if inspect.isawaitable(callback_result):
+                    await callback_result
+
+            try:
+                with tempfile.TemporaryDirectory(prefix="miniproto-download-") as temporary:
+                    part_paths = tuple(
+                        Path(temporary) / f"worker-{item.index}.part" for item in ranges
+                    )
+
+                    async def download_worker(
+                        worker_client: Client, worker_index: int
+                    ) -> MediaDownloadResult:
+                        item = ranges[worker_index]
+                        worker_options = dict(options)
+                        worker_options.update(
+                            offset=item.offset,
+                            limit=item.limit,
+                            total_size=total_size,
+                            resume=False,
+                            progress=lambda current, total: report(worker_index, current, total),
+                            part_size=MAX_DOWNLOAD_CHUNK_SIZE,
+                            concurrency=1,
+                            media_lanes=1,
+                            adaptive_concurrency=True,
+                            adaptive_part_size=False,
+                            max_part_size=MAX_DOWNLOAD_CHUNK_SIZE,
+                            max_in_flight_bytes=None,
+                            range_cache=False,
+                            read_ahead_bytes=0,
+                        )
+                        return await worker_client._download_media_single(
+                            media, part_paths[worker_index], worker_options
+                        )
+
+                    results = await asyncio.gather(
+                        *(
+                            download_worker(worker_client, index)
+                            for index, worker_client in enumerate(clients)
+                        )
+                    )
+                    for item, result in zip(ranges, results, strict=True):
+                        if result.bytes_downloaded != item.limit:
+                            raise RuntimeError(
+                                f"multi-session worker {item.index} size mismatch: expected {item.limit}, got {result.bytes_downloaded}"
+                            )
+                    resolved_destination, data = await asyncio.to_thread(
+                        assemble_download_parts, part_paths, destination, expected_size=total_size
+                    )
+                    return MediaDownloadResult(
+                        bytes_downloaded=total_size,
+                        offset=0,
+                        destination=resolved_destination,
+                        data=data,
+                        raw_location=download_location_from_media(media),
+                    )
+            finally:
+                await self._disconnect_auxiliary_download_clients(auxiliaries)
+
+    async def _ensure_auxiliary_download_clients(self, session_count: int) -> tuple[Client, ...]:
+        primary_record = load_session_record(await self._storage.load(), self.config.dc_id)
+        primary_user = primary_record.user
+        if primary_user is None or not primary_user.is_bot:
+            return ()
+        sibling = getattr(self._session_storage_backend, "sibling", None)
+        if not callable(sibling):
+            _emit_multi_session_ignored("session_storage_has_no_sibling_support")
+            return ()
+        clients: list[Client] = []
+        for index in range(1, session_count):
+            auxiliary = self._auxiliary_download_clients.get(index)
+            if auxiliary is None:
+                auxiliary_storage = sibling(f"download-{index}")
+                auxiliary = Client(
+                    replace(
+                        self.config, session_storage=auxiliary_storage, bot_token=self._bot_token
+                    ),
+                    _updates_enabled=False,
+                )
+                auxiliary._sender_factory = self._sender_factory
+                auxiliary_record = load_session_record(
+                    await auxiliary._storage.load(), self.config.dc_id
+                )
+                if auxiliary_record.user is not None and (
+                    not auxiliary_record.user.is_bot or auxiliary_record.user.id != primary_user.id
+                ):
+                    _emit_multi_session_ignored(
+                        "auxiliary_session_identity_mismatch", auxiliary_index=index
+                    )
+                    await auxiliary._storage.close()
+                    break
+                if auxiliary_record.auth_key is None or auxiliary_record.user is None:
+                    if self._bot_token is None:
+                        _emit_multi_session_ignored(
+                            "bot_token_required_for_auxiliary_session", auxiliary_index=index
+                        )
+                        await auxiliary._storage.close()
+                        break
+                    try:
+                        await auxiliary.sign_in_bot(self._bot_token)
+                    except asyncio.CancelledError:
+                        raise
+                    except BaseException as exc:
+                        _emit_multi_session_ignored(
+                            "auxiliary_session_authorization_failed",
+                            auxiliary_index=index,
+                            error_type=type(exc).__name__,
+                        )
+                        await auxiliary.disconnect()
+                        break
+                    auxiliary_record = load_session_record(
+                        await auxiliary._storage.load(), self.config.dc_id
+                    )
+                    if (
+                        auxiliary_record.auth_key is None
+                        or auxiliary_record.user is None
+                        or not auxiliary_record.user.is_bot
+                        or auxiliary_record.user.id != primary_user.id
+                    ):
+                        _emit_multi_session_ignored(
+                            "auxiliary_session_identity_mismatch", auxiliary_index=index
+                        )
+                        await auxiliary.disconnect()
+                        break
+                self._auxiliary_download_clients[index] = auxiliary
+            if not auxiliary.is_connected:
+                await auxiliary.connect()
+            clients.append(auxiliary)
+        return tuple(clients)
+
+    async def _disconnect_auxiliary_download_clients(self, clients: Iterable[Client]) -> None:
+        connected = tuple(client for client in clients if client.is_connected)
+        if connected:
+            results = await asyncio.gather(
+                *(client.disconnect() for client in connected), return_exceptions=True
+            )
+            for client, result in zip(connected, results, strict=True):
+                if isinstance(result, BaseException):
+                    emit_event(
+                        _LOGGER,
+                        logging.ERROR,
+                        "client.download_media.auxiliary_disconnect_failed",
+                        outcome="error",
+                        error_type=type(result).__name__,
+                        auxiliary_dc_id=client.config.dc_id,
+                    )
 
     async def _upload_limit_parts_from_app_config(self) -> int | None:
         if self._upload_limit_parts_cache is not None:
@@ -811,7 +1051,7 @@ class Client:
                 raw_request,
                 self.config,
                 needs_init=needs_init,
-                without_updates=without_updates and needs_init,
+                without_updates=(without_updates or not self._updates_enabled) and needs_init,
             )
             try:
                 raw_result = await sender.request(
@@ -1028,7 +1268,8 @@ class Client:
                     on_salt_change=self._on_salt_change,
                 )
                 record_metric("client.sender_builds", 1)
-                self._start_receive_dispatch(self._sender)
+                if self._updates_enabled:
+                    self._start_receive_dispatch(self._sender)
             return self._sender
 
     async def _ensure_authorization_key(self) -> None:
@@ -1712,6 +1953,7 @@ _DOWNLOAD_MEDIA_OPTION_DEFAULTS: dict[str, object] = {
     "read_ahead_bytes": 0,
     "file_reference_refresher": None,
     "media_lanes": 2,
+    "multi_session": False,
 }
 
 
@@ -1798,6 +2040,7 @@ def _download_media_options(kwargs: dict[str, Any]) -> dict[str, Any]:
         options["flood_sleep_threshold"] = int(options["flood_sleep_threshold"])
     options["concurrency"] = int(options["concurrency"])
     options["adaptive_concurrency"] = bool(options["adaptive_concurrency"])
+    options["multi_session"] = bool(options["multi_session"])
     if options["media_lanes"] is not None:
         options["media_lanes"] = int(options["media_lanes"])
     return options
@@ -1808,6 +2051,30 @@ def _media_lane_count(configured: Any, concurrency: Any) -> int:
     if lanes < 0:
         raise ValueError("media_lanes must be non-negative")
     return lanes
+
+
+def _resolve_download_total_size(media: object, configured: object) -> int | None:
+    if configured is not None:
+        return int(cast(Any, configured))
+    resolved = (
+        media
+        if isinstance(media, Media)
+        else media_from_file_id(media)
+        if is_file_id(media)
+        else media_from_raw(media)
+    )
+    return resolved.size if resolved is not None else None
+
+
+def _emit_multi_session_ignored(reason: str, **fields: object) -> None:
+    emit_event(
+        _LOGGER,
+        logging.ERROR,
+        "client.download_media.multi_session_ignored",
+        outcome="error",
+        reason=reason,
+        **fields,
+    )
 
 
 def _message_id_tuple(message_ids: int | Iterable[int]) -> tuple[int, ...]:

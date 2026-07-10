@@ -22,6 +22,11 @@ def test_client_config_validates_api_id() -> None:
         ClientConfig(api_id=0, api_hash="hash")
 
 
+def test_client_config_hides_bot_token_from_repr() -> None:
+    config = ClientConfig(api_id=1, api_hash="hash", bot_token="123:secret")  # noqa: S106
+    assert "123:secret" not in repr(config)
+
+
 def test_public_api_imports() -> None:
     config = ClientConfig(api_id=1, api_hash="hash")
     client = Client(config)

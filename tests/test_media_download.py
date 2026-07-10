@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import logging
 import random
 from dataclasses import dataclass, field
-from typing import Any
+from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
+import miniproto.client as client_module
 import miniproto.media.download as media_download
 from miniproto import (
     AuthKey,
@@ -17,6 +20,7 @@ from miniproto import (
     InMemorySessionStorage,
     Media,
     SessionRecord,
+    UserIdentity,
     encode_file_id,
     event_loop,
 )
@@ -33,6 +37,7 @@ from miniproto.media import (
     CdnIntegrityError,
     DownloadRangeCache,
     MediaDownloadError,
+    MediaDownloadResult,
     decrypt_cdn_chunk,
     download_file,
     download_media,
@@ -41,6 +46,7 @@ from miniproto.observability import InMemoryMetrics, get_metrics_sink, set_metri
 from miniproto.raw import functions, types
 
 AUTH_KEY = b"m" * 256
+BOT_CREDENTIAL = "42:secret"
 
 
 @dataclass(slots=True)
@@ -181,6 +187,17 @@ def storage_with_auth() -> InMemorySessionStorage:
             dc_id=2,
             auth_key=AuthKey(dc_id=2, key=AUTH_KEY, key_id=123),
             dc_options=(DCOption(id=2, ip_address="127.0.0.1", port=443),),
+        )
+    )
+
+
+def storage_with_identity(*, is_bot: bool) -> InMemorySessionStorage:
+    return InMemorySessionStorage(
+        SessionRecord(
+            dc_id=2,
+            auth_key=AuthKey(dc_id=2, key=AUTH_KEY, key_id=123),
+            dc_options=(DCOption(id=2, ip_address="127.0.0.1", port=443),),
+            user=UserIdentity(id=42, is_bot=is_bot),
         )
     )
 
@@ -1490,5 +1507,217 @@ def test_client_download_media_rejects_unknown_options() -> None:
         )
         with pytest.raises(TypeError, match="unsupported download_media options"):
             await client.download_media(Media(id=1, location=document_location()), unsupported=True)
+
+    run(scenario())
+
+
+@pytest.mark.parametrize(
+    ("size", "expected_sessions"), [(50 * 1024 * 1024 + 1, 2), (250 * 1024 * 1024 + 1, 4)]
+)
+def test_client_download_media_routes_bot_multi_session_by_size(
+    size: int, expected_sessions: int, monkeypatch
+) -> None:
+    async def scenario() -> None:
+        client = Client(
+            ClientConfig(
+                api_id=1, api_hash="hash", session_storage=storage_with_identity(is_bot=True)
+            )
+        )
+        calls: list[tuple[int, int]] = []
+
+        async def fake_multi(media, destination, options, *, total_size, session_count):
+            del media, destination, options
+            calls.append((total_size, session_count))
+            return MediaDownloadResult(bytes_downloaded=total_size, offset=0, data=b"multi")
+
+        monkeypatch.setattr(client, "_download_media_multi_session", fake_multi)
+        result = await client.download_media(
+            Media(id=10, size=size, location=document_location()), multi_session=True
+        )
+        assert result.data == b"multi"
+        assert calls == [(size, expected_sessions)]
+
+    run(scenario())
+
+
+def test_client_download_media_ignores_multi_session_for_user_with_error_log(monkeypatch) -> None:
+    async def scenario() -> None:
+        sender = FakeSender([upload_file_part(b"abc")])
+        client = Client(
+            ClientConfig(
+                api_id=1, api_hash="hash", session_storage=storage_with_identity(is_bot=False)
+            )
+        )
+        client._sender = sender
+        events: list[tuple[int, str, dict[str, object]]] = []
+
+        def capture_event(logger, level, event, **fields):
+            del logger
+            events.append((level, event, fields))
+
+        monkeypatch.setattr("miniproto.client.emit_event", capture_event)
+        await client.connect()
+        result = await client.download_media(
+            Media(id=10, size=75 * 1024 * 1024, location=document_location()),
+            multi_session=True,
+            concurrency=1,
+            media_lanes=0,
+        )
+        assert result.data == b"abc"
+        ignored = [
+            item for item in events if item[1] == "client.download_media.multi_session_ignored"
+        ]
+        assert len(ignored) == 1
+        assert ignored[0][0] == logging.ERROR
+        assert ignored[0][2]["reason"] == "account_is_not_bot"
+        await client.disconnect()
+
+    run(scenario())
+
+
+def test_client_small_bot_download_does_not_create_auxiliary_session() -> None:
+    async def scenario() -> None:
+        sender = FakeSender([upload_file_part(b"abc")])
+        client = Client(
+            ClientConfig(
+                api_id=1, api_hash="hash", session_storage=storage_with_identity(is_bot=True)
+            )
+        )
+        client._sender = sender
+        await client.connect()
+        result = await client.download_media(
+            Media(id=10, size=5 * 1024 * 1024, location=document_location()),
+            multi_session=True,
+            concurrency=1,
+            media_lanes=0,
+        )
+        assert result.data == b"abc"
+        assert client._auxiliary_download_clients == {}
+        await client.disconnect()
+
+    run(scenario())
+
+
+def test_client_lazily_creates_reuses_and_disconnects_auxiliary_bot_sessions(monkeypatch) -> None:
+    async def scenario() -> None:
+        storage = storage_with_identity(is_bot=True)
+        client = Client(
+            ClientConfig(
+                api_id=1, api_hash="hash", session_storage=storage, bot_token=BOT_CREDENTIAL
+            )
+        )
+        sign_ins: list[Client] = []
+
+        async def fake_sign_in_bot(auxiliary: Client, token: str) -> object:
+            assert token == BOT_CREDENTIAL
+            assert not auxiliary._updates_enabled
+            await auxiliary.connect()
+            assert auxiliary._update_manager._task is None
+            index = len(sign_ins) + 1
+            await auxiliary._storage.save(
+                SessionRecord(
+                    dc_id=2,
+                    auth_key=AuthKey(dc_id=2, key=bytes([index]) * 256, key_id=index),
+                    dc_options=(DCOption(id=2, ip_address="127.0.0.1", port=443),),
+                    user=UserIdentity(id=42, is_bot=True),
+                )
+            )
+            sign_ins.append(auxiliary)
+            return object()
+
+        monkeypatch.setattr(Client, "sign_in_bot", fake_sign_in_bot)
+        first = await client._ensure_auxiliary_download_clients(2)
+        assert len(first) == 1
+        assert len(sign_ins) == 1
+        await client._disconnect_auxiliary_download_clients(first)
+        assert not first[0].is_connected
+        auxiliaries = await client._ensure_auxiliary_download_clients(4)
+        assert len(auxiliaries) == 3
+        assert auxiliaries[0] is first[0]
+        assert len(sign_ins) == 3
+        assert all(auxiliary.is_connected for auxiliary in auxiliaries)
+        await client._disconnect_auxiliary_download_clients(auxiliaries)
+        assert all(not auxiliary.is_connected for auxiliary in auxiliaries)
+
+    run(scenario())
+
+
+def test_auxiliary_client_initializes_sender_without_updates() -> None:
+    async def scenario() -> None:
+        sender = FakeSender([upload_file_part(b"abc")])
+        auxiliary = Client(
+            ClientConfig(
+                api_id=1, api_hash="hash", session_storage=storage_with_identity(is_bot=True)
+            ),
+            _updates_enabled=False,
+        )
+        auxiliary._sender = sender
+        await auxiliary.connect()
+        result = await auxiliary.invoke(
+            functions.UploadGetFile(
+                location=document_location(),
+                offset=0,
+                limit=1024,
+                precise=False,
+                cdn_supported=True,
+            )
+        )
+        assert isinstance(result, types.UploadFile)
+        assert isinstance(sender.requests[0], functions.InvokeWithoutUpdates)
+        assert auxiliary._update_manager._task is None
+        assert auxiliary._receive_dispatch_task is None
+        await auxiliary.disconnect()
+
+    run(scenario())
+
+
+def test_client_multi_session_download_splits_and_assembles_ranges(tmp_path, monkeypatch) -> None:
+    async def scenario() -> None:
+        primary = Client(
+            ClientConfig(
+                api_id=1, api_hash="hash", session_storage=storage_with_identity(is_bot=True)
+            )
+        )
+        auxiliary = Client(
+            ClientConfig(
+                api_id=1, api_hash="hash", session_storage=storage_with_identity(is_bot=True)
+            ),
+            _updates_enabled=False,
+        )
+        auxiliary._connected = True
+
+        async def fake_auxiliaries(session_count: int) -> tuple[Client, ...]:
+            assert session_count == 2
+            return (auxiliary,)
+
+        async def fake_single(
+            worker: Client, media: object, destination: object, options: dict[str, object]
+        ) -> MediaDownloadResult:
+            del worker, media
+            offset = cast(int, options["offset"])
+            limit = cast(int, options["limit"])
+            payload = bytes([offset // (1024 * 1024)]) * limit
+            assert isinstance(destination, Path)
+            destination.write_bytes(payload)
+            return MediaDownloadResult(
+                bytes_downloaded=limit, offset=offset, destination=destination
+            )
+
+        monkeypatch.setattr(primary, "_ensure_auxiliary_download_clients", fake_auxiliaries)
+        monkeypatch.setattr(Client, "_download_media_single", fake_single)
+        target = tmp_path / "assembled.bin"
+        result = await primary._download_media_multi_session(
+            Media(id=10, size=2 * 1024 * 1024, location=document_location()),
+            target,
+            client_module._download_media_options({}),
+            total_size=2 * 1024 * 1024,
+            session_count=2,
+        )
+        assert result.destination == target
+        assert result.bytes_downloaded == 2 * 1024 * 1024
+        payload = target.read_bytes()
+        assert payload[: 1024 * 1024] == b"\0" * (1024 * 1024)
+        assert payload[1024 * 1024 :] == b"\1" * (1024 * 1024)
+        assert not auxiliary.is_connected
 
     run(scenario())

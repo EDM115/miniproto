@@ -69,6 +69,7 @@ class ClientConfig:
     # closes at 60 s); keepalive pings keep them warm until then. None keeps
     # lanes open for the client's whole lifetime.
     media_idle_close: float | None = 120.0
+    bot_token: str | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
         if self.api_id <= 0:
@@ -99,3 +100,5 @@ class ClientConfig:
             raise ValueError("media_max_buffer_size must be positive when set")
         if self.media_idle_close is not None and self.media_idle_close <= 0:
             raise ValueError("media_idle_close must be positive when set")
+        if self.bot_token is not None and not self.bot_token:
+            raise ValueError("bot_token must not be empty when set")

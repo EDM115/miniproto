@@ -58,6 +58,13 @@ def test_in_memory_storage_preserves_mapping_payloads_and_copies() -> None:
     run(scenario())
 
 
+def test_in_memory_storage_reuses_named_siblings() -> None:
+    storage = InMemorySessionStorage()
+    first = storage.sibling("download-1")
+    assert first is storage.sibling("download-1")
+    assert first is not storage.sibling("download-2")
+
+
 def test_session_record_serialization_round_trips_dataclass_payload() -> None:
     record = sample_record()
     decoded = deserialize_session_data(serialize_session_data(record))
@@ -86,6 +93,25 @@ def test_encrypted_sqlite_storage_load_save_clear_close(tmp_path) -> None:
         await storage.close()
 
     run(scenario())
+
+
+def test_encrypted_sqlite_storage_uses_stable_sibling_paths_and_keys(tmp_path) -> None:
+    async def scenario() -> None:
+        storage = EncryptedSQLiteSessionStorage(tmp_path / "bot.sqlite", key="x" * 32)
+        sibling = storage.sibling("download-1")
+        assert sibling.path == tmp_path / "bot-download-1.sqlite"
+        await sibling.save({"auth_key": b"auxiliary"})
+        reopened = storage.sibling("download-1")
+        assert reopened.path == sibling.path
+        assert await reopened.load() == {"auth_key": b"auxiliary"}
+
+    run(scenario())
+
+
+@pytest.mark.parametrize("name", ["", ".", "../other", "download/1", "download\\1"])
+def test_session_storage_rejects_unsafe_sibling_names(name) -> None:
+    with pytest.raises(ValueError, match="sibling name"):
+        InMemorySessionStorage().sibling(name)
 
 
 def test_encrypted_sqlite_storage_splits_encrypted_rows_by_session_domain(tmp_path) -> None:

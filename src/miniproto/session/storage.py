@@ -7,6 +7,7 @@ import hmac
 import json
 import logging
 import os
+import re
 import secrets
 import sqlite3
 import time
@@ -46,6 +47,7 @@ CREATE TABLE IF NOT EXISTS session_domains (
 """
 _KNOWN_SESSION_DOMAINS = ("auth", "peers", "update_state", "metadata", "payload")
 _LOGGER = get_logger("session.storage")
+_SIBLING_NAME_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*\Z")
 
 
 @runtime_checkable
@@ -64,6 +66,15 @@ class InMemorySessionStorage:
         self._data: dict[str, Any] | None = (
             _copy_session_data(initial) if initial is not None else None
         )
+        self._siblings: dict[str, InMemorySessionStorage] = {}
+
+    def sibling(self, name: str) -> InMemorySessionStorage:
+        _validate_sibling_name(name)
+        storage = self._siblings.get(name)
+        if storage is None:
+            storage = InMemorySessionStorage()
+            self._siblings[name] = storage
+        return storage
 
     async def load(self) -> Mapping[str, Any] | None:
         started = time.perf_counter()
@@ -103,6 +114,22 @@ class EncryptedSQLiteSessionStorage:
             raise ValueError("EncryptedSQLiteSessionStorage key must be at least 16 bytes")
         self.path = Path(path)
         self._encryption_key, self._mac_key = _derive_keys(key_material)
+
+    def sibling(self, name: str) -> EncryptedSQLiteSessionStorage:
+        _validate_sibling_name(name)
+        suffix = self.path.suffix
+        path = self.path.with_name(f"{self.path.stem}-{name}{suffix}")
+        return self._from_derived_keys(path, self._encryption_key, self._mac_key)
+
+    @classmethod
+    def _from_derived_keys(
+        cls, path: Path, encryption_key: bytes, mac_key: bytes
+    ) -> EncryptedSQLiteSessionStorage:
+        storage = cls.__new__(cls)
+        storage.path = path
+        storage._encryption_key = encryption_key
+        storage._mac_key = mac_key
+        return storage
 
     async def load(self) -> Mapping[str, Any] | None:
         started = time.perf_counter()
@@ -260,6 +287,13 @@ class EncryptedSQLiteSessionStorage:
             raise SessionEnvelopeError("session envelope authentication failed")
         plaintext = _xor_bytes(ciphertext, _keystream(self._encryption_key, nonce, len(ciphertext)))
         return deserialize_session_data(plaintext)
+
+
+def _validate_sibling_name(name: str) -> None:
+    if _SIBLING_NAME_RE.fullmatch(name) is None:
+        raise ValueError(
+            "session sibling name must contain only letters, numbers, '.', '_', or '-'"
+        )
 
 
 def serialize_session_data(data: SessionPayload) -> bytes:
