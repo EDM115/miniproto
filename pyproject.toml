@@ -31,8 +31,8 @@ dependencies = [
 dev = [
   "maturin==1.14.1,<2.0",
   "pytest==9.1.1",
-  "ruff==0.15.20",
-  "ty==0.0.57",
+  "ruff==0.15.21",
+  "ty==0.0.59",
 ]
 
 [project.urls]
