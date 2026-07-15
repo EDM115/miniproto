@@ -33,7 +33,9 @@ Phase 2 models support auth keys, DC options, user identity, update state, peer 
 
 ## Redaction
 
-Secret-like values are redacted by key name before rendering helper output or RPC errors. The protected names include `api_hash`, `phone`, `auth_key`, `session_key`, `bot_token`, `password`, `proxy`, `raw_session`, and case-insensitive variants. Do not log raw session mappings directly; use the public error and redaction helpers when debugging.
+Secret-like values are redacted by key name before rendering helper output or RPC errors. The protected names include `api_hash`, `phone`, `auth_key`, `session_key`, `bot_token`, `password`, `proxy`, `raw_session`, and case-insensitive variants. Generated reprs for public configuration, session models, and auth-key exchange results also omit secret-bearing fields, including proxy configuration, storage objects, API hashes, bot tokens, auth-key bytes, DC secrets, phone numbers, raw peer payloads, and session metadata. Do not log raw session mappings directly; use the public error and redaction helpers when debugging.
+
+Field-level repr omission only makes ordinary dataclass reprs safer. It does not redact direct attribute access, `dataclasses.asdict()`, session serialization, pickling, or process memory; those paths intentionally retain the original values. Continue to use the redaction helpers for arbitrary mappings, generated raw requests, and other debug output.
 
 ## Operational Constraints
 

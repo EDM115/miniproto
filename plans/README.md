@@ -15,7 +15,7 @@ The sequence prioritizes correctness and security, keeps plans that touch the sa
 | 002 | [Validate inbound MTProto envelopes](002-validate-inbound-mtproto-envelopes.md) | P0 | L | None | Proposed | Rejects replay, wrong-session, malformed, and implausibly timed traffic before mutation |
 | 003 | [Validate Telegram DH and SRP groups](003-validate-dh-and-srp-groups.md) | P0 | M | None | Proposed | Closes weak-group acceptance in both authorization paths |
 | 004 | [Make session updates atomic and domain-incremental](004-atomic-domain-session-updates.md) | P0 | L | None | Proposed | Removes lost updates and becomes the storage foundation for 011 and 012 |
-| 005 | [Redact secrets from ordinary dataclass reprs](005-redact-secret-dataclass-reprs.md) | P0 | S | None | Proposed | Makes the existing SEC-001 completion claim true for ordinary Python repr |
+| 005 | [Redact secrets from ordinary dataclass reprs](005-redact-secret-dataclass-reprs.md) | P0 | S | None | Completed | Makes the existing SEC-001 completion claim true for ordinary Python repr |
 | 006 | [Bound native and fallback vector decoding](006-bound-native-vector-decodes.md) | P0 | M | None | Proposed | Prevents attacker-controlled allocation/iteration from impossible vector counts |
 | 007 | [Verify concurrent downloads have no holes](007-verify-concurrent-download-completion.md) | P0 | M | None | Proposed | Prevents silent sparse or truncated media success |
 | 008 | [Enforce the pending RPC cap atomically](008-enforce-pending-rpc-cap-atomically.md) | P0 | M | None | Proposed | Makes max_pending_rpcs effective during cold-start bursts |
@@ -23,7 +23,7 @@ The sequence prioritizes correctness and security, keeps plans that touch the sa
 | 010 | [Lazy-load the generated raw API](010-lazy-load-generated-raw-api.md) | P1 | L | None | Proposed | Targets the largest measured startup-time and retained-memory cost |
 | 011 | [Align the runtime with the encrypted session default](011-align-encrypted-session-default.md) | P1 | M | 004 | Proposed | Promotes encrypted durable storage only after mutation correctness is fixed |
 | 012 | [Add in-memory indexes to the peer cache](012-index-peer-cache.md) | P2 | M | 004 | Proposed | Uses storage-domain revisions to eliminate repeated tuple scans safely |
-| 013 | [Migrate away from deprecated asyncio policies](013-migrate-event-loop-policy.md) | P2 | M | None | Proposed | Removes import side effects and prepares for Python 3.16 |
+| 013 | [Migrate away from deprecated asyncio policies](013-migrate-event-loop-policy.md) | P2 | M | None | In progress | Implementation and full correctness checks pass; runtime benchmark smoke remains |
 ## Dependency graph
 Hard dependencies only:
 > 004 atomic domain session updates -> 011 encrypted session default  

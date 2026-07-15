@@ -28,7 +28,7 @@ def _coerce_datetime(
 @dataclass(slots=True, frozen=True)
 class AuthKey:
     dc_id: int
-    key: bytes
+    key: bytes = field(repr=False)
     key_id: int | None = None
     created_at: datetime = field(default_factory=_utc_now)
     expires_at: datetime | None = None
@@ -54,7 +54,7 @@ class DCOption:
     media_only: bool = False
     tcpo_only: bool = False
     static: bool = False
-    secret: bytes | None = None
+    secret: bytes | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
         if self.id <= 0:
@@ -73,7 +73,7 @@ class UserIdentity:
     access_hash: int | None = None
     is_bot: bool = False
     username: str | None = None
-    phone: str | None = None
+    phone: str | None = field(default=None, repr=False)
     first_name: str | None = None
     last_name: str | None = None
 
@@ -101,9 +101,9 @@ class PeerCacheEntry:
     kind: PeerKind
     access_hash: int | None = None
     username: str | None = None
-    phone: str | None = None
+    phone: str | None = field(default=None, repr=False)
     updated_at: datetime = field(default_factory=_utc_now)
-    raw: Mapping[str, Any] | None = None
+    raw: Mapping[str, Any] | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
         if self.id <= 0:
@@ -124,7 +124,7 @@ class SessionRecord:
     user: UserIdentity | None = None
     update_state: UpdateState = field(default_factory=UpdateState)
     peers: tuple[PeerCacheEntry, ...] = ()
-    metadata: Mapping[str, Any] = field(default_factory=dict)
+    metadata: Mapping[str, Any] = field(default_factory=dict, repr=False)
 
     def __post_init__(self) -> None:
         if self.version != SESSION_RECORD_VERSION:

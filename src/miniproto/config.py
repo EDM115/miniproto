@@ -18,7 +18,7 @@ class TransportConfig:
     reconnect_backoff_initial: float = 0.25
     reconnect_backoff_max: float = 5.0
     max_payload_size: int = 16 * 1024 * 1024
-    proxy: str | None = None
+    proxy: str | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
         if self.connect_timeout <= 0:
@@ -49,8 +49,8 @@ class DeviceInfo:
 @dataclass(slots=True, frozen=True)
 class ClientConfig:
     api_id: int
-    api_hash: str
-    session_storage: SessionStorage | None = None
+    api_hash: str = field(repr=False)
+    session_storage: SessionStorage | None = field(default=None, repr=False)
     transport: TransportConfig = field(default_factory=TransportConfig)
     device: DeviceInfo = field(default_factory=DeviceInfo)
     update_queue_size: int = 1000

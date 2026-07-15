@@ -8,6 +8,11 @@ This file is the command reference for routine `miniproto` development. Run comm
 - Rust toolchain with Cargo, rustfmt, and Clippy.
 - PyPI and crates.io credentials only for release publishing commands.
 
+## Event Loop Ownership
+
+Importing `miniproto` is side-effect free with respect to asyncio: it does not import `uvloop` or `winloop` and does not install a global event-loop policy. Use `miniproto.event_loop.run(coro)` for script entry points, or `asyncio.Runner(loop_factory=miniproto.event_loop.new_event_loop)` when you need direct Runner ownership. Library and embedded callers should keep using their application-owned loop.  
+`event_loop.install()` remains only as an explicit deprecated compatibility helper before Python 3.16; production code must not depend on `EventLoopPolicy`. On Windows with Python 3.14+ and `winloop<=0.6.3`, debug Runner mode deliberately falls back to the stdlib loop because the installed backend crashes during async-generator finalization; non-debug runs retain the optimized factory.
+
 ## Install And Sync Dependencies
 
 ```powershell

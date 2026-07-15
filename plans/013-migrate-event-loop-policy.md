@@ -1,6 +1,6 @@
 # Migrate away from deprecated asyncio event-loop policies
 ## 0. Plan metadata
-- Status: proposed
+- Status: in progress
 - Priority: P2 forward compatibility and import hygiene
 - Estimated size: M
 - Risk: medium; optimized-loop selection differs across Python, uvloop, winloop, and embedded applications
@@ -53,6 +53,8 @@ installed() reports only an explicit successful legacy install. Add optimized_av
 - Suppressing deprecation warnings is rejected because the API will be removed, not merely noisy.
 - Calling backend.install at Client.connect is rejected because it still mutates application-global state.
 - Dropping optimized backends is rejected because performance is a project priority.
+### 4.6 Verified backend compatibility exception
+The installed Windows backend is `winloop 0.6.3` and exposes `new_event_loop()`, so the factory-first design is supported for normal execution. A deterministic local reproduction on Python 3.14.5 showed that `asyncio.Runner(debug=True, loop_factory=winloop.new_event_loop)` crashes natively when finalizing an unfinished async generator; debug-only execution therefore uses the stdlib Runner until a newer winloop version is installed, while non-debug execution keeps the optimized factory.
 ## 5. Files to change
 | File | Change |
 | --- | --- |
@@ -127,3 +129,10 @@ If a backend factory fails on one platform, fall back to stdlib Runner with a vi
 - Review trigger: Python minimum/maximum support, asyncio Runner/policy changes, uvloop/winloop upgrades, or top-level import changes.
 - Official reference: https://docs.python.org/3.16/library/asyncio-policy.html
 - Repository evidence: pyproject.toml, src/miniproto/event_loop.py, src/miniproto/__init__.py, tests/test_event_loop.py, docs/development.md.
+## 13. Implementation and verification evidence
+- Completed on 2026-07-15 against `228ab8b` plus the uncommitted implementation diff.
+- TDD RED: the new focused suite failed because importing `miniproto` changed the policy, loaded `winloop`, and emitted no explicit-install deprecation warning.
+- TDD GREEN: `uv run pytest tests/test_event_loop.py --basetemp .tmp/pytest-event-loop-verified` exited zero after lazy backend loading, Runner factory migration, explicit legacy installation, and the debug-only compatibility fallback.
+- Verified the installed `winloop 0.6.3` API exposes `install()`, `new_event_loop()`, and `run()`; the implementation uses only the factory for supported non-debug execution.
+- Repository verification exited zero: `uv run ruff format --check .`, `uv run ruff check .`, `uv run ty check`, `uv run python -m tools.schema.generate --check`, `uv run pytest --basetemp .tmp/pytest-final-two-plans`, `cargo fmt --check`, `cargo clippy --all-targets --all-features -- -D warnings`, and `cargo test --all-features`.
+- Remaining verification: `tools/bench/benchmark_runtime_paths.py` did not start through the approved wrapper because permission review timed out; the one direct retry requested by the maintainer failed immediately with Windows access denied. No further retry was made.

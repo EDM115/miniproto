@@ -4,7 +4,7 @@ import os
 import secrets
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol, Self, runtime_checkable
 
 from miniproto.crypto.mtproto import auth_key_id
@@ -280,7 +280,7 @@ class DHGenFail:
 
 @dataclass(frozen=True, slots=True)
 class AuthKeyExchangeResult:
-    auth_key: bytes
+    auth_key: bytes = field(repr=False)
     auth_key_id: bytes
     server_salt: int
     time_offset: float

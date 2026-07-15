@@ -9,11 +9,22 @@ on:
 jobs:
   python:
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.experimental }}
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python-version: "3.14"
+            experimental: false
+          - python-version: "3.16"
+            experimental: true
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v8.2.0
       - name: Install Python
-        run: uv python install 3.14
+        run: uv python install ${{ matrix.python-version }}
       - name: Sync
         run: uv sync --extra dev
       - name: Ruff format check

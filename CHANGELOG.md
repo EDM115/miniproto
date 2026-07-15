@@ -6,3 +6,4 @@
 - Added initial Python/Rust project scaffold.
 - Added public API placeholders for client lifecycle, config, session storage, errors, core types, raw namespace, and native fallback loading.
 - Added initial docs, tests, CI workflow, and implementation progress tracking.
+- Removed import-time asyncio policy installation, made optimized loop backends lazy, and moved script execution to `asyncio.Runner(loop_factory=...)`; the legacy explicit installer is deprecated and unavailable on Python 3.16+.

@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from typing import cast
+
+from miniproto.auth.key_exchange import AuthKeyExchangeResult
+from miniproto.config import ClientConfig, TransportConfig
 from miniproto.errors import RpcError
 from miniproto.raw import functions
 from miniproto.security.redaction import (
@@ -9,9 +13,22 @@ from miniproto.security.redaction import (
     redact_text,
     safe_repr,
 )
-from miniproto.session.models import AuthKey, SessionRecord, UserIdentity
+from miniproto.session.models import (
+    AuthKey,
+    DCOption,
+    PeerCacheEntry,
+    SessionRecord,
+    UserIdentity,
+    session_record_to_mapping,
+)
+from miniproto.session.storage import SessionStorage
 
 SECRET_VALUE = "do-not-leak"  # noqa: S105 - intentional redaction-test sentinel
+
+
+class _SentinelSessionStorage:
+    def __repr__(self) -> str:
+        return "storage-secret-sentinel"
 
 
 def test_sensitive_key_detection_is_case_insensitive_and_variant_aware() -> None:
@@ -79,6 +96,103 @@ def test_safe_repr_redacts_dataclass_secret_fields() -> None:
     assert "metadata-secret" not in rendered
     assert "alice" in rendered
     assert "ok" in rendered
+
+
+def test_config_dataclass_reprs_hide_secrets_and_keep_diagnostics() -> None:
+    transport = TransportConfig(proxy="socks5://proxy-secret-sentinel")
+    config = ClientConfig(
+        api_id=12345,
+        api_hash="api-hash-secret-sentinel",
+        session_storage=cast("SessionStorage", _SentinelSessionStorage()),
+        transport=transport,
+        bot_token="bot-token-secret-sentinel",  # noqa: S106 - intentional sentinel
+        dc_id=4,
+    )
+
+    transport_repr = repr(transport)
+    config_repr = repr(config)
+    for secret in (
+        "proxy-secret-sentinel",
+        "api-hash-secret-sentinel",
+        "storage-secret-sentinel",
+        "bot-token-secret-sentinel",
+    ):
+        assert secret not in transport_repr
+        assert secret not in config_repr
+    assert "mode='tcp_abridged'" in transport_repr
+    assert "api_id=12345" in config_repr
+    assert "dc_id=4" in config_repr
+
+
+def test_session_dataclass_reprs_hide_direct_and_nested_secrets() -> None:
+    auth_key = AuthKey(dc_id=2, key=b"auth-key-secret-sentinel", key_id=111)
+    dc_option = DCOption(id=2, ip_address="149.154.167.40", port=443, secret=b"dc-secret-sentinel")
+    user = UserIdentity(id=222, username="visible-user", phone="phone-secret-sentinel")
+    peer = PeerCacheEntry(
+        id=333,
+        kind="user",
+        username="visible-peer",
+        phone="peer-phone-secret-sentinel",
+        raw={"payload": "peer-raw-secret-sentinel"},
+    )
+    record = SessionRecord(
+        dc_id=2,
+        auth_key=auth_key,
+        dc_options=(dc_option,),
+        user=user,
+        peers=(peer,),
+        metadata={"session_key": "metadata-secret-sentinel"},
+    )
+
+    direct_reprs = (repr(auth_key), repr(dc_option), repr(user), repr(peer))
+    record_repr = repr(record)
+    for secret in (
+        "auth-key-secret-sentinel",
+        "dc-secret-sentinel",
+        "phone-secret-sentinel",
+        "peer-phone-secret-sentinel",
+        "peer-raw-secret-sentinel",
+        "metadata-secret-sentinel",
+    ):
+        assert all(secret not in rendered for rendered in direct_reprs)
+        assert secret not in record_repr
+    assert "dc_id=2" in record_repr
+    assert "key_id=111" in record_repr
+    assert "visible-user" in record_repr
+    assert "visible-peer" in record_repr
+    assert "id=333" in record_repr
+
+
+def test_auth_key_exchange_result_repr_hides_auth_key() -> None:
+    result = AuthKeyExchangeResult(
+        auth_key=b"exchange-auth-key-secret-sentinel",
+        auth_key_id=b"visible-key-id",
+        server_salt=444,
+        time_offset=1.5,
+        dc_id=5,
+    )
+
+    rendered = repr(result)
+    assert "exchange-auth-key-secret-sentinel" not in rendered
+    assert "visible-key-id" in rendered
+    assert "server_salt=444" in rendered
+    assert "dc_id=5" in rendered
+
+
+def test_repr_redaction_does_not_change_equality_or_session_serialization() -> None:
+    first = AuthKey(dc_id=2, key=b"first-auth-key-secret")
+    second = AuthKey(dc_id=2, key=b"second-auth-key-secret")
+    record = SessionRecord(
+        auth_key=first,
+        user=UserIdentity(id=222, phone="serialized-phone-secret"),
+        metadata={"session_key": "serialized-metadata-secret"},
+    )
+
+    assert first != second
+    mapping = session_record_to_mapping(record)
+    assert mapping["auth_key"]["key"] == b"first-auth-key-secret"
+    assert mapping["user"]["phone"] == "serialized-phone-secret"
+    assert mapping["metadata"]["session_key"] == "serialized-metadata-secret"
 
 
 def test_safe_repr_summarizes_binary_payloads_without_dumping_contents() -> None:

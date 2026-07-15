@@ -1,6 +1,6 @@
 # Redact secrets from ordinary dataclass reprs
 ## 0. Plan metadata
-- Status: proposed
+- Status: completed
 - Priority: P0 security
 - Estimated size: S
 - Risk: medium; repr changes can affect tests and debugging but must not affect serialization
@@ -41,6 +41,7 @@ Root cause: safe rendering exists at selected logging/error call sites, but ordi
 Use dataclasses.field(repr=False) for secret-bearing fields:
 - TransportConfig.proxy.
 - ClientConfig.api_hash, session_storage, and bot_token.
+- AuthKeyExchangeResult.auth_key.
 - AuthKey.key.
 - DCOption.secret.
 - UserIdentity.phone.
@@ -62,6 +63,7 @@ Document that repr=False does not redact dataclasses.asdict, direct attribute ac
 | --- | --- |
 | src/miniproto/config.py | Mark api_hash, session_storage, proxy, and existing token fields non-repr |
 | src/miniproto/session/models.py | Mark secret-bearing fields non-repr |
+| src/miniproto/auth/key_exchange.py | Mark the exchanged auth-key bytes non-repr |
 | tests/test_redaction.py | Add direct and nested repr sentinel tests |
 | PROGRESS.md | Correct SEC-001/TASK-019 evidence after tests pass |
 | docs/session-security.md | Clarify repr versus serialization boundary |
@@ -116,3 +118,10 @@ If a consumer depended on a full repr, expose a separate explicit diagnostic met
 - Owner: unassigned
 - Review trigger: any new config/session dataclass field, logging change, or SEC-001 update.
 - Repository evidence: src/miniproto/config.py, src/miniproto/session/models.py, src/miniproto/security/redaction.py, tests/test_redaction.py, PROGRESS.md.
+## 13. Completion evidence
+- Completed: 2026-07-15.
+- Red: `uv run pytest tests/test_redaction.py -k repr` failed as expected with 3 failures, 4 passes, and 3 deselections; the failures exposed config, nested session, and auth-key exchange result sentinels.
+- Green: the same repr-selected command passed with 7 passes and 3 deselections after applying only field-level `repr=False` metadata.
+- Focused regression: `uv run pytest --basetemp <writable-scratch> tests/test_redaction.py tests/test_session_storage.py tests/test_observability.py` passed all 30 tests.
+- Type safety: `uv run ty check src/miniproto/config.py src/miniproto/session/models.py src/miniproto/auth/key_exchange.py tests/test_redaction.py` passed. A repository-wide check reached only two unrelated Python 3.14 event-loop-policy deprecation diagnostics in the concurrently edited `tests/test_event_loop.py`.
+- Quality: scoped `ruff format --check` and `ruff check` passed for the same four production/test files.

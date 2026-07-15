@@ -12,6 +12,10 @@ The sibling `MPGram` repository already exists next to this repository in the sa
 
 The Rust crate lives in `rust/miniproto/` and is named `miniproto` for crates.io ownership. For Python users it is still imported as the private extension module `miniproto._native`; direct Rust reuse is not a v1 priority, though the crate layout should not block a future public Rust API.
 
+## Event Loop
+
+Importing `miniproto` never installs or replaces the process-wide asyncio policy. Scripts that own their top-level coroutine can use `event_loop.run(main())`; embedded applications keep ownership of their running loop, and advanced callers can pass `event_loop.new_event_loop` to `asyncio.Runner(loop_factory=...)`. The legacy `event_loop.install()` helper is an explicit deprecated compatibility path for Python versions before 3.16.
+
 ## Session Security
 
 Encrypted durable session storage is implemented through `EncryptedSQLiteSessionStorage`, which requires an explicit key or `MINIPROTO_SESSION_KEY`. See [Session Security](docs/session-security.md) for key handling, envelope behavior, persisted session data, and redaction rules.
