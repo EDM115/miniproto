@@ -1109,6 +1109,7 @@ def test_sender_flushes_acks_automatically_before_64_unacked_accumulate() -> Non
         sent_content = 0
         standalone_acked = 0
         max_unacked = 0
+        keepalive_pings = 0
         servers: list[FakeMTProtoServer] = []
 
         def total_acked() -> int:
@@ -1116,11 +1117,14 @@ def test_sender_flushes_acks_automatically_before_64_unacked_accumulate() -> Non
             return standalone_acked + piggybacked
 
         def handle(message):
-            nonlocal sent_content, standalone_acked, max_unacked
+            nonlocal sent_content, standalone_acked, max_unacked, keepalive_pings
             body = decode_message_body(message.body)
             if isinstance(body, MsgsAck):
                 standalone_acked += len(body.msg_ids)
                 return None
+            if isinstance(body, tuple) and body[0] == "ping_delay_disconnect":
+                keepalive_pings += 1
+                return Pong(msg_id=message.msg_id, ping_id=cast(int, body[1]))
             sent_content += 1
             max_unacked = max(max_unacked, sent_content - total_acked())
             return RpcResult(req_msg_id=message.msg_id, result=b"okay")
@@ -1129,9 +1133,14 @@ def test_sender_flushes_acks_automatically_before_64_unacked_accumulate() -> Non
         state = MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID)
         async with FakeMTProtoServer(AUTH_KEY, config, handle) as server:
             servers.append(server)
-            sender = MTProtoSender(server.endpoint, config, state, ack_max_delay=0.2)
+            sender = MTProtoSender(server.endpoint, config, state, ack_max_delay=0.05, ping_interval=0.1)
             for _ in range(total_requests):
                 assert await sender.request(b"req1", request_timeout=5.0) == b"okay"
+            for _ in range(100):
+                if keepalive_pings:
+                    break
+                await asyncio.sleep(0.01)
+            assert keepalive_pings > 0
             for _ in range(200):
                 if total_acked() >= total_requests and state.pending_ack_count == 0:
                     break
