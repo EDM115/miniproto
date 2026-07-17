@@ -223,10 +223,7 @@ class TransferRecorder:
         self.samples_mib_s.append(window_mib_s)
         self.last_sample_time = sampled_at
         self.last_sample_bytes = current
-        if (
-            self.progress_interval_s > 0
-            and sampled_at - self.last_report_time >= self.progress_interval_s
-        ):
+        if self.progress_interval_s > 0 and sampled_at - self.last_report_time >= self.progress_interval_s:
             self.last_report_time = sampled_at
             self.last_report_bytes = current
             print_progress(
@@ -247,11 +244,7 @@ class TransferRecorder:
             return
         self.last_report_time = sampled_at
         print_progress(
-            self.label,
-            current=self.last_bytes,
-            total=self.total,
-            elapsed_s=sampled_at - self.start,
-            window_mib_s=0.0,
+            self.label, current=self.last_bytes, total=self.total, elapsed_s=sampled_at - self.start, window_mib_s=0.0
         )
 
     def finish(self, bytes_done: int) -> tuple[float, float, SampleStats]:
@@ -295,14 +288,10 @@ def configure_standard_streams_line_buffering() -> None:
             reconfigure(line_buffering=True, write_through=True)
 
 
-def parse_args(
-    argv: list[str] | None = None, env: Mapping[str, str] | None = None
-) -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None, env: Mapping[str, str] | None = None) -> argparse.Namespace:
     values = {} if env is None else env
     json_path = env_value(values, "MINIPROTO_LIVE_BENCH_JSON")
-    parser = argparse.ArgumentParser(
-        description="Run opt-in live Telegram media-limit upload/download benchmarks."
-    )
+    parser = argparse.ArgumentParser(description="Run opt-in live Telegram media-limit upload/download benchmarks.")
     parser.add_argument(
         "--actor",
         choices=("user", "bot", "both"),
@@ -350,16 +339,12 @@ def parse_args(
         "--dc-id",
         type=int,
         default=int(
-            env_value(values, "MINIPROTO_LIVE_BENCH_DC_ID")
-            or env_value(values, "MINIPROTO_REAL_DC_ID")
-            or "4"
+            env_value(values, "MINIPROTO_LIVE_BENCH_DC_ID") or env_value(values, "MINIPROTO_REAL_DC_ID") or "4"
         ),
         help="production DC id to use for both user and bot sessions",
     )
     upload_concurrency_default = env_value(
-        values,
-        "MINIPROTO_LIVE_BENCH_UPLOAD_CONCURRENCY",
-        env_value(values, "MINIPROTO_LIVE_BENCH_CONCURRENCY", "8"),
+        values, "MINIPROTO_LIVE_BENCH_UPLOAD_CONCURRENCY", env_value(values, "MINIPROTO_LIVE_BENCH_CONCURRENCY", "8")
     )
     parser.add_argument(
         "--upload-concurrency",
@@ -369,15 +354,9 @@ def parse_args(
         help="number of concurrent upload part requests on the active MTProto sender",
     )
     parser.add_argument(
-        "--concurrency",
-        dest="upload_concurrency",
-        type=int,
-        default=argparse.SUPPRESS,
-        help=argparse.SUPPRESS,
+        "--concurrency", dest="upload_concurrency", type=int, default=argparse.SUPPRESS, help=argparse.SUPPRESS
     )
-    upload_media_lanes = env_value(
-        values, "MINIPROTO_LIVE_BENCH_UPLOAD_MEDIA_LANES", str(DEFAULT_UPLOAD_MEDIA_LANES)
-    )
+    upload_media_lanes = env_value(values, "MINIPROTO_LIVE_BENCH_UPLOAD_MEDIA_LANES", str(DEFAULT_UPLOAD_MEDIA_LANES))
     parser.add_argument(
         "--upload-media-lanes",
         type=int,
@@ -388,11 +367,7 @@ def parse_args(
         "--download-concurrency",
         type=int,
         default=int(
-            env_value(
-                values,
-                "MINIPROTO_LIVE_BENCH_DOWNLOAD_CONCURRENCY",
-                str(DEFAULT_DOWNLOAD_CONCURRENCY),
-            )
+            env_value(values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_CONCURRENCY", str(DEFAULT_DOWNLOAD_CONCURRENCY))
             or str(DEFAULT_DOWNLOAD_CONCURRENCY)
         ),
         help="maximum concurrent upload.getFile requests for known-size downloads; defaults to 1 because Telegram flood waits can erase concurrency gains",
@@ -406,9 +381,7 @@ def parse_args(
         default=int(download_media_lanes) if download_media_lanes else None,
         help=f"MTProto sender lanes for download parts; defaults to {DEFAULT_DOWNLOAD_MEDIA_LANES} from live DC4 measurements, set 0 for the legacy main-sender path",
     )
-    download_adaptive_default = env_bool(
-        values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_ADAPTIVE_CONCURRENCY", default=True
-    )
+    download_adaptive_default = env_bool(values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_ADAPTIVE_CONCURRENCY", default=True)
     download_adaptive = parser.add_mutually_exclusive_group()
     download_adaptive.add_argument(
         "--download-adaptive-concurrency",
@@ -473,9 +446,7 @@ def parse_args(
         default=int(download_max_in_flight) if download_max_in_flight else None,
         help="cap in-flight download bytes across active upload.getFile requests; empty uses chunk_size * concurrency",
     )
-    download_adaptive_part_default = env_bool(
-        values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_ADAPTIVE_PART_SIZE", default=True
-    )
+    download_adaptive_part_default = env_bool(values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_ADAPTIVE_PART_SIZE", default=True)
     download_adaptive_part = parser.add_mutually_exclusive_group()
     download_adaptive_part.add_argument(
         "--download-adaptive-part-size",
@@ -494,9 +465,7 @@ def parse_args(
         "--download-max-chunk-size",
         type=int,
         default=int(
-            env_value(
-                values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_MAX_CHUNK_SIZE", str(MAX_DOWNLOAD_CHUNK_SIZE)
-            )
+            env_value(values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_MAX_CHUNK_SIZE", str(MAX_DOWNLOAD_CHUNK_SIZE))
             or str(MAX_DOWNLOAD_CHUNK_SIZE)
         ),
         help=f"largest chunk size adaptive download part sizing may try; Telegram currently caps upload.getFile at {MAX_DOWNLOAD_CHUNK_SIZE} bytes",
@@ -504,28 +473,20 @@ def parse_args(
     parser.add_argument(
         "--download-read-ahead-bytes",
         type=int,
-        default=int(
-            env_value(values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_READ_AHEAD_BYTES", "0") or "0"
-        ),
+        default=int(env_value(values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_READ_AHEAD_BYTES", "0") or "0"),
         help="optional range-cache read-ahead budget in bytes; useful for range/stream experiments, disabled by default",
     )
     parser.add_argument(
         "--download-range-cache-bytes",
         type=int,
-        default=int(
-            env_value(values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_RANGE_CACHE_BYTES", "0") or "0"
-        ),
+        default=int(env_value(values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_RANGE_CACHE_BYTES", "0") or "0"),
         help="optional in-memory range cache size in bytes; 0 disables benchmark range caching",
     )
-    download_flood_sleep_threshold = env_value(
-        values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_FLOOD_SLEEP_THRESHOLD", "30"
-    )
+    download_flood_sleep_threshold = env_value(values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_FLOOD_SLEEP_THRESHOLD", "30")
     parser.add_argument(
         "--download-flood-sleep-threshold",
         type=int,
-        default=int(download_flood_sleep_threshold)
-        if download_flood_sleep_threshold is not None
-        else None,
+        default=int(download_flood_sleep_threshold) if download_flood_sleep_threshold is not None else None,
         help="maximum FLOOD_WAIT seconds to sleep and retry per download chunk",
     )
     parser.add_argument(
@@ -535,9 +496,7 @@ def parse_args(
         help="rewrite the payload even when the target path already has the expected size",
     )
     parser.add_argument(
-        "--prepare-only",
-        action="store_true",
-        help="create/validate the payload and exit without contacting Telegram",
+        "--prepare-only", action="store_true", help="create/validate the payload and exit without contacting Telegram"
     )
     parser.add_argument(
         "--verify-digest",
@@ -559,11 +518,7 @@ def parse_args(
     )
     parser.add_argument(
         "--log-level",
-        default=env_value(
-            values,
-            "MINIPROTO_LIVE_BENCH_LOG_LEVEL",
-            env_value(values, "MINIPROTO_LOG_LEVEL", "INFO"),
-        )
+        default=env_value(values, "MINIPROTO_LIVE_BENCH_LOG_LEVEL", env_value(values, "MINIPROTO_LOG_LEVEL", "INFO"))
         or "INFO",
         help="miniproto log level for the benchmark run",
     )
@@ -583,16 +538,9 @@ def parse_args(
     if args.repeat < 1:
         parser.error("--repeat must be positive")
     if args.download_max_chunk_size < args.download_chunk_size:
-        parser.error(
-            "--download-max-chunk-size must be greater than or equal to --download-chunk-size"
-        )
-    if (
-        args.download_max_in_flight_bytes is not None
-        and args.download_max_in_flight_bytes < args.download_chunk_size
-    ):
-        parser.error(
-            "--download-max-in-flight-bytes must be greater than or equal to --download-chunk-size"
-        )
+        parser.error("--download-max-chunk-size must be greater than or equal to --download-chunk-size")
+    if args.download_max_in_flight_bytes is not None and args.download_max_in_flight_bytes < args.download_chunk_size:
+        parser.error("--download-max-in-flight-bytes must be greater than or equal to --download-chunk-size")
     if args.download_read_ahead_bytes < 0:
         parser.error("--download-read-ahead-bytes must not be negative")
     if args.download_range_cache_bytes < 0:
@@ -610,9 +558,7 @@ async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int
             f"payload: path={payload_file} bytes={size} chunks={math.ceil(size / DEFAULT_CHUNK_SIZE)} "
             f"chunk_size={DEFAULT_CHUNK_SIZE}"
         )
-        ensure_benchmark_file(
-            payload_file, size=size, chunk_size=DEFAULT_CHUNK_SIZE, force=args.force_regenerate
-        )
+        ensure_benchmark_file(payload_file, size=size, chunk_size=DEFAULT_CHUNK_SIZE, force=args.force_regenerate)
     else:
         print(
             f"payload: operation=download source_file={payload_file} fallback_bytes={size} "
@@ -781,9 +727,7 @@ async def benchmark_actor(
         upload_counters = transfer_counters(upload_metrics, "upload", upload_duration)
         media = sent.media or await find_recent_media(client, peer, caption)
         if media is None:
-            raise RuntimeError(
-                f"{actor} upload completed but no media was found for the sent message"
-            )
+            raise RuntimeError(f"{actor} upload completed but no media was found for the sent message")
         active_file_id = media.file_id or encode_file_id(media)
         message_id = sent.id or None
         print(f"{actor}.upload: file_id={active_file_id}")
@@ -874,17 +818,11 @@ async def benchmark_actor(
     )
     download_counters = transfer_counters(download_metrics, "download", download_duration)
     if downloaded.bytes_downloaded != size:
-        raise RuntimeError(
-            f"{actor} download size mismatch: expected {size}, got {downloaded.bytes_downloaded}"
-        )
+        raise RuntimeError(f"{actor} download size mismatch: expected {size}, got {downloaded.bytes_downloaded}")
     if verify_digest:
-        source_digest, target_digest = await asyncio.gather(
-            file_digest(source), file_digest(target)
-        )
+        source_digest, target_digest = await asyncio.gather(file_digest(source), file_digest(target))
         if source_digest != target_digest:
-            raise RuntimeError(
-                f"{actor} download digest mismatch: {source_digest} != {target_digest}"
-            )
+            raise RuntimeError(f"{actor} download digest mismatch: {source_digest} != {target_digest}")
     download = TransferSummary(
         actor=actor,
         operation="download",
@@ -932,9 +870,7 @@ async def progress_heartbeat(recorder: TransferRecorder) -> None:
         raise
 
 
-async def authorized_client(
-    actor: Actor, args: argparse.Namespace, env: Mapping[str, str]
-) -> Client:
+async def authorized_client(actor: Actor, args: argparse.Namespace, env: Mapping[str, str]) -> Client:
     storage = EncryptedSQLiteSessionStorage(
         Path(".tmp") / f"miniproto-live-bench-{actor}-dc{args.dc_id}.sqlite",
         key=required_env(env, "MINIPROTO_SESSION_KEY"),
@@ -944,16 +880,12 @@ async def authorized_client(
             api_id=int(required_env(env, "MINIPROTO_API_ID")),
             api_hash=required_env(env, "MINIPROTO_API_HASH"),
             session_storage=storage,
-            transport=TransportConfig(
-                read_timeout=args.request_timeout, write_timeout=args.request_timeout
-            ),
+            transport=TransportConfig(read_timeout=args.request_timeout, write_timeout=args.request_timeout),
             dc_id=args.dc_id,
             test_mode=False,
             request_timeout=args.request_timeout,
             max_request_retries=3,
-            flood_sleep_threshold=int(
-                env_value(env, "MINIPROTO_LIVE_BENCH_FLOOD_SLEEP_THRESHOLD") or "300"
-            ),
+            flood_sleep_threshold=int(env_value(env, "MINIPROTO_LIVE_BENCH_FLOOD_SLEEP_THRESHOLD") or "300"),
         )
     )
     await client.connect()
@@ -964,9 +896,7 @@ async def authorized_client(
         return client
     if record.user is None or record.user.is_bot:
         await client.sign_in_phone(
-            required_env(env, "MINIPROTO_REAL_PHONE"),
-            lambda: prompt_code(env),
-            lambda: prompt_password(env),
+            required_env(env, "MINIPROTO_REAL_PHONE"), lambda: prompt_code(env), lambda: prompt_password(env)
         )
     return client
 
@@ -1103,11 +1033,7 @@ def transfer_counters(
             )
         },
         flood_wait_seconds_by_type=dict(
-            sorted(
-                metric_sum_by_attr(
-                    metrics, f"media.{operation}.flood_wait_seconds", "error_type"
-                ).items()
-            )
+            sorted(metric_sum_by_attr(metrics, f"media.{operation}.flood_wait_seconds", "error_type").items())
         ),
         retry_sleep_seconds=metric_sum(metrics, f"media.{operation}.retry_sleep_seconds"),
         reconnects=int(metric_sum(metrics, "sender.reconnects")),
@@ -1115,15 +1041,11 @@ def transfer_counters(
         sender_drop_skips=int(metric_sum(metrics, "client.sender_drop_skipped")),
         media_lane_builds=int(metric_sum(metrics, "client.media_lane_builds")),
         media_lane_drops=int(
-            metric_sum_where(
-                metrics, "client.media_lane_drops", lambda attrs: attrs.get("reason") != "close"
-            )
+            metric_sum_where(metrics, "client.media_lane_drops", lambda attrs: attrs.get("reason") != "close")
         ),
         media_lane_drop_skips=int(metric_sum(metrics, "client.media_lane_drop_skipped")),
         media_lane_closes=int(
-            metric_sum_where(
-                metrics, "client.media_lane_drops", lambda attrs: attrs.get("reason") == "close"
-            )
+            metric_sum_where(metrics, "client.media_lane_drops", lambda attrs: attrs.get("reason") == "close")
         ),
         byte_window_waits=int(metric_sum(metrics, f"media.{operation}.byte_window_waits")),
         writer_queue_seconds=metric_sum(metrics, f"media.{operation}.writer_queue_seconds"),
@@ -1163,14 +1085,8 @@ def metric_count(metrics: InMemoryMetrics, name: str) -> int:
     return sum(1 for event in metrics.events if event.name == name)
 
 
-def metric_sum_where(
-    metrics: InMemoryMetrics, name: str, predicate: Callable[[Mapping[str, object]], bool]
-) -> float:
-    return sum(
-        event.value
-        for event in metrics.events
-        if event.name == name and predicate(event.attributes)
-    )
+def metric_sum_where(metrics: InMemoryMetrics, name: str, predicate: Callable[[Mapping[str, object]], bool]) -> float:
+    return sum(event.value for event in metrics.events if event.name == name and predicate(event.attributes))
 
 
 def benchmark_file_arg_default(env: Mapping[str, str]) -> Path | None:
@@ -1280,14 +1196,9 @@ def print_transfer(summary: TransferSummary) -> None:
     )
 
 
-def print_progress(
-    label: str, *, current: int, total: int | None, elapsed_s: float, window_mib_s: float
-) -> None:
+def print_progress(label: str, *, current: int, total: int | None, elapsed_s: float, window_mib_s: float) -> None:
     if total is None or total <= 0:
-        print(
-            f"{label}: {_mib(current):.1f}MiB transferred "
-            f"elapsed={elapsed_s:.1f}s window={window_mib_s:.3f}MiB/s"
-        )
+        print(f"{label}: {_mib(current):.1f}MiB transferred elapsed={elapsed_s:.1f}s window={window_mib_s:.3f}MiB/s")
         return
     percent = min(100.0, current / total * 100)
     overall_mib_s = _mib(current) / elapsed_s if elapsed_s > 0 else 0.0
@@ -1482,9 +1393,7 @@ def prompt_code_http(env: Mapping[str, str]) -> str:
             self.wfile.write(payload)
 
     server = ThreadingHTTPServer((host, port), CodeHandler)
-    thread = threading.Thread(
-        target=server.serve_forever, name="miniproto-http-code-prompt", daemon=True
-    )
+    thread = threading.Thread(target=server.serve_forever, name="miniproto-http-code-prompt", daemon=True)
     thread.start()
     actual_port = int(server.server_address[1])
     local_url = f"http://{host}:{actual_port}{prompt_path}"

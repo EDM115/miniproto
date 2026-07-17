@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
+from types import SimpleNamespace
 from typing import Any, cast
 
 import pytest
@@ -19,6 +20,9 @@ from miniproto import (
     UserIdentity,
     event_loop,
 )
+from miniproto.auth.bootstrap import ensure_auth_key
+from miniproto.auth.service import AuthService
+from miniproto.client import _CachedSessionStorage
 from miniproto.connection.sender import MTProtoSender
 from miniproto.connection.transport import TransportClosed, TransportError
 from miniproto.errors import (
@@ -30,17 +34,19 @@ from miniproto.errors import (
     InvalidCode,
     ResultTypeMismatch,
     RpcError,
+    SessionStorageError,
 )
 from miniproto.invoke import (
     TELEGRAM_LAYER,
     RawSender,
     build_sender_from_session,
+    clear_invalid_auth_key,
     decode_result_payload,
     is_retryable_request,
 )
 from miniproto.mtproto.codec import BadServerSalt, RpcErrorBody, RpcResult, encode_message_body
 from miniproto.raw import functions, types
-from miniproto.session.models import session_record_from_mapping
+from miniproto.session.models import PeerCacheEntry, UpdateState, session_record_from_mapping
 from miniproto.session.storage import SessionPayload
 
 AUTH_KEY = b"k" * 256
@@ -54,6 +60,7 @@ def run(coro):
 class FakeSender:
     responses: list[object]
     requests: list[object] = field(default_factory=list)
+    retry_safety: list[bool] = field(default_factory=list)
     disconnected: int = 0
     is_connected: bool = True
 
@@ -62,9 +69,11 @@ class FakeSender:
         body: bytes | object,
         *,
         content_related: bool = True,
+        retry_safe: bool,
         request_timeout: float | None = None,
     ) -> object:
         self.requests.append(body)
+        self.retry_safety.append(retry_safe)
         if not self.responses:
             raise AssertionError("fake sender has no queued response")
         response = self.responses.pop(0)
@@ -94,9 +103,10 @@ class InitTrackingSender:
         body: bytes | object,
         *,
         content_related: bool = True,
+        retry_safe: bool,
         request_timeout: float | None = None,
     ) -> object:
-        del content_related, request_timeout
+        del content_related, retry_safe, request_timeout
         self.requests.append(body)
         if not self.responses:
             raise AssertionError("init tracking sender has no queued response")
@@ -122,8 +132,10 @@ class BlockingSender:
         body: bytes | object,
         *,
         content_related: bool = True,
+        retry_safe: bool,
         request_timeout: float | None = None,
     ) -> object:
+        del content_related, retry_safe, request_timeout
         self.requests.append(body)
         self.pending += 1
         self.started.set()
@@ -148,8 +160,10 @@ class DisconnectingSender:
         body: bytes | object,
         *,
         content_related: bool = True,
+        retry_safe: bool,
         request_timeout: float | None = None,
     ) -> object:
+        del content_related, retry_safe, request_timeout
         self.requests.append(body)
         self.future = asyncio.get_running_loop().create_future()
         self.started.set()
@@ -175,9 +189,10 @@ class GateFailSender:
         body: bytes | object,
         *,
         content_related: bool = True,
+        retry_safe: bool,
         request_timeout: float | None = None,
     ) -> object:
-        del content_related, request_timeout
+        del content_related, retry_safe, request_timeout
         self.requests.append(body)
         self.started.set()
         await self.release.wait()
@@ -198,6 +213,93 @@ class CountingSessionStorage(InMemorySessionStorage):
         return await super().load()
 
 
+class BlockingCountingSessionStorage(CountingSessionStorage):
+    def __init__(self, initial: SessionPayload | None = None) -> None:
+        super().__init__(initial)
+        self.started = asyncio.Event()
+        self.release = asyncio.Event()
+
+    async def load(self):
+        self.loads += 1
+        self.started.set()
+        await self.release.wait()
+        return await InMemorySessionStorage.load(self)
+
+
+class FailingSessionStorage(InMemorySessionStorage):
+    def __init__(self, initial: SessionPayload | None = None) -> None:
+        super().__init__(initial)
+        self.fail_save = False
+        self.fail_mutate = False
+
+    async def save(self, data: SessionPayload) -> None:
+        if self.fail_save:
+            raise SessionStorageError("save failed")
+        await super().save(data)
+
+    async def mutate(self, transform):
+        if self.fail_mutate:
+            raise SessionStorageError("mutate failed")
+        return await super().mutate(transform)
+
+
+class MutationOnlySessionStorage(InMemorySessionStorage):
+    async def save(self, data: SessionPayload) -> None:
+        del data
+        raise AssertionError("read-modify-write persistence must use atomic mutate")
+
+
+def test_cached_session_storage_serializes_concurrent_first_loads() -> None:
+    async def scenario() -> None:
+        backend = BlockingCountingSessionStorage({"value": 1})
+        storage = _CachedSessionStorage(backend)
+        first_task = asyncio.create_task(storage.load())
+        second_task = asyncio.create_task(storage.load())
+        await backend.started.wait()
+        await asyncio.sleep(0)
+        backend.release.set()
+        first, second = await asyncio.gather(first_task, second_task)
+        assert first == {"value": 1}
+        assert second == {"value": 1}
+        assert backend.loads == 1
+
+    run(scenario())
+
+
+def test_cached_session_storage_updates_cache_and_revisions_only_after_commit() -> None:
+    async def scenario() -> None:
+        backend = FailingSessionStorage({"value": 1})
+        storage = _CachedSessionStorage(backend)
+        assert await storage.load() == {"value": 1}
+        revisions_before = dict(storage.domain_revisions())
+
+        backend.fail_save = True
+        with pytest.raises(SessionStorageError, match="save failed"):
+            await storage.save({"value": 2})
+        assert await storage.load() == {"value": 1}
+        assert storage.domain_revisions() == revisions_before
+
+        backend.fail_save = False
+        backend.fail_mutate = True
+        with pytest.raises(SessionStorageError, match="mutate failed"):
+            await storage.mutate(lambda payload: {"value": 3})
+        assert await storage.load() == {"value": 1}
+        assert storage.domain_revisions() == revisions_before
+
+        backend.fail_mutate = False
+
+        def increment(payload):
+            assert payload is not None
+            return {"value": int(payload["value"]) + 1}
+
+        committed = await storage.mutate(increment)
+        assert committed == {"value": 2}
+        assert await storage.load() == {"value": 2}
+        assert storage.domain_revisions()["payload"] == revisions_before["payload"] + 1
+
+    run(scenario())
+
+
 def nearest_dc() -> types.NearestDc:
     return types.NearestDc(country="US", this_dc=2, nearest_dc=2)
 
@@ -206,9 +308,7 @@ def rpc_error(code: int, text: str) -> bytes:
     return encode_message_body(RpcErrorBody(error_code=code, error_message=text))
 
 
-def storage_with_auth(
-    *, dc_id: int = 2, user: UserIdentity | None = None
-) -> InMemorySessionStorage:
+def storage_with_auth(*, dc_id: int = 2, user: UserIdentity | None = None) -> InMemorySessionStorage:
     return InMemorySessionStorage(
         SessionRecord(
             dc_id=dc_id,
@@ -223,16 +323,10 @@ def storage_with_auth(
 
 
 async def connected_client(
-    sender: RawSender,
-    storage: InMemorySessionStorage | None = None,
-    *,
-    config: ClientConfig | None = None,
+    sender: RawSender, storage: InMemorySessionStorage | None = None, *, config: ClientConfig | None = None
 ) -> Client:
     client = Client(
-        config
-        or ClientConfig(
-            api_id=1, api_hash="hash", session_storage=storage or InMemorySessionStorage()
-        )
+        config or ClientConfig(api_id=1, api_hash="hash", session_storage=storage or InMemorySessionStorage())
     )
     client._sender = sender
     await client.connect()
@@ -344,16 +438,10 @@ def test_media_lane_wraps_first_request_in_invoke_without_updates() -> None:
             return None
 
         await client._invoke_via_sender(
-            functions.HelpGetNearestDc(),
-            ensure_sender=ensure_sender,
-            drop_sender=drop_sender,
-            without_updates=True,
+            functions.HelpGetNearestDc(), ensure_sender=ensure_sender, drop_sender=drop_sender, without_updates=True
         )
         await client._invoke_via_sender(
-            functions.HelpGetNearestDc(),
-            ensure_sender=ensure_sender,
-            drop_sender=drop_sender,
-            without_updates=True,
+            functions.HelpGetNearestDc(), ensure_sender=ensure_sender, drop_sender=drop_sender, without_updates=True
         )
         first, second = sender.requests
         assert isinstance(first, functions.InvokeWithoutUpdates)
@@ -387,10 +475,7 @@ def test_invoke_against_real_sender_inits_once_and_serializes_once() -> None:
         transport = TransportConfig(mode="tcp_intermediate", read_timeout=2.0)
         async with FakeMTProtoServer(AUTH_KEY, transport, handle) as server:
             config = ClientConfig(
-                api_id=1,
-                api_hash="hash",
-                session_storage=fake_server_storage(server),
-                transport=transport,
+                api_id=1, api_hash="hash", session_storage=fake_server_storage(server), transport=transport
             )
             client = Client(config)
             await client.connect()
@@ -432,28 +517,25 @@ def test_bad_server_salt_is_persisted_and_used_by_new_senders() -> None:
             content_messages += 1
             if content_messages == 1:
                 return BadServerSalt(
-                    bad_msg_id=message.msg_id,
-                    bad_msg_seq_no=message.seq_no,
-                    error_code=48,
-                    new_server_salt=new_salt,
+                    bad_msg_id=message.msg_id, bad_msg_seq_no=message.seq_no, error_code=48, new_server_salt=new_salt
                 )
             return RpcResult(req_msg_id=message.msg_id, result=nearest_dc().serialize())
 
         transport = TransportConfig(mode="tcp_intermediate", read_timeout=2.0)
         async with FakeMTProtoServer(AUTH_KEY, transport, handle) as server:
             storage = fake_server_storage(server)
-            config = ClientConfig(
-                api_id=1, api_hash="hash", session_storage=storage, transport=transport
-            )
+            config = ClientConfig(api_id=1, api_hash="hash", session_storage=storage, transport=transport)
             client = Client(config)
             await client.connect()
             assert await client.invoke(functions.HelpGetNearestDc()) == nearest_dc()
-            await client.disconnect()
+            await client._flush_server_salt()
             loaded = await storage.load()
             assert loaded is not None
             record = session_record_from_mapping(loaded)
             assert record.metadata["server_salt"] == new_salt
-            rebuilt = await build_sender_from_session(config, storage)
+            await client.disconnect()
+            reopened = InMemorySessionStorage(loaded)
+            rebuilt = await build_sender_from_session(config, reopened)
             assert isinstance(rebuilt, MTProtoSender)
             assert rebuilt.state.server_salt == new_salt
 
@@ -549,7 +631,10 @@ def test_invoke_sleeps_for_bounded_flood_wait_only_when_allowed() -> None:
         request = functions.HelpGetNearestDc()
         sender = FakeSender([rpc_error(420, "FLOOD_WAIT_0"), nearest_dc().serialize()])
         client = await connected_client(
-            sender, config=ClientConfig(api_id=1, api_hash="hash", max_request_retries=1)
+            sender,
+            config=ClientConfig(
+                api_id=1, api_hash="hash", session_storage=InMemorySessionStorage(), max_request_retries=1
+            ),
         )
         result = await client.invoke(request, flood_sleep_threshold=0)
         assert result == nearest_dc()
@@ -573,12 +658,15 @@ def test_invoke_raises_flood_wait_by_default_without_sleeping() -> None:
 def test_invoke_retries_retryable_transport_failures_for_read_requests() -> None:
     async def scenario() -> None:
         sender = FakeSender([TransportError("temporary"), nearest_dc().serialize()])
-        client = Client(ClientConfig(api_id=1, api_hash="hash", max_request_retries=1))
+        client = Client(
+            ClientConfig(api_id=1, api_hash="hash", session_storage=InMemorySessionStorage(), max_request_retries=1)
+        )
         client._sender_factory = lambda _record: sender
         await client.connect()
         result = await client.invoke(functions.HelpGetNearestDc())
         assert result == nearest_dc()
         assert len(sender.requests) == 2
+        assert sender.retry_safety == [True, True]
         assert sender.disconnected == 0
 
     run(scenario())
@@ -587,7 +675,9 @@ def test_invoke_retries_retryable_transport_failures_for_read_requests() -> None
 def test_invoke_retries_retryable_rpc_timeout_errors_for_read_requests() -> None:
     async def scenario() -> None:
         sender = FakeSender([rpc_error(-503, "MSG_WAIT_TIMEOUT"), nearest_dc().serialize()])
-        client = Client(ClientConfig(api_id=1, api_hash="hash", max_request_retries=1))
+        client = Client(
+            ClientConfig(api_id=1, api_hash="hash", session_storage=InMemorySessionStorage(), max_request_retries=1)
+        )
         client._sender_factory = lambda _record: sender
         await client.connect()
         result = await client.invoke(functions.HelpGetNearestDc())
@@ -600,13 +690,16 @@ def test_invoke_retries_retryable_rpc_timeout_errors_for_read_requests() -> None
 def test_invoke_does_not_retry_unsafe_requests_after_transport_failure() -> None:
     async def scenario() -> None:
         sender = FakeSender([TransportError("after send")])
-        client = Client(ClientConfig(api_id=1, api_hash="hash", max_request_retries=1))
+        client = Client(
+            ClientConfig(api_id=1, api_hash="hash", session_storage=InMemorySessionStorage(), max_request_retries=1)
+        )
         client._sender_factory = lambda _record: sender
         await client.connect()
         request = functions.MessagesEditMessage(peer=types.InputPeerSelf(), id=1, message="hi")
         with pytest.raises(RpcError, match="after send"):
             await client.invoke(request)
         assert len(sender.requests) == 1
+        assert sender.retry_safety == [False]
         assert sender.disconnected == 0
 
     run(scenario())
@@ -616,15 +709,16 @@ def test_invoke_retries_random_id_message_requests_after_transport_failure() -> 
     async def scenario() -> None:
         response = types.UpdateShortSentMessage(id=10, pts=1, pts_count=1, date=1_700_000_000)
         sender = FakeSender([TransportError("after send"), response.serialize()])
-        client = Client(ClientConfig(api_id=1, api_hash="hash", max_request_retries=1))
+        client = Client(
+            ClientConfig(api_id=1, api_hash="hash", session_storage=InMemorySessionStorage(), max_request_retries=1)
+        )
         client._sender_factory = lambda _record: sender
         await client.connect()
-        request = functions.MessagesSendMessage(
-            peer=types.InputPeerSelf(), message="hi", random_id=1
-        )
+        request = functions.MessagesSendMessage(peer=types.InputPeerSelf(), message="hi", random_id=1)
         assert is_retryable_request(request)
         assert await client.invoke(request) == response
         assert len(sender.requests) == 2
+        assert sender.retry_safety == [True, True]
         assert sender.disconnected == 0
 
     run(scenario())
@@ -634,7 +728,10 @@ def test_invoke_classifies_transport_failure_from_dead_sender_as_client_disconne
     async def scenario() -> None:
         sender = FakeSender([TransportClosed("sender disconnected")])
         client = await connected_client(
-            sender, config=ClientConfig(api_id=1, api_hash="hash", max_request_retries=0)
+            sender,
+            config=ClientConfig(
+                api_id=1, api_hash="hash", session_storage=InMemorySessionStorage(), max_request_retries=0
+            ),
         )
         with pytest.raises(ClientDisconnected):
             await client.invoke(functions.HelpGetNearestDc())
@@ -648,7 +745,10 @@ def test_invoke_does_not_drop_replacement_sender_from_stale_failure() -> None:
         first = GateFailSender(TransportError("old sender failed"))
         second = FakeSender([nearest_dc().serialize()])
         client = await connected_client(
-            first, config=ClientConfig(api_id=1, api_hash="hash", max_request_retries=1)
+            first,
+            config=ClientConfig(
+                api_id=1, api_hash="hash", session_storage=InMemorySessionStorage(), max_request_retries=1
+            ),
         )
         task = asyncio.create_task(client.invoke(functions.HelpGetNearestDc()))
         await first.started.wait()
@@ -671,9 +771,7 @@ def test_invoke_handles_dc_migration_and_retries_safe_request_with_new_sender() 
         first = FakeSender([rpc_error(303, "USER_MIGRATE_4")])
         second = FakeSender([nearest_dc().serialize()])
         senders = [first, second]
-        client = Client(
-            ClientConfig(api_id=1, api_hash="hash", session_storage=storage, max_request_retries=1)
-        )
+        client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage, max_request_retries=1))
         client._sender_factory = lambda _record: senders.pop(0)
         await client.connect()
         result = await client.invoke(functions.HelpGetNearestDc())
@@ -689,9 +787,7 @@ def test_invoke_handles_dc_migration_and_retries_safe_request_with_new_sender() 
 
 def test_invoke_clears_invalid_auth_key_when_telegram_rejects_it() -> None:
     async def scenario() -> None:
-        storage = storage_with_auth(
-            user=UserIdentity(id=42, access_hash=9000, username="alice", phone="+9996621234")
-        )
+        storage = storage_with_auth(user=UserIdentity(id=42, access_hash=9000, username="alice", phone="+9996621234"))
         sender = FakeSender([rpc_error(401, "AUTH_KEY_UNREGISTERED")])
         client = await connected_client(sender, storage)
         with pytest.raises(AuthKeyNotFound):
@@ -701,6 +797,109 @@ def test_invoke_clears_invalid_auth_key_when_telegram_rejects_it() -> None:
         record = session_record_from_mapping(loaded)
         assert record.auth_key is None
         assert record.user is None
+
+    run(scenario())
+
+
+def test_invalid_auth_clear_uses_atomic_mutation_and_preserves_unrelated_state() -> None:
+    async def scenario() -> None:
+        storage = MutationOnlySessionStorage(
+            SessionRecord(
+                dc_id=2,
+                auth_key=AuthKey(dc_id=2, key=AUTH_KEY, key_id=123),
+                user=UserIdentity(id=42, access_hash=9000),
+                metadata={"server_salt": 123},
+            )
+        )
+        await clear_invalid_auth_key(storage, ClientConfig(api_id=1, api_hash="hash", session_storage=storage))
+        loaded = await storage.load()
+        assert loaded is not None
+        record = session_record_from_mapping(loaded)
+        assert record.auth_key is None
+        assert record.user is None
+        assert record.metadata["server_salt"] == 123
+
+    run(scenario())
+
+
+def test_server_salt_persistence_uses_atomic_mutation() -> None:
+    async def scenario() -> None:
+        storage = MutationOnlySessionStorage(
+            SessionRecord(dc_id=2, peers=(PeerCacheEntry(id=42, kind="user", access_hash=9000),))
+        )
+        client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage))
+        client._latest_server_salt = 456
+        client._salt_dirty = True
+        await client._persist_server_salt()
+        loaded = await storage.load()
+        assert loaded is not None
+        record = session_record_from_mapping(loaded)
+        assert record.metadata["server_salt"] == 456
+        assert record.peers[0].id == 42
+
+    run(scenario())
+
+
+def test_auth_bootstrap_and_service_persistence_use_atomic_mutation() -> None:
+    async def scenario() -> None:
+        auth_key = AuthKey(dc_id=2, key=AUTH_KEY, key_id=123)
+        storage = MutationOnlySessionStorage(SessionRecord(dc_id=2, auth_key=auth_key))
+        config = ClientConfig(api_id=1, api_hash="hash", session_storage=storage)
+        await ensure_auth_key(config, storage)
+        service = AuthService(config, storage, lambda _request: None)
+        options = await service.persist_dc_options(
+            SimpleNamespace(
+                this_dc=2,
+                dc_options=(
+                    types.DcOption(id=2, ip_address="149.154.167.50", port=443),
+                    types.DcOption(id=4, ip_address="149.154.167.91", port=443),
+                ),
+            )
+        )
+        loaded = await storage.load()
+        assert loaded is not None
+        record = session_record_from_mapping(loaded)
+        assert record.auth_key == auth_key
+        assert record.dc_options == options
+
+    run(scenario())
+
+
+def test_media_dc_auth_persistence_uses_atomic_mutation(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def scenario() -> None:
+        class FakeTransport:
+            def __init__(self, *args, **kwargs) -> None:
+                del args, kwargs
+
+            async def close(self) -> None:
+                return None
+
+        class FakeExchange:
+            def __init__(self, *args, **kwargs) -> None:
+                del args, kwargs
+
+            async def create_auth_key(self):
+                return SimpleNamespace(auth_key=b"m" * 256, server_salt=789)
+
+        monkeypatch.setattr("miniproto.client.UnencryptedAuthKeyTransport", FakeTransport)
+        monkeypatch.setattr("miniproto.client.AuthKeyExchange", FakeExchange)
+        storage = MutationOnlySessionStorage(
+            SessionRecord(
+                dc_id=2,
+                dc_options=(
+                    DCOption(id=2, ip_address="127.0.0.1", port=443),
+                    DCOption(id=4, ip_address="127.0.0.1", port=444),
+                ),
+                update_state=UpdateState(pts=17),
+            )
+        )
+        client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage))
+        assert await client._ensure_media_dc_auth(4) == (b"m" * 256, 789)
+        loaded = await storage.load()
+        assert loaded is not None
+        record = session_record_from_mapping(loaded)
+        assert record.update_state.pts == 17
+        assert record.metadata["dc_auth"]["4"] == {"key": b"m" * 256, "salt": 789}
 
     run(scenario())
 

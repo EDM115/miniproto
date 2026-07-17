@@ -9,6 +9,7 @@ import sys
 import time
 import tracemalloc
 from collections.abc import Mapping
+from contextlib import suppress
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from typing import Literal, Protocol, TextIO
@@ -23,12 +24,7 @@ _METRICS_SINK: MetricsSink | None = None
 
 class MetricsSink(Protocol):
     def record_metric(
-        self,
-        name: str,
-        value: float,
-        *,
-        unit: str = "count",
-        attributes: Mapping[str, object] | None = None,
+        self, name: str, value: float, *, unit: str = "count", attributes: Mapping[str, object] | None = None
     ) -> None: ...
 
 
@@ -46,16 +42,9 @@ class InMemoryMetrics:
     events: list[MetricEvent] = field(default_factory=list)
 
     def record_metric(
-        self,
-        name: str,
-        value: float,
-        *,
-        unit: str = "count",
-        attributes: Mapping[str, object] | None = None,
+        self, name: str, value: float, *, unit: str = "count", attributes: Mapping[str, object] | None = None
     ) -> None:
-        self.events.append(
-            MetricEvent(name=name, value=value, unit=unit, attributes=dict(attributes or {}))
-        )
+        self.events.append(MetricEvent(name=name, value=value, unit=unit, attributes=dict(attributes or {})))
 
 
 @dataclass(frozen=True, slots=True)
@@ -147,9 +136,7 @@ def get_logger(name: str | None = None) -> logging.Logger:
     return logging.getLogger(_LOGGER_NAME if name is None else f"{_LOGGER_NAME}.{name}")
 
 
-def configure_logging(
-    level: str | int = "INFO", *, format: LogFormat = "text", stream: TextIO | None = None
-) -> None:
+def configure_logging(level: str | int = "INFO", *, format: LogFormat = "text", stream: TextIO | None = None) -> None:
     handler = logging.StreamHandler(stream)
     handler.setFormatter(StructuredFormatter(fmt=format))
     logger = get_logger()
@@ -192,7 +179,8 @@ def record_metric(
 ) -> None:
     sink = _METRICS_SINK
     if sink is not None:
-        sink.record_metric(name, value, unit=unit, attributes=attributes)
+        with suppress(Exception):
+            sink.record_metric(name, value, unit=unit, attributes=attributes)
 
 
 def resource_snapshot() -> ResourceSnapshot:
@@ -246,11 +234,7 @@ def _windows_rss_bytes() -> int | None:
     kernel32 = win_dll("kernel32", use_last_error=True)
     psapi = win_dll("psapi", use_last_error=True)
     kernel32.GetCurrentProcess.restype = wintypes.HANDLE
-    psapi.GetProcessMemoryInfo.argtypes = (
-        wintypes.HANDLE,
-        ctypes.POINTER(ProcessMemoryCounters),
-        wintypes.DWORD,
-    )
+    psapi.GetProcessMemoryInfo.argtypes = (wintypes.HANDLE, ctypes.POINTER(ProcessMemoryCounters), wintypes.DWORD)
     psapi.GetProcessMemoryInfo.restype = wintypes.BOOL
     handle = kernel32.GetCurrentProcess()
     ok = psapi.GetProcessMemoryInfo(handle, ctypes.byref(counters), counters.cb)

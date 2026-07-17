@@ -59,8 +59,10 @@ class FakeSender:
         body: bytes | object,
         *,
         content_related: bool = True,
+        retry_safe: bool,
         request_timeout: float | None = None,
     ) -> object:
+        del content_related, retry_safe, request_timeout
         self.requests.append(body)
         if not self.responses:
             raise AssertionError("fake sender has no queued response")
@@ -155,9 +157,7 @@ def test_upload_file_cancels_pending_part_tasks_when_outer_upload_is_cancelled()
             finally:
                 cancelled += 1
 
-        task = asyncio.create_task(
-            upload_file(invoke, b"x" * (4 * 1024), part_size=1024, concurrency=2)
-        )
+        task = asyncio.create_task(upload_file(invoke, b"x" * (4 * 1024), part_size=1024, concurrency=2))
         await asyncio.wait_for(started.wait(), timeout=1.0)
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
@@ -183,10 +183,7 @@ def test_upload_file_uses_small_file_parts_and_md5() -> None:
         assert result.input_file.id == 5
         assert result.input_file.parts == 2
         assert result.input_file.name == "small.bin"
-        assert (
-            result.input_file.md5_checksum
-            == hashlib.md5(payload, usedforsecurity=False).hexdigest()
-        )
+        assert result.input_file.md5_checksum == hashlib.md5(payload, usedforsecurity=False).hexdigest()
         assert [type(request) for request in invoker.requests] == [
             functions.UploadSaveFilePart,
             functions.UploadSaveFilePart,
@@ -210,9 +207,7 @@ def test_upload_file_uses_big_file_branch() -> None:
         assert result.big is True
         assert result.md5_checksum is None
         assert result.parts == parts
-        assert all(
-            isinstance(request, functions.UploadSaveBigFilePart) for request in invoker.requests
-        )
+        assert all(isinstance(request, functions.UploadSaveBigFilePart) for request in invoker.requests)
         assert invoker.requests[0].file_total_parts == parts
         assert invoker.requests[-1].file_part == parts - 1
 
@@ -238,17 +233,11 @@ def test_client_reads_upload_limit_parts_from_app_config() -> None:
         config = types.HelpAppConfig(
             hash=123,
             config=types.JsonObject(
-                value=(
-                    types.JsonObjectValue(
-                        key="upload_max_fileparts", value=types.JsonNumber(value=4096.0)
-                    ),
-                )
+                value=(types.JsonObjectValue(key="upload_max_fileparts", value=types.JsonNumber(value=4096.0)),)
             ),
         )
         sender = FakeSender([config])
-        client = Client(
-            ClientConfig(api_id=1, api_hash="hash", session_storage=storage_with_auth())
-        )
+        client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage_with_auth()))
         client._sender = sender
         await client.connect()
         assert await client._upload_limit_parts_from_app_config() == 4096
@@ -263,9 +252,7 @@ def test_upload_file_spools_unknown_size_iterables_and_retries_false_parts() -> 
     async def scenario() -> None:
         invoker = FakeInvoker([types.BoolFalse(), types.BoolTrue()])
         source = (chunk for chunk in (b"ab", b"cd"))
-        result = await upload_file(
-            invoker, source, file_name="stream.bin", part_size=1024, file_id=7
-        )
+        result = await upload_file(invoker, source, file_name="stream.bin", part_size=1024, file_id=7)
         assert isinstance(result.input_file, types.InputFile)
         assert result.size == 4
         assert [request.file_part for request in invoker.requests] == [0, 0]
@@ -302,9 +289,7 @@ def test_upload_file_does_not_retry_non_transient_rpc_errors() -> None:
 
 def test_upload_file_sleeps_and_retries_flood_waits_within_threshold() -> None:
     async def scenario() -> None:
-        invoker = FakeInvoker(
-            [classify_rpc_error(RpcError("FLOOD_PREMIUM_WAIT_0", code=420)), types.BoolTrue()]
-        )
+        invoker = FakeInvoker([classify_rpc_error(RpcError("FLOOD_PREMIUM_WAIT_0", code=420)), types.BoolTrue()])
         result = await upload_file(invoker, b"abc", part_size=1024, max_retries=1, file_id=9)
         assert result.size == 3
         assert [request.file_part for request in invoker.requests] == [0, 0]
@@ -318,9 +303,7 @@ def test_upload_file_floods_do_not_consume_the_transient_retry_budget() -> None:
     async def scenario() -> None:
         # 4 consecutive floods on one part with max_retries=1: server pacing
         # must not abort the upload (one flood used to kill uploads at 99%).
-        invoker = FakeInvoker(
-            [FloodWait(0), FloodWait(0), FloodWait(0), FloodWait(0), types.BoolTrue()]
-        )
+        invoker = FakeInvoker([FloodWait(0), FloodWait(0), FloodWait(0), FloodWait(0), types.BoolTrue()])
         result = await upload_file(invoker, b"abc", part_size=1024, max_retries=1, file_id=9)
         assert result.size == 3
         assert [request.file_part for request in invoker.requests] == [0, 0, 0, 0, 0]
@@ -328,9 +311,7 @@ def test_upload_file_floods_do_not_consume_the_transient_retry_budget() -> None:
     run(scenario())
 
 
-def test_upload_flood_retry_sleep_only_uses_large_floor_for_zero_wait(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_upload_flood_retry_sleep_only_uses_large_floor_for_zero_wait(monkeypatch: pytest.MonkeyPatch) -> None:
     async def scenario() -> None:
         sleeps: list[float] = []
 
@@ -368,9 +349,7 @@ def test_upload_file_flood_threshold_is_a_hard_cap_override() -> None:
     async def scenario() -> None:
         invoker = FakeInvoker([FloodWait(0)])
         with pytest.raises(FloodWait):
-            await upload_file(
-                invoker, b"abc", part_size=1024, max_retries=3, flood_sleep_threshold=None
-            )
+            await upload_file(invoker, b"abc", part_size=1024, max_retries=3, flood_sleep_threshold=None)
         assert len(invoker.requests) == 1
 
     run(scenario())
@@ -400,11 +379,7 @@ def test_upload_retry_backoff_sleeps_nonzero_delay(monkeypatch: pytest.MonkeyPat
 
         monkeypatch.setattr("miniproto.media.upload.asyncio.sleep", recording_sleep)
         invoker = FakeInvoker(
-            [
-                ClientDisconnected("sender disconnected"),
-                ClientDisconnected("sender disconnected"),
-                types.BoolTrue(),
-            ]
+            [ClientDisconnected("sender disconnected"), ClientDisconnected("sender disconnected"), types.BoolTrue()]
         )
         result = await upload_file(invoker, b"abc", part_size=1024, max_retries=2, file_id=10)
         assert result.size == 3
@@ -428,9 +403,7 @@ def test_upload_file_raises_after_missing_part_retries_are_exhausted() -> None:
 def test_upload_file_enforces_memory_ceiling() -> None:
     async def scenario() -> None:
         with pytest.raises(ValueError, match="max_buffer_size"):
-            await upload_file(
-                bad_invoker, b"abc", part_size=1024, concurrency=2, max_buffer_size=1024
-            )
+            await upload_file(bad_invoker, b"abc", part_size=1024, concurrency=2, max_buffer_size=1024)
 
     async def bad_invoker(request: object, **kwargs: object) -> object:
         raise AssertionError("upload should validate before invoking")
@@ -454,14 +427,10 @@ def test_client_send_file_uploads_and_sends_generated_media_request() -> None:
         sender = FakeSender(
             [
                 types.BoolTrue(),
-                types.UpdateShortSentMessage(
-                    id=300, pts=1, pts_count=1, date=1_700_000_001, media=raw_media
-                ),
+                types.UpdateShortSentMessage(id=300, pts=1, pts_count=1, date=1_700_000_001, media=raw_media),
             ]
         )
-        client = Client(
-            ClientConfig(api_id=1, api_hash="hash", session_storage=storage_with_auth())
-        )
+        client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage_with_auth()))
         client._sender = sender
         await client.connect()
         message = await client.send_file(
@@ -483,9 +452,7 @@ def test_client_send_file_uploads_and_sends_generated_media_request() -> None:
         assert isinstance(send_request.media.file, types.InputFile)
         assert send_request.media.file.name == "note.txt"
         assert send_request.media.mime_type == "text/plain"
-        assert send_request.media.attributes == (
-            types.DocumentAttributeFilename(file_name="note.txt"),
-        )
+        assert send_request.media.attributes == (types.DocumentAttributeFilename(file_name="note.txt"),)
         assert send_request.message == "see file"
         assert send_request.entities == (types.MessageEntityBold(offset=4, length=4),)
         assert send_request.random_id == 9
@@ -514,11 +481,7 @@ def test_client_send_file_uses_dedicated_media_lanes() -> None:
         )
         raw_media = types.MessageMediaDocument(document=document)
         main_sender = FakeSender(
-            [
-                types.UpdateShortSentMessage(
-                    id=301, pts=1, pts_count=1, date=1_700_000_001, media=raw_media
-                )
-            ]
+            [types.UpdateShortSentMessage(id=301, pts=1, pts_count=1, date=1_700_000_001, media=raw_media)]
         )
         lane_senders = [FakeSender([types.BoolTrue()]), FakeSender([types.BoolTrue()])]
         built_senders: list[FakeSender] = []
@@ -529,19 +492,12 @@ def test_client_send_file_uses_dedicated_media_lanes() -> None:
             built_senders.append(sender)
             return sender
 
-        client = Client(
-            ClientConfig(api_id=1, api_hash="hash", session_storage=storage_with_auth())
-        )
+        client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage_with_auth()))
         client._sender = main_sender
         client._sender_factory = sender_factory
         await client.connect()
         message = await client.send_file(
-            "@alice",
-            b"a" * 2048,
-            file_name="lanes.bin",
-            part_size=1024,
-            concurrency=2,
-            random_id=10,
+            "@alice", b"a" * 2048, file_name="lanes.bin", part_size=1024, concurrency=2, random_id=10
         )
         assert message.id == 301
         assert built_senders == lane_senders
@@ -572,15 +528,9 @@ def test_client_send_file_reuses_miniproto_file_id_without_upload() -> None:
         file_id = encode_file_id(document)
         raw_media = types.MessageMediaDocument(document=document)
         sender = FakeSender(
-            [
-                types.UpdateShortSentMessage(
-                    id=302, pts=1, pts_count=1, date=1_700_000_001, media=raw_media
-                )
-            ]
+            [types.UpdateShortSentMessage(id=302, pts=1, pts_count=1, date=1_700_000_001, media=raw_media)]
         )
-        client = Client(
-            ClientConfig(api_id=1, api_hash="hash", session_storage=storage_with_auth())
-        )
+        client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage_with_auth()))
         client._sender = sender
         await client.connect()
         message = await client.send_file("@alice", file_id, caption="reuse", random_id=11)
@@ -599,9 +549,7 @@ def test_client_send_file_reuses_miniproto_file_id_without_upload() -> None:
 
 def test_client_send_file_rejects_unknown_options() -> None:
     async def scenario() -> None:
-        client = Client(
-            ClientConfig(api_id=1, api_hash="hash", session_storage=storage_with_auth())
-        )
+        client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage_with_auth()))
         with pytest.raises(TypeError, match="unsupported send_file options"):
             await client.send_file("@alice", b"hello", unsupported=True)
 

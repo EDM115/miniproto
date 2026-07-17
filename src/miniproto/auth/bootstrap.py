@@ -72,12 +72,17 @@ async def ensure_auth_key(config: ClientConfig, storage: SessionStorage) -> None
     if record.auth_key is not None:
         if record.dc_options:
             return
-        await storage.save(replace(record, dc_options=dc_options))
+
+        def persist_options(payload):
+            current = load_session_record(payload, config.dc_id)
+            if current.dc_options:
+                return current
+            return replace(current, dc_options=dc_options)
+
+        await storage.mutate(persist_options)
         return
     option = select_dc_option(dc_options, dc_id)
-    transport = UnencryptedAuthKeyTransport(
-        ConnectionEndpoint(option.ip_address, option.port), config
-    )
+    transport = UnencryptedAuthKeyTransport(ConnectionEndpoint(option.ip_address, option.port), config)
     try:
         result = await AuthKeyExchange(
             transport,
@@ -87,28 +92,30 @@ async def ensure_auth_key(config: ClientConfig, storage: SessionStorage) -> None
         ).create_auth_key()
     finally:
         await transport.close()
-    metadata = dict(record.metadata)
-    metadata["server_salt"] = result.server_salt
-    metadata["time_offset"] = result.time_offset
-    await storage.save(
-        replace(
-            record,
+
+    def persist_auth(payload):
+        current = load_session_record(payload, config.dc_id)
+        metadata = dict(current.metadata)
+        metadata["server_salt"] = result.server_salt
+        metadata["time_offset"] = result.time_offset
+        return replace(
+            current,
             dc_id=result.dc_id,
             auth_key=AuthKey(
                 dc_id=result.dc_id,
                 key=result.auth_key,
                 key_id=int.from_bytes(auth_key_id(result.auth_key), "little", signed=False),
             ),
-            dc_options=dc_options,
+            dc_options=current.dc_options or dc_options,
             metadata=metadata,
         )
-    )
+
+    await storage.mutate(persist_auth)
 
 
 def telegram_rsa_public_keys(*, test_mode: bool) -> tuple[RSAKey, ...]:
     return tuple(
-        _rsa_key_from_pem(pem)
-        for pem in (_TEST_RSA_PUBLIC_KEYS if test_mode else _PRODUCTION_RSA_PUBLIC_KEYS)
+        _rsa_key_from_pem(pem) for pem in (_TEST_RSA_PUBLIC_KEYS if test_mode else _PRODUCTION_RSA_PUBLIC_KEYS)
     )
 
 

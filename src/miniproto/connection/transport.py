@@ -62,9 +62,7 @@ _MIN_SOCKET_BUFFER_BYTES = 1024 * 1024
 _WRITE_DRAIN_THRESHOLD_BYTES = 256 * 1024
 
 
-async def default_stream_connector(
-    endpoint: ConnectionEndpoint, config: TransportConfig
-) -> StreamPair:
+async def default_stream_connector(endpoint: ConnectionEndpoint, config: TransportConfig) -> StreamPair:
     started = time.perf_counter()
     try:
         async with asyncio.timeout(config.connect_timeout):
@@ -94,12 +92,7 @@ async def default_stream_connector(
         )
         raise TransportError(f"transport connect failed: {exc}") from exc
     _emit_transport_event(
-        "transport.connect",
-        started,
-        outcome="success",
-        host=endpoint.host,
-        port=endpoint.port,
-        mode=config.mode,
+        "transport.connect", started, outcome="success", host=endpoint.host, port=endpoint.port, mode=config.mode
     )
     return pair
 
@@ -147,10 +140,7 @@ def _parse_proxy_url(proxy_url: str) -> _ProxyConfig:
 
 
 async def _handshake_http_connect(
-    reader: asyncio.StreamReader,
-    writer: asyncio.StreamWriter,
-    endpoint: ConnectionEndpoint,
-    proxy: _ProxyConfig,
+    reader: asyncio.StreamReader, writer: asyncio.StreamWriter, endpoint: ConnectionEndpoint, proxy: _ProxyConfig
 ) -> None:
     target = f"{endpoint.host}:{endpoint.port}"
     lines = [f"CONNECT {target} HTTP/1.1", f"Host: {target}", "Proxy-Connection: Keep-Alive"]
@@ -170,10 +160,7 @@ async def _handshake_http_connect(
 
 
 async def _handshake_socks5(
-    reader: asyncio.StreamReader,
-    writer: asyncio.StreamWriter,
-    endpoint: ConnectionEndpoint,
-    proxy: _ProxyConfig,
+    reader: asyncio.StreamReader, writer: asyncio.StreamWriter, endpoint: ConnectionEndpoint, proxy: _ProxyConfig
 ) -> None:
     wants_auth = proxy.username is not None
     methods = b"\x00\x02" if wants_auth else b"\x00"
@@ -189,9 +176,7 @@ async def _handshake_socks5(
         password = (proxy.password or "").encode()
         if len(username) > 255 or len(password) > 255:
             raise TransportError("socks5 proxy credentials are too long")
-        writer.write(
-            b"\x01" + bytes([len(username)]) + username + bytes([len(password)]) + password
-        )
+        writer.write(b"\x01" + bytes([len(username)]) + username + bytes([len(password)]) + password)
         await writer.drain()
         auth_version, status = await reader.readexactly(2)
         if auth_version != 1 or status != 0:
@@ -199,9 +184,7 @@ async def _handshake_socks5(
     elif method != 0:
         raise TransportError(f"socks5 proxy selected unsupported authentication method {method}")
     address_type, address = _socks5_address(endpoint.host)
-    writer.write(
-        b"\x05\x01\x00" + bytes([address_type]) + address + int(endpoint.port).to_bytes(2, "big")
-    )
+    writer.write(b"\x05\x01\x00" + bytes([address_type]) + address + int(endpoint.port).to_bytes(2, "big"))
     await writer.drain()
     header = await reader.readexactly(4)
     if header[0] != 5:
@@ -235,10 +218,7 @@ async def _read_socks5_bound_address(reader: asyncio.StreamReader, address_type:
 
 
 async def open_transport(
-    endpoint: ConnectionEndpoint,
-    config: TransportConfig,
-    *,
-    connector: StreamConnector | None = None,
+    endpoint: ConnectionEndpoint, config: TransportConfig, *, connector: StreamConnector | None = None
 ) -> Transport:
     match config.mode:
         case "tcp_abridged":
@@ -263,11 +243,7 @@ class StreamTransportBase:
     handshake_tag: bytes = b""
 
     def __init__(
-        self,
-        endpoint: ConnectionEndpoint,
-        config: TransportConfig,
-        *,
-        connector: StreamConnector | None = None,
+        self, endpoint: ConnectionEndpoint, config: TransportConfig, *, connector: StreamConnector | None = None
     ) -> None:
         self.endpoint = endpoint
         self.config = config
@@ -311,40 +287,24 @@ class StreamTransportBase:
         started = time.perf_counter()
         if not self.is_connected:
             _emit_transport_event(
-                "transport.send",
-                started,
-                outcome="error",
-                error_type="TransportClosed",
-                payload_bytes=len(payload),
+                "transport.send", started, outcome="error", error_type="TransportClosed", payload_bytes=len(payload)
             )
             raise TransportClosed("transport is not connected")
         if len(payload) > self.config.max_payload_size:
             _emit_transport_event(
-                "transport.send",
-                started,
-                outcome="error",
-                error_type="TransportError",
-                payload_bytes=len(payload),
+                "transport.send", started, outcome="error", error_type="TransportError", payload_bytes=len(payload)
             )
             raise TransportError("transport payload exceeds configured maximum")
         await self._write_raw(self.encode_packet(payload))
         _emit_transport_event(
-            "transport.send",
-            started,
-            outcome="success",
-            payload_bytes=len(payload),
-            mode=self.config.mode,
+            "transport.send", started, outcome="success", payload_bytes=len(payload), mode=self.config.mode
         )
 
     async def recv(self) -> bytes:
         started = time.perf_counter()
         if not self.is_connected or self._reader is None:
             _emit_transport_event(
-                "transport.recv",
-                started,
-                outcome="error",
-                error_type="TransportClosed",
-                level=logging.INFO,
+                "transport.recv", started, outcome="error", error_type="TransportClosed", level=logging.INFO
             )
             raise TransportClosed("transport is not connected")
         # A single idle watchdog per connection enforces the read deadline instead
@@ -358,41 +318,25 @@ class StreamTransportBase:
             self._closed = True
             if self._read_timed_out:
                 _emit_transport_event(
-                    "transport.recv",
-                    started,
-                    outcome="error",
-                    error_type="TransportTimeout",
-                    level=logging.WARNING,
+                    "transport.recv", started, outcome="error", error_type="TransportTimeout", level=logging.WARNING
                 )
                 raise TransportTimeout("transport read timed out") from exc
             # Telegram routinely closes media connections as a throttling/load-shedding
             # signal; a server-side EOF is normal operation, not an error worth ERROR
             # logs (Telethon logs INFO, Pyrogram nothing, TDLib INFO).
             _emit_transport_event(
-                "transport.recv",
-                started,
-                outcome="error",
-                error_type="TransportClosed",
-                level=logging.INFO,
+                "transport.recv", started, outcome="error", error_type="TransportClosed", level=logging.INFO
             )
             raise TransportClosed("transport closed while reading") from exc
         except OSError as exc:
             self._closed = True
             if self._read_timed_out:
                 _emit_transport_event(
-                    "transport.recv",
-                    started,
-                    outcome="error",
-                    error_type="TransportTimeout",
-                    level=logging.WARNING,
+                    "transport.recv", started, outcome="error", error_type="TransportTimeout", level=logging.WARNING
                 )
                 raise TransportTimeout("transport read timed out") from exc
             _emit_transport_event(
-                "transport.recv",
-                started,
-                outcome="error",
-                error_type=type(exc).__name__,
-                level=logging.INFO,
+                "transport.recv", started, outcome="error", error_type=type(exc).__name__, level=logging.INFO
             )
             raise TransportClosed(f"transport read failed: {exc}") from exc
         finally:
@@ -400,19 +344,11 @@ class StreamTransportBase:
             self._last_activity = time.monotonic()
         if len(payload) > self.config.max_payload_size:
             _emit_transport_event(
-                "transport.recv",
-                started,
-                outcome="error",
-                error_type="TransportError",
-                payload_bytes=len(payload),
+                "transport.recv", started, outcome="error", error_type="TransportError", payload_bytes=len(payload)
             )
             raise TransportError("transport received payload exceeds configured maximum")
         _emit_transport_event(
-            "transport.recv",
-            started,
-            outcome="success",
-            payload_bytes=len(payload),
-            mode=self.config.mode,
+            "transport.recv", started, outcome="success", payload_bytes=len(payload), mode=self.config.mode
         )
         return payload
 
@@ -521,9 +457,7 @@ def _write_buffer_size(writer: asyncio.StreamWriter) -> int | None:
         return None
 
 
-async def read_exactly_bounded(
-    reader: asyncio.StreamReader, length: int, max_payload_size: int
-) -> bytes:
+async def read_exactly_bounded(reader: asyncio.StreamReader, length: int, max_payload_size: int) -> bytes:
     if length < 0:
         raise TransportError("transport frame length cannot be negative")
     if length > max_payload_size:
@@ -544,21 +478,11 @@ def _emit_transport_event(
     duration_ms = (time.perf_counter() - started) * 1000
     payload_bytes = fields.get("payload_bytes")
     if isinstance(payload_bytes, int):
-        metric_name = (
-            "transport.bytes_sent" if event == "transport.send" else "transport.bytes_received"
-        )
+        metric_name = "transport.bytes_sent" if event == "transport.send" else "transport.bytes_received"
         record_metric(metric_name, payload_bytes, unit="bytes", attributes={"outcome": outcome})
     record_metric(f"{event}.duration", duration_ms, unit="ms", attributes={"outcome": outcome})
     if level is None:
         level = logging.ERROR if outcome == "error" else logging.DEBUG
     if not _LOGGER.isEnabledFor(level):
         return
-    emit_event(
-        _LOGGER,
-        level,
-        event,
-        outcome=outcome,
-        duration_ms=duration_ms,
-        details=safe_repr(fields),
-        **fields,
-    )
+    emit_event(_LOGGER, level, event, outcome=outcome, duration_ms=duration_ms, details=safe_repr(fields), **fields)

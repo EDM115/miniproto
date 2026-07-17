@@ -34,8 +34,10 @@ class FakeSender:
         body: bytes | object,
         *,
         content_related: bool = True,
+        retry_safe: bool,
         request_timeout: float | None = None,
     ) -> object:
+        del content_related, retry_safe, request_timeout
         self.requests.append(body)
         if not self.responses:
             raise AssertionError("fake sender has no queued response")
@@ -78,12 +80,8 @@ def rpc_error(code: int, text: str) -> bytes:
 
 def test_send_message_uses_cached_input_peer_and_generated_send_request() -> None:
     async def scenario() -> None:
-        storage = storage_with_auth(
-            peers=(PeerCacheEntry(id=7, kind="user", access_hash=77, username="alice"),)
-        )
-        sender = FakeSender(
-            [types.UpdateShortSentMessage(id=123, pts=1, pts_count=1, date=1_700_000_000)]
-        )
+        storage = storage_with_auth(peers=(PeerCacheEntry(id=7, kind="user", access_hash=77, username="alice"),))
+        sender = FakeSender([types.UpdateShortSentMessage(id=123, pts=1, pts_count=1, date=1_700_000_000)])
         client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage))
         client._sender = sender
         await client.connect()
@@ -106,15 +104,11 @@ def test_send_message_uses_cached_input_peer_and_generated_send_request() -> Non
 def test_send_message_parses_markdown_lite_entities() -> None:
     async def scenario() -> None:
         storage = storage_with_auth(user=UserIdentity(id=42, access_hash=9900, username="alice"))
-        sender = FakeSender(
-            [types.UpdateShortSentMessage(id=124, pts=1, pts_count=1, date=1_700_000_000)]
-        )
+        sender = FakeSender([types.UpdateShortSentMessage(id=124, pts=1, pts_count=1, date=1_700_000_000)])
         client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage))
         client._sender = sender
         await client.connect()
-        message = await client.send_message(
-            "me", "hi **bold** and `x`", parse_mode="markdown-lite", random_id=99
-        )
+        message = await client.send_message("me", "hi **bold** and `x`", parse_mode="markdown-lite", random_id=99)
         request = inner_request(sender.requests[0])
         assert isinstance(request, functions.MessagesSendMessage)
         assert isinstance(request.peer, types.InputPeerSelf)
@@ -132,9 +126,7 @@ def test_send_message_parses_markdown_lite_entities() -> None:
 def test_send_message_plain_text_keeps_markdown_markers_without_parse_mode() -> None:
     async def scenario() -> None:
         storage = storage_with_auth(user=UserIdentity(id=42, access_hash=9900, username="alice"))
-        sender = FakeSender(
-            [types.UpdateShortSentMessage(id=125, pts=1, pts_count=1, date=1_700_000_000)]
-        )
+        sender = FakeSender([types.UpdateShortSentMessage(id=125, pts=1, pts_count=1, date=1_700_000_000)])
         client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage))
         client._sender = sender
         await client.connect()
@@ -149,12 +141,8 @@ def test_send_message_plain_text_keeps_markdown_markers_without_parse_mode() -> 
 
 def test_send_message_normalizes_message_from_updates_container_and_remembers_entities() -> None:
     async def scenario() -> None:
-        storage = storage_with_auth(
-            peers=(PeerCacheEntry(id=7, kind="user", access_hash=77, username="alice"),)
-        )
-        raw_message = types.Message(
-            id=77, peer_id=types.PeerUser(user_id=7), date=1_700_000_001, message="server text"
-        )
+        storage = storage_with_auth(peers=(PeerCacheEntry(id=7, kind="user", access_hash=77, username="alice"),))
+        raw_message = types.Message(id=77, peer_id=types.PeerUser(user_id=7), date=1_700_000_001, message="server text")
         sender = FakeSender(
             [
                 types.Updates(
@@ -198,9 +186,7 @@ def test_send_message_surfaces_flood_wait_errors_from_raw_invoke() -> None:
 
 def test_get_history_returns_normalized_messages_and_remembers_entities() -> None:
     async def scenario() -> None:
-        storage = storage_with_auth(
-            peers=(PeerCacheEntry(id=7, kind="user", access_hash=77, username="alice"),)
-        )
+        storage = storage_with_auth(peers=(PeerCacheEntry(id=7, kind="user", access_hash=77, username="alice"),))
         raw_message = types.Message(
             id=77, peer_id=types.PeerUser(user_id=7), date=1_700_000_001, message="history text"
         )
@@ -243,9 +229,7 @@ def test_get_history_returns_normalized_messages_and_remembers_entities() -> Non
 
 def test_edit_message_sends_generated_edit_request_and_normalizes_result() -> None:
     async def scenario() -> None:
-        storage = storage_with_auth(
-            peers=(PeerCacheEntry(id=7, kind="user", access_hash=77, username="alice"),)
-        )
+        storage = storage_with_auth(peers=(PeerCacheEntry(id=7, kind="user", access_hash=77, username="alice"),))
         raw_message = types.Message(
             id=77,
             peer_id=types.PeerUser(user_id=7),
@@ -282,9 +266,7 @@ def test_edit_message_sends_generated_edit_request_and_normalizes_result() -> No
 
 def test_delete_messages_uses_messages_delete_for_non_channels() -> None:
     async def scenario() -> None:
-        storage = storage_with_auth(
-            peers=(PeerCacheEntry(id=7, kind="user", access_hash=77, username="alice"),)
-        )
+        storage = storage_with_auth(peers=(PeerCacheEntry(id=7, kind="user", access_hash=77, username="alice"),))
         sender = FakeSender([types.MessagesAffectedMessages(pts=2, pts_count=2)])
         client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage))
         client._sender = sender
@@ -302,9 +284,7 @@ def test_delete_messages_uses_messages_delete_for_non_channels() -> None:
 
 def test_delete_messages_uses_channels_delete_for_channels() -> None:
     async def scenario() -> None:
-        storage = storage_with_auth(
-            peers=(PeerCacheEntry(id=8, kind="channel", access_hash=88, username="channel"),)
-        )
+        storage = storage_with_auth(peers=(PeerCacheEntry(id=8, kind="channel", access_hash=88, username="channel"),))
         sender = FakeSender([types.MessagesAffectedMessages(pts=3, pts_count=1)])
         client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage))
         client._sender = sender

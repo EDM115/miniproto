@@ -76,9 +76,7 @@ def test_event_loop_run_uses_runner_cleanup_and_debug() -> None:
     assert generator_closed
 
 
-def test_event_loop_run_propagates_factory_and_coroutine_errors(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_event_loop_run_propagates_factory_and_coroutine_errors(monkeypatch: pytest.MonkeyPatch) -> None:
     async def fail() -> None:
         raise LookupError("sentinel")
 

@@ -4,8 +4,8 @@ use pyo3::types::PyModule;
 use pyo3::wrap_pyfunction;
 
 use crate::crypto::{
-    AES_BLOCK_SIZE, detach_if_large, mtproto_decrypt_payload_raw, mtproto_encrypt_payload_raw,
-    validate_auth_key,
+    AES_BLOCK_SIZE, detach_if_large, mtproto_auth_key_id_raw, mtproto_decrypt_payload_raw,
+    mtproto_encrypt_payload_raw, validate_auth_key,
 };
 use crate::tl::read_fixed;
 
@@ -148,6 +148,11 @@ pub(crate) fn mtproto_decode_message_raw(
     let msg_key = &packet[8..24];
     let ciphertext = &packet[24..];
     let plaintext = mtproto_decrypt_payload_raw(auth_key, msg_key, ciphertext, client_to_server)?;
+    if auth_key_id != mtproto_auth_key_id_raw(auth_key)? {
+        return Err(PyValueError::new_err(
+            "encrypted MTProto auth_key_id does not match auth_key",
+        ));
+    }
     if plaintext.len() < ENVELOPE_HEADER_LEN {
         return Err(PyValueError::new_err(
             "encrypted MTProto plaintext is too short",
@@ -164,6 +169,11 @@ pub(crate) fn mtproto_decode_message_raw(
         ));
     }
     let body_len = body_len as usize;
+    if !body_len.is_multiple_of(4) {
+        return Err(PyValueError::new_err(
+            "encrypted MTProto body length must be divisible by 4",
+        ));
+    }
     let body_offset = ENVELOPE_HEADER_LEN;
     let padding_offset = body_offset + body_len;
     if padding_offset > plaintext.len() {
@@ -171,6 +181,7 @@ pub(crate) fn mtproto_decode_message_raw(
             "encrypted MTProto body length is invalid",
         ));
     }
+    validate_padding(padding_offset, &plaintext[padding_offset..])?;
     Ok(DecodedEncryptedMessage {
         auth_key_id,
         server_salt,
@@ -293,6 +304,15 @@ mod tests {
         })
         .unwrap_err();
         assert!(error.to_string().contains("padding"));
+    }
+
+    #[test]
+    fn padding_predicate_rejects_boundary_and_isolated_invalid_lengths() {
+        Python::initialize();
+        for padding_len in [8, 11, 1025, 1028] {
+            let error = validate_padding(ENVELOPE_HEADER_LEN, &vec![0; padding_len]).unwrap_err();
+            assert!(error.to_string().contains("padding"));
+        }
     }
 
     fn auth_key() -> Vec<u8> {

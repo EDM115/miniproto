@@ -8,11 +8,7 @@ from miniproto.session.models import (
     session_record_from_mapping,
     session_record_to_mapping,
 )
-from miniproto.session.storage import (
-    EncryptedSQLiteSessionStorage,
-    InMemorySessionStorage,
-    SessionStorage,
-)
+from miniproto.session.storage import EncryptedSQLiteSessionStorage, InMemorySessionStorage, SessionStorage
 
 __all__ = [
     "AuthKey",

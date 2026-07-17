@@ -33,12 +33,7 @@ class CdnRedirect:
 
 
 async def get_cdn_file_part(
-    invoke: RawInvoker,
-    redirect: CdnRedirect,
-    *,
-    offset: int,
-    limit: int,
-    request_timeout: float | None = None,
+    invoke: RawInvoker, redirect: CdnRedirect, *, offset: int, limit: int, request_timeout: float | None = None
 ) -> bytes:
     while True:
         result = await invoke(
@@ -47,9 +42,7 @@ async def get_cdn_file_part(
         )
         if isinstance(result, types.UploadCdnFileReuploadNeeded):
             await invoke(
-                functions.UploadReuploadCdnFile(
-                    file_token=redirect.file_token, request_token=result.request_token
-                ),
+                functions.UploadReuploadCdnFile(file_token=redirect.file_token, request_token=result.request_token),
                 request_timeout=request_timeout,
                 retry=True,
             )
@@ -58,9 +51,7 @@ async def get_cdn_file_part(
             payload = decrypt_cdn_chunk(
                 result.bytes, key=redirect.encryption_key, iv=redirect.encryption_iv, offset=offset
             )
-            await verify_cdn_part(
-                invoke, redirect, offset=offset, data=payload, request_timeout=request_timeout
-            )
+            await verify_cdn_part(invoke, redirect, offset=offset, data=payload, request_timeout=request_timeout)
             return payload
         raise CdnError(f"unsupported CDN file response: {type(result).__name__}")
 
@@ -89,9 +80,7 @@ async def verify_cdn_part(
         file_hash = hashes.get(block_offset)
         if file_hash is None:
             fetched = await invoke(
-                functions.UploadGetCdnFileHashes(
-                    file_token=redirect.file_token, offset=block_offset
-                ),
+                functions.UploadGetCdnFileHashes(file_token=redirect.file_token, offset=block_offset),
                 request_timeout=request_timeout,
                 retry=True,
             )
@@ -107,8 +96,7 @@ async def verify_cdn_part(
         block = bytes(data[position : position + hash_limit])
         if len(block) != hash_limit:
             raise CdnIntegrityError(
-                f"CDN chunk at offset {block_offset} is not verifiable: "
-                f"got {len(block)} of {hash_limit} hashed bytes"
+                f"CDN chunk at offset {block_offset} is not verifiable: got {len(block)} of {hash_limit} hashed bytes"
             )
         if hashlib.sha256(block).digest() != bytes(file_hash.hash):
             record_metric("media.cdn.hash_mismatches", 1)

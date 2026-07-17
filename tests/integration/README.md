@@ -7,7 +7,7 @@ Live sessions are stored under `.tmp/miniproto-*.sqlite` using `MINIPROTO_SESSIO
 
 Run the five current smoke checks with:
 
-```powershell
+```pwsh
 uv run pytest tests/integration/test_auth_live.py tests/integration/test_messages_live.py tests/integration/test_media_live.py
 ```
 
@@ -15,7 +15,7 @@ The checks cover bot authorization plus `get_me()`, phone authorization plus `ge
 
 The heavy live media-limit benchmark is not part of pytest. Run it only when you intentionally want to create and transfer the default Telegram MTProto media-limit payload:
 
-```powershell
+```pwsh
 $env:MINIPROTO_INTEGRATION = "1"
 $env:MINIPROTO_REAL_INTEGRATION = "1"
 $env:MINIPROTO_LIVE_BENCH = "1"

@@ -5,6 +5,7 @@ from miniproto.auth import AuthKeyExchange, AuthKeyExchangeResult, AuthService
 from miniproto.client import Client
 from miniproto.config import ClientConfig, DeviceInfo, TransportConfig, UpdateQueueOverflowPolicy
 from miniproto.errors import (
+    AmbiguousRpcResult,
     AuthError,
     AuthKeyNotFound,
     AuthKeyRegenerationRequired,
@@ -62,23 +63,13 @@ from miniproto.observability import (
     set_metrics_sink,
     to_jsonable,
 )
-from miniproto.session.models import (
-    AuthKey,
-    DCOption,
-    PeerCacheEntry,
-    SessionRecord,
-    UpdateState,
-    UserIdentity,
-)
-from miniproto.session.storage import (
-    EncryptedSQLiteSessionStorage,
-    InMemorySessionStorage,
-    SessionStorage,
-)
+from miniproto.session.models import AuthKey, DCOption, PeerCacheEntry, SessionRecord, UpdateState, UserIdentity
+from miniproto.session.storage import EncryptedSQLiteSessionStorage, InMemorySessionStorage, SessionStorage
 from miniproto.types import Media, Message, NewMessage, Peer, Update, User
 
 __all__ = [
     "FILE_ID_PREFIX",
+    "AmbiguousRpcResult",
     "AuthError",
     "AuthKey",
     "AuthKeyExchange",

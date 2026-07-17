@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from miniproto.session.models import PeerCacheEntry, SessionRecord, UpdateState
+from miniproto.session.peer_merge import merge_peer_entries
 from miniproto.types import PeerKind
 
 UPDATE_METADATA_KEY = "updates"
@@ -70,9 +71,7 @@ class UpdateCursor:
     duplicate_keys: tuple[str, ...] = ()
 
     @classmethod
-    def from_record(
-        cls, record: SessionRecord, *, duplicate_window: int = DEFAULT_DUPLICATE_WINDOW
-    ) -> UpdateCursor:
+    def from_record(cls, record: SessionRecord, *, duplicate_window: int = DEFAULT_DUPLICATE_WINDOW) -> UpdateCursor:
         metadata = update_metadata(record.metadata)
         raw_keys = metadata.get(UPDATE_DUPLICATE_KEYS_KEY, ())
         keys = tuple(str(key) for key in raw_keys if isinstance(key, str))[-duplicate_window:]
@@ -117,9 +116,7 @@ class UpdateCursor:
         self, channel_id: int, *, pts: int, date: datetime | int | float | str | None = None
     ) -> UpdateCursor:
         updated = ChannelUpdateCursor(
-            channel_id=channel_id,
-            pts=pts,
-            date=self.date if date is None else coerce_update_datetime(date),
+            channel_id=channel_id, pts=pts, date=self.date if date is None else coerce_update_datetime(date)
         )
         cursors = {cursor.channel_id: cursor for cursor in self.channel_cursors}
         cursors[channel_id] = updated
@@ -158,9 +155,7 @@ class UpdateCursor:
 
 
 class DuplicateTracker:
-    def __init__(
-        self, keys: Iterable[str] = (), *, max_size: int = DEFAULT_DUPLICATE_WINDOW
-    ) -> None:
+    def __init__(self, keys: Iterable[str] = (), *, max_size: int = DEFAULT_DUPLICATE_WINDOW) -> None:
         if max_size <= 0:
             raise ValueError("duplicate tracker max_size must be positive")
         self.max_size = max_size
@@ -193,9 +188,7 @@ def update_metadata(metadata: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def metadata_with_duplicate_keys(
-    metadata: Mapping[str, Any],
-    keys: Iterable[str],
-    channel_cursors: Iterable[ChannelUpdateCursor] = (),
+    metadata: Mapping[str, Any], keys: Iterable[str], channel_cursors: Iterable[ChannelUpdateCursor] = ()
 ) -> dict[str, Any]:
     updated = dict(metadata)
     update_values = update_metadata(updated)
@@ -203,8 +196,7 @@ def metadata_with_duplicate_keys(
     cursors = tuple(channel_cursors)
     if cursors:
         update_values[UPDATE_CHANNELS_KEY] = {
-            str(cursor.channel_id): {"pts": cursor.pts, "date": cursor.date.isoformat()}
-            for cursor in cursors
+            str(cursor.channel_id): {"pts": cursor.pts, "date": cursor.date.isoformat()} for cursor in cursors
         }
     updated[UPDATE_METADATA_KEY] = update_values
     return updated
@@ -224,9 +216,7 @@ def _channel_cursors_from_metadata(metadata: Mapping[str, Any]) -> tuple[Channel
         except (TypeError, ValueError):
             continue
         cursors.append(
-            ChannelUpdateCursor(
-                channel_id=channel_id, pts=pts, date=coerce_update_datetime(raw_cursor.get("date"))
-            )
+            ChannelUpdateCursor(channel_id=channel_id, pts=pts, date=coerce_update_datetime(raw_cursor.get("date")))
         )
     return tuple(cursors)
 
@@ -234,23 +224,16 @@ def _channel_cursors_from_metadata(metadata: Mapping[str, Any]) -> tuple[Channel
 def merge_entity_references(
     existing: Iterable[EntityReference], incoming: Iterable[EntityReference]
 ) -> dict[tuple[PeerKind, int], EntityReference]:
-    merged: dict[tuple[PeerKind, int], EntityReference] = {}
-    for entity in existing:
-        merged[(entity.kind, entity.id)] = entity
-    for entity in incoming:
-        merged[(entity.kind, entity.id)] = entity
-    return merged
+    peers = merge_peer_entries(
+        (entity.to_peer_cache_entry() for entity in existing), (entity.to_peer_cache_entry() for entity in incoming)
+    )
+    return {(peer.kind, peer.id): entity_reference_from_peer(peer) for peer in peers}
 
 
 def merge_peer_cache_entries(
     existing: Iterable[PeerCacheEntry], entities: Iterable[EntityReference]
 ) -> tuple[PeerCacheEntry, ...]:
-    merged: dict[tuple[PeerKind, int], PeerCacheEntry] = {
-        (peer.kind, peer.id): peer for peer in existing
-    }
-    for entity in entities:
-        merged[(entity.kind, entity.id)] = entity.to_peer_cache_entry()
-    return tuple(merged.values())
+    return merge_peer_entries(existing, (entity.to_peer_cache_entry() for entity in entities))
 
 
 def entity_reference_from_peer(peer: PeerCacheEntry) -> EntityReference:

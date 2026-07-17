@@ -14,9 +14,7 @@ def _utc_now() -> datetime:
     return datetime.now(UTC)
 
 
-def _coerce_datetime(
-    value: datetime | str | None, *, default: datetime | None = None
-) -> datetime | None:
+def _coerce_datetime(value: datetime | str | None, *, default: datetime | None = None) -> datetime | None:
     if value is None:
         return default
     if isinstance(value, datetime):
@@ -39,9 +37,7 @@ class AuthKey:
         if not self.key:
             raise ValueError("auth key bytes must not be empty")
         object.__setattr__(self, "key", bytes(self.key))
-        object.__setattr__(
-            self, "created_at", _coerce_datetime(self.created_at, default=_utc_now())
-        )
+        object.__setattr__(self, "created_at", _coerce_datetime(self.created_at, default=_utc_now()))
         object.__setattr__(self, "expires_at", _coerce_datetime(self.expires_at))
 
 
@@ -108,9 +104,7 @@ class PeerCacheEntry:
     def __post_init__(self) -> None:
         if self.id <= 0:
             raise ValueError("peer cache entry id must be positive")
-        object.__setattr__(
-            self, "updated_at", _coerce_datetime(self.updated_at, default=_utc_now())
-        )
+        object.__setattr__(self, "updated_at", _coerce_datetime(self.updated_at, default=_utc_now()))
         if self.raw is not None:
             object.__setattr__(self, "raw", dict(self.raw))
 
@@ -236,9 +230,7 @@ def _dc_option_from_mapping(data: object) -> DCOption:
         media_only=bool(mapping.get("media_only", False)),
         tcpo_only=bool(mapping.get("tcpo_only", False)),
         static=bool(mapping.get("static", False)),
-        secret=None
-        if mapping.get("secret") is None
-        else _require_bytes(mapping["secret"], "dc_option.secret"),
+        secret=None if mapping.get("secret") is None else _require_bytes(mapping["secret"], "dc_option.secret"),
     )
 
 

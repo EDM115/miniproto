@@ -13,9 +13,31 @@ This file is the command reference for routine `miniproto` development. Run comm
 Importing `miniproto` is side-effect free with respect to asyncio: it does not import `uvloop` or `winloop` and does not install a global event-loop policy. Use `miniproto.event_loop.run(coro)` for script entry points, or `asyncio.Runner(loop_factory=miniproto.event_loop.new_event_loop)` when you need direct Runner ownership. Library and embedded callers should keep using their application-owned loop.  
 `event_loop.install()` remains only as an explicit deprecated compatibility helper before Python 3.16; production code must not depend on `EventLoopPolicy`. On Windows with Python 3.14+ and `winloop<=0.6.3`, debug Runner mode deliberately falls back to the stdlib loop because the installed backend crashes during async-generator finalization; non-debug runs retain the optimized factory.
 
+## Session Storage Concurrency Invariants
+
+Every production read-modify-write of session state must use `SessionStorage.mutate()` with a pure synchronous transform. Network requests and other awaited work happen before the mutation; the transform parses the latest isolated mapping and changes only its intended fields. Keep update cursor, update entities, and duplicate/channel metadata in one mutation.
+
+Built-in storage backends serialize load, save, mutate, clear, and close. `InMemorySessionStorage` and `EncryptedSQLiteSessionStorage` use `threading.RLock`, while the client-local cached wrapper uses `asyncio.Lock` and updates its cache and revision snapshot only after the backend commits. SQLite mutations use `BEGIN IMMEDIATE`, retain legacy-envelope load compatibility, compare canonical plaintext domains, encrypt/write/delete only dirty domains, and roll back without revision changes on any failure.  
+New multi-session bot auxiliaries remain locally owned until session identity validation, a successful connection, and cache registration all complete. Cancellation before that ownership transfer waits for shielded disconnect and storage close before propagating, while already cached healthy auxiliaries remain outside the later setup guard. Local cleanup runs exactly once even when cancellation arrives during cleanup; initial load, connect, or registration failures are redacted, cleaned up, and ignored so the primary download continues without the extra session. Test these boundaries with deterministic event barriers instead of sleeps.  
+When adding a session field or persistence path, add deterministic concurrency coverage for its interaction with unrelated domains and verify `domain_revisions()` advances only the logically changed domain. Repeat the unsafe-sequence inventory before review:
+
+```pwsh
+rtk proxy rg -n -U "await .*\.load\(\)[\s\S]{0,800}await .*\.save\(" src/miniproto
+```
+
+The only acceptable match is an API definition or a deliberately classified replace-all initialization, never a reconstructed session record derived from an earlier load.
+
+## Peer Cache Index Invariants
+
+`PeerCache` owns one process-local index bundle guarded by its cache lock. Warm kind/id, numeric, username, phone, and cached-user lookups compare only the synchronous `auth` and `peers` domain revisions; unchanged revisions must not call the client-local cached storage wrapper's `load()` method or scan/copy the canonical peer tuple. Update-state and metadata commits therefore leave the bundle warm, while an UpdateManager peer commit causes exactly one lazy rebuild on the next lookup.
+
+Canonical `SessionRecord.peers` order remains authoritative for conflicting aliases and phones. Username lookup selects the first fresh durable-position owner, skipping stale owners before network resolution; phone lookup selects the first durable-position peer and uses the cached identity only as fallback. Adaptive singleton-or-ordered owner collections preserve promotion when an owner changes or drops a value, and an earlier durable key that later acquires a value outranks later keys. Every string retained in `raw.usernames` remains an alias because the persisted peer model does not retain Telegram's active flag.
+
+Direct peer ingestion runs under the cache-lock-to-storage-lock order, merges through the neutral session peer policy, and reconciles only from the committed canonical result. Fully attributable own commits update affected index owners incrementally; unexpected revision deltas rebuild from the returned record so a queued external commit cannot be hidden. A post-commit cancellation that returns no mapping marks the published revisions stale and forces one rebuild on the next lookup.
+
 ## Install And Sync Dependencies
 
-```powershell
+```pwsh
 uv python install 3.14
 uv sync --extra dev
 uv lock
@@ -26,7 +48,7 @@ Use `uv sync --extra dev` for normal development. Use `uv lock` after dependency
 
 ## Generate Schema Outputs
 
-```powershell
+```pwsh
 uv run python -m tools.schema.generate
 ```
 
@@ -34,7 +56,7 @@ Run this after changing `tools/schema/schema.json`, `tools/schema/schema.tl`, `t
 
 ## Update Pinned Schema Inputs
 
-```powershell
+```pwsh
 uv run python -m tools.schema.update
 ```
 
@@ -42,7 +64,7 @@ This fetches the current official Telegram schema JSON, schema page, layer chang
 
 ## Schema Freshness Check
 
-```powershell
+```pwsh
 uv run python -m tools.schema.generate --check
 ```
 
@@ -50,7 +72,7 @@ This fails when committed raw API files or schema metadata drift from the pinned
 
 ## Upstream Schema Freshness Check
 
-```powershell
+```pwsh
 uv run python -m tools.schema.update --check-upstream
 ```
 
@@ -58,57 +80,67 @@ This network-dependent check fails when the upstream Telegram schema or RPC erro
 
 ## Format
 
-```powershell
+```pwsh
 uv run ruff format .
 cargo fmt
 ```
 
 ## Format Check
 
-```powershell
+```pwsh
 uv run ruff format --check .
 cargo fmt --check
 ```
 
 ## Lint
 
-```powershell
+```pwsh
 uv run ruff check .
 cargo clippy --all-targets --all-features -- -D warnings
 ```
 
 ## Type Check
 
-```powershell
+```pwsh
 uv run ty check
 ```
 
 ## Test
 
-```powershell
+```pwsh
 uv run pytest
+$pythonBase = uv run python -c 'import sys; print(sys.base_prefix)'
+$env:PATH = "$pythonBase;$env:PATH"
 cargo test --all-features
 ```
 
 ## Benchmark Smoke
 
-```powershell
+```pwsh
 uv run python tools/bench/benchmark_native_fallback_crypto.py
 uv run python tools/bench/benchmark_runtime_paths.py
 ```
 
-These compare native-extension timings with the pure Python fallback for crypto, TL primitive paths, and single-call MTProto encrypted envelope encode/decode, then benchmark async runtime paths such as update dispatch, media transfer, generated TL `upload.getFile` request encoding, generated TL `upload.File` result decoding, and synthetic concurrent request scheduling. The commands are smoke checks, not absolute timing gates. Keep Rust implementations and Python fallbacks in parity even when the public wrapper intentionally prefers the Python fallback; `benchmark_native_fallback_crypto.py` is the evidence source for those routing choices.
+These compare native-extension timings with the pure Python fallback for crypto, TL primitive paths, and single-call MTProto encrypted envelope encode/decode, then benchmark async runtime paths such as update dispatch, media transfer, generated TL `upload.getFile` request encoding, generated TL `upload.File` result decoding, synthetic concurrent request scheduling, 100,000 synchronous pending-slot reserve/release pairs against a no-op loop, a 1,000-task held-slot burst against the scheduling baseline, and a 10,000-entry peer cache. The peer case reports cold construction, indexed and canonical-scan medians for kind/id, numeric, username, and phone lookups, per-type and combined speedups, cached-wrapper loads, canonical tuple visits, retained heap with shared-object deduplication, and separate end-to-end durable-update and incremental index-reconciliation times. Its deterministic gates require at least 20x per warm lookup type, incremental index heap below 2.5x canonical peer heap, unchanged warm load/build/visit counters, and no rebuild for one attributable direct peer commit. The pending-slot output reports best/median raw times, normalized per-operation deltas, percentage overhead, and the event-loop backend. Other timings remain observational smoke evidence. Keep Rust implementations and Python fallbacks in parity even when the public wrapper intentionally prefers the Python fallback; `benchmark_native_fallback_crypto.py` is the evidence source for those routing choices.
+
+## Pending RPC Capacity Invariants
+
+`max_pending_rpcs` is a fail-fast per-sender bound on public caller RPCs after a concrete sender has been selected. A public request synchronously reserves one logical slot before its first await and keeps that one slot across connection setup, send, response wait, and every replay alias until the request coroutine exits. `SenderState.pending_count` and `sender.pending_rpcs` therefore report logical caller occupancy rather than message-id alias cardinality. Public `ClientConfig.max_pending_rpcs` requires a positive integer and defaults to 512; `None` is only an internal/direct-`MTProtoSender` unlimited test mode, where rejection is skipped but occupancy remains tracked. The latest `sender.pending_rpcs` metric value is the current occupancy gauge, while `sender.pending_rpc_limit_exceeded` is an increment counter with numeric `used` and `configured` attributes.
+
+One-way acknowledgements and state-info replies remain uncounted service sends, and correlated keepalive ping/Pong traffic uses a private uncounted service-request path so a full caller cap cannot prevent liveness or recovery. Pending-map, receive, reconnect, and disconnect helpers never release caller slots; the public request's outer `finally` is the sole release owner. Consequently, tests asserting zero after disconnect must gather the affected request tasks so their finalizers have run. A protocol-invalid envelope closes the suspect transport without releasing preserved Plan 002 requests: their slots remain occupied until timeout, caller cancellation, explicit disconnect, or another actual terminal completion.
 
 ## Protocol Robustness Notes
 
 `TransportConfig.proxy` supports stdlib HTTP CONNECT and SOCKS5 URLs in the default connector. Use `http://host:port`, `http://user:pass@host:port`, `socks5://host:port`, or `socks5://user:pass@host:port`; custom connectors still override the built-in path.
+Inbound encrypted MTProto messages are authenticated and structurally decoded before sender state is touched, then the complete outer message/container is prevalidated for session identity, server message-id parity, trusted-time bounds, duplicate/replay-floor status, and pending-alias correlation. A failure raises `ProtocolValidationError`, makes the sender fatal, closes the suspect transport, and emits `sender.protocol_validation_errors` plus a `sender.receive_loop` event with only the stable `validation_reason`; diagnostics may contain numeric message IDs and structural sizes but never bodies, auth keys, message keys, session secrets, or decrypted plaintext. Stable reasons currently include `auth_key_id`, `msg_key`, `padding`, `body_length`, `malformed_envelope`, `session_id`, `msg_id_parity`, `duplicate_msg_id`, `duplicate_msg_id_in_container`, `replay_floor`, `msg_id_future`, `msg_id_past`, and `unknown_bad_msg_id`. `bad_msg_notification` and `bad_server_salt` are accepted only when `bad_msg_id` is a current pending request alias, so stale or unknown references cannot alter time or salt.
 Quick ack is intentionally documented as a later transport feature rather than enabled in v1. The next implementation step is to add transport-level quick-ack frame decoding, correlate those acks to pending requests separately from normal `msgs_ack`, and prove with fake-server plus live traces that it improves latency without hiding ordinary response/error handling. The current runtime handles regular MTProto service messages (`msgs_state_req`, `msgs_state_info`, and `msg_resend_req`) and keeps quick ack out of behavioral paths until those protocol-specific frames are decoded explicitly.
+Custom `RawSender` implementations must expose `request(body, *, content_related=True, retry_safe: bool, request_timeout=None)` and honor `retry_safe=False` by never replaying an RPC whose result became ambiguous after transport send began. The client derives this flag from the innermost TL request, including wrappers, and explicit `Client.invoke(..., retry=True)` opts into replay safety; use that override only when the operation is idempotent or Telegram de-duplicates it, because forcing it for an unsafe write can execute the RPC twice after a reconnect.
 
 ## Live Media-Limit Benchmark
 
 The heavy live benchmark is intentionally separate from smoke checks. It creates a deterministic, non-random payload at Telegram's standard MTProto default upload ceiling (`4000 * 512 KiB = 2,097,152,000 bytes`, also 2000 MiB), uploads it, downloads the same media from Telegram, and reports overall throughput plus fixed-window average, median, p01, p05, p95, p99, fastest 5%, slowest 1%, min, max, and standard deviation. Telegram exposes the actual max uploadable parts through app config; override `MINIPROTO_LIVE_BENCH_UPLOAD_PARTS` or `MINIPROTO_LIVE_BENCH_SIZE` when testing Premium or server-side changes.
 
-```powershell
+```pwsh
 $env:MINIPROTO_INTEGRATION = "1"
 $env:MINIPROTO_REAL_INTEGRATION = "1"
 $env:MINIPROTO_LIVE_BENCH = "1"
@@ -123,7 +155,7 @@ The manual GitHub Actions workflow `.github/workflows/live-media-bench.yml` runs
 
 ## Stress Tests
 
-```powershell
+```pwsh
 $env:MINIPROTO_STRESS = "1"
 uv run pytest tests/stress
 ```
@@ -132,14 +164,14 @@ Stress tests cover larger media buffers, many update emissions, repeated message
 
 Optional live Telegram integration tests are gated by environment variables:
 
-```powershell
+```pwsh
 $env:MINIPROTO_INTEGRATION = "1"
 uv run pytest tests/integration
 ```
 
 ## Build
 
-```powershell
+```pwsh
 uv run maturin build
 cargo build --release --all-features
 ```
@@ -148,7 +180,7 @@ cargo build --release --all-features
 
 ## Local Editable Build
 
-```powershell
+```pwsh
 uv run maturin develop
 ```
 
@@ -156,7 +188,7 @@ Use this when you need to import the compiled native extension from the active v
 
 ## Clean Generated Build Artifacts
 
-```powershell
+```pwsh
 Remove-Item -Recurse -Force target, dist, build -ErrorAction SilentlyContinue
 ```
 
@@ -164,8 +196,8 @@ Do not remove `.venv` unless you intentionally want to rebuild the local Python 
 
 ## Publish To PyPI
 
-```powershell
-uv run maturin build --release
+```pwsh
+uv run maturin build --release --out dist
 uv publish dist/*
 ```
 
@@ -173,7 +205,7 @@ Use the configured PyPI token or trusted publishing flow. The PyPI `miniproto` n
 
 ## Publish To crates.io
 
-```powershell
+```pwsh
 cargo publish -p miniproto --dry-run
 cargo publish -p miniproto
 ```
@@ -182,7 +214,7 @@ Only publish the Rust crate when the crates.io package contents intentionally ma
 
 ## Full Local Verification
 
-```powershell
+```pwsh
 uv run ruff format --check .
 uv run ruff check .
 uv run ty check
@@ -202,7 +234,7 @@ Copy `.env.example` to `.env` for local live-test runs and keep `.env` uncommitt
 
 For the current production-DC smoke path, set:
 
-```powershell
+```pwsh
 $env:MINIPROTO_INTEGRATION = "1"
 $env:MINIPROTO_REAL_INTEGRATION = "1"
 $env:MINIPROTO_API_ID = "..."

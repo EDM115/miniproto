@@ -41,14 +41,7 @@ def test_live_saved_messages_media_upload_download() -> None:
 async def _find_recent_media(client, caption: str) -> Media | None:
     history = await client.invoke(
         functions.MessagesGetHistory(
-            peer=types.InputPeerSelf(),
-            offset_id=0,
-            offset_date=0,
-            add_offset=0,
-            limit=10,
-            max_id=0,
-            min_id=0,
-            hash=0,
+            peer=types.InputPeerSelf(), offset_id=0, offset_date=0, add_offset=0, limit=10, max_id=0, min_id=0, hash=0
         )
     )
     for message in getattr(history, "messages", ()):

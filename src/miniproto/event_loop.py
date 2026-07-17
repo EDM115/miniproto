@@ -74,9 +74,7 @@ def install() -> bool:
             return False
         install_func = getattr(selected_backend, "install", None)
         if not callable(install_func):
-            _INSTALL_ERROR = RuntimeError(
-                f"{_BACKEND_NAME} does not expose a legacy event-loop policy installer"
-            )
+            _INSTALL_ERROR = RuntimeError(f"{_BACKEND_NAME} does not expose a legacy event-loop policy installer")
             _INSTALLED = False
             return False
         install_func()

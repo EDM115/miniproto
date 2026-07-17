@@ -4,14 +4,16 @@ import asyncio
 import base64
 import hashlib
 import hmac
+import inspect
 import json
 import logging
 import os
 import re
 import secrets
 import sqlite3
+import threading
 import time
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import fields, is_dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -46,6 +48,9 @@ CREATE TABLE IF NOT EXISTS session_domains (
 )
 """
 _KNOWN_SESSION_DOMAINS = ("auth", "peers", "update_state", "metadata", "payload")
+_SESSION_RECORD_KEYS = frozenset(
+    {"version", "dc_id", "auth_key", "dc_options", "user", "update_state", "peers", "metadata"}
+)
 _LOGGER = get_logger("session.storage")
 _SIBLING_NAME_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*\Z")
 
@@ -56,6 +61,12 @@ class SessionStorage(Protocol):
 
     async def save(self, data: SessionPayload) -> None: ...
 
+    async def mutate(
+        self, transform: Callable[[Mapping[str, Any] | None], SessionPayload | None]
+    ) -> Mapping[str, Any] | None: ...
+
+    def domain_revisions(self) -> Mapping[str, int]: ...
+
     async def clear(self) -> None: ...
 
     async def close(self) -> None: ...
@@ -63,39 +74,81 @@ class SessionStorage(Protocol):
 
 class InMemorySessionStorage:
     def __init__(self, initial: SessionPayload | None = None) -> None:
-        self._data: dict[str, Any] | None = (
-            _copy_session_data(initial) if initial is not None else None
-        )
+        self._lock = threading.RLock()
+        self._closed = False
+        self._revisions = _new_domain_revisions()
+        self._data: dict[str, Any] | None = _copy_session_data(initial) if initial is not None else None
+        self._domains = _canonical_session_domains(initial)
         self._siblings: dict[str, InMemorySessionStorage] = {}
 
     def sibling(self, name: str) -> InMemorySessionStorage:
         _validate_sibling_name(name)
-        storage = self._siblings.get(name)
-        if storage is None:
-            storage = InMemorySessionStorage()
-            self._siblings[name] = storage
-        return storage
+        with self._lock:
+            storage = self._siblings.get(name)
+            if storage is None:
+                storage = InMemorySessionStorage()
+                self._siblings[name] = storage
+            return storage
 
     async def load(self) -> Mapping[str, Any] | None:
         started = time.perf_counter()
-        result = _copy_session_data(self._data) if self._data is not None else None
-        _emit_storage_event(
-            "session.load", started, outcome="success", backend="memory", found=result is not None
-        )
+        with self._lock:
+            self._ensure_open()
+            result = _copy_session_data(self._data) if self._data is not None else None
+        _emit_storage_event("session.load", started, outcome="success", backend="memory", found=result is not None)
         return result
 
     async def save(self, data: SessionPayload) -> None:
         started = time.perf_counter()
-        self._data = _copy_session_data(data)
+        with self._lock:
+            self._ensure_open()
+            new_data = _copy_session_data(data)
+            new_domains = _canonical_session_domains(data)
+            changed = _changed_domain_plaintexts(self._domains, new_domains)
+            self._data = new_data
+            self._domains = new_domains
+            _advance_domain_revisions(self._revisions, changed)
         _emit_storage_event("session.save", started, outcome="success", backend="memory")
+
+    async def mutate(
+        self, transform: Callable[[Mapping[str, Any] | None], SessionPayload | None]
+    ) -> Mapping[str, Any] | None:
+        started = time.perf_counter()
+        with self._lock:
+            self._ensure_open()
+            current = _copy_session_data(self._data) if self._data is not None else None
+            transformed = _apply_sync_transform(transform, current)
+            new_data = None if transformed is None else _copy_session_data(transformed)
+            new_domains = _canonical_session_domains(transformed)
+            changed = _changed_domain_plaintexts(self._domains, new_domains)
+            self._data = new_data
+            self._domains = new_domains
+            _advance_domain_revisions(self._revisions, changed)
+            result = _copy_session_data(new_data) if new_data is not None else None
+        _emit_storage_event("session.mutate", started, outcome="success", backend="memory")
+        return result
+
+    def domain_revisions(self) -> Mapping[str, int]:
+        with self._lock:
+            return dict(self._revisions)
 
     async def clear(self) -> None:
         started = time.perf_counter()
-        self._data = None
+        with self._lock:
+            self._ensure_open()
+            changed = set(self._domains)
+            self._data = None
+            self._domains = {}
+            _advance_domain_revisions(self._revisions, changed)
         _emit_storage_event("session.clear", started, outcome="success", backend="memory")
 
     async def close(self) -> None:
-        return None
+        with self._lock:
+            self._closed = True
+
+    def _ensure_open(self) -> None:
+        if self._closed:
+            raise SessionStorageError("session storage is closed")
 
 
 class EncryptedSQLiteSessionStorage:
@@ -104,16 +157,15 @@ class EncryptedSQLiteSessionStorage:
     def __init__(self, path: str | os.PathLike[str], key: bytes | str | None = None) -> None:
         resolved_key = key if key is not None else os.environ.get("MINIPROTO_SESSION_KEY")
         if not resolved_key:
-            raise ValueError(
-                "EncryptedSQLiteSessionStorage requires a key or MINIPROTO_SESSION_KEY"
-            )
-        key_material = (
-            resolved_key.encode() if isinstance(resolved_key, str) else bytes(resolved_key)
-        )
+            raise ValueError("EncryptedSQLiteSessionStorage requires a key or MINIPROTO_SESSION_KEY")
+        key_material = resolved_key.encode() if isinstance(resolved_key, str) else bytes(resolved_key)
         if len(key_material) < 16:
             raise ValueError("EncryptedSQLiteSessionStorage key must be at least 16 bytes")
         self.path = Path(path)
         self._encryption_key, self._mac_key = _derive_keys(key_material)
+        self._lock = threading.RLock()
+        self._closed = False
+        self._revisions = _new_domain_revisions()
 
     def sibling(self, name: str) -> EncryptedSQLiteSessionStorage:
         _validate_sibling_name(name)
@@ -122,13 +174,14 @@ class EncryptedSQLiteSessionStorage:
         return self._from_derived_keys(path, self._encryption_key, self._mac_key)
 
     @classmethod
-    def _from_derived_keys(
-        cls, path: Path, encryption_key: bytes, mac_key: bytes
-    ) -> EncryptedSQLiteSessionStorage:
+    def _from_derived_keys(cls, path: Path, encryption_key: bytes, mac_key: bytes) -> EncryptedSQLiteSessionStorage:
         storage = cls.__new__(cls)
         storage.path = path
         storage._encryption_key = encryption_key
         storage._mac_key = mac_key
+        storage._lock = threading.RLock()
+        storage._closed = False
+        storage._revisions = _new_domain_revisions()
         return storage
 
     async def load(self) -> Mapping[str, Any] | None:
@@ -137,36 +190,40 @@ class EncryptedSQLiteSessionStorage:
             result = await asyncio.to_thread(self._load_sync)
         except BaseException as exc:
             _emit_storage_event(
-                "session.load",
-                started,
-                outcome="error",
-                backend="sqlite",
-                error_type=type(exc).__name__,
+                "session.load", started, outcome="error", backend="sqlite", error_type=type(exc).__name__
             )
             raise
-        _emit_storage_event(
-            "session.load", started, outcome="success", backend="sqlite", found=result is not None
-        )
+        _emit_storage_event("session.load", started, outcome="success", backend="sqlite", found=result is not None)
         return result
 
     async def save(self, data: SessionPayload) -> None:
         started = time.perf_counter()
-        envelopes = {
-            domain: self._encrypt(serialize_session_data(payload))
-            for domain, payload in _split_session_domains(data).items()
-        }
         try:
-            await asyncio.to_thread(self._save_sync, envelopes)
+            await asyncio.to_thread(self._save_sync, data)
         except BaseException as exc:
             _emit_storage_event(
-                "session.save",
-                started,
-                outcome="error",
-                backend="sqlite",
-                error_type=type(exc).__name__,
+                "session.save", started, outcome="error", backend="sqlite", error_type=type(exc).__name__
             )
             raise
         _emit_storage_event("session.save", started, outcome="success", backend="sqlite")
+
+    async def mutate(
+        self, transform: Callable[[Mapping[str, Any] | None], SessionPayload | None]
+    ) -> Mapping[str, Any] | None:
+        started = time.perf_counter()
+        try:
+            result = await asyncio.to_thread(self._mutate_sync, transform)
+        except BaseException as exc:
+            _emit_storage_event(
+                "session.mutate", started, outcome="error", backend="sqlite", error_type=type(exc).__name__
+            )
+            raise
+        _emit_storage_event("session.mutate", started, outcome="success", backend="sqlite")
+        return result
+
+    def domain_revisions(self) -> Mapping[str, int]:
+        with self._lock:
+            return dict(self._revisions)
 
     async def clear(self) -> None:
         started = time.perf_counter()
@@ -174,86 +231,153 @@ class EncryptedSQLiteSessionStorage:
             await asyncio.to_thread(self._clear_sync)
         except BaseException as exc:
             _emit_storage_event(
-                "session.clear",
-                started,
-                outcome="error",
-                backend="sqlite",
-                error_type=type(exc).__name__,
+                "session.clear", started, outcome="error", backend="sqlite", error_type=type(exc).__name__
             )
             raise
         _emit_storage_event("session.clear", started, outcome="success", backend="sqlite")
 
     async def close(self) -> None:
-        return None
+        await asyncio.to_thread(self._close_sync)
 
     def _load_sync(self) -> Mapping[str, Any] | None:
-        if not self.path.exists():
-            return None
-        try:
-            with self._connect() as connection:
-                _ensure_schema(connection)
-                domain_rows = connection.execute(
-                    "SELECT domain, envelope FROM session_domains ORDER BY domain"
-                ).fetchall()
-                if domain_rows:
-                    merged: dict[str, Any] = {}
-                    for _domain, envelope in domain_rows:
-                        merged.update(self._decrypt(bytes(envelope)))
-                    return merged
-                row = connection.execute(
-                    "SELECT envelope FROM session_records WHERE name = ?", (_DEFAULT_RECORD_NAME,)
-                ).fetchone()
-        except sqlite3.Error as exc:
-            raise SessionStorageError("failed to load session database") from exc
-        if row is None:
-            return None
-        return self._decrypt(bytes(row[0]))
+        with self._lock:
+            self._ensure_open()
+            if not self.path.exists():
+                return None
+            try:
+                with self._connect() as connection:
+                    _ensure_schema(connection)
+                    data, _domains, _legacy_present = self._load_current(connection)
+            except sqlite3.Error as exc:
+                raise SessionStorageError("failed to load session database") from exc
+            return _copy_session_data(data) if data is not None else None
 
-    def _save_sync(self, envelopes: Mapping[str, bytes]) -> None:
+    def _save_sync(self, data: SessionPayload) -> None:
+        with self._lock:
+            self._ensure_open()
+            new_data = _copy_session_data(data)
+            new_domains = _canonical_session_domains(data)
+            self._write_replacement(new_data, new_domains, operation="save")
+
+    def _mutate_sync(
+        self, transform: Callable[[Mapping[str, Any] | None], SessionPayload | None]
+    ) -> Mapping[str, Any] | None:
+        with self._lock:
+            self._ensure_open()
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            connection = self._connect()
+            try:
+                _ensure_schema(connection)
+                connection.execute("BEGIN IMMEDIATE")
+                current, old_domains, legacy_present = self._load_current(connection)
+                isolated = _copy_session_data(current) if current is not None else None
+                transformed = _apply_sync_transform(transform, isolated)
+                new_data = _copy_session_data(transformed) if transformed is not None else None
+                new_domains = _canonical_session_domains(transformed)
+                changed = _changed_domain_plaintexts(old_domains, new_domains)
+                writes = set(new_domains) if legacy_present else changed
+                self._apply_domain_changes(connection, new_domains, writes)
+                connection.commit()
+            except sqlite3.Error as exc:
+                connection.rollback()
+                raise SessionStorageError("failed to mutate session database") from exc
+            except BaseException:
+                connection.rollback()
+                raise
+            finally:
+                connection.close()
+            _advance_domain_revisions(self._revisions, changed)
+            return _copy_session_data(new_data) if new_data is not None else None
+
+    def _write_replacement(
+        self, new_data: Mapping[str, Any] | None, new_domains: Mapping[str, bytes], *, operation: str
+    ) -> None:
+        del new_data
         self.path.parent.mkdir(parents=True, exist_ok=True)
         connection = self._connect()
         try:
             _ensure_schema(connection)
             connection.execute("BEGIN IMMEDIATE")
-            now = datetime.now(UTC).isoformat()
-            connection.execute(
-                "DELETE FROM session_records WHERE name = ?", (_DEFAULT_RECORD_NAME,)
-            )
-            for stale_domain in set(_KNOWN_SESSION_DOMAINS) - set(envelopes):
-                connection.execute("DELETE FROM session_domains WHERE domain = ?", (stale_domain,))
-            for domain, envelope in envelopes.items():
-                connection.execute(
-                    """
-                    INSERT INTO session_domains (domain, envelope, updated_at)
-                    VALUES (?, ?, ?)
-                    ON CONFLICT(domain) DO UPDATE SET envelope = excluded.envelope, updated_at = excluded.updated_at
-                    """,
-                    (domain, envelope, now),
-                )
+            _current, old_domains, legacy_present = self._load_current(connection)
+            changed = _changed_domain_plaintexts(old_domains, new_domains)
+            writes = set(new_domains) if legacy_present else changed
+            self._apply_domain_changes(connection, new_domains, writes)
             connection.commit()
         except sqlite3.Error as exc:
             connection.rollback()
-            raise SessionStorageError("failed to save session database") from exc
+            raise SessionStorageError(f"failed to {operation} session database") from exc
+        except BaseException:
+            connection.rollback()
+            raise
         finally:
             connection.close()
+        _advance_domain_revisions(self._revisions, changed)
+
+    def _load_current(self, connection: sqlite3.Connection) -> tuple[dict[str, Any] | None, dict[str, bytes], bool]:
+        domain_rows = connection.execute("SELECT domain, envelope FROM session_domains ORDER BY domain").fetchall()
+        if domain_rows:
+            merged: dict[str, Any] = {}
+            domains: dict[str, bytes] = {}
+            for domain, envelope in domain_rows:
+                payload = self._decrypt(bytes(envelope))
+                merged.update(payload)
+                domains[str(domain)] = serialize_session_data(payload)
+            return merged, domains, False
+        row = connection.execute(
+            "SELECT envelope FROM session_records WHERE name = ?", (_DEFAULT_RECORD_NAME,)
+        ).fetchone()
+        if row is None:
+            return None, {}, False
+        payload = dict(self._decrypt(bytes(row[0])))
+        return payload, _canonical_loaded_domains(payload), True
+
+    def _apply_domain_changes(
+        self, connection: sqlite3.Connection, new_domains: Mapping[str, bytes], changed: set[str]
+    ) -> None:
+        connection.execute("DELETE FROM session_records WHERE name = ?", (_DEFAULT_RECORD_NAME,))
+        now = datetime.now(UTC).isoformat()
+        for domain in _ordered_session_domains(changed):
+            plaintext = new_domains.get(domain)
+            if plaintext is None:
+                connection.execute("DELETE FROM session_domains WHERE domain = ?", (domain,))
+                continue
+            envelope = self._encrypt(plaintext)
+            connection.execute(
+                """
+                INSERT INTO session_domains (domain, envelope, updated_at)
+                VALUES (?, ?, ?)
+                ON CONFLICT(domain) DO UPDATE SET envelope = excluded.envelope, updated_at = excluded.updated_at
+                """,
+                (domain, envelope, now),
+            )
 
     def _clear_sync(self) -> None:
-        if not self.path.exists():
-            return
-        connection = self._connect()
-        try:
-            _ensure_schema(connection)
-            connection.execute("BEGIN IMMEDIATE")
-            connection.execute(
-                "DELETE FROM session_records WHERE name = ?", (_DEFAULT_RECORD_NAME,)
-            )
-            connection.execute("DELETE FROM session_domains")
-            connection.commit()
-        except sqlite3.Error as exc:
-            connection.rollback()
-            raise SessionStorageError("failed to clear session database") from exc
-        finally:
-            connection.close()
+        with self._lock:
+            self._ensure_open()
+            if not self.path.exists():
+                return
+            connection = self._connect()
+            try:
+                _ensure_schema(connection)
+                connection.execute("BEGIN IMMEDIATE")
+                _current, old_domains, _legacy_present = self._load_current(connection)
+                connection.execute("DELETE FROM session_records WHERE name = ?", (_DEFAULT_RECORD_NAME,))
+                connection.execute("DELETE FROM session_domains")
+                connection.commit()
+            except sqlite3.Error as exc:
+                connection.rollback()
+                raise SessionStorageError("failed to clear session database") from exc
+            finally:
+                connection.close()
+            _advance_domain_revisions(self._revisions, set(old_domains))
+
+    def _close_sync(self) -> None:
+        with self._lock:
+            self._closed = True
+
+    def _ensure_open(self) -> None:
+        if self._closed:
+            raise SessionStorageError("session storage is closed")
 
     def _connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.path)
@@ -280,9 +404,7 @@ class EncryptedSQLiteSessionStorage:
         nonce = _b64decode(str(envelope["nonce"]), "nonce")
         ciphertext = _b64decode(str(envelope["payload"]), "payload")
         tag = _b64decode(str(envelope["tag"]), "tag")
-        expected_tag = hmac.new(
-            self._mac_key, _mac_input(nonce, ciphertext), hashlib.sha256
-        ).digest()
+        expected_tag = hmac.new(self._mac_key, _mac_input(nonce, ciphertext), hashlib.sha256).digest()
         if not hmac.compare_digest(tag, expected_tag):
             raise SessionEnvelopeError("session envelope authentication failed")
         plaintext = _xor_bytes(ciphertext, _keystream(self._encryption_key, nonce, len(ciphertext)))
@@ -291,9 +413,7 @@ class EncryptedSQLiteSessionStorage:
 
 def _validate_sibling_name(name: str) -> None:
     if _SIBLING_NAME_RE.fullmatch(name) is None:
-        raise ValueError(
-            "session sibling name must contain only letters, numbers, '.', '_', or '-'"
-        )
+        raise ValueError("session sibling name must contain only letters, numbers, '.', '_', or '-'")
 
 
 def serialize_session_data(data: SessionPayload) -> bytes:
@@ -333,6 +453,10 @@ def _split_session_domains(data: SessionPayload) -> dict[str, Mapping[str, Any]]
     if not isinstance(data, SessionRecord):
         return {"payload": _normalize_session_payload(data)}
     payload = dict(session_record_to_mapping(data))
+    return _split_session_record_mapping_domains(payload)
+
+
+def _split_session_record_mapping_domains(payload: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
     return {
         "auth": {
             "version": payload.get("version"),
@@ -347,6 +471,55 @@ def _split_session_domains(data: SessionPayload) -> dict[str, Mapping[str, Any]]
     }
 
 
+def _canonical_loaded_domains(data: Mapping[str, Any]) -> dict[str, bytes]:
+    if set(data) == _SESSION_RECORD_KEYS:
+        return {
+            domain: serialize_session_data(payload)
+            for domain, payload in _split_session_record_mapping_domains(data).items()
+        }
+    return {"payload": serialize_session_data(data)}
+
+
+def _new_domain_revisions() -> dict[str, int]:
+    return dict.fromkeys(_KNOWN_SESSION_DOMAINS, 0)
+
+
+def _canonical_session_domains(data: SessionPayload | None) -> dict[str, bytes]:
+    if data is None:
+        return {}
+    return {domain: serialize_session_data(payload) for domain, payload in _split_session_domains(data).items()}
+
+
+def _changed_domain_plaintexts(old_domains: Mapping[str, bytes], new_domains: Mapping[str, bytes]) -> set[str]:
+    return {
+        domain
+        for domain in old_domains.keys() | new_domains.keys()
+        if old_domains.get(domain) != new_domains.get(domain)
+    }
+
+
+def _advance_domain_revisions(revisions: dict[str, int], changed: set[str]) -> None:
+    for domain in changed:
+        revisions[domain] += 1
+
+
+def _ordered_session_domains(domains: set[str]) -> tuple[str, ...]:
+    known = tuple(domain for domain in _KNOWN_SESSION_DOMAINS if domain in domains)
+    return (*known, *sorted(domains - set(_KNOWN_SESSION_DOMAINS)))
+
+
+def _apply_sync_transform(
+    transform: Callable[[Mapping[str, Any] | None], SessionPayload | None], payload: Mapping[str, Any] | None
+) -> SessionPayload | None:
+    transformed = transform(payload)
+    if inspect.isawaitable(transformed):
+        close = getattr(transformed, "close", None)
+        if callable(close):
+            close()
+        raise TypeError("session mutation transform must be synchronous")
+    return transformed
+
+
 def _encode_json_value(value: object) -> object:
     if isinstance(value, bytes | bytearray | memoryview):
         return {_JSON_TYPE_KEY: "bytes", "value": _b64encode(bytes(value))}
@@ -356,9 +529,7 @@ def _encode_json_value(value: object) -> object:
     if isinstance(value, SessionRecord):
         return _encode_json_value(session_record_to_mapping(value))
     if is_dataclass(value) and not isinstance(value, type):
-        return {
-            field.name: _encode_json_value(getattr(value, field.name)) for field in fields(value)
-        }
+        return {field.name: _encode_json_value(getattr(value, field.name)) for field in fields(value)}
     if isinstance(value, Mapping):
         return {str(key): _encode_json_value(item) for key, item in value.items()}
     if isinstance(value, list | tuple):
@@ -433,9 +604,7 @@ def _b64decode(value: str, field_name: str) -> bytes:
     try:
         return base64.b64decode(value.encode("ascii"), validate=True)
     except (ValueError, UnicodeEncodeError) as exc:
-        raise SessionEnvelopeError(
-            f"session envelope field {field_name} is not valid base64"
-        ) from exc
+        raise SessionEnvelopeError(f"session envelope field {field_name} is not valid base64") from exc
 
 
 def _parse_datetime(value: str) -> datetime:

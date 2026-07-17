@@ -47,9 +47,7 @@ def make_random_id() -> int:
     return secrets.randbits(63) or 1
 
 
-def message_from_send_result(
-    result: object, *, peer: Peer, text: str, entities: Iterable[object] = ()
-) -> Message:
+def message_from_send_result(result: object, *, peer: Peer, text: str, entities: Iterable[object] = ()) -> Message:
     parsed_entities = tuple(entities)
     if isinstance(result, types.UpdateShortSentMessage):
         return Message(
@@ -78,16 +76,9 @@ def message_from_update_result(
     raw_message = _find_message_result(result)
     if raw_message is None:
         return Message(
-            id=0,
-            peer=fallback_peer,
-            text=fallback_text,
-            date=utc_now(),
-            entities=parsed_entities,
-            raw=result,
+            id=0, peer=fallback_peer, text=fallback_text, date=utc_now(), entities=parsed_entities, raw=result
         )
-    return _message_from_raw(
-        raw_message, fallback_peer=fallback_peer, fallback_entities=parsed_entities
-    )
+    return _message_from_raw(raw_message, fallback_peer=fallback_peer, fallback_entities=parsed_entities)
 
 
 def messages_from_history_result(result: object, *, fallback_peer: Peer) -> tuple[Message, ...]:
@@ -99,9 +90,7 @@ def messages_from_history_result(result: object, *, fallback_peer: Peer) -> tupl
     )
 
 
-def _parse_delimited_entity(
-    text: str, index: int, output: list[str]
-) -> tuple[int, object | None] | None:
+def _parse_delimited_entity(text: str, index: int, output: list[str]) -> tuple[int, object | None] | None:
     for delimiter, kind in (("```", "pre"), ("**", "bold"), ("__", "italic"), ("`", "code")):
         if not text.startswith(delimiter, index):
             continue
@@ -162,9 +151,7 @@ def _find_message_result(result: object) -> types.Message | None:
     return None
 
 
-def _message_from_raw(
-    raw: types.Message, *, fallback_peer: Peer, fallback_entities: tuple[object, ...]
-) -> Message:
+def _message_from_raw(raw: types.Message, *, fallback_peer: Peer, fallback_entities: tuple[object, ...]) -> Message:
     return Message(
         id=raw.id,
         peer=_peer_from_raw(raw.peer_id, fallback_peer),

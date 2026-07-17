@@ -8,6 +8,7 @@ __pycache__/
 *.dylib
 *.egg-info/
 .pytest_cache/
+.pytest-*/
 .ruff_cache/
 .ty/
 .tmp/
@@ -19,9 +20,11 @@ htmlcov/
 .mypy_cache/
 .idea/
 .vscode/
-*.sqlite
-*.sqlite3
+# Documented default encrypted session plus its derived sibling sessions.
+miniproto.session.sqlite
+miniproto.session-*.sqlite
 *.session
+.pytest-tmp/
 *.log
 *.pdb
 .env

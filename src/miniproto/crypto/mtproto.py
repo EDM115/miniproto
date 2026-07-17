@@ -27,38 +27,26 @@ def auth_key_id(auth_key: bytes) -> bytes:
     return mtproto_auth_key_id(auth_key)
 
 
-def message_key(
-    auth_key: bytes, plaintext_with_padding: BytesLike, *, client_to_server: bool = True
-) -> bytes:
+def message_key(auth_key: bytes, plaintext_with_padding: BytesLike, *, client_to_server: bool = True) -> bytes:
     return mtproto_message_key(auth_key, plaintext_with_padding, client_to_server=client_to_server)
 
 
-def derive_aes_key_iv(
-    auth_key: bytes, msg_key: bytes, *, client_to_server: bool = True
-) -> tuple[bytes, bytes]:
+def derive_aes_key_iv(auth_key: bytes, msg_key: bytes, *, client_to_server: bool = True) -> tuple[bytes, bytes]:
     return mtproto_derive_aes_key_iv(auth_key, msg_key, client_to_server=client_to_server)
 
 
 def encrypt_payload(
-    auth_key: bytes,
-    plaintext: BytesLike,
-    *,
-    client_to_server: bool = True,
-    padding: bytes | None = None,
+    auth_key: bytes, plaintext: BytesLike, *, client_to_server: bool = True, padding: bytes | None = None
 ) -> EncryptedPayload:
     if padding is None:
         padding = os.urandom(_padding_length(len(plaintext)))
     _validate_padding(len(plaintext), padding)
     padded = bytes(plaintext) + padding
-    key_id, msg_key, ciphertext = mtproto_encrypt_payload(
-        auth_key, padded, client_to_server=client_to_server
-    )
+    key_id, msg_key, ciphertext = mtproto_encrypt_payload(auth_key, padded, client_to_server=client_to_server)
     return EncryptedPayload(auth_key_id=key_id, msg_key=msg_key, ciphertext=ciphertext)
 
 
-def decrypt_payload(
-    auth_key: bytes, msg_key: bytes, ciphertext: BytesLike, *, client_to_server: bool = False
-) -> bytes:
+def decrypt_payload(auth_key: bytes, msg_key: bytes, ciphertext: BytesLike, *, client_to_server: bool = False) -> bytes:
     return mtproto_decrypt_payload(auth_key, msg_key, ciphertext, client_to_server=client_to_server)
 
 

@@ -12,7 +12,7 @@ from typing import Any
 
 from tools.schema.parser import TLParameter, TLSchema, iter_public_params, parse_schema_file
 
-_GENERATOR_VERSION = "2"
+_GENERATOR_VERSION = "3"
 _SCHEMA_LAYER = 214
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_SCHEMA = _REPO_ROOT / "tools" / "schema" / "schema.json"
@@ -20,10 +20,17 @@ _DEFAULT_METADATA = _REPO_ROOT / "tools" / "schema" / "schema-metadata.json"
 _DEFAULT_ERRORS = _REPO_ROOT / "tools" / "schema" / "rpc-errors.json"
 _DEFAULT_RAW_DIR = _REPO_ROOT / "src" / "miniproto" / "raw"
 _DEFAULT_DOCS = _REPO_ROOT / "docs" / "raw-api.md"
+_TYPE_BUCKET_COUNT = 64
+_FUNCTION_BUCKET_COUNT = 32
 _MANIFEST = (
     "src/miniproto/raw/base.py",
     "src/miniproto/raw/types.py",
+    "src/miniproto/raw/types.pyi",
     "src/miniproto/raw/functions.py",
+    "src/miniproto/raw/functions.pyi",
+    "src/miniproto/raw/_registry.py",
+    "src/miniproto/raw/_types_shards/*.py",
+    "src/miniproto/raw/_function_shards/*.py",
     "src/miniproto/raw/errors.py",
     "docs/raw-api.md",
 )
@@ -38,20 +45,17 @@ _SOURCE_CHANGELOG_URL = "https://core.telegram.org/api/layers"
 @dataclass(frozen=True, slots=True)
 class GeneratedOutputs:
     files: Mapping[Path, str]
+    owned_directories: tuple[Path, ...] = ()
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        description="Generate miniproto raw API modules from pinned TL schema."
-    )
+    parser = argparse.ArgumentParser(description="Generate miniproto raw API modules from pinned TL schema.")
     parser.add_argument("--schema", type=Path, default=_DEFAULT_SCHEMA)
     parser.add_argument("--metadata", type=Path, default=_DEFAULT_METADATA)
     parser.add_argument("--errors", type=Path, default=_DEFAULT_ERRORS)
     parser.add_argument("--raw-dir", type=Path, default=_DEFAULT_RAW_DIR)
     parser.add_argument("--docs", type=Path, default=_DEFAULT_DOCS)
-    parser.add_argument(
-        "--check", action="store_true", help="fail when generated files or metadata are stale"
-    )
+    parser.add_argument("--check", action="store_true", help="fail when generated files or metadata are stale")
     args = parser.parse_args(argv)
     outputs = render_outputs(args.schema, args.metadata, args.errors, args.raw_dir, args.docs)
     stale = stale_outputs(outputs)
@@ -76,22 +80,39 @@ def render_outputs(
     schema = parse_schema_file(schema_path)
     rpc_error_database = _load_rpc_error_database(errors_path)
     metadata = _metadata(schema_path, errors_path, metadata_path, schema, rpc_error_database)
+    type_shard_dir = raw_dir / "_types_shards"
+    function_shard_dir = raw_dir / "_function_shards"
     files: dict[Path, str] = {
         metadata_path: _json_document(metadata),
         raw_dir / "base.py": _render_base(metadata),
-        raw_dir / "types.py": _render_entries_module(schema.constructors, module_kind="types"),
-        raw_dir / "functions.py": _render_entries_module(schema.functions, module_kind="functions"),
+        raw_dir / "types.py": _render_facade(schema.constructors, module_kind="types"),
+        raw_dir / "types.pyi": _render_stub(schema.constructors, module_kind="types"),
+        raw_dir / "functions.py": _render_facade(schema.functions, module_kind="functions"),
+        raw_dir / "functions.pyi": _render_stub(schema.functions, module_kind="functions"),
+        raw_dir / "_registry.py": _render_registry(schema),
         raw_dir / "errors.py": _render_errors(rpc_error_database),
         docs_path: _render_docs(metadata, schema, rpc_error_database),
     }
+    files.update(
+        _render_shards(
+            schema.constructors, module_kind="types", shard_dir=type_shard_dir, bucket_count=_TYPE_BUCKET_COUNT
+        )
+    )
+    files.update(
+        _render_shards(
+            schema.functions, module_kind="functions", shard_dir=function_shard_dir, bucket_count=_FUNCTION_BUCKET_COUNT
+        )
+    )
     formatted = {
-        path: _format_python(path, content) if path.suffix == ".py" else content
+        path: _format_python(path, content) if path.suffix in {".py", ".pyi"} else content
         for path, content in files.items()
     }
-    return GeneratedOutputs(files=formatted)
+    return GeneratedOutputs(files=formatted, owned_directories=(type_shard_dir, function_shard_dir))
 
 
 def write_outputs(outputs: GeneratedOutputs) -> None:
+    for path in _unexpected_owned_outputs(outputs):
+        path.unlink()
     for path, content in outputs.files.items():
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8", newline="\n")
@@ -102,7 +123,312 @@ def stale_outputs(outputs: GeneratedOutputs) -> tuple[Path, ...]:
     for path, expected in outputs.files.items():
         if not path.exists() or path.read_text(encoding="utf-8") != expected:
             stale.append(path)
+    stale.extend(_unexpected_owned_outputs(outputs))
     return tuple(stale)
+
+
+def _unexpected_owned_outputs(outputs: GeneratedOutputs) -> tuple[Path, ...]:
+    expected = frozenset(outputs.files)
+    unexpected: list[Path] = []
+    for directory in outputs.owned_directories:
+        if not directory.exists():
+            continue
+        for path in directory.glob("*.py"):
+            if path in expected:
+                continue
+            if path.read_text(encoding="utf-8").startswith(_HEADER.splitlines()[0]):
+                unexpected.append(path)
+    return tuple(sorted(unexpected))
+
+
+def _bucket_for_constructor_id(constructor_id: int, bucket_count: int) -> int:
+    if bucket_count <= 0 or bucket_count & (bucket_count - 1):
+        raise ValueError("bucket_count must be a positive power of two")
+    return constructor_id & (bucket_count - 1)
+
+
+def _render_shards(entries: Sequence[Any], *, module_kind: str, shard_dir: Path, bucket_count: int) -> dict[Path, str]:
+    buckets: dict[int, list[Any]] = {}
+    for entry in entries:
+        bucket = _bucket_for_constructor_id(entry.constructor_id, bucket_count)
+        buckets.setdefault(bucket, []).append(entry)
+    return {
+        shard_dir / f"bucket_{bucket:02d}.py": _render_entries_module(tuple(bucket_entries), module_kind=module_kind)
+        for bucket, bucket_entries in sorted(buckets.items())
+    }
+
+
+def _render_facade(entries: Sequence[Any], *, module_kind: str) -> str:
+    collection_name = f"ALL_{module_kind.upper()}"
+    public_names = [entry.python_class_name for entry in entries]
+    namespaces = sorted({entry.namespace for entry in entries if entry.namespace is not None})
+    namespace_names = [namespace.replace(".", "_") for namespace in namespaces]
+    lines = [
+        _HEADER.rstrip(),
+        "from __future__ import annotations",
+        "",
+        "from miniproto.raw._registry import (",
+        "    LazyClassSequence,",
+        "    LazyConstructorMap,",
+        "    LazyNameMap,",
+        "    lazy_namespace,",
+        "    resolve_class,",
+        ")",
+        "",
+        "",
+    ]
+    for namespace, public_name in zip(namespaces, namespace_names, strict=True):
+        lines.append(f"{public_name} = lazy_namespace({module_kind!r}, {namespace!r})")
+    if namespaces:
+        lines.append("")
+    lines.extend(
+        [
+            f"{collection_name} = LazyClassSequence({module_kind!r})",
+            f"CONSTRUCTOR_ID_MAP = LazyConstructorMap({module_kind!r})",
+            f"NAME_MAP = LazyNameMap({module_kind!r})",
+            "",
+            "",
+            "def __getattr__(name: str):",
+            f"    resolved = resolve_class({module_kind!r}, name)",
+            "    globals()[name] = resolved",
+            "    return resolved",
+            "",
+            "",
+            "def __dir__():",
+            f"    return sorted(set(globals()).union({tuple(public_names)!r}))",
+            "",
+            "",
+            f"__all__ = {tuple(public_names + namespace_names + ['CONSTRUCTOR_ID_MAP', 'NAME_MAP'])!r}",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _render_stub(entries: Sequence[Any], *, module_kind: str) -> str:
+    base_class = "TLConstructor" if module_kind == "types" else "TLRequest"
+    lines = [
+        _HEADER.rstrip(),
+        "from __future__ import annotations",
+        "",
+        "from collections.abc import Mapping, Sequence",
+        "from typing import Any, ClassVar",
+        "",
+        f"from miniproto.raw.base import {base_class}",
+        "",
+        "",
+    ]
+    for entry in entries:
+        fields = iter_public_params(entry.params)
+        lines.extend(
+            [
+                f"class {entry.python_class_name}({base_class}):",
+                "    CONSTRUCTOR_ID: ClassVar[int]",
+                "    QUALNAME: ClassVar[str]",
+                "    RESULT_TYPE: ClassVar[str]",
+            ]
+        )
+        for field in fields:
+            lines.append(f"    {field.python_name}: {_stub_annotation(field)}")
+        parameters = ["self"]
+        if fields:
+            parameters.append("*")
+            for field in fields:
+                default = " = ..." if field.is_optional else ""
+                parameters.append(f"{field.python_name}: {_stub_annotation(field)}{default}")
+        lines.extend([f"    def __init__({', '.join(parameters)}) -> None: ...", "", ""])
+    namespace_lines, _namespace_names = _namespace_classes(entries)
+    lines.extend(namespace_lines)
+    lines.extend(
+        [
+            f"ALL_{module_kind.upper()}: Sequence[type[{base_class}]]",
+            f"CONSTRUCTOR_ID_MAP: Mapping[int, type[{base_class}]]",
+            f"NAME_MAP: Mapping[str, type[{base_class}]]",
+            "__all__: tuple[str, ...]",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _stub_annotation(field: TLParameter) -> str:
+    annotation = _annotation(field)
+    return f"{annotation} | None" if field.is_optional and not field.is_true_flag else annotation
+
+
+def _render_registry(schema: TLSchema) -> str:
+    lines = [
+        _HEADER.rstrip(),
+        "from __future__ import annotations",
+        "",
+        "import sys",
+        "from collections.abc import Iterator, Mapping, Sequence",
+        "from functools import cache",
+        "from importlib import import_module",
+        "from typing import Any",
+        "",
+        f"TYPE_SPECS = {_registry_specs(schema.constructors, 'types', _TYPE_BUCKET_COUNT)!r}",
+        f"FUNCTION_SPECS = {_registry_specs(schema.functions, 'functions', _FUNCTION_BUCKET_COUNT)!r}",
+        f"TYPE_CONSTRUCTORS = {_constructor_names(schema.constructors)!r}",
+        f"FUNCTION_CONSTRUCTORS = {_constructor_names(schema.functions)!r}",
+        f"TYPE_QUALNAMES = {_qualname_names(schema.constructors)!r}",
+        f"FUNCTION_QUALNAMES = {_qualname_names(schema.functions)!r}",
+        f"TYPE_NAMESPACES = {_registry_namespaces(schema.constructors)!r}",
+        f"FUNCTION_NAMESPACES = {_registry_namespaces(schema.functions)!r}",
+        "",
+    ]
+    lines.extend(
+        """
+
+def _kind_tables(kind: str):
+    if kind == "types":
+        return TYPE_SPECS, TYPE_CONSTRUCTORS, TYPE_QUALNAMES, TYPE_NAMESPACES
+    if kind == "functions":
+        return FUNCTION_SPECS, FUNCTION_CONSTRUCTORS, FUNCTION_QUALNAMES, FUNCTION_NAMESPACES
+    raise ValueError(f"unknown raw facade kind: {kind!r}")
+
+
+@cache
+def resolve_class(kind: str, name: str) -> type[Any]:
+    specs, _constructors, _qualnames, _namespaces = _kind_tables(kind)
+    try:
+        shard_module, attribute_name = specs[name]
+    except KeyError:
+        raise AttributeError(name) from None
+    cls = getattr(import_module(shard_module), attribute_name)
+    facade_name = f"miniproto.raw.{kind}"
+    cls.__module__ = facade_name
+    facade = sys.modules.get(facade_name)
+    if facade is None:
+        facade = import_module(facade_name)
+    facade.__dict__.setdefault(name, cls)
+    return cls
+
+
+class LazyClassSequence(Sequence[type[Any]]):
+    def __init__(self, kind: str) -> None:
+        self._kind = kind
+        self._names = tuple(_kind_tables(kind)[0])
+
+    def __len__(self) -> int:
+        return len(self._names)
+
+    def __getitem__(self, index: int | slice):
+        if isinstance(index, slice):
+            return tuple(resolve_class(self._kind, name) for name in self._names[index])
+        return resolve_class(self._kind, self._names[index])
+
+    def __iter__(self) -> Iterator[type[Any]]:
+        return (resolve_class(self._kind, name) for name in self._names)
+
+
+class LazyConstructorMap(Mapping[int, type[Any]]):
+    def __init__(self, kind: str | None = None) -> None:
+        self._kind = kind
+
+    def __len__(self) -> int:
+        if self._kind is not None:
+            return len(_kind_tables(self._kind)[1])
+        return len(TYPE_CONSTRUCTORS) + len(FUNCTION_CONSTRUCTORS)
+
+    def __iter__(self) -> Iterator[int]:
+        if self._kind == "types":
+            return iter(TYPE_CONSTRUCTORS)
+        if self._kind == "functions":
+            return iter(FUNCTION_CONSTRUCTORS)
+        return iter((*TYPE_CONSTRUCTORS, *FUNCTION_CONSTRUCTORS))
+
+    def __getitem__(self, constructor_id: int) -> type[Any]:
+        if self._kind == "types":
+            return resolve_class("types", TYPE_CONSTRUCTORS[constructor_id])
+        if self._kind == "functions":
+            return resolve_class("functions", FUNCTION_CONSTRUCTORS[constructor_id])
+        if constructor_id in TYPE_CONSTRUCTORS:
+            return resolve_class("types", TYPE_CONSTRUCTORS[constructor_id])
+        return resolve_class("functions", FUNCTION_CONSTRUCTORS[constructor_id])
+
+
+class LazyNameMap(Mapping[str, type[Any]]):
+    def __init__(self, kind: str) -> None:
+        self._kind = kind
+        self._qualnames = _kind_tables(kind)[2]
+
+    def __len__(self) -> int:
+        return len(self._qualnames)
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._qualnames)
+
+    def __getitem__(self, qualname: str) -> type[Any]:
+        return resolve_class(self._kind, self._qualnames[qualname])
+
+
+class _LazyNamespaceMeta(type):
+    _kind: str
+    _namespace: str
+
+    def __getattr__(cls, name: str) -> type[Any]:
+        members = _kind_tables(cls._kind)[3][cls._namespace]
+        try:
+            public_name = members[name]
+        except KeyError:
+            raise AttributeError(name) from None
+        resolved = resolve_class(cls._kind, public_name)
+        setattr(cls, name, resolved)
+        return resolved
+
+    def __dir__(cls) -> list[str]:
+        members = _kind_tables(cls._kind)[3][cls._namespace]
+        return sorted(set(super().__dir__()) | set(members))
+
+
+def lazy_namespace(kind: str, namespace: str) -> type[Any]:
+    public_name = namespace.replace(".", "_")
+    return _LazyNamespaceMeta(
+        public_name,
+        (),
+        {
+            "__module__": f"miniproto.raw.{kind}",
+            "_kind": kind,
+            "_namespace": namespace,
+        },
+    )
+
+
+CONSTRUCTORS = LazyConstructorMap()
+""".splitlines()
+    )
+    return "\n".join(lines)
+
+
+def _registry_specs(entries: Sequence[Any], module_kind: str, bucket_count: int) -> dict[str, tuple[str, str]]:
+    shard_package = "_types_shards" if module_kind == "types" else "_function_shards"
+    return {
+        entry.python_class_name: (
+            f"miniproto.raw.{shard_package}.bucket_{_bucket_for_constructor_id(entry.constructor_id, bucket_count):02d}",
+            entry.python_class_name,
+        )
+        for entry in sorted(entries, key=lambda item: item.python_class_name)
+    }
+
+
+def _constructor_names(entries: Sequence[Any]) -> dict[int, str]:
+    return {
+        entry.constructor_id: entry.python_class_name for entry in sorted(entries, key=lambda item: item.constructor_id)
+    }
+
+
+def _qualname_names(entries: Sequence[Any]) -> dict[str, str]:
+    return {entry.name: entry.python_class_name for entry in sorted(entries, key=lambda item: item.name)}
+
+
+def _registry_namespaces(entries: Sequence[Any]) -> dict[str, dict[str, str]]:
+    namespaces: dict[str, dict[str, str]] = {}
+    for entry in sorted(entries, key=lambda item: (item.namespace or "", item.short_name)):
+        if entry.namespace is None:
+            continue
+        namespaces.setdefault(entry.namespace, {})[_short_class_name(entry.short_name)] = entry.python_class_name
+    return namespaces
 
 
 def _format_python(path: Path, content: str) -> str:
@@ -124,11 +450,7 @@ def _format_python(path: Path, content: str) -> str:
 
 
 def _metadata(
-    schema_path: Path,
-    errors_path: Path,
-    metadata_path: Path,
-    schema: TLSchema,
-    rpc_error_database: Mapping[str, Any],
+    schema_path: Path, errors_path: Path, metadata_path: Path, schema: TLSchema, rpc_error_database: Mapping[str, Any]
 ) -> dict[str, Any]:
     error_count = sum(len(errors) for errors in rpc_error_database.get("errors", {}).values())
     previous = _load_existing_metadata(metadata_path)
@@ -147,9 +469,7 @@ def _metadata(
         "fetch_date": previous.get("fetch_date", "unknown"),
         "sha256": schema_sha256,
         "schema_sha256": schema_sha256,
-        "schema_json_sha256": schema_sha256
-        if schema_format == "json"
-        else previous.get("schema_json_sha256"),
+        "schema_json_sha256": schema_sha256 if schema_format == "json" else previous.get("schema_json_sha256"),
         "schema_tl_sha256": previous.get("schema_tl_sha256"),
         "schema_tl_source_kind": previous.get("schema_tl_source_kind"),
         "schema_format": schema_format,
@@ -157,9 +477,7 @@ def _metadata(
         "constructor_count": len(schema.constructors),
         "function_count": len(schema.functions),
         "rpc_error_source_url": _SOURCE_ERRORS_URL,
-        "rpc_error_download_url": previous.get(
-            "rpc_error_download_url", _SOURCE_ERRORS_DOWNLOAD_URL
-        ),
+        "rpc_error_download_url": previous.get("rpc_error_download_url", _SOURCE_ERRORS_DOWNLOAD_URL),
         "rpc_error_layer": rpc_error_layer,
         "rpc_error_sha256": _sha256_file(errors_path),
         "rpc_error_count": error_count,
@@ -246,14 +564,8 @@ def _render_entries_module(entries: Sequence[Any], *, module_kind: str) -> str:
         if base_class == "TLConstructor"
         else f"TLField, TLFlagGroup, {base_class}"
     )
-    ruff_noqa = (
-        "# ruff: noqa: F401,N801,N806,N815,RUF022,RUF059"
-        if module_kind == "types"
-        else "# ruff: noqa: F401,N801,RUF022"
-    )
     lines: list[str] = [
         _HEADER.rstrip(),
-        ruff_noqa,
         "from __future__ import annotations",
         "",
         "from dataclasses import dataclass",
@@ -292,10 +604,7 @@ def _render_entries_module(entries: Sequence[Any], *, module_kind: str) -> str:
     for entry in entries:
         fields = iter_public_params(entry.params)
         lines.extend(
-            [
-                "@dataclass(frozen=True, slots=True, kw_only=True)",
-                f"class {entry.python_class_name}({base_class}):",
-            ]
+            ["@dataclass(frozen=True, slots=True, kw_only=True)", f"class {entry.python_class_name}({base_class}):"]
         )
         if fields:
             for field in fields:
@@ -436,10 +745,7 @@ def _codec_methods(fields: Sequence[TLParameter], params: Sequence[TLParameter])
         flag_var = _flag_var(field, flag_groups)
         if field.is_true_flag:
             lines.extend(
-                [
-                    f"        if self.{field.python_name}:",
-                    f"            {flag_var} |= {1 << field.flag_index}",
-                ]
+                [f"        if self.{field.python_name}:", f"            {flag_var} |= {1 << field.flag_index}"]
             )
         else:
             lines.extend(
@@ -462,9 +768,7 @@ def _codec_methods(fields: Sequence[TLParameter], params: Sequence[TLParameter])
                 ]
             )
         else:
-            lines.append(
-                f"        output.extend({_encode_expr(field, f'self.{field.python_name}')})"
-            )
+            lines.append(f"        output.extend({_encode_expr(field, f'self.{field.python_name}')})")
     for _name, python_name, _before_field_index in groups_by_index.get(len(fields), ()):
         lines.append(f"        output.extend(encode_int({python_name}))")
     lines.extend(
@@ -537,9 +841,7 @@ def _flag_group_specs(params: Sequence[TLParameter]) -> list[tuple[str, str, int
     return groups
 
 
-def _flag_groups_by_index(
-    groups: Sequence[tuple[str, str, int]],
-) -> dict[int, tuple[tuple[str, str, int], ...]]:
+def _flag_groups_by_index(groups: Sequence[tuple[str, str, int]]) -> dict[int, tuple[tuple[str, str, int], ...]]:
     grouped: dict[int, list[tuple[str, str, int]]] = {}
     for group in groups:
         grouped.setdefault(group[2], []).append(group)
@@ -675,15 +977,11 @@ def _render_errors(database: Mapping[str, Any]) -> str:
         )
     lines.extend(["}", "CODE_TO_ERROR_NAMES: dict[int, tuple[str, ...]] = {"])
     for code in sorted({code for _name, code, _methods, _description in specs}):
-        names = tuple(
-            name for name, item_code, _methods, _description in specs if item_code == code
-        )
+        names = tuple(name for name, item_code, _methods, _description in specs if item_code == code)
         lines.append(f"    {code!r}: {_tuple_literal(names, indent='    ')},")
     lines.extend(["}", "METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {"])
     for method in sorted(method_map):
-        lines.append(
-            f"    {method!r}: {_tuple_literal(tuple(sorted(set(method_map[method]))), indent='    ')},"
-        )
+        lines.append(f"    {method!r}: {_tuple_literal(tuple(sorted(set(method_map[method]))), indent='    ')},")
     lines.extend(
         [
             "}",
@@ -740,7 +1038,7 @@ def _render_docs(metadata: Mapping[str, Any], schema: TLSchema, database: Mappin
     changelog_latest_layer = metadata.get("changelog_latest_layer", "unknown")
     return f"""# Raw API
 
-Status: generated documentation stub for Telegram Schema Layer {metadata["schema_layer"]}.
+Status: generated Telegram Schema Layer {metadata["schema_layer"]} surface with implemented runtime transport support and lazy raw loading.
 
 ## Source
 
@@ -765,9 +1063,17 @@ from miniproto.raw import functions
 request = functions.help.GetConfig()
 ```
 
+## Lazy Loading and Typing
+
+Facade imports stay lightweight: they load generated facades and the registry, not implementation shards. Requested symbols load and cache their generated shard on first attribute, namespace, constructor-ID, or name-map lookup. Mapping and sequence iteration may realize classes as needed. The `.pyi` facades retain static type declarations. Update generated artifacts only through `python -m tools.schema.generate`.
+
+## Current Runtime Scope
+
+The runtime handles binary TL primitive encoding, generated object serialization/deserialization, flags, vectors, boxed constructors, RPC error metadata, gzip-packed payloads, message containers, transport framing, and RPC response correlation.
+
 ## Current Limits
 
-Phase 4 implements binary TL primitive encoding, generated object serialization/deserialization, flags, vectors, boxed constructors, and RPC error metadata. Gzip payload handling, message containers, transport framing, and RPC response correlation land in later runtime phases.
+Transport-level quick-ack frame decoding and its fake-server/live-trace validation remain deferred.
 
 ## Samples
 

@@ -42,9 +42,7 @@ class UpstreamSchemaSnapshot:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Update pinned Telegram schema inputs.")
     parser.add_argument(
-        "--check-upstream",
-        action="store_true",
-        help="fetch upstream and fail when pinned schema inputs are stale",
+        "--check-upstream", action="store_true", help="fetch upstream and fail when pinned schema inputs are stale"
     )
     args = parser.parse_args(argv)
 
@@ -96,9 +94,7 @@ def render_pinned_files(snapshot: UpstreamSchemaSnapshot, *, root: Path) -> dict
     schema_json_text = _json_document(snapshot.schema_json)
     rpc_errors_text = _json_document(snapshot.rpc_errors)
     schema_tl_text = (
-        snapshot.schema_tl_text
-        if snapshot.schema_tl_text.endswith("\n")
-        else snapshot.schema_tl_text + "\n"
+        snapshot.schema_tl_text if snapshot.schema_tl_text.endswith("\n") else snapshot.schema_tl_text + "\n"
     )
     metadata = {
         "layer": snapshot.schema_layer,
@@ -115,7 +111,7 @@ def render_pinned_files(snapshot: UpstreamSchemaSnapshot, *, root: Path) -> dict
         "schema_tl_sha256": _sha256_text(schema_tl_text),
         "schema_tl_source_kind": snapshot.schema_tl_source_kind,
         "schema_format": "json",
-        "generator_version": "2",
+        "generator_version": "3",
         "constructor_count": len(snapshot.schema_json.get("constructors", ())),
         "function_count": len(snapshot.schema_json.get("methods", ())),
         "rpc_error_source_url": _ERRORS_DOC_URL,
@@ -127,7 +123,12 @@ def render_pinned_files(snapshot: UpstreamSchemaSnapshot, *, root: Path) -> dict
         "generated_file_manifest": [
             "src/miniproto/raw/base.py",
             "src/miniproto/raw/types.py",
+            "src/miniproto/raw/types.pyi",
             "src/miniproto/raw/functions.py",
+            "src/miniproto/raw/functions.pyi",
+            "src/miniproto/raw/_registry.py",
+            "src/miniproto/raw/_types_shards/*.py",
+            "src/miniproto/raw/_function_shards/*.py",
             "src/miniproto/raw/errors.py",
             "docs/raw-api.md",
         ],
@@ -227,9 +228,7 @@ def _load_json(payload: bytes, *, source: str) -> Mapping[str, Any]:
     return data
 
 
-def _schema_tl_from_html_or_json(
-    schema_html: str, schema_json: Mapping[str, Any]
-) -> tuple[str, str]:
+def _schema_tl_from_html_or_json(schema_html: str, schema_json: Mapping[str, Any]) -> tuple[str, str]:
     extracted = _extract_tl_schema_from_html(schema_html)
     if extracted is not None:
         return extracted, "html_extracted"
@@ -272,9 +271,7 @@ def _rpc_error_count(database: Mapping[str, Any]) -> int:
     errors = database.get("errors", {})
     if not isinstance(errors, Mapping):
         return 0
-    return sum(
-        len(named_errors) for named_errors in errors.values() if isinstance(named_errors, Mapping)
-    )
+    return sum(len(named_errors) for named_errors in errors.values() if isinstance(named_errors, Mapping))
 
 
 def _sha256_text(text: str) -> str:

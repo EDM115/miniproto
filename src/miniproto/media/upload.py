@@ -17,14 +17,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, BinaryIO, cast
 
-from miniproto.errors import (
-    ClientDisconnected,
-    FloodWait,
-    InternalServerError,
-    RequestTimeout,
-    RpcError,
-    RpcTimeout,
-)
+from miniproto.errors import ClientDisconnected, FloodWait, InternalServerError, RequestTimeout, RpcError, RpcTimeout
 from miniproto.media.retry import backoff_delay
 from miniproto.observability import emit_event, get_logger, record_metric
 from miniproto.raw import functions, types
@@ -47,14 +40,7 @@ _LOGGER = get_logger("media.upload")
 
 type ProgressCallback = Callable[[int, int | None], Awaitable[None] | None]
 type FileSource = (
-    str
-    | os.PathLike[str]
-    | bytes
-    | bytearray
-    | memoryview
-    | BinaryIO
-    | Iterable[bytes]
-    | AsyncIterable[bytes]
+    str | os.PathLike[str] | bytes | bytearray | memoryview | BinaryIO | Iterable[bytes] | AsyncIterable[bytes]
 )
 
 
@@ -173,9 +159,7 @@ async def upload_file(
     except BaseException:
         duration_ms = (time.perf_counter() - started) * 1000
         record_metric(
-            "media.upload.errors",
-            1,
-            attributes={"big": is_big, "parts": total_parts, "concurrency": concurrency},
+            "media.upload.errors", 1, attributes={"big": is_big, "parts": total_parts, "concurrency": concurrency}
         )
         emit_event(
             _LOGGER,
@@ -285,15 +269,11 @@ def _part_size_for_part_limit(size: int, part_size: int, max_file_parts: int | N
     required = math.ceil(size / max_file_parts)
     adjusted = math.ceil(required / 1024) * 1024
     if adjusted > DEFAULT_CHUNK_SIZE:
-        raise MediaUploadError(
-            f"file requires more than {max_file_parts} upload parts at the maximum part size"
-        )
+        raise MediaUploadError(f"file requires more than {max_file_parts} upload parts at the maximum part size")
     return max(part_size, adjusted)
 
 
-async def _prepare_upload_source(
-    source: FileSource, *, file_name: str | None, chunk_size: int
-) -> _PreparedUpload:
+async def _prepare_upload_source(source: FileSource, *, file_name: str | None, chunk_size: int) -> _PreparedUpload:
     if isinstance(source, str | os.PathLike):
         path = Path(cast(str | os.PathLike[str], source))
         stat = await asyncio.to_thread(path.stat)
@@ -304,10 +284,7 @@ async def _prepare_upload_source(
                 yield handle
 
         return _PreparedUpload(
-            name=file_name or path.name or "file",
-            size=stat.st_size,
-            open_reader=open_path,
-            cleanup=lambda: None,
+            name=file_name or path.name or "file", size=stat.st_size, open_reader=open_path, cleanup=lambda: None
         )
     if isinstance(source, bytes | bytearray | memoryview):
         payload = bytes(source)
@@ -317,10 +294,7 @@ async def _prepare_upload_source(
             yield io.BytesIO(payload)
 
         return _PreparedUpload(
-            name=file_name or "file",
-            size=len(payload),
-            open_reader=open_bytes,
-            cleanup=lambda: None,
+            name=file_name or "file", size=len(payload), open_reader=open_bytes, cleanup=lambda: None
         )
     if _is_seekable_reader(source):
         reader = cast(BinaryIO, source)
@@ -343,9 +317,7 @@ async def _prepare_upload_source(
     return await _materialize_unknown_source(source, file_name=file_name, chunk_size=chunk_size)
 
 
-async def _materialize_unknown_source(
-    source: object, *, file_name: str | None, chunk_size: int
-) -> _PreparedUpload:
+async def _materialize_unknown_source(source: object, *, file_name: str | None, chunk_size: int) -> _PreparedUpload:
     temporary = tempfile.TemporaryFile("w+b")  # noqa: SIM115 - cleanup is returned with the prepared source.
     size = 0
     try:
@@ -375,10 +347,7 @@ async def _materialize_unknown_source(
             yield cast(BinaryIO, temporary)
 
         return _PreparedUpload(
-            name=file_name or _source_name(source),
-            size=size,
-            open_reader=open_temporary,
-            cleanup=temporary.close,
+            name=file_name or _source_name(source), size=size, open_reader=open_temporary, cleanup=temporary.close
         )
     except BaseException:
         temporary.close()
@@ -424,9 +393,7 @@ async def _save_part(
     while True:
         try:
             record_metric("media.upload.part_requests", 1, attributes={"big": big})
-            result = await invoke(
-                request, request_timeout=request_timeout, retry=False, flood_sleep_threshold=0
-            )
+            result = await invoke(request, request_timeout=request_timeout, retry=False, flood_sleep_threshold=0)
         except Exception as exc:
             if not _is_transient_upload_error(exc, flood_sleep_threshold=flood_sleep_threshold):
                 raise
@@ -505,9 +472,7 @@ async def _cancel_pending(pending: set[asyncio.Task[None]]) -> None:
     await asyncio.gather(*pending, return_exceptions=True)
 
 
-async def _call_progress(
-    progress: ProgressCallback | None, current: int, total: int | None
-) -> None:
+async def _call_progress(progress: ProgressCallback | None, current: int, total: int | None) -> None:
     if progress is None:
         return
     result = progress(current, total)
@@ -569,13 +534,7 @@ def _is_transient_upload_error(
         # sleeping inside the media layer, capped by the caller's threshold.
         return flood_sleep_threshold is not None and exc.seconds <= flood_sleep_threshold
     if isinstance(
-        exc,
-        ClientDisconnected
-        | RequestTimeout
-        | RpcTimeout
-        | InternalServerError
-        | TimeoutError
-        | ConnectionError,
+        exc, ClientDisconnected | RequestTimeout | RpcTimeout | InternalServerError | TimeoutError | ConnectionError
     ):
         return True
     if not isinstance(exc, RpcError):
@@ -585,10 +544,7 @@ def _is_transient_upload_error(
     if exc.code is not None:
         return False
     message = exc.message.casefold()
-    return any(
-        token in message
-        for token in ("sender disconnected", "transport", "connection", "timed out", "timeout")
-    )
+    return any(token in message for token in ("sender disconnected", "transport", "connection", "timed out", "timeout"))
 
 
 def _emit_part_retry(
@@ -615,9 +571,7 @@ def _emit_part_retry(
         fields["flood_wait_seconds"] = flood_wait_seconds
         attrs = {"error_type": error_type}
         record_metric("media.upload.flood_waits", 1, attributes=attrs)
-        record_metric(
-            "media.upload.flood_wait_seconds", flood_wait_seconds, unit="s", attributes=attrs
-        )
+        record_metric("media.upload.flood_wait_seconds", flood_wait_seconds, unit="s", attributes=attrs)
     emit_event(_LOGGER, logging.WARNING, "media.upload.part_retry", **fields)
 
 

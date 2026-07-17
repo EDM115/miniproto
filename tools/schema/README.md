@@ -11,7 +11,7 @@ Status: deterministic Telegram Schema Layer 223 JSON pinning and generation is a
 
 ## Update Pinned Inputs
 
-```powershell
+```pwsh
 uv run python -m tools.schema.update
 ```
 
@@ -19,7 +19,7 @@ This fetches the upstream schema JSON, schema page, layer changelog, and RPC err
 
 ## Upstream Freshness Check
 
-```powershell
+```pwsh
 uv run python -m tools.schema.update --check-upstream
 ```
 
@@ -27,7 +27,7 @@ This fetches upstream sources and exits non-zero when any pinned schema input di
 
 ## Generate
 
-```powershell
+```pwsh
 uv run python -m tools.schema.generate
 ```
 
@@ -35,7 +35,7 @@ This rewrites `src/miniproto/raw/base.py`, `src/miniproto/raw/types.py`, `src/mi
 
 ## Stale Check
 
-```powershell
+```pwsh
 uv run python -m tools.schema.generate --check
 ```
 

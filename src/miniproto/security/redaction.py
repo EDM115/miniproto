@@ -45,9 +45,7 @@ def is_sensitive_key(key: object) -> bool:
     normalized = _normalize_key(str(key))
     if normalized in _SENSITIVE_KEY_TOKENS:
         return True
-    return any(
-        token in normalized for token in _SENSITIVE_KEY_TOKENS if token not in {"token", "secret"}
-    )
+    return any(token in normalized for token in _SENSITIVE_KEY_TOKENS if token not in {"token", "secret"})
 
 
 def redact_value(value: object) -> str:
@@ -56,15 +54,12 @@ def redact_value(value: object) -> str:
 
 def redact_mapping(data: Mapping[Any, Any]) -> dict[str, Any]:
     return {
-        str(key): redact_value(value) if is_sensitive_key(key) else _redact_nested(value)
-        for key, value in data.items()
+        str(key): redact_value(value) if is_sensitive_key(key) else _redact_nested(value) for key, value in data.items()
     }
 
 
 def redact_text(text: str) -> str:
-    return _SENSITIVE_TEXT_RE.sub(
-        lambda match: f"{match.group('prefix')}{match.group('quote')}{REDACTED}", text
-    )
+    return _SENSITIVE_TEXT_RE.sub(lambda match: f"{match.group('prefix')}{match.group('quote')}{REDACTED}", text)
 
 
 def safe_repr(value: object) -> str:

@@ -7,8 +7,25 @@ from typing import cast
 
 import pytest
 
+import miniproto._native_fallback as fallback
 import miniproto.crypto.native as native_module
 from miniproto.crypto import native_available, xor_bytes
+
+_MT_PROTO_AUTH_KEY = bytes(range(256))
+
+
+def _mutate_mtproto_envelope(body_len: int) -> bytes:
+    packet = fallback.mtproto_encode_message(
+        _MT_PROTO_AUTH_KEY, 1, 2, 3, 4, b"body", client_to_server=True, padding=b"\0" * 12
+    )
+    plaintext = bytearray(
+        fallback.mtproto_decrypt_payload(_MT_PROTO_AUTH_KEY, packet[8:24], packet[24:], client_to_server=True)
+    )
+    plaintext[28:32] = body_len.to_bytes(4, "little", signed=True)
+    auth_key_id, msg_key, ciphertext = fallback.mtproto_encrypt_payload(
+        _MT_PROTO_AUTH_KEY, bytes(plaintext), client_to_server=True
+    )
+    return auth_key_id + msg_key + ciphertext
 
 
 def test_xor_bytes_matches_expected_result() -> None:
@@ -24,9 +41,37 @@ def test_native_available_returns_bool() -> None:
     assert isinstance(native_available(), bool)
 
 
-def test_native_loader_falls_back_when_extension_import_fails(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+@pytest.mark.parametrize(
+    "decoder", [fallback.mtproto_decode_message, pytest.importorskip("miniproto._native").mtproto_decode_message]
+)
+def test_mtproto_decoder_rejects_wrong_envelope_auth_key_id(decoder) -> None:
+    packet = fallback.mtproto_encode_message(
+        _MT_PROTO_AUTH_KEY, 1, 2, 3, 4, b"body", client_to_server=True, padding=b"\0" * 12
+    )
+    wrong_auth_key_id = bytes(value ^ 0xFF for value in packet[:8])
+
+    with pytest.raises(ValueError, match="auth_key_id"):
+        decoder(_MT_PROTO_AUTH_KEY, wrong_auth_key_id + packet[8:], True)
+
+
+@pytest.mark.parametrize(
+    ("body_len", "error"), [(64, "body length is invalid"), (5, "body length must be divisible by 4")]
+)
+@pytest.mark.parametrize(
+    "decoder", [fallback.mtproto_decode_message, pytest.importorskip("miniproto._native").mtproto_decode_message]
+)
+def test_mtproto_decoder_rejects_malformed_envelope_body_length(decoder, body_len: int, error: str) -> None:
+    with pytest.raises(ValueError, match=error):
+        decoder(_MT_PROTO_AUTH_KEY, _mutate_mtproto_envelope(body_len), True)
+
+
+@pytest.mark.parametrize("padding_len", [8, 11, 1025, 1028])
+def test_mtproto_padding_predicate_rejects_boundary_and_isolated_invalid_lengths(padding_len: int) -> None:
+    with pytest.raises(ValueError, match="padding must be between 12 and 1024"):
+        fallback._validate_mtproto_padding(32, b"\0" * padding_len)
+
+
+def test_native_loader_falls_back_when_extension_import_fails(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_import(name: str):
         if name == "miniproto._native":
             raise ImportError("native failed")
@@ -38,9 +83,7 @@ def test_native_loader_falls_back_when_extension_import_fails(
     assert error == "ImportError: native failed"
 
 
-def test_native_loader_falls_back_when_extension_is_incomplete(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_native_loader_falls_back_when_extension_is_incomplete(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_import(name: str):
         if name == "miniproto._native":
             return SimpleNamespace(native_available=lambda: True)
@@ -76,6 +119,38 @@ def test_native_loaded_event_is_logged(caplog: pytest.LogCaptureFixture) -> None
     assert event["event"] == "crypto.native.loaded"
     assert event["backend"] == "rust"
     assert event["native_available"] is True
+
+
+@pytest.mark.parametrize(("decoder_name", "width"), [("tl_decode_int_vector", 4), ("tl_decode_long_vector", 8)])
+def test_fallback_vector_decoder_rejects_maximum_count_without_payload(decoder_name: str, width: int) -> None:
+    del width
+    decoder = getattr(fallback, decoder_name)
+    data = (0x1CB5C415).to_bytes(4, "little") + (2**31 - 1).to_bytes(4, "little", signed=True)
+
+    with pytest.raises(ValueError, match="vector count exceeds remaining payload"):
+        decoder(data, 0)
+
+
+@pytest.mark.parametrize(("decoder_name", "width"), [("tl_decode_int_vector", 4), ("tl_decode_long_vector", 8)])
+def test_compiled_native_vector_decoder_rejects_maximum_count_without_payload(decoder_name: str, width: int) -> None:
+    del width
+    native = pytest.importorskip("miniproto._native")
+    decoder = getattr(native, decoder_name)
+    data = (0x1CB5C415).to_bytes(4, "little") + (2**31 - 1).to_bytes(4, "little", signed=True)
+
+    with pytest.raises(ValueError, match="vector count exceeds remaining payload"):
+        decoder(data, 0)
+
+
+@pytest.mark.parametrize("decoder_name", ["tl_decode_int_vector", "tl_decode_long_vector"])
+@pytest.mark.parametrize("offset", [-1, 1, 7, 2**63])
+def test_compiled_native_vector_decoder_normalizes_invalid_offsets(decoder_name: str, offset: int) -> None:
+    native = pytest.importorskip("miniproto._native")
+    decoder = getattr(native, decoder_name)
+    data = (0x1CB5C415).to_bytes(4, "little") + (0).to_bytes(4, "little", signed=True)
+
+    with pytest.raises(ValueError, match="TL data ended before the requested value could be decoded"):
+        decoder(data, offset)
 
 
 def test_mtproto_encode_message_prefers_native_impl(monkeypatch: pytest.MonkeyPatch) -> None:

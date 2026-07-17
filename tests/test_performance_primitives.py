@@ -9,9 +9,7 @@ def test_combined_mtproto_payload_crypto_roundtrips_large_buffer() -> None:
     plaintext = bytes((index * 13) % 256 for index in range(256 * 1024))
     padding = b"p" * 16
     encrypted = encrypt_payload(auth_key, plaintext, padding=padding)
-    decrypted = decrypt_payload(
-        auth_key, encrypted.msg_key, encrypted.ciphertext, client_to_server=True
-    )
+    decrypted = decrypt_payload(auth_key, encrypted.msg_key, encrypted.ciphertext, client_to_server=True)
     assert encrypted.auth_key_id == auth_key_id(auth_key)
     assert decrypted == plaintext + padding
 

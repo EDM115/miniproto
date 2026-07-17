@@ -1,14 +1,7 @@
 from __future__ import annotations
 
 import miniproto.errors as public_errors
-from miniproto.errors import (
-    FloodPremiumWait,
-    FloodWait,
-    InvalidCode,
-    PhoneCodeInvalid,
-    RpcError,
-    classify_rpc_error,
-)
+from miniproto.errors import FloodPremiumWait, FloodWait, InvalidCode, PhoneCodeInvalid, RpcError, classify_rpc_error
 from miniproto.raw.errors import RPC_ERROR_MAP
 
 
@@ -29,11 +22,7 @@ def _part(part: str) -> str:
 
 def test_public_errors_module_exposes_class_for_every_pinned_telegram_error() -> None:
     missing = sorted(
-        {
-            _class_name(name)
-            for name, _code in RPC_ERROR_MAP
-            if not hasattr(public_errors, _class_name(name))
-        }
+        {_class_name(name) for name, _code in RPC_ERROR_MAP if not hasattr(public_errors, _class_name(name))}
     )
     assert missing == []
 

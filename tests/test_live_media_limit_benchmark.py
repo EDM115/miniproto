@@ -54,16 +54,13 @@ def test_default_benchmark_file_name_follows_requested_size() -> None:
 def test_explicit_benchmark_file_name_is_preserved() -> None:
     args = parse_args(["--actor", "user", "--size", "1000mib", "--file", ".tmp/custom.bin"], {})
     assert resolved_benchmark_file(args, {}) == Path(".tmp/custom.bin")
-    env_args = parse_args(
-        ["--actor", "user", "--size", "1000mib"], {"MINIPROTO_LIVE_BENCH_FILE": ".tmp/from-env.bin"}
-    )
+    env_args = parse_args(["--actor", "user", "--size", "1000mib"], {"MINIPROTO_LIVE_BENCH_FILE": ".tmp/from-env.bin"})
     assert resolved_benchmark_file(env_args, {}) == Path(".tmp/from-env.bin")
 
 
 def test_legacy_example_benchmark_file_env_does_not_pin_smaller_size() -> None:
     args = parse_args(
-        ["--actor", "user", "--size", "1000mib"],
-        {"MINIPROTO_LIVE_BENCH_FILE": ".tmp/miniproto-live-bench-2000mib.bin"},
+        ["--actor", "user", "--size", "1000mib"], {"MINIPROTO_LIVE_BENCH_FILE": ".tmp/miniproto-live-bench-2000mib.bin"}
     )
     assert resolved_benchmark_file(args, {}) == Path(".tmp/miniproto-live-bench-1000mib.bin")
 
@@ -98,9 +95,7 @@ def test_sample_stats_reports_tails_and_percentiles() -> None:
 
 def test_transfer_recorder_samples_fixed_time_windows() -> None:
     one_mib = 1024 * 1024
-    recorder = TransferRecorder(
-        total=10 * one_mib, label="bench", progress_interval_s=0, sample_interval_s=5
-    )
+    recorder = TransferRecorder(total=10 * one_mib, label="bench", progress_interval_s=0, sample_interval_s=5)
     recorder.begin(now=1.0)
     recorder.record(one_mib, None, now=1.1)
     recorder.record(5 * one_mib, None, now=6.0)
@@ -113,9 +108,7 @@ def test_transfer_recorder_samples_fixed_time_windows() -> None:
 
 def test_transfer_recorder_heartbeat_reports_stalled_progress(capsys) -> None:
     one_mib = 1024 * 1024
-    recorder = TransferRecorder(
-        total=10 * one_mib, label="bench", progress_interval_s=5, sample_interval_s=5
-    )
+    recorder = TransferRecorder(total=10 * one_mib, label="bench", progress_interval_s=5, sample_interval_s=5)
     recorder.begin(now=1.0)
     recorder.report_heartbeat(now=6.1)
     captured = capsys.readouterr().out
@@ -127,9 +120,7 @@ def test_transfer_recorder_heartbeat_reports_stalled_progress(capsys) -> None:
 
 def test_transfer_recorder_heartbeat_does_not_hide_moving_window(capsys) -> None:
     one_mib = 1024 * 1024
-    recorder = TransferRecorder(
-        total=10 * one_mib, label="bench", progress_interval_s=5, sample_interval_s=5
-    )
+    recorder = TransferRecorder(total=10 * one_mib, label="bench", progress_interval_s=5, sample_interval_s=5)
     recorder.begin(now=1.0)
     recorder.record(one_mib, 10 * one_mib, now=3.0)
     recorder.report_heartbeat(now=6.1)
@@ -187,10 +178,7 @@ def test_download_concurrency_is_independent_from_upload_concurrency() -> None:
     assert shared.download_concurrency == 6
     specific = parse_args(
         ["--actor", "user"],
-        {
-            "MINIPROTO_LIVE_BENCH_UPLOAD_CONCURRENCY": "8",
-            "MINIPROTO_LIVE_BENCH_DOWNLOAD_CONCURRENCY": "2",
-        },
+        {"MINIPROTO_LIVE_BENCH_UPLOAD_CONCURRENCY": "8", "MINIPROTO_LIVE_BENCH_DOWNLOAD_CONCURRENCY": "2"},
     )
     assert specific.upload_concurrency == 8
     assert specific.download_concurrency == 2
@@ -206,16 +194,11 @@ def test_media_lanes_are_directional_and_use_measured_defaults() -> None:
     assert format_media_lanes(defaults.download_media_lanes, defaults.download_concurrency) == "2"
     specific = parse_args(
         ["--actor", "user"],
-        {
-            "MINIPROTO_LIVE_BENCH_UPLOAD_MEDIA_LANES": "0",
-            "MINIPROTO_LIVE_BENCH_DOWNLOAD_MEDIA_LANES": "2",
-        },
+        {"MINIPROTO_LIVE_BENCH_UPLOAD_MEDIA_LANES": "0", "MINIPROTO_LIVE_BENCH_DOWNLOAD_MEDIA_LANES": "2"},
     )
     assert specific.upload_media_lanes == 0
     assert specific.download_media_lanes == 2
-    overridden = parse_args(
-        ["--actor", "user", "--upload-media-lanes", "4", "--download-media-lanes", "0"], {}
-    )
+    overridden = parse_args(["--actor", "user", "--upload-media-lanes", "4", "--download-media-lanes", "0"], {})
     assert overridden.upload_media_lanes == 4
     assert overridden.download_media_lanes == 0
 
@@ -245,10 +228,7 @@ def test_download_flood_sleep_threshold_uses_download_specific_env_only() -> Non
     assert shared.download_flood_sleep_threshold == 30
     specific = parse_args(
         ["--actor", "user"],
-        {
-            "MINIPROTO_LIVE_BENCH_FLOOD_SLEEP_THRESHOLD": "9",
-            "MINIPROTO_LIVE_BENCH_DOWNLOAD_FLOOD_SLEEP_THRESHOLD": "3",
-        },
+        {"MINIPROTO_LIVE_BENCH_FLOOD_SLEEP_THRESHOLD": "9", "MINIPROTO_LIVE_BENCH_DOWNLOAD_FLOOD_SLEEP_THRESHOLD": "3"},
     )
     assert specific.download_flood_sleep_threshold == 3
     overridden = parse_args(["--actor", "user", "--download-flood-sleep-threshold", "5"], {})
@@ -297,22 +277,12 @@ def test_download_byte_window_and_range_options_use_specific_env_and_cli() -> No
     assert overridden.download_range_cache_bytes == MAX_DOWNLOAD_CHUNK_SIZE
     with pytest.raises(SystemExit):
         parse_args(
-            [
-                "--actor",
-                "user",
-                "--download-chunk-size",
-                "1048576",
-                "--download-max-in-flight-bytes",
-                "524288",
-            ],
-            {},
+            ["--actor", "user", "--download-chunk-size", "1048576", "--download-max-in-flight-bytes", "524288"], {}
         )
 
 
 def test_download_adaptive_concurrency_can_be_disabled() -> None:
-    env_disabled = parse_args(
-        ["--actor", "user"], {"MINIPROTO_LIVE_BENCH_DOWNLOAD_ADAPTIVE_CONCURRENCY": "0"}
-    )
+    env_disabled = parse_args(["--actor", "user"], {"MINIPROTO_LIVE_BENCH_DOWNLOAD_ADAPTIVE_CONCURRENCY": "0"})
     assert env_disabled.download_adaptive_concurrency is False
     cli_enabled = parse_args(
         ["--actor", "user", "--download-adaptive-concurrency"],
@@ -324,13 +294,10 @@ def test_download_adaptive_concurrency_can_be_disabled() -> None:
 
 
 def test_download_adaptive_part_size_can_be_disabled() -> None:
-    env_disabled = parse_args(
-        ["--actor", "user"], {"MINIPROTO_LIVE_BENCH_DOWNLOAD_ADAPTIVE_PART_SIZE": "0"}
-    )
+    env_disabled = parse_args(["--actor", "user"], {"MINIPROTO_LIVE_BENCH_DOWNLOAD_ADAPTIVE_PART_SIZE": "0"})
     assert env_disabled.download_adaptive_part_size is False
     cli_enabled = parse_args(
-        ["--actor", "user", "--download-adaptive-part-size"],
-        {"MINIPROTO_LIVE_BENCH_DOWNLOAD_ADAPTIVE_PART_SIZE": "0"},
+        ["--actor", "user", "--download-adaptive-part-size"], {"MINIPROTO_LIVE_BENCH_DOWNLOAD_ADAPTIVE_PART_SIZE": "0"}
     )
     assert cli_enabled.download_adaptive_part_size is True
     cli_disabled = parse_args(["--actor", "user", "--no-download-adaptive-part-size"], {})
@@ -367,15 +334,9 @@ def test_transfer_counters_aggregate_metrics() -> None:
     metrics.record_metric("media.download.part_requests", 4)
     metrics.record_metric("media.download.part_retries", 2)
     metrics.record_metric("media.download.flood_waits", 1, attributes={"error_type": "FloodWait"})
-    metrics.record_metric(
-        "media.download.flood_waits", 2, attributes={"error_type": "FloodPremiumWait"}
-    )
-    metrics.record_metric(
-        "media.download.flood_wait_seconds", 3, attributes={"error_type": "FloodWait"}
-    )
-    metrics.record_metric(
-        "media.download.flood_wait_seconds", 5, attributes={"error_type": "FloodPremiumWait"}
-    )
+    metrics.record_metric("media.download.flood_waits", 2, attributes={"error_type": "FloodPremiumWait"})
+    metrics.record_metric("media.download.flood_wait_seconds", 3, attributes={"error_type": "FloodWait"})
+    metrics.record_metric("media.download.flood_wait_seconds", 5, attributes={"error_type": "FloodPremiumWait"})
     metrics.record_metric("media.download.retry_sleep_seconds", 3)
     metrics.record_metric("sender.reconnects", 1)
     metrics.record_metric("client.sender_drops", 1)
@@ -427,10 +388,7 @@ def test_transfer_counters_aggregate_metrics() -> None:
 
 def test_bot_peer_must_not_default_to_self() -> None:
     assert benchmark_peer_for_actor("user", {}) == "self"
-    assert (
-        benchmark_peer_for_actor("bot", {"MINIPROTO_LIVE_BENCH_BOT_PEER": "@benchchat"})
-        == "@benchchat"
-    )
+    assert benchmark_peer_for_actor("bot", {"MINIPROTO_LIVE_BENCH_BOT_PEER": "@benchchat"}) == "@benchchat"
     with pytest.raises(SystemExit, match="BOT_PEER"):
         benchmark_peer_for_actor("bot", {})
     with pytest.raises(SystemExit, match="BOT_PEER"):

@@ -20,9 +20,7 @@ class TcpIntermediateTransport(StreamTransportBase):
 
     async def read_packet(self, reader: asyncio.StreamReader) -> bytes:
         length = int.from_bytes(
-            await read_exactly_bounded(reader, 4, self.config.max_payload_size),
-            "little",
-            signed=True,
+            await read_exactly_bounded(reader, 4, self.config.max_payload_size), "little", signed=True
         )
         if length < 0:
             raise_transport_error_frame(length)

@@ -68,9 +68,7 @@ class _NativeModule(Protocol):
     def tl_encode_int_vector(self, values: tuple[int, ...]) -> bytes: ...
     def tl_decode_int_vector(self, data: BytesLike, offset: int) -> tuple[tuple[int, ...], int]: ...
     def tl_encode_long_vector(self, values: tuple[int, ...]) -> bytes: ...
-    def tl_decode_long_vector(
-        self, data: BytesLike, offset: int
-    ) -> tuple[tuple[int, ...], int]: ...
+    def tl_decode_long_vector(self, data: BytesLike, offset: int) -> tuple[tuple[int, ...], int]: ...
 
 
 _REQUIRED_NATIVE_NAMES = (
@@ -118,10 +116,7 @@ def _load_native_impl() -> tuple[_NativeModule, str | None]:
     try:
         native_impl = import_module("miniproto._native")
     except Exception as exc:
-        return (
-            cast(_NativeModule, import_module("miniproto._native_fallback")),
-            f"{type(exc).__name__}: {exc}",
-        )
+        return (cast(_NativeModule, import_module("miniproto._native_fallback")), f"{type(exc).__name__}: {exc}")
     missing = tuple(name for name in _REQUIRED_NATIVE_NAMES if not hasattr(native_impl, name))
     if missing:
         return (
@@ -174,17 +169,11 @@ def mtproto_auth_key_id(auth_key: bytes) -> bytes:
     return bytes(_fallback_impl.mtproto_auth_key_id(auth_key))
 
 
-def mtproto_message_key(
-    auth_key: bytes, plaintext_with_padding: BytesLike, *, client_to_server: bool = True
-) -> bytes:
-    return bytes(
-        _fallback_impl.mtproto_message_key(auth_key, plaintext_with_padding, client_to_server)
-    )
+def mtproto_message_key(auth_key: bytes, plaintext_with_padding: BytesLike, *, client_to_server: bool = True) -> bytes:
+    return bytes(_fallback_impl.mtproto_message_key(auth_key, plaintext_with_padding, client_to_server))
 
 
-def mtproto_derive_aes_key_iv(
-    auth_key: bytes, msg_key: bytes, *, client_to_server: bool = True
-) -> tuple[bytes, bytes]:
+def mtproto_derive_aes_key_iv(auth_key: bytes, msg_key: bytes, *, client_to_server: bool = True) -> tuple[bytes, bytes]:
     aes_key, aes_iv = _native_impl.mtproto_derive_aes_key_iv(auth_key, msg_key, client_to_server)
     return bytes(aes_key), bytes(aes_iv)
 
@@ -201,9 +190,7 @@ def mtproto_encrypt_payload(
 def mtproto_decrypt_payload(
     auth_key: bytes, msg_key: bytes, ciphertext: BytesLike, *, client_to_server: bool = False
 ) -> bytes:
-    return bytes(
-        _native_impl.mtproto_decrypt_payload(auth_key, msg_key, bytes(ciphertext), client_to_server)
-    )
+    return bytes(_native_impl.mtproto_decrypt_payload(auth_key, msg_key, bytes(ciphertext), client_to_server))
 
 
 def mtproto_encode_message(
@@ -227,8 +214,8 @@ def mtproto_encode_message(
 def mtproto_decode_message(
     auth_key: bytes, packet: BytesLike, *, client_to_server: bool = False
 ) -> tuple[bytes, int, int, int, int, bytes, bytes]:
-    auth_key_id, server_salt, session_id, msg_id, seq_no, body, padding = (
-        _native_impl.mtproto_decode_message(auth_key, bytes(packet), client_to_server)
+    auth_key_id, server_salt, session_id, msg_id, seq_no, body, padding = _native_impl.mtproto_decode_message(
+        auth_key, bytes(packet), client_to_server
     )
     return (
         bytes(auth_key_id),

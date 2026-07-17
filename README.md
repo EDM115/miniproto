@@ -18,11 +18,25 @@ Importing `miniproto` never installs or replaces the process-wide asyncio policy
 
 ## Session Security
 
-Encrypted durable session storage is implemented through `EncryptedSQLiteSessionStorage`, which requires an explicit key or `MINIPROTO_SESSION_KEY`. See [Session Security](docs/session-security.md) for key handling, envelope behavior, persisted session data, and redaction rules.
+`Client(ClientConfig(...))` persists an encrypted session by default. It uses `EncryptedSQLiteSessionStorage` at the relative path `miniproto.session.sqlite` and requires a constructor key or `MINIPROTO_SESSION_KEY`; without adequate key material, construction fails before connecting or creating a file. This quickstart deliberately uses explicit in-memory storage, so it is executable without creating or retaining credentials:
+
+```python
+from miniproto import Client, ClientConfig, InMemorySessionStorage
+
+client = Client(
+    ClientConfig(
+        api_id=12345,
+        api_hash="...",
+        session_storage=InMemorySessionStorage(),
+    )
+)
+```
+
+`InMemorySessionStorage()` intentionally does not persist credentials; use it only for tests or throwaway clients. For durable clients, provision a unique `MINIPROTO_SESSION_KEY` through your deployment secret manager (or pass constructor key material) before constructing the default client, and choose a distinct `session_path` for each account. `session_storage=` takes precedence over `session_path`. See [Session Security](docs/session-security.md) for key handling, envelope behavior, persisted session data, migration guidance, and redaction rules.
 
 ## Raw API
 
-The generated raw API is pinned to Telegram Layer 214 from the official schema page. See [Raw API](docs/raw-api.md) for source metadata, generated file scope, RPC error database details, and current serialization limits.
+The generated raw API is pinned to Telegram Schema Layer 223 from the official schema page. See [Raw API](docs/raw-api.md) for the generated source metadata, lazy facade/shard layout, RPC error database details, and current runtime scope.
 
 ## Non-Goals For v1
 

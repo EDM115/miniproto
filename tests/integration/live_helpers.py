@@ -79,9 +79,7 @@ def allow_prompt() -> bool:
 
 def code_callback() -> Callable[[], str]:
     if not allow_prompt():
-        pytest.skip(
-            "set MINIPROTO_LIVE_PROMPT_CODE=1 and run interactively to enter the Telegram login code"
-        )
+        pytest.skip("set MINIPROTO_LIVE_PROMPT_CODE=1 and run interactively to enter the Telegram login code")
 
     def prompt() -> str:
         return input("Telegram login code: ").strip()

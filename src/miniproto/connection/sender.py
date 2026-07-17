@@ -6,7 +6,7 @@ import secrets
 import time
 from collections.abc import Callable
 from contextlib import suppress
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from miniproto.config import TransportConfig
 from miniproto.connection.transport import (
@@ -17,7 +17,7 @@ from miniproto.connection.transport import (
     TransportError,
     open_transport,
 )
-from miniproto.errors import PendingRpcLimitExceeded
+from miniproto.errors import AmbiguousRpcResult, PendingRpcLimitExceeded, ProtocolValidationError
 from miniproto.mtproto.codec import (
     BadMsgNotification,
     BadServerSalt,
@@ -58,8 +58,10 @@ class PendingRequest:
     body: bytes | object
     content_related: bool
     future: asyncio.Future[object]
+    retry_safe: bool = False
     attempts: int = 0
     transport: Transport | None = None
+    aliases: set[int] = field(default_factory=set)
 
 
 @dataclass(frozen=True, slots=True)
@@ -113,10 +115,9 @@ class MTProtoSender:
         self._keepalive_task: asyncio.Task[None] | None = None
         self._fatal_error: BaseException | None = None
         self._pending: dict[int, PendingRequest] = {}
+        self._pending_slots_used = 0
         self._acks_received: set[int] = set()
-        self._incoming: asyncio.Queue[DecodedEncryptedMessage] = asyncio.Queue(
-            maxsize=max(1, incoming_queue_size)
-        )
+        self._incoming: asyncio.Queue[DecodedEncryptedMessage] = asyncio.Queue(maxsize=max(1, incoming_queue_size))
 
     @property
     def is_connected(self) -> bool:
@@ -144,7 +145,7 @@ class MTProtoSender:
     @property
     def sender_state(self) -> SenderState:
         return SenderState(
-            pending_count=len(self._pending),
+            pending_count=self._pending_slots_used,
             connected=self.is_connected,
             receive_task_done=self._receive_task.done() if self._receive_task is not None else True,
         )
@@ -161,19 +162,13 @@ class MTProtoSender:
             await self._cancel_keepalive_task()
             await self._close_transport()
             self._closing = False
-            self._transport = await open_transport(
-                self.endpoint, self.transport_config, connector=self._connector
-            )
+            self._transport = await open_transport(self.endpoint, self.transport_config, connector=self._connector)
             self.connection_initialized = False
             self._last_connect_time = time.monotonic()
             self._receive_task = asyncio.create_task(self._receive_loop())
             self._keepalive_task = asyncio.create_task(self._keepalive_loop())
         _emit_sender_event(
-            "sender.connect",
-            started,
-            outcome="success",
-            host=self.endpoint.host,
-            port=self.endpoint.port,
+            "sender.connect", started, outcome="success", host=self.endpoint.host, port=self.endpoint.port
         )
 
     async def disconnect(self) -> None:
@@ -189,10 +184,7 @@ class MTProtoSender:
         if self._transport is not None:
             await self._transport.close()
             self._transport = None
-        for pending in self._pending.values():
-            if not pending.future.done():
-                pending.future.set_exception(TransportClosed("sender disconnected"))
-        self._pending.clear()
+        self._fail_pending(TransportClosed("sender disconnected"))
         _emit_sender_event("sender.disconnect", started, outcome="success")
 
     @property
@@ -209,53 +201,65 @@ class MTProtoSender:
         body: bytes | object,
         *,
         content_related: bool = True,
+        retry_safe: bool = False,
         request_timeout: float | None = None,
     ) -> object:
         started = time.perf_counter()
-        if self._max_pending_rpcs is not None and len(self._pending) >= self._max_pending_rpcs:
-            record_metric("sender.pending_rpc_limit_exceeded", 1)
-            raise PendingRpcLimitExceeded(
-                f"sender already has {len(self._pending)} pending RPCs "
-                f"(max_pending_rpcs={self._max_pending_rpcs})"
+        self._reserve_pending_slot()
+        outcome = "success"
+        error_type: str | None = None
+        try:
+            return await self._request_core(
+                body, content_related=content_related, retry_safe=retry_safe, request_timeout=request_timeout
             )
+        except asyncio.CancelledError:
+            outcome = "cancelled"
+            raise
+        except BaseException as exc:
+            outcome = "error"
+            error_type = type(exc).__name__
+            raise
+        finally:
+            self._release_pending_slot()
+            _emit_sender_event(
+                "sender.request",
+                started,
+                outcome=outcome,
+                pending_count=self._pending_slots_used,
+                request_timeout=request_timeout,
+                **({"error_type": error_type} if error_type is not None else {}),
+            )
+
+    async def _request_service(
+        self,
+        body: bytes | object,
+        *,
+        content_related: bool = True,
+        retry_safe: bool = False,
+        request_timeout: float | None = None,
+    ) -> object:
+        return await self._request_core(
+            body, content_related=content_related, retry_safe=retry_safe, request_timeout=request_timeout
+        )
+
+    async def _request_core(
+        self, body: bytes | object, *, content_related: bool, retry_safe: bool, request_timeout: float | None
+    ) -> object:
         await self.connect()
         loop = asyncio.get_running_loop()
         future: asyncio.Future[object] = loop.create_future()
-        msg_id = await self._send_pending(
-            PendingRequest(body=body, content_related=content_related, future=future)
-        )
+        pending = PendingRequest(body=body, content_related=content_related, future=future, retry_safe=retry_safe)
+        await self._send_pending(pending)
         try:
             result = await asyncio.wait_for(future, timeout=request_timeout)
         except asyncio.CancelledError:
-            self._pending.pop(msg_id, None)
+            self._remove_pending(pending)
             if not future.done():
                 future.cancel()
-            _emit_sender_event(
-                "sender.request",
-                started,
-                outcome="cancelled",
-                pending_count=len(self._pending),
-                request_timeout=request_timeout,
-            )
             raise
         except TimeoutError:
-            self._pending.pop(msg_id, None)
-            _emit_sender_event(
-                "sender.request",
-                started,
-                outcome="error",
-                error_type="TimeoutError",
-                pending_count=len(self._pending),
-                request_timeout=request_timeout,
-            )
+            self._remove_pending(pending)
             raise
-        _emit_sender_event(
-            "sender.request",
-            started,
-            outcome="success",
-            pending_count=len(self._pending),
-            request_timeout=request_timeout,
-        )
         return result
 
     async def send(self, body: bytes | object, *, content_related: bool = True) -> int:
@@ -277,9 +281,10 @@ class MTProtoSender:
 
     async def ping(self) -> Pong:
         ping_id = secrets.randbits(63)
-        response = await self.request(
+        response = await self._request_service(
             encode_ping_delay_disconnect(ping_id, self._ping_disconnect_delay),
             content_related=False,
+            retry_safe=True,
             request_timeout=self.transport_config.read_timeout,
         )
         if not isinstance(response, Pong):
@@ -304,79 +309,129 @@ class MTProtoSender:
         record_metric("sender.acks_flushed", len(msg_ids))
         return msg_id
 
-    async def _send_pending(
-        self, pending: PendingRequest, *, fail_future_on_error: bool = True
-    ) -> int:
+    async def _send_pending(self, pending: PendingRequest, *, fail_future_on_error: bool = True) -> int:
         async with self._send_lock:
-            # Pending acks ride inside a msg_container with the outgoing request:
-            # one transport frame, no standalone ack round trip (grammers prepends
-            # acks into outgoing containers; mtcute/MTKruto ride acks with the next
-            # RPC the same way). Only one RPC ever shares a container, so the
-            # "never two upload.getFile per container" rule holds by construction.
-            ack_ids = self.state.pop_pending_acks(limit=DEFAULT_ACK_FLUSH_LIMIT)
-            ack_item: MessageContainerItem | None = None
-            if ack_ids:
-                ack_item = MessageContainerItem(
-                    msg_id=self.state.next_msg_id(),
-                    seq_no=self.state.next_seq_no(content_related=False),
-                    body=MsgsAck(msg_ids=ack_ids),
-                )
-            msg_id = self.state.next_msg_id()
-            seq_no = self.state.next_seq_no(content_related=pending.content_related)
-            body: bytes | object = pending.body
-            envelope_msg_id = msg_id
-            envelope_seq_no = seq_no
-            if ack_item is not None:
-                body = MessageContainer(
-                    messages=(
-                        ack_item,
-                        MessageContainerItem(msg_id=msg_id, seq_no=seq_no, body=pending.body),
-                    )
-                )
-                envelope_msg_id = self.state.next_msg_id()
-                envelope_seq_no = self.state.next_seq_no(content_related=False)
-            payload = encode_encrypted_message(
-                self.state.auth_key,
-                self.state.server_salt,
-                self.state.session_id,
-                envelope_msg_id,
-                envelope_seq_no,
-                body,
-                client_to_server=True,
-            )
-            pending.attempts += 1
-            if not pending.future.done():
-                self._pending[msg_id] = pending
-            try:
-                pending.transport = await self._send_payload(payload)
-            except BaseException:
-                self._pending.pop(msg_id, None)
+            while True:
+                try:
+                    transport = await self._connected_transport()
+                except asyncio.CancelledError:
+                    self._remove_pending(pending)
+                    if not pending.future.done():
+                        pending.future.cancel()
+                    raise
+                except BaseException:
+                    if fail_future_on_error:
+                        self._remove_pending(pending)
+                        if not pending.future.done():
+                            pending.future.cancel()
+                    raise
+                msg_id, payload, ack_ids = self._encode_pending_attempt(pending)
+                pending.attempts += 1
+                if not pending.future.done():
+                    self._pending[msg_id] = pending
+                    pending.aliases.add(msg_id)
+                pending.transport = transport
+                try:
+                    await transport.send(payload)
+                except asyncio.CancelledError:
+                    if ack_ids:
+                        self.state.requeue_acks(ack_ids)
+                    self._remove_pending(pending)
+                    if not pending.future.done():
+                        pending.future.cancel()
+                    raise
+                except BaseException as exc:
+                    if ack_ids:
+                        self.state.requeue_acks(ack_ids)
+                    if isinstance(exc, TransportError):
+                        record_metric("sender.send_transport_errors", 1)
+                    if not pending.retry_safe:
+                        ambiguous = _ambiguous_rpc_result(pending, error=exc)
+                        self._remove_pending(pending)
+                        if not pending.future.done():
+                            pending.future.cancel()
+                        raise ambiguous from exc
+                    if pending.attempts > self._reconnect_attempts:
+                        error = TransportError("connection retry limit exceeded")
+                        if fail_future_on_error:
+                            self._remove_pending(pending)
+                            if not pending.future.done():
+                                pending.future.cancel()
+                        raise error from exc
+                    try:
+                        await self._reconnect(failed_transport=transport)
+                    except asyncio.CancelledError:
+                        self._remove_pending(pending)
+                        if not pending.future.done():
+                            pending.future.cancel()
+                        raise
+                    except BaseException:
+                        if fail_future_on_error:
+                            self._remove_pending(pending)
+                            if not pending.future.done():
+                                pending.future.cancel()
+                        raise
+                    continue
                 if ack_ids:
-                    self.state.requeue_acks(ack_ids)
-                if fail_future_on_error and not pending.future.done():
-                    pending.future.cancel()
-                raise
-            if ack_ids:
-                record_metric("sender.acks_piggybacked", len(ack_ids))
-            return msg_id
+                    record_metric("sender.acks_piggybacked", len(ack_ids))
+                return msg_id
 
-    async def _send_payload(self, payload: bytes) -> Transport:
-        transport = self._transport
-        if transport is None or not transport.is_connected:
-            await self._reconnect(failed_transport=transport)
-            transport = self._transport
-        if transport is None:
-            raise TransportClosed("sender is not connected")
+    def _encode_pending_attempt(self, pending: PendingRequest) -> tuple[int, bytes, tuple[int, ...]]:
+        # Pending acks ride inside a msg_container with the outgoing request:
+        # one transport frame, no standalone ack round trip.
+        ack_ids = self.state.pop_pending_acks(limit=DEFAULT_ACK_FLUSH_LIMIT)
+        ack_item: MessageContainerItem | None = None
+        if ack_ids:
+            ack_item = MessageContainerItem(
+                msg_id=self.state.next_msg_id(),
+                seq_no=self.state.next_seq_no(content_related=False),
+                body=MsgsAck(msg_ids=ack_ids),
+            )
+        msg_id = self.state.next_msg_id()
+        seq_no = self.state.next_seq_no(content_related=pending.content_related)
+        body: bytes | object = pending.body
+        envelope_msg_id = msg_id
+        envelope_seq_no = seq_no
+        if ack_item is not None:
+            body = MessageContainer(
+                messages=(ack_item, MessageContainerItem(msg_id=msg_id, seq_no=seq_no, body=pending.body))
+            )
+            envelope_msg_id = self.state.next_msg_id()
+            envelope_seq_no = self.state.next_seq_no(content_related=False)
+        payload = encode_encrypted_message(
+            self.state.auth_key,
+            self.state.server_salt,
+            self.state.session_id,
+            envelope_msg_id,
+            envelope_seq_no,
+            body,
+            client_to_server=True,
+        )
+        return msg_id, payload, ack_ids
+
+    async def _send_payload(self, payload: bytes, *, retry_transport_error: bool = True) -> Transport:
+        transport = await self._connected_transport()
         try:
             await transport.send(payload)
         except TransportError:
             record_metric("sender.send_transport_errors", 1)
+            if not retry_transport_error:
+                raise
             await self._reconnect(failed_transport=transport)
             replacement = self._transport
             if replacement is None:
                 raise
             await replacement.send(payload)
             return replacement
+        return transport
+
+    async def _connected_transport(self) -> Transport:
+        transport = self._transport
+        if transport is None or not transport.is_connected:
+            await self._reconnect(failed_transport=transport)
+            transport = self._transport
+        if transport is None:
+            raise TransportClosed("sender is not connected")
         return transport
 
     async def _receive_loop(self) -> None:
@@ -393,14 +448,14 @@ class MTProtoSender:
                     await asyncio.sleep(0)
                     continue
                 packet = await transport.recv()
-                message = decode_encrypted_message(
-                    self.state.auth_key, packet, client_to_server=False
-                )
-                if not self.state.record_incoming(
-                    message.msg_id, content_related=message.seq_no % 2 == 1
-                ):
-                    continue
-                await self._handle_incoming(message)
+                try:
+                    message = decode_encrypted_message(self.state.auth_key, packet, client_to_server=False)
+                    await self._prevalidate_and_commit_incoming(message)
+                except ProtocolValidationError:
+                    raise
+                except ValueError as exc:
+                    raise _normalize_protocol_validation_error(exc) from exc
+                await self._handle_incoming(message, committed=True)
                 if self.state.pending_ack_count >= self._ack_flush_threshold:
                     await self._flush_acks_safely()
             except asyncio.CancelledError:
@@ -410,25 +465,91 @@ class MTProtoSender:
                     return
                 # Telegram media DCs routinely close connections after serving
                 # responses when throttling; treat it as routine: reconnect (paced)
-                # and transparently re-send in-flight requests, like the reference
-                # clients (Telethon re-enqueues, TDLib resends via msgs_state_info).
+                # and transparently re-send retry-safe in-flight requests. Unsafe
+                # requests surface an ambiguous result instead of being replayed.
                 record_metric("sender.receive_transport_errors", 1)
-                await self._reconnect(failed_transport=transport)
+                try:
+                    await self._reconnect(failed_transport=transport)
+                except asyncio.CancelledError:
+                    raise
+                except Exception as exc:
+                    self._fail_pending_after_transport_loss(exc, failed_transport=transport)
+                    await self._close_transport()
+                    return
                 await self._resend_pending()
             except Exception as exc:
+                validation_reason = exc.reason if isinstance(exc, ProtocolValidationError) else None
+                if validation_reason is not None:
+                    record_metric("sender.protocol_validation_errors", 1, attributes={"reason": validation_reason})
                 _emit_sender_event(
                     "sender.receive_loop",
                     time.perf_counter(),
                     outcome="error",
                     error_type=type(exc).__name__,
-                    pending_count=len(self._pending),
+                    pending_count=self._pending_slots_used,
+                    **({"validation_reason": validation_reason} if validation_reason is not None else {}),
                 )
                 self._fatal_error = exc
-                self._fail_pending(exc)
+                if validation_reason is None:
+                    self._fail_pending(exc)
                 await self._close_transport()
                 return
 
-    async def _handle_incoming(self, message: DecodedEncryptedMessage) -> None:
+    async def _prevalidate_and_commit_incoming(self, message: DecodedEncryptedMessage) -> None:
+        messages: list[tuple[DecodedEncryptedMessage, object]] = []
+
+        async def collect(candidate: DecodedEncryptedMessage) -> None:
+            body = decode_message_body(candidate.body)
+            while isinstance(body, GzipPacked):
+                body = decode_message_body(await _unpack_gzip(body))
+            messages.append((candidate, body))
+            if isinstance(body, MessageContainer):
+                for item in body.messages:
+                    await collect(
+                        DecodedEncryptedMessage(
+                            auth_key_id=candidate.auth_key_id,
+                            server_salt=candidate.server_salt,
+                            session_id=candidate.session_id,
+                            msg_id=item.msg_id,
+                            seq_no=item.seq_no,
+                            body=_message_body_bytes(item.body),
+                            padding=b"",
+                        )
+                    )
+
+        await collect(message)
+        now = time.time()
+        seen: set[int] = set()
+        outer, outer_body = messages[0]
+        self.state.validate_incoming(outer.msg_id, session_id=outer.session_id, now=now)
+        self._validate_bad_message_correlation(outer_body)
+        seen.add(outer.msg_id)
+        provisional_time_offset = None if self.state.time_trusted else (outer.msg_id >> 32) - now
+        for candidate, body in messages[1:]:
+            if candidate.msg_id in seen:
+                raise ProtocolValidationError("duplicate_msg_id_in_container", context={"msg_id": candidate.msg_id})
+            self.state.validate_incoming(
+                candidate.msg_id,
+                session_id=candidate.session_id,
+                now=now,
+                provisional_time_offset=provisional_time_offset,
+                provisional_seen_msg_ids=seen,
+            )
+            self._validate_bad_message_correlation(body)
+            seen.add(candidate.msg_id)
+        for candidate, _body in messages:
+            self.state.commit_incoming(candidate.msg_id, content_related=candidate.seq_no % 2 == 1, now=now)
+
+    def _validate_bad_message_correlation(self, body: object) -> None:
+        if not isinstance(body, BadMsgNotification | BadServerSalt):
+            return
+        pending = self._pending.get(body.bad_msg_id)
+        if pending is None or pending.future.done():
+            raise ProtocolValidationError(
+                "unknown_bad_msg_id", context={"bad_msg_id": body.bad_msg_id, "service": type(body).__name__}
+            )
+
+    async def _handle_incoming(self, message: DecodedEncryptedMessage, *, committed: bool = False) -> None:
         body = decode_message_body(message.body)
         while isinstance(body, GzipPacked):
             body = decode_message_body(await _unpack_gzip(body))
@@ -443,18 +564,14 @@ class MTProtoSender:
                     body=_message_body_bytes(item.body),
                     padding=b"",
                 )
-                if self.state.record_incoming(
-                    nested.msg_id, content_related=nested.seq_no % 2 == 1
-                ):
-                    await self._handle_incoming(nested)
+                await self._handle_incoming(nested, committed=True)
             return
         if isinstance(body, MsgsAck):
             self._acks_received.update(body.msg_ids)
             return
         if isinstance(body, MsgsStateReq):
             await self.send(
-                MsgsStateInfo(req_msg_id=message.msg_id, info=b"\x00" * len(body.msg_ids)),
-                content_related=False,
+                MsgsStateInfo(req_msg_id=message.msg_id, info=b"\x00" * len(body.msg_ids)), content_related=False
             )
             return
         if isinstance(body, MsgsStateInfo):
@@ -464,6 +581,8 @@ class MTProtoSender:
                 await self._retry_bad_message(msg_id)
             return
         if isinstance(body, BadServerSalt):
+            if body.bad_msg_id not in self._pending:
+                return
             self.state.apply_server_salt(body.new_server_salt)
             self._notify_salt_change()
             await self._retry_bad_message(body.bad_msg_id)
@@ -475,22 +594,25 @@ class MTProtoSender:
             return
         if isinstance(body, BadMsgNotification):
             if body.error_code in {16, 17}:
+                if body.bad_msg_id not in self._pending:
+                    return
                 self.state.correct_time_offset_from_msg_id(message.msg_id)
                 await self._retry_bad_message(body.bad_msg_id)
                 return
             self._fail_pending_for_message(
-                body.bad_msg_id,
-                TransportError(f"bad_msg_notification error_code={body.error_code}"),
+                body.bad_msg_id, TransportError(f"bad_msg_notification error_code={body.error_code}")
             )
             return
         if isinstance(body, Pong):
-            pending = self._pending.pop(body.msg_id, None)
+            pending = self._pending.get(body.msg_id)
             if pending is not None and not pending.future.done():
+                self._remove_pending(pending, matched_msg_id=body.msg_id)
                 pending.future.set_result(body)
             return
         if isinstance(body, RpcResult):
-            pending = self._pending.pop(body.req_msg_id, None)
+            pending = self._pending.get(body.req_msg_id)
             if pending is not None and not pending.future.done():
+                self._remove_pending(pending, matched_msg_id=body.req_msg_id)
                 pending.future.set_result(body.result)
             return
         self._put_incoming(message)
@@ -515,9 +637,7 @@ class MTProtoSender:
         try:
             callback(self.state.server_salt)
         except Exception as exc:
-            record_metric(
-                "sender.salt_callback_errors", 1, attributes={"error_type": type(exc).__name__}
-            )
+            record_metric("sender.salt_callback_errors", 1, attributes={"error_type": type(exc).__name__})
 
     async def _flush_acks_safely(self) -> None:
         try:
@@ -525,9 +645,7 @@ class MTProtoSender:
         except asyncio.CancelledError:
             raise
         except Exception as exc:
-            record_metric(
-                "sender.ack_flush_errors", 1, attributes={"error_type": type(exc).__name__}
-            )
+            record_metric("sender.ack_flush_errors", 1, attributes={"error_type": type(exc).__name__})
 
     async def _keepalive_loop(self) -> None:
         # ping_delay_disconnect arms a server-side disconnect timer that is only reset
@@ -543,10 +661,7 @@ class MTProtoSender:
             if receive_task is None or receive_task.done():
                 return
             try:
-                if (
-                    self.state.pending_ack_count > 0
-                    and self.state.oldest_pending_ack_age() >= self._ack_max_delay
-                ):
+                if self.state.pending_ack_count > 0 and self.state.oldest_pending_ack_age() >= self._ack_max_delay:
                     await self.flush_acks()
                 if time.monotonic() - last_ping >= self._ping_interval:
                     record_metric("sender.keepalive_pings", 1)
@@ -555,18 +670,12 @@ class MTProtoSender:
             except asyncio.CancelledError:
                 raise
             except Exception as exc:
-                record_metric(
-                    "sender.keepalive_errors", 1, attributes={"error_type": type(exc).__name__}
-                )
+                record_metric("sender.keepalive_errors", 1, attributes={"error_type": type(exc).__name__})
 
     async def _cancel_keepalive_task(self) -> None:
         keepalive_task = self._keepalive_task
         self._keepalive_task = None
-        if (
-            keepalive_task is None
-            or keepalive_task.done()
-            or keepalive_task is asyncio.current_task()
-        ):
+        if keepalive_task is None or keepalive_task.done() or keepalive_task is asyncio.current_task():
             return
         keepalive_task.cancel()
         with suppress(asyncio.CancelledError):
@@ -575,23 +684,22 @@ class MTProtoSender:
     async def _resend_pending(self) -> None:
         """Re-send in-flight requests that were sent on a now-dead transport.
 
-        Requests keep their original future and get a fresh msg_id, so callers never
-        observe a routine server-side connection close (same behavior as Telethon's
-        pending-state re-enqueue and TDLib's query resend).
+        Retry-safe requests keep their original future and get a fresh msg_id, so
+        those callers do not observe a routine server-side connection close. Unsafe
+        requests surface an ambiguous result instead of being replayed.
         """
         current = self._transport
-        stale = [
-            (msg_id, pending)
-            for msg_id, pending in self._pending.items()
-            if pending.transport is not current
-        ]
-        for msg_id, pending in stale:
-            self._pending.pop(msg_id, None)
+        stale = [pending for pending in self._pending_requests() if pending.transport is not current]
+        for pending in stale:
             if pending.future.done():
+                self._remove_pending(pending)
+                continue
+            if not pending.retry_safe:
+                self._fail_pending_request(pending, _ambiguous_rpc_result(pending))
                 continue
             if pending.attempts > self._reconnect_attempts:
                 # "connection" keeps this classified as transient by the media layer.
-                pending.future.set_exception(TransportError("connection retry limit exceeded"))
+                self._fail_pending_request(pending, TransportError("connection retry limit exceeded"))
                 continue
             try:
                 await self._send_pending(pending, fail_future_on_error=False)
@@ -600,28 +708,72 @@ class MTProtoSender:
                 raise
             except Exception as exc:
                 if not pending.future.done():
-                    pending.future.set_exception(exc)
+                    self._fail_pending_request(pending, exc)
 
     async def _retry_bad_message(self, bad_msg_id: int) -> None:
-        pending = self._pending.pop(bad_msg_id, None)
+        pending = self._pending.get(bad_msg_id)
         if pending is None or pending.future.done():
             return
         if pending.attempts > self._reconnect_attempts:
-            pending.future.set_exception(TransportError("message retry limit exceeded"))
+            self._fail_pending_request(pending, TransportError("message retry limit exceeded"))
             return
         record_metric("sender.bad_message_retries", 1)
         await self._send_pending(pending)
 
     def _fail_pending_for_message(self, msg_id: int, exc: Exception) -> None:
-        pending = self._pending.pop(msg_id, None)
+        pending = self._pending.get(msg_id)
         if pending is not None and not pending.future.done():
-            pending.future.set_exception(exc)
+            self._fail_pending_request(pending, exc)
 
     def _fail_pending(self, exc: Exception) -> None:
-        for pending in self._pending.values():
-            if not pending.future.done():
-                pending.future.set_exception(exc)
+        for pending in self._pending_requests():
+            self._fail_pending_request(pending, exc)
         self._pending.clear()
+
+    def _fail_pending_after_transport_loss(self, exc: Exception, *, failed_transport: Transport | None) -> None:
+        for pending in self._pending_requests():
+            if pending.transport is not failed_transport:
+                continue
+            terminal = exc if pending.retry_safe else _ambiguous_rpc_result(pending, error=exc)
+            self._fail_pending_request(pending, terminal)
+
+    def _pending_requests(self) -> tuple[PendingRequest, ...]:
+        return tuple({id(pending): pending for pending in self._pending.values()}.values())
+
+    def _pending_alias_count(self) -> int:
+        return len(self._pending)
+
+    def _reserve_pending_slot(self) -> None:
+        used = self._pending_slots_used
+        configured = self._max_pending_rpcs
+        if configured is not None and used >= configured:
+            record_metric("sender.pending_rpc_limit_exceeded", 1, attributes={"used": used, "configured": configured})
+            raise PendingRpcLimitExceeded(f"sender already has {used} pending RPCs (max_pending_rpcs={configured})")
+        self._pending_slots_used = used + 1
+        try:
+            record_metric("sender.pending_rpcs", self._pending_slots_used, unit="count")
+        except BaseException:
+            self._pending_slots_used = used
+            raise
+
+    def _release_pending_slot(self) -> None:
+        used = self._pending_slots_used
+        assert used > 0, "pending RPC slot counter underflow"
+        self._pending_slots_used = used - 1
+        record_metric("sender.pending_rpcs", self._pending_slots_used, unit="count")
+
+    def _remove_pending(self, pending: PendingRequest, *, matched_msg_id: int | None = None) -> None:
+        if matched_msg_id is not None:
+            self._pending.pop(matched_msg_id, None)
+        for msg_id in pending.aliases:
+            if self._pending.get(msg_id) is pending:
+                self._pending.pop(msg_id, None)
+        pending.aliases.clear()
+
+    def _fail_pending_request(self, pending: PendingRequest, exc: Exception) -> None:
+        self._remove_pending(pending)
+        if not pending.future.done():
+            pending.future.set_exception(exc)
 
     async def _close_transport(self) -> None:
         transport = self._transport
@@ -646,10 +798,7 @@ class MTProtoSender:
                 # and the receive loop (observed live as a TransportClosed storm).
                 record_metric("sender.reconnect_skipped", 1)
                 return
-            if (
-                self._reconnect_cooldown > 0
-                and time.monotonic() - self._last_connect_time < RECONNECT_FLAP_WINDOW
-            ):
+            if self._reconnect_cooldown > 0 and time.monotonic() - self._last_connect_time < RECONNECT_FLAP_WINDOW:
                 # The previous connection died young: Telegram media DCs shed
                 # connections when throttling, and instant zero-backoff reconnects
                 # keep the account in that regime. Pace like MTKruto (3 s if the
@@ -695,7 +844,6 @@ class MTProtoSender:
                     attempts=self._reconnect_attempts,
                     error_type=type(last_error).__name__,
                 )
-                self._fail_pending(last_error)
                 raise last_error
 
 
@@ -724,3 +872,36 @@ def _message_body_bytes(body: bytes | bytearray | memoryview | object) -> bytes 
     if isinstance(body, bytearray):
         return memoryview(body)
     return encode_message_body(body)
+
+
+def _ambiguous_rpc_result(pending: PendingRequest, *, error: BaseException | None = None) -> AmbiguousRpcResult:
+    context: dict[str, object] = {"attempts": pending.attempts}
+    if error is not None:
+        context["error_type"] = type(error).__name__
+    return AmbiguousRpcResult(request=_request_descriptor(pending.body), context=context)
+
+
+def _request_descriptor(body: bytes | object) -> str:
+    current = body
+    while True:
+        query = getattr(current, "query", None)
+        if query is None or query is current:
+            break
+        current = query
+    qualname = getattr(type(current), "QUALNAME", None)
+    return str(qualname) if qualname else type(current).__name__
+
+
+def _normalize_protocol_validation_error(exc: ValueError) -> ProtocolValidationError:
+    message = str(exc)
+    if "auth_key_id" in message:
+        reason = "auth_key_id"
+    elif "msg_key" in message:
+        reason = "msg_key"
+    elif "padding" in message:
+        reason = "padding"
+    elif "length" in message:
+        reason = "body_length"
+    else:
+        reason = "malformed_envelope"
+    return ProtocolValidationError(reason)

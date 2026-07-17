@@ -3,9 +3,15 @@ from __future__ import annotations
 import secrets
 import time
 from collections import OrderedDict
+from collections.abc import Collection
 from dataclasses import dataclass, field
 
 from miniproto.crypto.mtproto import auth_key_id
+from miniproto.errors import ProtocolValidationError
+
+MAX_SERVER_MSG_ID_FUTURE_SKEW = 30
+MAX_SERVER_MSG_ID_PAST_SKEW = 300
+_SERVER_MSG_ID_PARITY = 1
 
 
 @dataclass(slots=True)
@@ -19,6 +25,7 @@ class MTProtoState:
     _content_related_count: int = 0
     _seen_msg_ids: OrderedDict[int, None] = field(default_factory=OrderedDict)
     _pending_acks: OrderedDict[int, float] = field(default_factory=OrderedDict)
+    _time_trusted: bool = False
 
     def __post_init__(self) -> None:
         self.auth_key = bytes(self.auth_key)
@@ -50,6 +57,49 @@ class MTProtoState:
         server_time = msg_id >> 32
         if server_time > 0:
             self.time_offset = server_time - time.time()
+
+    @property
+    def time_trusted(self) -> bool:
+        return self._time_trusted
+
+    def validate_incoming(
+        self,
+        msg_id: int,
+        *,
+        session_id: int,
+        now: float | None = None,
+        provisional_time_offset: float | None = None,
+        provisional_seen_msg_ids: Collection[int] = (),
+    ) -> None:
+        if session_id != self.session_id:
+            raise ProtocolValidationError("session_id", context={"msg_id": msg_id})
+        if msg_id % 4 != _SERVER_MSG_ID_PARITY:
+            raise ProtocolValidationError("msg_id_parity", context={"msg_id": msg_id})
+        if msg_id in self._seen_msg_ids or msg_id in provisional_seen_msg_ids:
+            raise ProtocolValidationError("duplicate_msg_id", context={"msg_id": msg_id})
+        replay_window = (*self._seen_msg_ids, *provisional_seen_msg_ids)
+        if replay_window and len(replay_window) >= self.duplicate_window and msg_id <= min(replay_window):
+            raise ProtocolValidationError("replay_floor", context={"msg_id": msg_id})
+        if self._time_trusted or provisional_time_offset is not None:
+            offset = self.time_offset if provisional_time_offset is None else provisional_time_offset
+            current_time = (time.time() if now is None else now) + offset
+            server_time = msg_id >> 32
+            if server_time > current_time + MAX_SERVER_MSG_ID_FUTURE_SKEW:
+                raise ProtocolValidationError("msg_id_future", context={"msg_id": msg_id})
+            if server_time < current_time - MAX_SERVER_MSG_ID_PAST_SKEW:
+                raise ProtocolValidationError("msg_id_past", context={"msg_id": msg_id})
+
+    def commit_incoming(self, msg_id: int, *, content_related: bool = True, now: float | None = None) -> None:
+        self._seen_msg_ids[msg_id] = None
+        while len(self._seen_msg_ids) > self.duplicate_window:
+            self._seen_msg_ids.pop(min(self._seen_msg_ids))
+        if content_related:
+            self._pending_acks[msg_id] = time.monotonic() if now is None else now
+        if not self._time_trusted:
+            server_time = msg_id >> 32
+            if server_time > 0:
+                self.time_offset = server_time - (time.time() if now is None else now)
+            self._time_trusted = True
 
     def record_incoming(self, msg_id: int, *, content_related: bool = True) -> bool:
         if msg_id in self._seen_msg_ids:

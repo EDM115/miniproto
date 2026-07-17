@@ -29,9 +29,7 @@ def download_session_count(total_size: int) -> int:
     return 4
 
 
-def plan_download_ranges(
-    total_size: int, *, session_count: int, alignment: int = MIB
-) -> tuple[DownloadRange, ...]:
+def plan_download_ranges(total_size: int, *, session_count: int, alignment: int = MIB) -> tuple[DownloadRange, ...]:
     if total_size <= 0:
         raise ValueError("total_size must be positive")
     if session_count <= 0:
@@ -56,10 +54,7 @@ def plan_download_ranges(
 
 
 def assemble_download_parts(
-    part_paths: Sequence[Path],
-    destination: str | os.PathLike[str] | BinaryIO | None,
-    *,
-    expected_size: int,
+    part_paths: Sequence[Path], destination: str | os.PathLike[str] | BinaryIO | None, *, expected_size: int
 ) -> tuple[Path | BinaryIO | None, bytes | None]:
     data_buffer: io.BytesIO | None = None
     should_close = False
@@ -87,7 +82,5 @@ def assemble_download_parts(
         if should_close:
             output.close()
     if written != expected_size:
-        raise RuntimeError(
-            f"assembled download size mismatch: expected {expected_size}, wrote {written}"
-        )
+        raise RuntimeError(f"assembled download size mismatch: expected {expected_size}, wrote {written}")
     return resolved_destination, data_buffer.getvalue() if data_buffer is not None else None

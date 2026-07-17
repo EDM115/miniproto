@@ -7,6 +7,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Protocol, Self, runtime_checkable
 
+from miniproto.auth.dh_validation import validate_dh_parameters, validate_public_value
 from miniproto.crypto.mtproto import auth_key_id
 from miniproto.crypto.native import (
     aes_256_ige_decrypt,
@@ -57,8 +58,7 @@ class RSAKey:
     @classmethod
     def from_bytes(cls, modulus: bytes, exponent: bytes) -> Self:
         return cls(
-            modulus=int.from_bytes(modulus, "big", signed=False),
-            exponent=int.from_bytes(exponent, "big", signed=False),
+            modulus=int.from_bytes(modulus, "big", signed=False), exponent=int.from_bytes(exponent, "big", signed=False)
         )
 
     @property
@@ -210,14 +210,7 @@ class ServerDHInnerData:
         g_a, offset = decode_bytes(data, offset)
         server_time, offset = decode_int(data, offset)
         _require_consumed(data, offset)
-        return cls(
-            nonce=nonce,
-            server_nonce=server_nonce,
-            g=g,
-            dh_prime=dh_prime,
-            g_a=g_a,
-            server_time=server_time,
-        )
+        return cls(nonce=nonce, server_nonce=server_nonce, g=g, dh_prime=dh_prime, g_a=g_a, server_time=server_time)
 
     def serialize(self) -> bytes:
         return (
@@ -312,9 +305,7 @@ class AuthKeyExchange:
 
     async def create_auth_key(self) -> AuthKeyExchangeResult:
         nonce = _random_int(16, self._random_bytes)
-        res_pq = ResPQ.deserialize(
-            await self.transport.send_unencrypted(ReqPQMulti(nonce).serialize())
-        )
+        res_pq = ResPQ.deserialize(await self.transport.send_unencrypted(ReqPQMulti(nonce).serialize()))
         if res_pq.nonce != nonce:
             raise ValueError("resPQ nonce does not match request nonce")
         p, q = factorize_pq(int.from_bytes(res_pq.pq, "big", signed=False))
@@ -339,9 +330,7 @@ class AuthKeyExchange:
             public_key_fingerprint=rsa_key.fingerprint,
             encrypted_data=rsa_pad(inner.serialize(), rsa_key, random_bytes=self._random_bytes),
         )
-        server_params = decode_server_dh_params(
-            await self.transport.send_unencrypted(req_dh.serialize())
-        )
+        server_params = decode_server_dh_params(await self.transport.send_unencrypted(req_dh.serialize()))
         if isinstance(server_params, ServerDHParamsFail):
             raise ValueError("server rejected req_DH_params")
         server_inner = decrypt_server_dh_answer(
@@ -351,8 +340,10 @@ class AuthKeyExchange:
         dh_prime = int.from_bytes(server_inner.dh_prime, "big", signed=False)
         g_a = int.from_bytes(server_inner.g_a, "big", signed=False)
         b = _random_int(256, self._random_bytes)
+        g_b_value = pow(server_inner.g, b, dh_prime)
+        validate_public_value(g_b_value, dh_prime, "g_b")
         auth_key = compute_auth_key(g_a=g_a, b=b, dh_prime=dh_prime)
-        g_b = pow(server_inner.g, b, dh_prime).to_bytes(len(server_inner.dh_prime), "big")
+        g_b = g_b_value.to_bytes(len(server_inner.dh_prime), "big")
         encrypted_client_data = encrypt_client_dh_inner_data(
             ClientDHInnerData(nonce=nonce, server_nonce=res_pq.server_nonce, retry_id=0, g_b=g_b),
             new_nonce=new_nonce,
@@ -361,9 +352,7 @@ class AuthKeyExchange:
         answer = decode_dh_gen_answer(
             await self.transport.send_unencrypted(
                 SetClientDHParams(
-                    nonce=nonce,
-                    server_nonce=res_pq.server_nonce,
-                    encrypted_data=encrypted_client_data,
+                    nonce=nonce, server_nonce=res_pq.server_nonce, encrypted_data=encrypted_client_data
                 ).serialize()
             )
         )
@@ -459,9 +448,7 @@ def factorize_pq(pq: int) -> tuple[int, int]:
     return (p, q) if p < q else (q, p)
 
 
-def rsa_pad(
-    data: bytes, key: RSAKey, *, random_bytes: Callable[[int], bytes] | None = None
-) -> bytes:
+def rsa_pad(data: bytes, key: RSAKey, *, random_bytes: Callable[[int], bytes] | None = None) -> bytes:
     if len(data) > 144:
         raise ValueError("RSA_PAD data must not exceed 144 bytes")
     random_source = random_bytes or os.urandom
@@ -474,9 +461,7 @@ def rsa_pad(
         temp_key_xor = xor_bytes(temp_key, sha256_digest(aes_encrypted))
         key_aes_encrypted = temp_key_xor + aes_encrypted
         if int.from_bytes(key_aes_encrypted, "big", signed=False) < key.modulus:
-            encrypted = pow(
-                int.from_bytes(key_aes_encrypted, "big", signed=False), key.exponent, key.modulus
-            )
+            encrypted = pow(int.from_bytes(key_aes_encrypted, "big", signed=False), key.exponent, key.modulus)
             return encrypted.to_bytes(_RSA_PADDED_SIZE, "big")
     raise ValueError("could not generate RSA_PAD value below RSA modulus")
 
@@ -492,9 +477,7 @@ def derive_tmp_aes_key_iv(new_nonce: int, server_nonce: int) -> tuple[bytes, byt
     return key, iv
 
 
-def decrypt_server_dh_answer(
-    encrypted_answer: bytes, *, new_nonce: int, server_nonce: int
-) -> ServerDHInnerData:
+def decrypt_server_dh_answer(encrypted_answer: bytes, *, new_nonce: int, server_nonce: int) -> ServerDHInnerData:
     key, iv = derive_tmp_aes_key_iv(new_nonce, server_nonce)
     plaintext = aes_256_ige_decrypt(encrypted_answer, key, iv)
     if len(plaintext) < 20:
@@ -507,9 +490,7 @@ def decrypt_server_dh_answer(
     raise ValueError("server_DH_inner_data SHA1 prefix did not match")
 
 
-def encrypt_client_dh_inner_data(
-    inner: ClientDHInnerData, *, new_nonce: int, server_nonce: int
-) -> bytes:
+def encrypt_client_dh_inner_data(inner: ClientDHInnerData, *, new_nonce: int, server_nonce: int) -> bytes:
     key, iv = derive_tmp_aes_key_iv(new_nonce, server_nonce)
     data = inner.serialize()
     data_with_hash = sha1_digest(data) + data
@@ -552,12 +533,9 @@ def server_salt(new_nonce: int, server_nonce: int) -> int:
 def _validate_dh_inner(inner: ServerDHInnerData, *, nonce: int, server_nonce: int) -> None:
     if inner.nonce != nonce or inner.server_nonce != server_nonce:
         raise ValueError("server_DH_inner_data nonces do not match")
-    if inner.g not in {2, 3, 4, 5, 6, 7}:
-        raise ValueError("unsupported DH generator")
     dh_prime = int.from_bytes(inner.dh_prime, "big", signed=False)
     g_a = int.from_bytes(inner.g_a, "big", signed=False)
-    if dh_prime <= 3 or not 1 < g_a < dh_prime - 1:
-        raise ValueError("invalid DH public values")
+    validate_dh_parameters(dh_prime, inner.g, g_a, "g_a")
 
 
 def _auth_dc_id(dc_id: int, *, test_mode: bool) -> int:

@@ -12,6 +12,51 @@ class MiniprotoError(Exception):
     """Base exception for miniproto."""
 
 
+class ProtocolValidationError(MiniprotoError, ValueError):
+    """An authenticated MTProto message violated the inbound protocol contract."""
+
+    def __init__(self, reason: str, *, context: Mapping[str, Any] | None = None) -> None:
+        self.reason = reason
+        self.context = dict(context or {})
+        Exception.__init__(self, f"inbound MTProto validation failed: {reason}")
+
+    def __str__(self) -> str:
+        rendered = f"inbound MTProto validation failed: {self.reason}"
+        if self.context:
+            rendered = f"{rendered} context={safe_repr(self.context)}"
+        return rendered
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(reason={redact_text(self.reason)!r}, context={safe_repr(self.context)})"
+
+
+class AmbiguousRpcResult(MiniprotoError):
+    """The transport failed after an RPC may already have reached Telegram."""
+
+    def __init__(
+        self,
+        message: str = "RPC result is ambiguous; the request may have executed",
+        *,
+        request: object | None = None,
+        context: Mapping[str, Any] | None = None,
+    ) -> None:
+        self.message = message
+        self.request = request
+        self.context = context
+        Exception.__init__(self, redact_text(message))
+
+    def __str__(self) -> str:
+        rendered = redact_text(self.message)
+        if self.request is not None:
+            rendered = f"{rendered} request={safe_repr(self.request)}"
+        if self.context:
+            rendered = f"{rendered} context={safe_repr(self.context)}"
+        return rendered
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(message={redact_text(self.message)!r}, request={safe_repr(self.request)}, context={safe_repr(self.context)})"
+
+
 @dataclass(slots=True, repr=False)
 class RpcError(MiniprotoError):
     message: str
@@ -90,33 +135,21 @@ class BadRequest(RpcError):
 
 class Unauthorized(RpcError):
     def __init__(
-        self,
-        message: str = "unauthorized",
-        *,
-        request: object | None = None,
-        context: Mapping[str, Any] | None = None,
+        self, message: str = "unauthorized", *, request: object | None = None, context: Mapping[str, Any] | None = None
     ) -> None:
         super().__init__(message=message, code=401, request=request, context=context)
 
 
 class Forbidden(RpcError):
     def __init__(
-        self,
-        message: str = "forbidden",
-        *,
-        request: object | None = None,
-        context: Mapping[str, Any] | None = None,
+        self, message: str = "forbidden", *, request: object | None = None, context: Mapping[str, Any] | None = None
     ) -> None:
         super().__init__(message=message, code=403, request=request, context=context)
 
 
 class NotFound(RpcError):
     def __init__(
-        self,
-        message: str = "not found",
-        *,
-        request: object | None = None,
-        context: Mapping[str, Any] | None = None,
+        self, message: str = "not found", *, request: object | None = None, context: Mapping[str, Any] | None = None
     ) -> None:
         super().__init__(message=message, code=404, request=request, context=context)
 
@@ -157,10 +190,7 @@ class FloodWait(RpcError):
     ) -> None:
         self.seconds = seconds
         super().__init__(
-            message=message or f"flood wait for {seconds} seconds",
-            code=code,
-            request=request,
-            context=context,
+            message=message or f"flood wait for {seconds} seconds", code=code, request=request, context=context
         )
 
 
@@ -276,20 +306,13 @@ class SessionEnvelopeError(SessionStorageError):
     """Raised when an encrypted session envelope fails validation or authentication."""
 
 
-_MIGRATION_RE = re.compile(
-    r"^(?P<kind>NETWORK|PHONE|STATS|USER|FILE)_MIGRATE_(?P<dc_id>\d+)$", re.IGNORECASE
-)
+_MIGRATION_RE = re.compile(r"^(?P<kind>NETWORK|PHONE|STATS|USER|FILE)_MIGRATE_(?P<dc_id>\d+)$", re.IGNORECASE)
 _FLOOD_RE = re.compile(r"^(?P<kind>[A-Z0-9_]*WAIT)_(?P<seconds>\d+)$", re.IGNORECASE)
 _TRAILING_INT_RE = re.compile(r"^(?P<prefix>.+)_(?P<value>\d+)$")
 _TEMPLATE_INT_RE = re.compile(r"%d", re.IGNORECASE)
 _AUTH_KEY_NOT_FOUND = {"AUTH_KEY_INVALID", "AUTH_KEY_PERM_EMPTY", "AUTH_KEY_UNREGISTERED"}
 _AUTH_KEY_REGENERATE = {"AUTH_KEY_DUPLICATED", "AUTH_KEY_UNSYNCHRONIZED"}
-_INVALID_CODE = {
-    "PHONE_CODE_EMPTY",
-    "PHONE_CODE_EXPIRED",
-    "PHONE_CODE_HASH_EMPTY",
-    "PHONE_CODE_INVALID",
-}
+_INVALID_CODE = {"PHONE_CODE_EMPTY", "PHONE_CODE_EXPIRED", "PHONE_CODE_HASH_EMPTY", "PHONE_CODE_INVALID"}
 _COMMON_EXACT_BASES: dict[str, type[RpcError]] = {
     "SESSION_PASSWORD_NEEDED": PasswordRequired,
     "PASSWORD_HASH_INVALID": PasswordInvalid,
@@ -305,9 +328,7 @@ def classify_rpc_error(error: RpcError) -> RpcError:
     raw_message = str(error.message).strip()
     upper_message = raw_message.upper()
     if migration_match := _MIGRATION_RE.match(upper_message):
-        cls = _ERROR_CLASS_BY_TEMPLATE.get(
-            f"{migration_match.group('kind')}_MIGRATE_%d", DatacenterMigration
-        )
+        cls = _ERROR_CLASS_BY_TEMPLATE.get(f"{migration_match.group('kind')}_MIGRATE_%d", DatacenterMigration)
         return _instantiate_migration_error(cls, migration_match, error)
     if flood_match := _FLOOD_RE.match(upper_message):
         template = f"{flood_match.group('kind')}_%d"
@@ -328,51 +349,28 @@ def classify_rpc_error(error: RpcError) -> RpcError:
     if error.code == 404:
         return NotFound(error.message, request=error.request, context=error.context)
     if error.code == -503:
-        return RpcTimeout(
-            error.message, code=error.code, request=error.request, context=error.context
-        )
+        return RpcTimeout(error.message, code=error.code, request=error.request, context=error.context)
     if error.code is not None and error.code >= 500:
-        return InternalServerError(
-            error.message, code=error.code, request=error.request, context=error.context
-        )
+        return InternalServerError(error.message, code=error.code, request=error.request, context=error.context)
     return error
 
 
-def _instantiate_migration_error(
-    cls: type[RpcError], match: re.Match[str], error: RpcError
-) -> RpcError:
+def _instantiate_migration_error(cls: type[RpcError], match: re.Match[str], error: RpcError) -> RpcError:
     dc_id = int(match.group("dc_id"))
     kind = match.group("kind").upper()
     if issubclass(cls, DatacenterMigration):
         return cast(
-            RpcError,
-            cls(
-                dc_id,
-                kind=kind,
-                message=error.message,
-                request=error.request,
-                context=error.context,
-            ),
+            RpcError, cls(dc_id, kind=kind, message=error.message, request=error.request, context=error.context)
         )
-    return DatacenterMigration(
-        dc_id, kind=kind, message=error.message, request=error.request, context=error.context
-    )
+    return DatacenterMigration(dc_id, kind=kind, message=error.message, request=error.request, context=error.context)
 
 
-def _instantiate_flood_error(
-    cls: type[RpcError], match: re.Match[str], error: RpcError
-) -> RpcError:
+def _instantiate_flood_error(cls: type[RpcError], match: re.Match[str], error: RpcError) -> RpcError:
     seconds = int(match.group("seconds"))
     if issubclass(cls, FloodWait):
         return cast(
             RpcError,
-            cls(
-                seconds,
-                message=error.message,
-                code=error.code or 420,
-                request=error.request,
-                context=error.context,
-            ),
+            cls(seconds, message=error.message, code=error.code or 420, request=error.request, context=error.context),
         )
     return FloodWait(seconds, message=error.message, request=error.request, context=error.context)
 
@@ -383,35 +381,18 @@ def _instantiate_error_class(cls: type[RpcError], error: RpcError) -> RpcError:
         seconds = values[0] if values else 0
         return cast(
             RpcError,
-            cls(
-                seconds,
-                message=error.message,
-                code=error.code or 420,
-                request=error.request,
-                context=error.context,
-            ),
+            cls(seconds, message=error.message, code=error.code or 420, request=error.request, context=error.context),
         )
     if issubclass(cls, DatacenterMigration):
         match = _MIGRATION_RE.match(error.message.upper())
         if match is not None:
             return _instantiate_migration_error(cls, match, error)
     if issubclass(cls, BadRequest):
-        return cast(
-            RpcError,
-            cls(
-                error.message, code=error.code or 400, request=error.request, context=error.context
-            ),
-        )
+        return cast(RpcError, cls(error.message, code=error.code or 400, request=error.request, context=error.context))
     if issubclass(cls, RpcTimeout):
-        return cast(
-            RpcError,
-            cls(error.message, code=error.code, request=error.request, context=error.context),
-        )
+        return cast(RpcError, cls(error.message, code=error.code, request=error.request, context=error.context))
     if issubclass(cls, InternalServerError):
-        return cast(
-            RpcError,
-            cls(error.message, code=error.code, request=error.request, context=error.context),
-        )
+        return cast(RpcError, cls(error.message, code=error.code, request=error.request, context=error.context))
     return cls(error.message, request=error.request, context=error.context)
 
 
@@ -430,9 +411,7 @@ def _register_generated_rpc_error_classes() -> None:
         _ERROR_CLASS_BY_TEMPLATE[template] = cls
 
 
-def _make_rpc_error_class(
-    class_name: str, name: str, code: int, description: str
-) -> type[RpcError]:
+def _make_rpc_error_class(class_name: str, name: str, code: int, description: str) -> type[RpcError]:
     base = _base_for_error(name, code)
     namespace: dict[str, object] = {
         "RPC_ERROR_NAME": name,
@@ -518,6 +497,7 @@ __all__ = tuple(
             "AuthError",
             "AuthKeyNotFound",
             "AuthKeyRegenerationRequired",
+            "AmbiguousRpcResult",
             "BadRequest",
             "ClientDisconnected",
             "DatacenterMigration",
@@ -532,6 +512,7 @@ __all__ = tuple(
             "PasswordInvalid",
             "PasswordRequired",
             "PendingRpcLimitExceeded",
+            "ProtocolValidationError",
             "RequestTimeout",
             "ResultTypeMismatch",
             "RpcError",

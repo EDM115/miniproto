@@ -12,13 +12,14 @@ from miniproto import (
     DCOption,
     InMemorySessionStorage,
     PendingRpcLimitExceeded,
+    RpcError,
     SessionRecord,
     TransportConfig,
     event_loop,
 )
 from miniproto.connection.sender import MTProtoSender
 from miniproto.connection.transport import ConnectionEndpoint
-from miniproto.mtproto.codec import RpcResult
+from miniproto.mtproto.codec import RpcErrorBody, RpcResult, encode_message_body
 from miniproto.mtproto.state import MTProtoState
 from miniproto.raw import functions, types
 
@@ -68,7 +69,11 @@ def test_client_config_validates_resource_limit_fields() -> None:
 def test_media_config_defaults_apply_only_when_not_overridden() -> None:
     client = Client(
         ClientConfig(
-            api_id=1, api_hash="hash", media_concurrency=4, media_max_buffer_size=8 * 1024 * 1024
+            api_id=1,
+            api_hash="hash",
+            session_storage=InMemorySessionStorage(),
+            media_concurrency=4,
+            media_max_buffer_size=8 * 1024 * 1024,
         )
     )
     kwargs: dict[str, object] = {}
@@ -96,9 +101,7 @@ def test_client_enforces_max_pending_rpcs_from_config() -> None:
             )
             client = Client(config)
             await client.connect()
-            blocked = asyncio.create_task(
-                client.invoke(functions.HelpGetNearestDc(), request_timeout=5.0)
-            )
+            blocked = asyncio.create_task(client.invoke(functions.HelpGetNearestDc(), request_timeout=5.0))
             sender: MTProtoSender | None = None
             for _ in range(100):
                 candidate = client._sender
@@ -112,6 +115,37 @@ def test_client_enforces_max_pending_rpcs_from_config() -> None:
                 await client.invoke(functions.HelpGetNearestDc(), request_timeout=5.0)
             blocked.cancel()
             await asyncio.gather(blocked, return_exceptions=True)
+            assert sender.sender_state.pending_count == 0
+            await client.disconnect()
+
+    run(scenario())
+
+
+def test_client_typed_rpc_error_releases_sender_pending_slot() -> None:
+    async def scenario() -> None:
+        def handle(message):
+            return RpcResult(
+                req_msg_id=message.msg_id,
+                result=encode_message_body(RpcErrorBody(error_code=400, error_message="PLAN_008_TEST_ERROR")),
+            )
+
+        transport = TransportConfig(mode="tcp_intermediate", read_timeout=2.0)
+        async with FakeMTProtoServer(AUTH_KEY, transport, handle) as server:
+            client = Client(
+                ClientConfig(
+                    api_id=1,
+                    api_hash="hash",
+                    session_storage=fake_server_storage(server),
+                    transport=transport,
+                    max_pending_rpcs=1,
+                )
+            )
+            await client.connect()
+            with pytest.raises(RpcError, match="PLAN_008_TEST_ERROR"):
+                await client.invoke(functions.HelpGetNearestDc())
+            sender = client._sender
+            assert isinstance(sender, MTProtoSender)
+            assert sender.sender_state.pending_count == 0
             await client.disconnect()
 
     run(scenario())
@@ -127,10 +161,7 @@ def test_disconnect_leaves_no_background_tasks_behind() -> None:
         transport = TransportConfig(mode="tcp_intermediate", read_timeout=2.0)
         async with FakeMTProtoServer(AUTH_KEY, transport, handle) as server:
             config = ClientConfig(
-                api_id=1,
-                api_hash="hash",
-                session_storage=fake_server_storage(server),
-                transport=transport,
+                api_id=1, api_hash="hash", session_storage=fake_server_storage(server), transport=transport
             )
             client = Client(config)
             await client.connect()
@@ -146,11 +177,7 @@ def test_disconnect_leaves_no_background_tasks_behind() -> None:
     def _client_owned_tasks(current: asyncio.Task | None) -> set[asyncio.Task]:
         # The fake server's per-connection handler task is test infrastructure,
         # not a task owned by the client under test.
-        return {
-            task
-            for task in asyncio.all_tasks()
-            if task is not current and "_handle_client" not in repr(task)
-        }
+        return {task for task in asyncio.all_tasks() if task is not current and "_handle_client" not in repr(task)}
 
     run(scenario())
 
@@ -165,10 +192,7 @@ def test_client_reuses_self_healing_sender_instead_of_rebuilding() -> None:
         transport = TransportConfig(mode="tcp_intermediate", read_timeout=2.0)
         async with FakeMTProtoServer(AUTH_KEY, transport, handle) as server:
             config = ClientConfig(
-                api_id=1,
-                api_hash="hash",
-                session_storage=fake_server_storage(server),
-                transport=transport,
+                api_id=1, api_hash="hash", session_storage=fake_server_storage(server), transport=transport
             )
             client = Client(config)
             await client.connect()
@@ -229,15 +253,16 @@ def test_client_surfaces_sender_fatal_error_on_next_invoke_and_recovers() -> Non
                 body: bytes | object,
                 *,
                 content_related: bool = True,
+                retry_safe: bool,
                 request_timeout: float | None = None,
             ) -> object:
-                del body, content_related, request_timeout
+                del body, content_related, retry_safe, request_timeout
                 return nearest_dc().serialize()
 
             async def disconnect(self) -> None:
                 self.is_connected = False
 
-        client = Client(ClientConfig(api_id=1, api_hash="hash"))
+        client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=InMemorySessionStorage()))
         client._sender = dead_sender
         client._sender_factory = lambda _record: ReplacementSender()
         await client.connect()
@@ -257,7 +282,7 @@ def test_client_disconnect_surfaces_sender_fatal_error_after_cleanup() -> None:
             MTProtoState(auth_key=AUTH_KEY, server_salt=1, session_id=2),
         )
         sender._fatal_error = ValueError("fatal receive failure")
-        client = Client(ClientConfig(api_id=1, api_hash="hash"))
+        client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=InMemorySessionStorage()))
         client._sender = sender
         await client.connect()
         with pytest.raises(ValueError, match="fatal receive failure"):

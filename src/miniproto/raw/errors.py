@@ -51,10 +51,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="Your account is associated to DC %d, please re-send the query to that DC.",
     ),
     ("ABOUT_TOO_LONG", 400): RawRPCErrorSpec(
-        name="ABOUT_TOO_LONG",
-        code=400,
-        methods=("account.updateProfile",),
-        description="About string too long.",
+        name="ABOUT_TOO_LONG", code=400, methods=("account.updateProfile",), description="About string too long."
     ),
     ("ACCESS_TOKEN_EXPIRED", 400): RawRPCErrorSpec(
         name="ACCESS_TOKEN_EXPIRED",
@@ -75,10 +72,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="The specified geopoint address is invalid.",
     ),
     ("ADMINS_TOO_MUCH", 400): RawRPCErrorSpec(
-        name="ADMINS_TOO_MUCH",
-        code=400,
-        methods=("channels.editAdmin",),
-        description="There are too many admins.",
+        name="ADMINS_TOO_MUCH", code=400, methods=("channels.editAdmin",), description="There are too many admins."
     ),
     ("ADMIN_ID_INVALID", 400): RawRPCErrorSpec(
         name="ADMIN_ID_INVALID",
@@ -255,10 +249,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="An invalid age was specified, must be between 0 and 150 years.",
     ),
     ("BOOSTS_EMPTY", 400): RawRPCErrorSpec(
-        name="BOOSTS_EMPTY",
-        code=400,
-        methods=("premium.applyBoost",),
-        description="No boost slots were specified.",
+        name="BOOSTS_EMPTY", code=400, methods=("premium.applyBoost",), description="No boost slots were specified."
     ),
     ("BOOSTS_REQUIRED", 400): RawRPCErrorSpec(
         name="BOOSTS_REQUIRED",
@@ -423,10 +414,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="The specified invoice is invalid.",
     ),
     ("BOT_METHOD_INVALID", 400): RawRPCErrorSpec(
-        name="BOT_METHOD_INVALID",
-        code=400,
-        methods=(),
-        description="The specified method cannot be used by bots.",
+        name="BOT_METHOD_INVALID", code=400, methods=(), description="The specified method cannot be used by bots."
     ),
     ("BOT_NOT_CONNECTED_YET", 400): RawRPCErrorSpec(
         name="BOT_NOT_CONNECTED_YET",
@@ -1375,12 +1363,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
     ("BUTTON_TYPE_INVALID", 400): RawRPCErrorSpec(
         name="BUTTON_TYPE_INVALID",
         code=400,
-        methods=(
-            "messages.editMessage",
-            "messages.sendMedia",
-            "messages.sendMessage",
-            "messages.setInlineBotResults",
-        ),
+        methods=("messages.editMessage", "messages.sendMedia", "messages.sendMessage", "messages.setInlineBotResults"),
         description="The type of one or more of the buttons you provided is invalid.",
     ),
     ("BUTTON_URL_INVALID", 400): RawRPCErrorSpec(
@@ -1838,11 +1821,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
     ("CHATLINK_SLUG_EMPTY", 400): RawRPCErrorSpec(
         name="CHATLINK_SLUG_EMPTY",
         code=400,
-        methods=(
-            "account.deleteBusinessChatLink",
-            "account.editBusinessChatLink",
-            "account.resolveBusinessChatLink",
-        ),
+        methods=("account.deleteBusinessChatLink", "account.editBusinessChatLink", "account.resolveBusinessChatLink"),
         description="The specified slug is empty.",
     ),
     ("CHATLINK_SLUG_EXPIRED", 400): RawRPCErrorSpec(
@@ -2168,12 +2147,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
     ("CHAT_TITLE_EMPTY", 400): RawRPCErrorSpec(
         name="CHAT_TITLE_EMPTY",
         code=400,
-        methods=(
-            "channels.createChannel",
-            "channels.editTitle",
-            "messages.createChat",
-            "messages.editChatTitle",
-        ),
+        methods=("channels.createChannel", "channels.editTitle", "messages.createChat", "messages.editChatTitle"),
         description="No chat title provided.",
     ),
     ("CHAT_TOO_BIG", 400): RawRPCErrorSpec(
@@ -2195,10 +2169,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="The provided code is empty.",
     ),
     ("CODE_HASH_INVALID", 400): RawRPCErrorSpec(
-        name="CODE_HASH_INVALID",
-        code=400,
-        methods=("account.confirmPhone",),
-        description="Code hash invalid.",
+        name="CODE_HASH_INVALID", code=400, methods=("account.confirmPhone",), description="Code hash invalid."
     ),
     ("CODE_INVALID", 400): RawRPCErrorSpec(
         name="CODE_INVALID",
@@ -2237,16 +2208,10 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="The provided API id is invalid.",
     ),
     ("CONNECTION_APP_VERSION_EMPTY", 400): RawRPCErrorSpec(
-        name="CONNECTION_APP_VERSION_EMPTY",
-        code=400,
-        methods=("help.getConfig",),
-        description="App version is empty.",
+        name="CONNECTION_APP_VERSION_EMPTY", code=400, methods=("help.getConfig",), description="App version is empty."
     ),
     ("CONNECTION_DEVICE_MODEL_EMPTY", 400): RawRPCErrorSpec(
-        name="CONNECTION_DEVICE_MODEL_EMPTY",
-        code=400,
-        methods=(),
-        description="The specified device model is empty.",
+        name="CONNECTION_DEVICE_MODEL_EMPTY", code=400, methods=(), description="The specified device model is empty."
     ),
     ("CONNECTION_ID_INVALID", 400): RawRPCErrorSpec(
         name="CONNECTION_ID_INVALID",
@@ -2255,10 +2220,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="The specified connection ID is invalid.",
     ),
     ("CONNECTION_LANG_PACK_INVALID", 400): RawRPCErrorSpec(
-        name="CONNECTION_LANG_PACK_INVALID",
-        code=400,
-        methods=(),
-        description="The specified language pack is empty.",
+        name="CONNECTION_LANG_PACK_INVALID", code=400, methods=(), description="The specified language pack is empty."
     ),
     ("CONNECTION_LAYER_INVALID", 400): RawRPCErrorSpec(
         name="CONNECTION_LAYER_INVALID",
@@ -2273,10 +2235,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="Please initialize the connection using initConnection before making queries.",
     ),
     ("CONNECTION_SYSTEM_EMPTY", 400): RawRPCErrorSpec(
-        name="CONNECTION_SYSTEM_EMPTY",
-        code=400,
-        methods=(),
-        description="The specified system version is empty.",
+        name="CONNECTION_SYSTEM_EMPTY", code=400, methods=(), description="The specified system version is empty."
     ),
     ("CONNECTION_SYSTEM_LANG_CODE_EMPTY", 400): RawRPCErrorSpec(
         name="CONNECTION_SYSTEM_LANG_CODE_EMPTY",
@@ -2310,10 +2269,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="The specified user is not a contact.",
     ),
     ("CONTACT_NAME_EMPTY", 400): RawRPCErrorSpec(
-        name="CONTACT_NAME_EMPTY",
-        code=400,
-        methods=("contacts.addContact",),
-        description="Contact name empty.",
+        name="CONTACT_NAME_EMPTY", code=400, methods=("contacts.addContact",), description="Contact name empty."
     ),
     ("CONTACT_REQ_MISSING", 400): RawRPCErrorSpec(
         name="CONTACT_REQ_MISSING",
@@ -2379,11 +2335,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
     ("DATA_TOO_LONG", 400): RawRPCErrorSpec(
         name="DATA_TOO_LONG",
         code=400,
-        methods=(
-            "messages.sendEncrypted",
-            "messages.sendEncryptedFile",
-            "messages.sendEncryptedService",
-        ),
+        methods=("messages.sendEncrypted", "messages.sendEncryptedFile", "messages.sendEncryptedService"),
         description="Data too long.",
     ),
     ("DATE_EMPTY", 400): RawRPCErrorSpec(
@@ -2396,10 +2348,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="The provided DC ID is invalid.",
     ),
     ("DH_G_A_INVALID", 400): RawRPCErrorSpec(
-        name="DH_G_A_INVALID",
-        code=400,
-        methods=("messages.requestEncryption",),
-        description="g_a invalid.",
+        name="DH_G_A_INVALID", code=400, methods=("messages.requestEncryption",), description="g_a invalid."
     ),
     ("DOCUMENT_INVALID", 400): RawRPCErrorSpec(
         name="DOCUMENT_INVALID",
@@ -2436,11 +2385,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
     ("EMAIL_HASH_EXPIRED", 400): RawRPCErrorSpec(
         name="EMAIL_HASH_EXPIRED",
         code=400,
-        methods=(
-            "account.cancelPasswordEmail",
-            "account.confirmPasswordEmail",
-            "account.resendPasswordEmail",
-        ),
+        methods=("account.cancelPasswordEmail", "account.confirmPasswordEmail", "account.resendPasswordEmail"),
         description="Email hash expired.",
     ),
     ("EMAIL_INSTALL_MISSING", 400): RawRPCErrorSpec(
@@ -2452,11 +2397,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
     ("EMAIL_INVALID", 400): RawRPCErrorSpec(
         name="EMAIL_INVALID",
         code=400,
-        methods=(
-            "account.sendVerifyEmailCode",
-            "account.updatePasswordSettings",
-            "account.verifyEmail",
-        ),
+        methods=("account.sendVerifyEmailCode", "account.updatePasswordSettings", "account.verifyEmail"),
         description="The specified email is invalid.",
     ),
     ("EMAIL_NOT_ALLOWED", 400): RawRPCErrorSpec(
@@ -2502,10 +2443,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="The specified `video_emoji_markup` was invalid.",
     ),
     ("EMOJI_NOT_MODIFIED", 400): RawRPCErrorSpec(
-        name="EMOJI_NOT_MODIFIED",
-        code=400,
-        methods=("messages.setChatTheme",),
-        description="The theme wasn't changed.",
+        name="EMOJI_NOT_MODIFIED", code=400, methods=("messages.setChatTheme",), description="The theme wasn't changed."
     ),
     ("EMOTICON_EMPTY", 400): RawRPCErrorSpec(
         name="EMOTICON_EMPTY",
@@ -2625,10 +2563,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="The specified expiration date is invalid.",
     ),
     ("EXPORT_CARD_INVALID", 400): RawRPCErrorSpec(
-        name="EXPORT_CARD_INVALID",
-        code=400,
-        methods=("contacts.importCard",),
-        description="Provided card is invalid.",
+        name="EXPORT_CARD_INVALID", code=400, methods=("contacts.importCard",), description="Provided card is invalid."
     ),
     ("EXTENDED_MEDIA_AMOUNT_INVALID", 400): RawRPCErrorSpec(
         name="EXTENDED_MEDIA_AMOUNT_INVALID",
@@ -2655,10 +2590,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="Paid media is not allowed for the target peer.",
     ),
     ("EXTERNAL_URL_INVALID", 400): RawRPCErrorSpec(
-        name="EXTERNAL_URL_INVALID",
-        code=400,
-        methods=("messages.sendMedia",),
-        description="External URL invalid.",
+        name="EXTERNAL_URL_INVALID", code=400, methods=("messages.sendMedia",), description="External URL invalid."
     ),
     ("FILE_CONTENT_TYPE_INVALID", 400): RawRPCErrorSpec(
         name="FILE_CONTENT_TYPE_INVALID",
@@ -2667,16 +2599,10 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="File content-type is invalid.",
     ),
     ("FILE_EMTPY", 400): RawRPCErrorSpec(
-        name="FILE_EMTPY",
-        code=400,
-        methods=("messages.sendEncryptedFile",),
-        description="An empty file was provided.",
+        name="FILE_EMTPY", code=400, methods=("messages.sendEncryptedFile",), description="An empty file was provided."
     ),
     ("FILE_ID_INVALID", 400): RawRPCErrorSpec(
-        name="FILE_ID_INVALID",
-        code=400,
-        methods=("upload.getFile",),
-        description="The provided file id is invalid.",
+        name="FILE_ID_INVALID", code=400, methods=("upload.getFile",), description="The provided file id is invalid."
     ),
     ("FILE_MIGRATE_%d", 400): RawRPCErrorSpec(
         name="FILE_MIGRATE_%d",
@@ -2814,11 +2740,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
     ("FILTER_INCLUDE_EMPTY", 400): RawRPCErrorSpec(
         name="FILTER_INCLUDE_EMPTY",
         code=400,
-        methods=(
-            "chatlists.joinChatlistInvite",
-            "chatlists.joinChatlistUpdates",
-            "messages.updateDialogFilter",
-        ),
+        methods=("chatlists.joinChatlistInvite", "chatlists.joinChatlistUpdates", "messages.updateDialogFilter"),
         description="The include_peers vector of the filter is empty.",
     ),
     ("FILTER_NOT_SUPPORTED", 400): RawRPCErrorSpec(
@@ -2974,10 +2896,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="GIF content-type invalid.",
     ),
     ("GIF_ID_INVALID", 400): RawRPCErrorSpec(
-        name="GIF_ID_INVALID",
-        code=400,
-        methods=("messages.saveGif",),
-        description="The provided GIF ID is invalid.",
+        name="GIF_ID_INVALID", code=400, methods=("messages.saveGif",), description="The provided GIF ID is invalid."
     ),
     ("GRAPH_EXPIRED_RELOAD", 400): RawRPCErrorSpec(
         name="GRAPH_EXPIRED_RELOAD",
@@ -3000,11 +2919,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
     ("GROUPCALL_ALREADY_DISCARDED", 400): RawRPCErrorSpec(
         name="GROUPCALL_ALREADY_DISCARDED",
         code=400,
-        methods=(
-            "phone.createGroupCall",
-            "phone.discardGroupCall",
-            "phone.discardGroupCallRequest",
-        ),
+        methods=("phone.createGroupCall", "phone.discardGroupCall", "phone.discardGroupCallRequest"),
         description="The group call was already discarded.",
     ),
     ("GROUPCALL_FORBIDDEN", 400): RawRPCErrorSpec(
@@ -3050,11 +2965,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
     ("GROUPCALL_JOIN_MISSING", 400): RawRPCErrorSpec(
         name="GROUPCALL_JOIN_MISSING",
         code=400,
-        methods=(
-            "phone.checkGroupCall",
-            "phone.getGroupCallStreamChannels",
-            "phone.sendGroupCallMessage",
-        ),
+        methods=("phone.checkGroupCall", "phone.getGroupCallStreamChannels", "phone.sendGroupCallMessage"),
         description="You haven't joined this group call.",
     ),
     ("GROUPCALL_NOT_MODIFIED", 400): RawRPCErrorSpec(
@@ -3174,10 +3085,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="The specified folder is invalid.",
     ),
     ("INPUT_CONSTRUCTOR_INVALID", 400): RawRPCErrorSpec(
-        name="INPUT_CONSTRUCTOR_INVALID",
-        code=400,
-        methods=(),
-        description="The specified TL constructor is invalid.",
+        name="INPUT_CONSTRUCTOR_INVALID", code=400, methods=(), description="The specified TL constructor is invalid."
     ),
     ("INPUT_FETCH_ERROR", 400): RawRPCErrorSpec(
         name="INPUT_FETCH_ERROR",
@@ -3204,16 +3112,10 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="The specified filter is invalid.",
     ),
     ("INPUT_LAYER_INVALID", 400): RawRPCErrorSpec(
-        name="INPUT_LAYER_INVALID",
-        code=400,
-        methods=(),
-        description="The specified layer is invalid.",
+        name="INPUT_LAYER_INVALID", code=400, methods=(), description="The specified layer is invalid."
     ),
     ("INPUT_METHOD_INVALID", 400): RawRPCErrorSpec(
-        name="INPUT_METHOD_INVALID",
-        code=400,
-        methods=(),
-        description="The specified method is invalid.",
+        name="INPUT_METHOD_INVALID", code=400, methods=(), description="The specified method is invalid."
     ),
     ("INPUT_PEERS_EMPTY", 400): RawRPCErrorSpec(
         name="INPUT_PEERS_EMPTY",
@@ -3228,10 +3130,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="The specified payment purpose is invalid.",
     ),
     ("INPUT_REQUEST_TOO_LONG", 400): RawRPCErrorSpec(
-        name="INPUT_REQUEST_TOO_LONG",
-        code=400,
-        methods=(),
-        description="The request payload is too long.",
+        name="INPUT_REQUEST_TOO_LONG", code=400, methods=(), description="The request payload is too long."
     ),
     ("INPUT_STARS_AMOUNT_INVALID", 400): RawRPCErrorSpec(
         name="INPUT_STARS_AMOUNT_INVALID",
@@ -3350,11 +3249,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
     ("INVITE_SLUG_EMPTY", 400): RawRPCErrorSpec(
         name="INVITE_SLUG_EMPTY",
         code=400,
-        methods=(
-            "chatlists.checkChatlistInvite",
-            "chatlists.editExportedInvite",
-            "chatlists.joinChatlistInvite",
-        ),
+        methods=("chatlists.checkChatlistInvite", "chatlists.editExportedInvite", "chatlists.joinChatlistInvite"),
         description="The specified invite slug is empty.",
     ),
     ("INVITE_SLUG_EXPIRED", 400): RawRPCErrorSpec(
@@ -3377,11 +3272,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
     ("INVOICE_INVALID", 400): RawRPCErrorSpec(
         name="INVOICE_INVALID",
         code=400,
-        methods=(
-            "payments.getPaymentForm",
-            "payments.sendPaymentForm",
-            "payments.sendStarGiftOffer",
-        ),
+        methods=("payments.getPaymentForm", "payments.sendPaymentForm", "payments.sendStarGiftOffer"),
         description="The specified invoice is invalid.",
     ),
     ("INVOICE_PAYLOAD_INVALID", 400): RawRPCErrorSpec(
@@ -3427,16 +3318,10 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="The provided language pack is invalid.",
     ),
     ("LASTNAME_INVALID", 400): RawRPCErrorSpec(
-        name="LASTNAME_INVALID",
-        code=400,
-        methods=("auth.signUp",),
-        description="The last name is invalid.",
+        name="LASTNAME_INVALID", code=400, methods=("auth.signUp",), description="The last name is invalid."
     ),
     ("LIMIT_INVALID", 400): RawRPCErrorSpec(
-        name="LIMIT_INVALID",
-        code=400,
-        methods=("upload.getFile",),
-        description="The provided limit is invalid.",
+        name="LIMIT_INVALID", code=400, methods=("upload.getFile",), description="The provided limit is invalid."
     ),
     ("LIMIT_PER_POST_INVALID", 400): RawRPCErrorSpec(
         name="LIMIT_PER_POST_INVALID",
@@ -3556,16 +3441,10 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="Media invalid.",
     ),
     ("MEDIA_NEW_INVALID", 400): RawRPCErrorSpec(
-        name="MEDIA_NEW_INVALID",
-        code=400,
-        methods=("messages.editMessage",),
-        description="The new media is invalid.",
+        name="MEDIA_NEW_INVALID", code=400, methods=("messages.editMessage",), description="The new media is invalid."
     ),
     ("MEDIA_PREV_INVALID", 400): RawRPCErrorSpec(
-        name="MEDIA_PREV_INVALID",
-        code=400,
-        methods=("messages.editMessage",),
-        description="Previous media invalid.",
+        name="MEDIA_PREV_INVALID", code=400, methods=("messages.editMessage",), description="Previous media invalid."
     ),
     ("MEDIA_TTL_INVALID", 400): RawRPCErrorSpec(
         name="MEDIA_TTL_INVALID",
@@ -3694,10 +3573,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="The specified message wasn't read yet.",
     ),
     ("MESSAGE_POLL_CLOSED", 400): RawRPCErrorSpec(
-        name="MESSAGE_POLL_CLOSED",
-        code=400,
-        methods=("messages.sendVote",),
-        description="Poll closed.",
+        name="MESSAGE_POLL_CLOSED", code=400, methods=("messages.sendVote",), description="Poll closed."
     ),
     ("MESSAGE_REQUIRED", 400): RawRPCErrorSpec(
         name="MESSAGE_REQUIRED",
@@ -3872,10 +3748,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="Too many media files for album.",
     ),
     ("NAME_INVALID", 400): RawRPCErrorSpec(
-        name="NAME_INVALID",
-        code=400,
-        methods=("bots.createBot",),
-        description="The specified bot name is invalid.",
+        name="NAME_INVALID", code=400, methods=("bots.createBot",), description="The specified bot name is invalid."
     ),
     ("NEED_ACTION_MISSING", 400): RawRPCErrorSpec(
         name="NEED_ACTION_MISSING",
@@ -3932,10 +3805,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="The upgrade/transfer of the specified gift was already paid for or is free.",
     ),
     ("OFFSET_INVALID", 400): RawRPCErrorSpec(
-        name="OFFSET_INVALID",
-        code=400,
-        methods=("upload.getFile",),
-        description="The provided offset is invalid.",
+        name="OFFSET_INVALID", code=400, methods=("upload.getFile",), description="The provided offset is invalid."
     ),
     ("OFFSET_PEER_ID_INVALID", 400): RawRPCErrorSpec(
         name="OFFSET_PEER_ID_INVALID",
@@ -3944,10 +3814,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="The provided offset peer is invalid.",
     ),
     ("OPTIONS_TOO_MUCH", 400): RawRPCErrorSpec(
-        name="OPTIONS_TOO_MUCH",
-        code=400,
-        methods=("messages.sendVote",),
-        description="Too many options provided.",
+        name="OPTIONS_TOO_MUCH", code=400, methods=("messages.sendVote",), description="Too many options provided."
     ),
     ("OPTION_INVALID", 400): RawRPCErrorSpec(
         name="OPTION_INVALID",
@@ -3999,21 +3866,13 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
     ("PARTICIPANTS_TOO_FEW", 400): RawRPCErrorSpec(
         name="PARTICIPANTS_TOO_FEW",
         code=400,
-        methods=(
-            "channels.convertToGigagroup",
-            "channels.setStickers",
-            "channels.toggleParticipantsHidden",
-        ),
+        methods=("channels.convertToGigagroup", "channels.setStickers", "channels.toggleParticipantsHidden"),
         description="Not enough participants.",
     ),
     ("PARTICIPANT_ID_INVALID", 400): RawRPCErrorSpec(
         name="PARTICIPANT_ID_INVALID",
         code=400,
-        methods=(
-            "channels.deleteParticipantHistory",
-            "channels.editBanned",
-            "channels.getParticipant",
-        ),
+        methods=("channels.deleteParticipantHistory", "channels.editBanned", "channels.getParticipant"),
         description="The specified participant ID is invalid.",
     ),
     ("PARTICIPANT_JOIN_MISSING", 400): RawRPCErrorSpec(
@@ -4402,10 +4261,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="The phone code you provided has expired.",
     ),
     ("PHONE_CODE_HASH_EMPTY", 400): RawRPCErrorSpec(
-        name="PHONE_CODE_HASH_EMPTY",
-        code=400,
-        methods=("auth.resendCode",),
-        description="phone_code_hash is missing.",
+        name="PHONE_CODE_HASH_EMPTY", code=400, methods=("auth.resendCode",), description="phone_code_hash is missing."
     ),
     ("PHONE_CODE_INVALID", 400): RawRPCErrorSpec(
         name="PHONE_CODE_INVALID",
@@ -4534,10 +4390,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="Profile photo file missing.",
     ),
     ("PHOTO_ID_INVALID", 400): RawRPCErrorSpec(
-        name="PHOTO_ID_INVALID",
-        code=400,
-        methods=("photos.updateProfilePhoto",),
-        description="Photo ID invalid.",
+        name="PHOTO_ID_INVALID", code=400, methods=("photos.updateProfilePhoto",), description="Photo ID invalid."
     ),
     ("PHOTO_INVALID", 400): RawRPCErrorSpec(
         name="PHOTO_INVALID",
@@ -4553,12 +4406,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
     ("PHOTO_INVALID_DIMENSIONS", 400): RawRPCErrorSpec(
         name="PHOTO_INVALID_DIMENSIONS",
         code=400,
-        methods=(
-            "messages.editMessage",
-            "messages.sendMedia",
-            "messages.uploadMedia",
-            "stories.sendStory",
-        ),
+        methods=("messages.editMessage", "messages.sendMedia", "messages.uploadMedia", "stories.sendStory"),
         description="The photo dimensions are invalid.",
     ),
     ("PHOTO_SAVE_FILE_INVALID", 400): RawRPCErrorSpec(
@@ -4700,10 +4548,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="The specified payment purpose is invalid.",
     ),
     ("QUERY_ID_EMPTY", 400): RawRPCErrorSpec(
-        name="QUERY_ID_EMPTY",
-        code=400,
-        methods=("messages.sendInlineBotResult",),
-        description="The query ID is empty.",
+        name="QUERY_ID_EMPTY", code=400, methods=("messages.sendInlineBotResult",), description="The query ID is empty."
     ),
     ("QUERY_ID_INVALID", 400): RawRPCErrorSpec(
         name="QUERY_ID_INVALID",
@@ -4718,20 +4563,12 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="The query ID is invalid.",
     ),
     ("QUERY_TOO_SHORT", 400): RawRPCErrorSpec(
-        name="QUERY_TOO_SHORT",
-        code=400,
-        methods=("contacts.search",),
-        description="The query string is too short.",
+        name="QUERY_TOO_SHORT", code=400, methods=("contacts.search",), description="The query string is too short."
     ),
     ("QUICK_REPLIES_BOT_NOT_ALLOWED", 400): RawRPCErrorSpec(
         name="QUICK_REPLIES_BOT_NOT_ALLOWED",
         code=400,
-        methods=(
-            "messages.forwardMessages",
-            "messages.sendMedia",
-            "messages.sendMessage",
-            "messages.sendMultiMedia",
-        ),
+        methods=("messages.forwardMessages", "messages.sendMedia", "messages.sendMessage", "messages.sendMultiMedia"),
         description="[Quick replies](https://core.telegram.org/api/business#quick-reply-shortcuts) cannot be used by bots.",
     ),
     ("QUICK_REPLIES_TOO_MUCH", 400): RawRPCErrorSpec(
@@ -4813,10 +4650,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="A provided random ID is invalid.",
     ),
     ("RANDOM_LENGTH_INVALID", 400): RawRPCErrorSpec(
-        name="RANDOM_LENGTH_INVALID",
-        code=400,
-        methods=("messages.getDhConfig",),
-        description="Random length invalid.",
+        name="RANDOM_LENGTH_INVALID", code=400, methods=("messages.getDhConfig",), description="Random length invalid."
     ),
     ("RANGES_INVALID", 400): RawRPCErrorSpec(
         name="RANGES_INVALID",
@@ -4876,12 +4710,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
     ("REPLY_MARKUP_INVALID", 400): RawRPCErrorSpec(
         name="REPLY_MARKUP_INVALID",
         code=400,
-        methods=(
-            "messages.editMessage",
-            "messages.sendMedia",
-            "messages.sendMessage",
-            "messages.setInlineBotResults",
-        ),
+        methods=("messages.editMessage", "messages.sendMedia", "messages.sendMessage", "messages.setInlineBotResults"),
         description="The provided reply markup is invalid.",
     ),
     ("REPLY_MARKUP_TOO_LONG", 400): RawRPCErrorSpec(
@@ -4905,11 +4734,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
     ("REPLY_MESSAGE_ID_INVALID", 400): RawRPCErrorSpec(
         name="REPLY_MESSAGE_ID_INVALID",
         code=400,
-        methods=(
-            "messages.sendMedia",
-            "messages.sendMessage",
-            "messages.sendScreenshotNotification",
-        ),
+        methods=("messages.sendMedia", "messages.sendMessage", "messages.sendScreenshotNotification"),
         description="The specified reply-to message ID is invalid.",
     ),
     ("REPLY_TO_INVALID", 400): RawRPCErrorSpec(
@@ -4973,19 +4798,12 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="You provided a duplicate result ID.",
     ),
     ("RESULT_ID_EMPTY", 400): RawRPCErrorSpec(
-        name="RESULT_ID_EMPTY",
-        code=400,
-        methods=("messages.sendInlineBotResult",),
-        description="Result ID empty.",
+        name="RESULT_ID_EMPTY", code=400, methods=("messages.sendInlineBotResult",), description="Result ID empty."
     ),
     ("RESULT_ID_INVALID", 400): RawRPCErrorSpec(
         name="RESULT_ID_INVALID",
         code=400,
-        methods=(
-            "messages.savePreparedInlineMessage",
-            "messages.sendInlineBotResult",
-            "messages.setInlineBotResults",
-        ),
+        methods=("messages.savePreparedInlineMessage", "messages.sendInlineBotResult", "messages.setInlineBotResults"),
         description="One of the specified result IDs is invalid.",
     ),
     ("RESULT_TYPE_INVALID", 400): RawRPCErrorSpec(
@@ -4995,10 +4813,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="Result type invalid.",
     ),
     ("REVOTE_NOT_ALLOWED", 400): RawRPCErrorSpec(
-        name="REVOTE_NOT_ALLOWED",
-        code=400,
-        methods=("messages.sendVote",),
-        description="You cannot change your vote.",
+        name="REVOTE_NOT_ALLOWED", code=400, methods=("messages.sendVote",), description="You cannot change your vote."
     ),
     ("RIGHTS_NOT_MODIFIED", 400): RawRPCErrorSpec(
         name="RIGHTS_NOT_MODIFIED",
@@ -5105,10 +4920,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="You cannot provide a search query and an invite link at the same time.",
     ),
     ("SECONDS_INVALID", 400): RawRPCErrorSpec(
-        name="SECONDS_INVALID",
-        code=400,
-        methods=("channels.toggleSlowMode",),
-        description="Invalid duration provided.",
+        name="SECONDS_INVALID", code=400, methods=("channels.toggleSlowMode",), description="Invalid duration provided."
     ),
     ("SECURE_SECRET_REQUIRED", 400): RawRPCErrorSpec(
         name="SECURE_SECRET_REQUIRED",
@@ -5203,10 +5015,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="The specified short name is already in use.",
     ),
     ("SLOTS_EMPTY", 400): RawRPCErrorSpec(
-        name="SLOTS_EMPTY",
-        code=400,
-        methods=("premium.applyBoost",),
-        description="The specified slot list is empty.",
+        name="SLOTS_EMPTY", code=400, methods=("premium.applyBoost",), description="The specified slot list is empty."
     ),
     ("SLOWMODE_MULTI_MSGS_DISABLED", 400): RawRPCErrorSpec(
         name="SLOWMODE_MULTI_MSGS_DISABLED",
@@ -5356,11 +5165,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
     ("STARGIFT_PEER_INVALID", 400): RawRPCErrorSpec(
         name="STARGIFT_PEER_INVALID",
         code=400,
-        methods=(
-            "payments.convertStarGift",
-            "payments.getPaymentForm",
-            "payments.transferStarGift",
-        ),
+        methods=("payments.convertStarGift", "payments.getPaymentForm", "payments.transferStarGift"),
         description="The specified inputSavedStarGiftChat.peer is invalid.",
     ),
     ("STARGIFT_RESELL_CURRENCY_NOT_ALLOWED", 400): RawRPCErrorSpec(
@@ -5397,11 +5202,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
     ("STARGIFT_UPGRADE_UNAVAILABLE", 400): RawRPCErrorSpec(
         name="STARGIFT_UPGRADE_UNAVAILABLE",
         code=400,
-        methods=(
-            "payments.getPaymentForm",
-            "payments.getStarGiftUpgradePreview",
-            "payments.upgradeStarGift",
-        ),
+        methods=("payments.getPaymentForm", "payments.getStarGiftUpgradePreview", "payments.upgradeStarGift"),
         description="A received gift can only be upgraded to a collectible gift if the [messageActionStarGift](https://core.telegram.org/constructor/messageActionStarGift)/[savedStarGift](https://core.telegram.org/constructor/savedStarGift).`can_upgrade` flag is set.",
     ),
     ("STARGIFT_USAGE_LIMITED", 400): RawRPCErrorSpec(
@@ -5509,10 +5310,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="The passed stickerset information is equal to the current information.",
     ),
     ("STICKERS_EMPTY", 400): RawRPCErrorSpec(
-        name="STICKERS_EMPTY",
-        code=400,
-        methods=("stickers.createStickerSet",),
-        description="No sticker provided.",
+        name="STICKERS_EMPTY", code=400, methods=("stickers.createStickerSet",), description="No sticker provided."
     ),
     ("STICKERS_TOO_MUCH", 400): RawRPCErrorSpec(
         name="STICKERS_TOO_MUCH",
@@ -5876,10 +5674,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="No todo items were specified, so no changes were made to the todo list.",
     ),
     ("TOKEN_EMPTY", 400): RawRPCErrorSpec(
-        name="TOKEN_EMPTY",
-        code=400,
-        methods=("account.registerDevice",),
-        description="The specified token is empty.",
+        name="TOKEN_EMPTY", code=400, methods=("account.registerDevice",), description="The specified token is empty."
     ),
     ("TOKEN_INVALID", 400): RawRPCErrorSpec(
         name="TOKEN_INVALID",
@@ -5902,12 +5697,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
     ("TOPIC_CLOSED", 400): RawRPCErrorSpec(
         name="TOPIC_CLOSED",
         code=400,
-        methods=(
-            "messages.forwardMessages",
-            "messages.sendMedia",
-            "messages.sendMessage",
-            "messages.sendMultiMedia",
-        ),
+        methods=("messages.forwardMessages", "messages.sendMedia", "messages.sendMessage", "messages.sendMultiMedia"),
         description="This topic was closed, you can't send messages to it anymore.",
     ),
     ("TOPIC_CLOSE_SEPARATELY", 400): RawRPCErrorSpec(
@@ -6012,10 +5802,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="The specified TTL period is invalid.",
     ),
     ("TYPES_EMPTY", 400): RawRPCErrorSpec(
-        name="TYPES_EMPTY",
-        code=400,
-        methods=("contacts.getTopPeers",),
-        description="No top peer type was provided.",
+        name="TYPES_EMPTY", code=400, methods=("contacts.getTopPeers",), description="No top peer type was provided."
     ),
     ("UNSUPPORTED", 400): RawRPCErrorSpec(
         name="UNSUPPORTED",
@@ -6158,10 +5945,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="The maximum number of users has been exceeded (to create a chat, for example).",
     ),
     ("USER_ADMIN_INVALID", 400): RawRPCErrorSpec(
-        name="USER_ADMIN_INVALID",
-        code=400,
-        methods=("channels.editBanned",),
-        description="You're not an admin.",
+        name="USER_ADMIN_INVALID", code=400, methods=("channels.editBanned",), description="You're not an admin."
     ),
     ("USER_ALREADY_INVITED", 400): RawRPCErrorSpec(
         name="USER_ALREADY_INVITED",
@@ -6365,12 +6149,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
     ("USER_IS_BOT", 400): RawRPCErrorSpec(
         name="USER_IS_BOT",
         code=400,
-        methods=(
-            "messages.forwardMessages",
-            "messages.sendMedia",
-            "messages.sendMessage",
-            "messages.setTyping",
-        ),
+        methods=("messages.forwardMessages", "messages.sendMedia", "messages.sendMessage", "messages.setTyping"),
         description="Bots can't send messages to other bots.",
     ),
     ("USER_KICKED", 400): RawRPCErrorSpec(
@@ -6601,10 +6380,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="You blocked this user.",
     ),
     ("AUTH_KEY_INVALID", 401): RawRPCErrorSpec(
-        name="AUTH_KEY_INVALID",
-        code=401,
-        methods=(),
-        description="The specified auth key is invalid.",
+        name="AUTH_KEY_INVALID", code=401, methods=(), description="The specified auth key is invalid."
     ),
     ("AUTH_KEY_PERM_EMPTY", 401): RawRPCErrorSpec(
         name="AUTH_KEY_PERM_EMPTY",
@@ -7364,22 +7140,13 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         name="SESSION_EXPIRED", code=401, methods=(), description="The session has expired."
     ),
     ("SESSION_PASSWORD_NEEDED", 401): RawRPCErrorSpec(
-        name="SESSION_PASSWORD_NEEDED",
-        code=401,
-        methods=(),
-        description="2FA is enabled, use a password to login.",
+        name="SESSION_PASSWORD_NEEDED", code=401, methods=(), description="2FA is enabled, use a password to login."
     ),
     ("SESSION_REVOKED", 401): RawRPCErrorSpec(
-        name="SESSION_REVOKED",
-        code=401,
-        methods=(),
-        description="The session was revoked by the user.",
+        name="SESSION_REVOKED", code=401, methods=(), description="The session was revoked by the user."
     ),
     ("USER_DEACTIVATED", 401): RawRPCErrorSpec(
-        name="USER_DEACTIVATED",
-        code=401,
-        methods=(),
-        description="The current account was deleted by the user.",
+        name="USER_DEACTIVATED", code=401, methods=(), description="The current account was deleted by the user."
     ),
     ("USER_DEACTIVATED_BAN", 401): RawRPCErrorSpec(
         name="USER_DEACTIVATED_BAN",
@@ -7446,11 +7213,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
     ("CHANNEL_PUBLIC_GROUP_NA", 403): RawRPCErrorSpec(
         name="CHANNEL_PUBLIC_GROUP_NA",
         code=403,
-        methods=(
-            "channels.getFullChannel",
-            "channels.leaveChannel",
-            "updates.getChannelDifference",
-        ),
+        methods=("channels.getFullChannel", "channels.leaveChannel", "updates.getChannelDifference"),
         description="channel/supergroup not available.",
     ),
     ("CHAT_ACTION_FORBIDDEN", 403): RawRPCErrorSpec(
@@ -7493,10 +7256,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="You must be an admin in this chat to do this.",
     ),
     ("CHAT_FORBIDDEN", 403): RawRPCErrorSpec(
-        name="CHAT_FORBIDDEN",
-        code=403,
-        methods=(),
-        description="This chat is not available to the current user.",
+        name="CHAT_FORBIDDEN", code=403, methods=(), description="This chat is not available to the current user."
     ),
     ("CHAT_GUEST_SEND_FORBIDDEN", 403): RawRPCErrorSpec(
         name="CHAT_GUEST_SEND_FORBIDDEN",
@@ -7724,11 +7484,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
     ("MESSAGE_DELETE_FORBIDDEN", 403): RawRPCErrorSpec(
         name="MESSAGE_DELETE_FORBIDDEN",
         code=403,
-        methods=(
-            "channels.deleteMessages",
-            "messages.deleteMessages",
-            "messages.deleteScheduledMessages",
-        ),
+        methods=("channels.deleteMessages", "messages.deleteMessages", "messages.deleteScheduledMessages"),
         description="You can't delete one of the messages you tried to delete, most likely because it is a service message.",
     ),
     ("NOT_ELIGIBLE", 403): RawRPCErrorSpec(
@@ -7927,10 +7683,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="You cannot fetch the read date of this message because you have disallowed other users to do so for *your* messages; to fix, allow other users to see *your* exact last online date OR purchase a [Telegram Premium](https://core.telegram.org/api/premium) subscription.",
     ),
     ("METHOD_INVALID", 404): RawRPCErrorSpec(
-        name="METHOD_INVALID",
-        code=404,
-        methods=("upload.getCdnFile",),
-        description="The specified method is invalid.",
+        name="METHOD_INVALID", code=404, methods=("upload.getCdnFile",), description="The specified method is invalid."
     ),
     ("PEER_ID_INVALID", 404): RawRPCErrorSpec(
         name="PEER_ID_INVALID",
@@ -8056,12 +7809,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
     ("INVITE_HASH_EXPIRED", 406): RawRPCErrorSpec(
         name="INVITE_HASH_EXPIRED",
         code=406,
-        methods=(
-            "channels.joinChannel",
-            "invokeWithLayer",
-            "messages.checkChatInvite",
-            "messages.importChatInvite",
-        ),
+        methods=("channels.joinChannel", "invokeWithLayer", "messages.checkChatInvite", "messages.importChatInvite"),
         description="The invite link has expired.",
     ),
     ("PAYMENT_UNSUPPORTED", 406): RawRPCErrorSpec(
@@ -8235,10 +7983,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="Please wait %d seconds before repeating the action, or purchase a [Telegram Premium subscription](https://core.telegram.org/api/premium) to remove this rate limit.",
     ),
     ("FLOOD_WAIT_%d", 420): RawRPCErrorSpec(
-        name="FLOOD_WAIT_%d",
-        code=420,
-        methods=(),
-        description="Please wait %d seconds before repeating the action.",
+        name="FLOOD_WAIT_%d", code=420, methods=(), description="Please wait %d seconds before repeating the action."
     ),
     ("FROZEN_METHOD_INVALID", 420): RawRPCErrorSpec(
         name="FROZEN_METHOD_INVALID",
@@ -8371,10 +8116,7 @@ RPC_ERROR_MAP: dict[tuple[str, int], RawRPCErrorSpec] = {
         description="The specified media is invalid.",
     ),
     ("SIGN_IN_FAILED", 500): RawRPCErrorSpec(
-        name="SIGN_IN_FAILED",
-        code=500,
-        methods=("auth.signIn",),
-        description="Failure while signing in.",
+        name="SIGN_IN_FAILED", code=500, methods=("auth.signIn",), description="Failure while signing in."
     ),
     ("TRANSLATE_REQ_FAILED", 500): RawRPCErrorSpec(
         name="TRANSLATE_REQ_FAILED",
@@ -9224,16 +8966,8 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "PUBLIC_KEY_REQUIRED",
     ),
     "account.addNoPaidMessagesException": ("USER_ID_INVALID",),
-    "account.cancelPasswordEmail": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "EMAIL_HASH_EXPIRED",
-    ),
-    "account.changeAuthorizationSettings": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "HASH_INVALID",
-    ),
+    "account.cancelPasswordEmail": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "EMAIL_HASH_EXPIRED"),
+    "account.changeAuthorizationSettings": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "HASH_INVALID"),
     "account.changePhone": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -9251,15 +8985,8 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "USERNAME_OCCUPIED",
         "USERNAME_PURCHASE_AVAILABLE",
     ),
-    "account.clearRecentEmojiStatuses": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
-    "account.confirmBotConnection": (
-        "AUTH_KEY_UNREGISTERED",
-        "BOT_ID_INVALID",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "account.clearRecentEmojiStatuses": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
+    "account.confirmBotConnection": ("AUTH_KEY_UNREGISTERED", "BOT_ID_INVALID", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "account.confirmPasswordEmail": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -9291,10 +9018,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "RESET_REQUEST_MISSING",
     ),
     "account.deleteAccount": ("2FA_CONFIRM_WAIT_%d", "PASSWORD_HASH_INVALID"),
-    "account.deleteAutoSaveExceptions": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "account.deleteAutoSaveExceptions": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "account.deleteBusinessChatLink": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -9303,10 +9027,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
     ),
     "account.deletePasskey": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "account.deleteSecureValue": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
-    "account.deleteWebBrowserSettingsExceptions": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "account.deleteWebBrowserSettingsExceptions": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "account.disablePeerConnectedBot": (
         "AUTH_KEY_UNREGISTERED",
         "BOT_ALREADY_DISABLED",
@@ -9320,11 +9041,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "CHATLINK_SLUG_EMPTY",
         "PREMIUM_ACCOUNT_REQUIRED",
     ),
-    "account.finishTakeoutSession": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "TAKEOUT_REQUIRED",
-    ),
+    "account.finishTakeoutSession": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "TAKEOUT_REQUIRED"),
     "account.getAccountTTL": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "account.getAllSecureValues": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "account.getAuthorizationForm": (
@@ -9342,47 +9059,19 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "CONNECTION_ID_INVALID",
     ),
     "account.getBusinessChatLinks": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
-    "account.getChannelDefaultEmojiStatuses": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
-    "account.getChannelRestrictedStatusEmojis": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "account.getChannelDefaultEmojiStatuses": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
+    "account.getChannelRestrictedStatusEmojis": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "account.getChatThemes": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
-    "account.getCollectibleEmojiStatuses": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "account.getCollectibleEmojiStatuses": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "account.getConnectedBots": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
-    "account.getContactSignUpNotification": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "account.getContactSignUpNotification": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "account.getContentSettings": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
-    "account.getDefaultBackgroundEmojis": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "account.getDefaultBackgroundEmojis": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "account.getDefaultEmojiStatuses": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
-    "account.getDefaultGroupPhotoEmojis": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
-    "account.getDefaultProfilePhotoEmojis": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
-    "account.getGlobalPrivacySettings": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
-    "account.getMultiWallPapers": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "WALLPAPER_INVALID",
-    ),
+    "account.getDefaultGroupPhotoEmojis": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
+    "account.getDefaultProfilePhotoEmojis": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
+    "account.getGlobalPrivacySettings": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
+    "account.getMultiWallPapers": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "WALLPAPER_INVALID"),
     "account.getNotifyExceptions": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "account.getNotifySettings": (
         "AUTH_KEY_UNREGISTERED",
@@ -9404,15 +9093,8 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "BUSINESS_CONNECTION_NOT_ALLOWED",
         "PASSWORD_HASH_INVALID",
     ),
-    "account.getPrivacy": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PRIVACY_KEY_INVALID",
-    ),
-    "account.getReactionsNotifySettings": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "account.getPrivacy": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PRIVACY_KEY_INVALID"),
+    "account.getReactionsNotifySettings": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "account.getRecentEmojiStatuses": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "account.getSavedMusicIds": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "account.getSavedRingtones": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
@@ -9433,11 +9115,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "TMP_PASSWORD_DISABLED",
     ),
     "account.getUniqueGiftChatThemes": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
-    "account.getWallPaper": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "WALLPAPER_INVALID",
-    ),
+    "account.getWallPaper": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "WALLPAPER_INVALID"),
     "account.getWallPapers": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "account.getWebAuthorizations": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "account.getWebBrowserSettings": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
@@ -9447,17 +9125,9 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "BUSINESS_CONNECTION_NOT_ALLOWED",
         "FRESH_RESET_AUTHORISATION_FORBIDDEN",
     ),
-    "account.initTakeoutSession": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "TAKEOUT_INIT_DELAY_%d",
-    ),
+    "account.initTakeoutSession": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "TAKEOUT_INIT_DELAY_%d"),
     "account.installTheme": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
-    "account.installWallPaper": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "WALLPAPER_INVALID",
-    ),
+    "account.installWallPaper": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "WALLPAPER_INVALID"),
     "account.invalidateSignInCodes": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "account.registerDevice": (
         "AUTH_KEY_UNREGISTERED",
@@ -9487,29 +9157,13 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "CHANNEL_PRIVATE",
         "PEER_ID_INVALID",
     ),
-    "account.reportProfilePhoto": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
-    "account.resendPasswordEmail": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "EMAIL_HASH_EXPIRED",
-    ),
-    "account.resetAuthorization": (
-        "AUTH_KEY_UNREGISTERED",
-        "FRESH_RESET_AUTHORISATION_FORBIDDEN",
-        "HASH_INVALID",
-    ),
+    "account.reportProfilePhoto": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
+    "account.resendPasswordEmail": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "EMAIL_HASH_EXPIRED"),
+    "account.resetAuthorization": ("AUTH_KEY_UNREGISTERED", "FRESH_RESET_AUTHORISATION_FORBIDDEN", "HASH_INVALID"),
     "account.resetNotifySettings": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "account.resetPassword": ("AUTH_KEY_UNREGISTERED", "PASSWORD_EMPTY"),
     "account.resetWallPapers": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
-    "account.resetWebAuthorization": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "HASH_INVALID",
-    ),
+    "account.resetWebAuthorization": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "HASH_INVALID"),
     "account.resetWebAuthorizations": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "account.resolveBusinessChatLink": (
         "AUTH_KEY_UNREGISTERED",
@@ -9517,41 +9171,18 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "CHATLINK_SLUG_EMPTY",
         "CHATLINK_SLUG_EXPIRED",
     ),
-    "account.saveAutoDownloadSettings": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
-    "account.saveAutoSaveSettings": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
-    "account.saveMusic": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "DOCUMENT_INVALID",
-    ),
-    "account.saveRingtone": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "RINGTONE_INVALID",
-    ),
+    "account.saveAutoDownloadSettings": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
+    "account.saveAutoSaveSettings": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
+    "account.saveMusic": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "DOCUMENT_INVALID"),
+    "account.saveRingtone": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "RINGTONE_INVALID"),
     "account.saveSecureValue": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
         "PASSWORD_REQUIRED",
         "SECURE_SECRET_REQUIRED",
     ),
-    "account.saveTheme": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "THEME_INVALID",
-    ),
-    "account.saveWallPaper": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "WALLPAPER_INVALID",
-    ),
+    "account.saveTheme": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "THEME_INVALID"),
+    "account.saveWallPaper": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "WALLPAPER_INVALID"),
     "account.sendChangePhoneCode": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -9560,11 +9191,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "PHONE_NUMBER_INVALID",
         "PHONE_NUMBER_OCCUPIED",
     ),
-    "account.sendConfirmPhoneCode": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "HASH_INVALID",
-    ),
+    "account.sendConfirmPhoneCode": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "HASH_INVALID"),
     "account.sendVerifyEmailCode": (
         "BUSINESS_CONNECTION_NOT_ALLOWED",
         "EMAIL_INVALID",
@@ -9574,26 +9201,15 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "PHONE_HASH_EXPIRED",
         "PHONE_NUMBER_INVALID",
     ),
-    "account.sendVerifyPhoneCode": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PHONE_NUMBER_INVALID",
-    ),
-    "account.setAccountTTL": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "TTL_DAYS_INVALID",
-    ),
+    "account.sendVerifyPhoneCode": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PHONE_NUMBER_INVALID"),
+    "account.setAccountTTL": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "TTL_DAYS_INVALID"),
     "account.setAuthorizationTTL": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
         "FRESH_RESET_AUTHORISATION_FORBIDDEN",
         "TTL_DAYS_INVALID",
     ),
-    "account.setContactSignUpNotification": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "account.setContactSignUpNotification": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "account.setContentSettings": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -9615,15 +9231,8 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "PRIVACY_TOO_LONG",
         "PRIVACY_VALUE_INVALID",
     ),
-    "account.setReactionsNotifySettings": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
-    "account.toggleConnectedBotPaused": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
+    "account.setReactionsNotifySettings": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
+    "account.toggleConnectedBotPaused": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
     "account.toggleNoPaidMessagesException": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -9644,24 +9253,10 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "BUSINESS_CONNECTION_NOT_ALLOWED",
         "URL_INVALID",
     ),
-    "account.unregisterDevice": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "TOKEN_INVALID",
-    ),
-    "account.updateBirthday": (
-        "AUTH_KEY_UNREGISTERED",
-        "BIRTHDAY_INVALID",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
-    "account.updateBusinessAwayMessage": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
-    "account.updateBusinessGreetingMessage": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "account.unregisterDevice": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "TOKEN_INVALID"),
+    "account.updateBirthday": ("AUTH_KEY_UNREGISTERED", "BIRTHDAY_INVALID", "BUSINESS_CONNECTION_NOT_ALLOWED"),
+    "account.updateBusinessAwayMessage": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
+    "account.updateBusinessGreetingMessage": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "account.updateBusinessIntro": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "account.updateBusinessLocation": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "account.updateBusinessWorkHours": (
@@ -9727,11 +9322,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "FIRSTNAME_INVALID",
     ),
     "account.updateStatus": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
-    "account.updateTheme": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "THEME_INVALID",
-    ),
+    "account.updateTheme": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "THEME_INVALID"),
     "account.updateUsername": (
         "AUTH_KEY_UNREGISTERED",
         "USERNAME_INVALID",
@@ -9739,15 +9330,8 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "USERNAME_OCCUPIED",
         "USERNAME_PURCHASE_AVAILABLE",
     ),
-    "account.updateWebBrowserSettings": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
-    "account.uploadRingtone": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "RINGTONE_MIME_INVALID",
-    ),
+    "account.updateWebBrowserSettings": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
+    "account.uploadRingtone": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "RINGTONE_MIME_INVALID"),
     "account.uploadTheme": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -9781,32 +9365,12 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
     ),
-    "aicompose.deleteTone": (
-        "AICOMPOSE_TONE_INVALID",
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
-    "aicompose.getTone": (
-        "AICOMPOSE_TONE_INVALID",
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
-    "aicompose.getToneExample": (
-        "AICOMPOSE_TONE_INVALID",
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "aicompose.deleteTone": ("AICOMPOSE_TONE_INVALID", "AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
+    "aicompose.getTone": ("AICOMPOSE_TONE_INVALID", "AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
+    "aicompose.getToneExample": ("AICOMPOSE_TONE_INVALID", "AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "aicompose.getTones": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
-    "aicompose.saveTone": (
-        "AICOMPOSE_TONE_INVALID",
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
-    "aicompose.updateTone": (
-        "AICOMPOSE_TONE_INVALID",
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "aicompose.saveTone": ("AICOMPOSE_TONE_INVALID", "AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
+    "aicompose.updateTone": ("AICOMPOSE_TONE_INVALID", "AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "auth.acceptLoginToken": (
         "AUTH_KEY_UNREGISTERED",
         "AUTH_TOKEN_ALREADY_ACCEPTED",
@@ -9822,11 +9386,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "TEMP_AUTH_KEY_ALREADY_BOUND",
         "TEMP_AUTH_KEY_EMPTY",
     ),
-    "auth.cancelCode": (
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PHONE_CODE_EXPIRED",
-        "PHONE_NUMBER_INVALID",
-    ),
+    "auth.cancelCode": ("BUSINESS_CONNECTION_NOT_ALLOWED", "PHONE_CODE_EXPIRED", "PHONE_NUMBER_INVALID"),
     "auth.checkPaidAuth": ("BUSINESS_CONNECTION_NOT_ALLOWED", "PHONE_NUMBER_INVALID"),
     "auth.checkPassword": (
         "AUTH_KEY_UNREGISTERED",
@@ -9843,11 +9403,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "CODE_EMPTY",
         "PASSWORD_RECOVERY_EXPIRED",
     ),
-    "auth.exportAuthorization": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "DC_ID_INVALID",
-    ),
+    "auth.exportAuthorization": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "DC_ID_INVALID"),
     "auth.exportLoginToken": (
         "API_ID_INVALID",
         "API_ID_PUBLISHED_FLOOD",
@@ -9860,11 +9416,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "CREDENTIAL_INVALID",
         "PASSKEY_ORIGIN_MISMATCH",
     ),
-    "auth.importAuthorization": (
-        "AUTH_BYTES_INVALID",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "USER_ID_INVALID",
-    ),
+    "auth.importAuthorization": ("AUTH_BYTES_INVALID", "BUSINESS_CONNECTION_NOT_ALLOWED", "USER_ID_INVALID"),
     "auth.importBotAuthorization": (
         "ACCESS_TOKEN_EXPIRED",
         "ACCESS_TOKEN_INVALID",
@@ -9879,11 +9431,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "AUTH_TOKEN_INVALIDX",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
     ),
-    "auth.importWebTokenAuthorization": (
-        "API_ID_INVALID",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "WEBAUTH_TOKEN_EXPIRED",
-    ),
+    "auth.importWebTokenAuthorization": ("API_ID_INVALID", "BUSINESS_CONNECTION_NOT_ALLOWED", "WEBAUTH_TOKEN_EXPIRED"),
     "auth.initPasskeyLogin": ("API_ID_INVALID", "AUTH_RESTART", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "auth.recoverPassword": (
         "AUTH_KEY_UNREGISTERED",
@@ -9892,11 +9440,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "NEW_SETTINGS_INVALID",
     ),
     "auth.reportMissingCode": ("BUSINESS_CONNECTION_NOT_ALLOWED", "PHONE_NUMBER_INVALID"),
-    "auth.requestFirebaseSms": (
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PHONE_CODE_EMPTY",
-        "PHONE_NUMBER_INVALID",
-    ),
+    "auth.requestFirebaseSms": ("BUSINESS_CONNECTION_NOT_ALLOWED", "PHONE_CODE_EMPTY", "PHONE_NUMBER_INVALID"),
     "auth.requestPasswordRecovery": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -9957,16 +9501,8 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "PHONE_NUMBER_INVALID",
         "PHONE_NUMBER_OCCUPIED",
     ),
-    "bots.addPreviewMedia": (
-        "AUTH_KEY_UNREGISTERED",
-        "BOT_INVALID",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
-    "bots.allowSendMessage": (
-        "AUTH_KEY_UNREGISTERED",
-        "BOT_INVALID",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "bots.addPreviewMedia": ("AUTH_KEY_UNREGISTERED", "BOT_INVALID", "BUSINESS_CONNECTION_NOT_ALLOWED"),
+    "bots.allowSendMessage": ("AUTH_KEY_UNREGISTERED", "BOT_INVALID", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "bots.answerWebhookJSONQuery": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -9974,16 +9510,8 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "QUERY_ID_INVALID",
         "USER_BOT_REQUIRED",
     ),
-    "bots.canSendMessage": (
-        "AUTH_KEY_UNREGISTERED",
-        "BOT_INVALID",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
-    "bots.checkDownloadFileParams": (
-        "AUTH_KEY_UNREGISTERED",
-        "BOT_INVALID",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "bots.canSendMessage": ("AUTH_KEY_UNREGISTERED", "BOT_INVALID", "BUSINESS_CONNECTION_NOT_ALLOWED"),
+    "bots.checkDownloadFileParams": ("AUTH_KEY_UNREGISTERED", "BOT_INVALID", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "bots.checkUsername": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -10002,22 +9530,14 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "USERNAME_OCCUPIED",
         "USERNAME_SUFFIX_MISSING",
     ),
-    "bots.deletePreviewMedia": (
-        "AUTH_KEY_UNREGISTERED",
-        "BOT_INVALID",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "bots.deletePreviewMedia": ("AUTH_KEY_UNREGISTERED", "BOT_INVALID", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "bots.editAccessSettings": (
         "AUTH_KEY_UNREGISTERED",
         "BOT_INVALID",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
         "USER_BOT_REQUIRED",
     ),
-    "bots.editPreviewMedia": (
-        "AUTH_KEY_UNREGISTERED",
-        "BOT_INVALID",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "bots.editPreviewMedia": ("AUTH_KEY_UNREGISTERED", "BOT_INVALID", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "bots.exportBotToken": (
         "AUTH_KEY_UNREGISTERED",
         "BOT_INVALID",
@@ -10031,11 +9551,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "USER_BOT_REQUIRED",
     ),
     "bots.getAdminedBots": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
-    "bots.getBotCommands": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "USER_BOT_REQUIRED",
-    ),
+    "bots.getBotCommands": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "USER_BOT_REQUIRED"),
     "bots.getBotInfo": (
         "AUTH_KEY_UNREGISTERED",
         "BOT_INVALID",
@@ -10043,27 +9559,11 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "LANG_CODE_INVALID",
         "USER_BOT_INVALID",
     ),
-    "bots.getBotMenuButton": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "USER_BOT_REQUIRED",
-    ),
-    "bots.getBotRecommendations": (
-        "AUTH_KEY_UNREGISTERED",
-        "BOT_INVALID",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "bots.getBotMenuButton": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "USER_BOT_REQUIRED"),
+    "bots.getBotRecommendations": ("AUTH_KEY_UNREGISTERED", "BOT_INVALID", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "bots.getPopularAppBots": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
-    "bots.getPreviewInfo": (
-        "AUTH_KEY_UNREGISTERED",
-        "BOT_INVALID",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
-    "bots.getPreviewMedias": (
-        "AUTH_KEY_UNREGISTERED",
-        "BOT_INVALID",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "bots.getPreviewInfo": ("AUTH_KEY_UNREGISTERED", "BOT_INVALID", "BUSINESS_CONNECTION_NOT_ALLOWED"),
+    "bots.getPreviewMedias": ("AUTH_KEY_UNREGISTERED", "BOT_INVALID", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "bots.getRequestedWebViewButton": (
         "AUTH_KEY_UNREGISTERED",
         "BOT_ID_INVALID",
@@ -10077,11 +9577,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "DATA_JSON_INVALID",
         "METHOD_INVALID",
     ),
-    "bots.reorderPreviewMedias": (
-        "AUTH_KEY_UNREGISTERED",
-        "BOT_INVALID",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "bots.reorderPreviewMedias": ("AUTH_KEY_UNREGISTERED", "BOT_INVALID", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "bots.reorderUsernames": (
         "AUTH_KEY_UNREGISTERED",
         "BOT_INVALID",
@@ -10130,12 +9626,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "RIGHTS_NOT_MODIFIED",
         "USER_BOT_REQUIRED",
     ),
-    "bots.setBotInfo": (
-        "AUTH_KEY_UNREGISTERED",
-        "BOT_INVALID",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "USER_BOT_INVALID",
-    ),
+    "bots.setBotInfo": ("AUTH_KEY_UNREGISTERED", "BOT_INVALID", "BUSINESS_CONNECTION_NOT_ALLOWED", "USER_BOT_INVALID"),
     "bots.setBotMenuButton": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -10157,11 +9648,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "BUSINESS_CONNECTION_NOT_ALLOWED",
         "USER_BOT_REQUIRED",
     ),
-    "bots.toggleUserEmojiStatusPermission": (
-        "AUTH_KEY_UNREGISTERED",
-        "BOT_INVALID",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "bots.toggleUserEmojiStatusPermission": ("AUTH_KEY_UNREGISTERED", "BOT_INVALID", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "bots.toggleUsername": (
         "AUTH_KEY_UNREGISTERED",
         "BOT_INVALID",
@@ -10229,11 +9716,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "PREMIUM_ACCOUNT_REQUIRED",
         "TOPIC_TITLE_EMPTY",
     ),
-    "channels.deactivateAllUsernames": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "CHANNEL_INVALID",
-    ),
+    "channels.deactivateAllUsernames": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "CHANNEL_INVALID"),
     "channels.deleteChannel": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -10288,12 +9771,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "MSG_ID_INVALID",
         "USER_ID_INVALID",
     ),
-    "channels.editAbout": (
-        "CHANNEL_INVALID",
-        "CHAT_ABOUT_NOT_MODIFIED",
-        "CHAT_ABOUT_TOO_LONG",
-        "CHAT_ADMIN_REQUIRED",
-    ),
+    "channels.editAbout": ("CHANNEL_INVALID", "CHAT_ABOUT_NOT_MODIFIED", "CHAT_ABOUT_TOO_LONG", "CHAT_ADMIN_REQUIRED"),
     "channels.editAdmin": (
         "ADMINS_TOO_MUCH",
         "ADMIN_RANK_EMOJI_NOT_ALLOWED",
@@ -10483,11 +9961,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "TAKEOUT_INVALID",
         "TAKEOUT_REQUIRED",
     ),
-    "channels.getMessageAuthor": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "CHANNEL_INVALID",
-    ),
+    "channels.getMessageAuthor": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "CHANNEL_INVALID"),
     "channels.getMessages": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -10527,12 +10001,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "CHAT_ID_INVALID",
         "PEER_ID_INVALID",
     ),
-    "channels.getSponsoredMessages": (
-        "CHANNEL_INVALID",
-        "CHANNEL_PRIVATE",
-        "CHAT_NOT_MODIFIED",
-        "MSG_ID_INVALID",
-    ),
+    "channels.getSponsoredMessages": ("CHANNEL_INVALID", "CHANNEL_PRIVATE", "CHAT_NOT_MODIFIED", "MSG_ID_INVALID"),
     "channels.inviteToChannel": (
         "AUTH_KEY_UNREGISTERED",
         "BOTS_TOO_MUCH",
@@ -10624,11 +10093,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "MSG_ID_INVALID",
         "USER_ID_INVALID",
     ),
-    "channels.reportSponsoredMessage": (
-        "AD_EXPIRED",
-        "CHANNEL_INVALID",
-        "PREMIUM_ACCOUNT_REQUIRED",
-    ),
+    "channels.reportSponsoredMessage": ("AD_EXPIRED", "CHANNEL_INVALID", "PREMIUM_ACCOUNT_REQUIRED"),
     "channels.restrictSponsoredMessages": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -10657,16 +10122,8 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "MEGAGROUP_ID_INVALID",
         "MEGAGROUP_PREHISTORY_HIDDEN",
     ),
-    "channels.setEmojiStickers": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "CHANNEL_INVALID",
-    ),
-    "channels.setMainProfileTab": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "CHANNEL_INVALID",
-    ),
+    "channels.setEmojiStickers": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "CHANNEL_INVALID"),
+    "channels.setMainProfileTab": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "CHANNEL_INVALID"),
     "channels.setStickers": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -10681,11 +10138,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "CHANNEL_INVALID",
         "CHAT_NOT_MODIFIED",
     ),
-    "channels.toggleAutotranslation": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "CHANNEL_INVALID",
-    ),
+    "channels.toggleAutotranslation": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "CHANNEL_INVALID"),
     "channels.toggleForum": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -10772,11 +10225,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "BUSINESS_CONNECTION_NOT_ALLOWED",
         "CHANNEL_INVALID",
     ),
-    "channels.updateEmojiStatus": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "CHANNEL_INVALID",
-    ),
+    "channels.updateEmojiStatus": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "CHANNEL_INVALID"),
     "channels.updatePaidMessagesPrice": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -10794,12 +10243,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "PINNED_TOPIC_NOT_MODIFIED",
         "TOPIC_ID_INVALID",
     ),
-    "channels.updatePinnedMessage": (
-        "CHANNEL_INVALID",
-        "CHAT_ADMIN_REQUIRED",
-        "CHAT_ID_INVALID",
-        "CHAT_NOT_MODIFIED",
-    ),
+    "channels.updatePinnedMessage": ("CHANNEL_INVALID", "CHAT_ADMIN_REQUIRED", "CHAT_ID_INVALID", "CHAT_NOT_MODIFIED"),
     "channels.updateUsername": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -10858,11 +10302,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "FILTER_NOT_SUPPORTED",
         "INPUT_CHATLIST_INVALID",
     ),
-    "chatlists.getExportedInvites": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "FILTER_ID_INVALID",
-    ),
+    "chatlists.getExportedInvites": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "FILTER_ID_INVALID"),
     "chatlists.getLeaveChatlistSuggestions": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -10890,11 +10330,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "FILTER_ID_INVALID",
         "FILTER_INCLUDE_EMPTY",
     ),
-    "chatlists.leaveChatlist": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "FILTER_ID_INVALID",
-    ),
+    "chatlists.leaveChatlist": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "FILTER_ID_INVALID"),
     "contacts.acceptContact": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -10920,18 +10356,10 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "MSG_ID_INVALID",
         "PEER_ID_INVALID",
     ),
-    "contacts.blockFromReplies": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "MSG_ID_INVALID",
-    ),
+    "contacts.blockFromReplies": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "MSG_ID_INVALID"),
     "contacts.deleteByPhones": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "contacts.deleteContact": ("CONTACT_ID_INVALID",),
-    "contacts.deleteContacts": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "MSG_ID_INVALID",
-    ),
+    "contacts.deleteContacts": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "MSG_ID_INVALID"),
     "contacts.editCloseFriends": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "contacts.exportContactToken": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "contacts.getBirthdays": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
@@ -10952,35 +10380,15 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "TAKEOUT_INVALID",
         "TAKEOUT_REQUIRED",
     ),
-    "contacts.getSponsoredPeers": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "SEARCH_QUERY_EMPTY",
-    ),
+    "contacts.getSponsoredPeers": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "SEARCH_QUERY_EMPTY"),
     "contacts.getStatuses": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
-    "contacts.getTopPeers": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "TYPES_EMPTY",
-    ),
+    "contacts.getTopPeers": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "TYPES_EMPTY"),
     "contacts.importCard": ("EXPORT_CARD_INVALID",),
-    "contacts.importContactToken": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "IMPORT_TOKEN_INVALID",
-    ),
+    "contacts.importContactToken": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "IMPORT_TOKEN_INVALID"),
     "contacts.importContacts": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "contacts.resetSaved": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
-    "contacts.resetTopPeerRating": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
-    "contacts.resolvePhone": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PHONE_NOT_OCCUPIED",
-    ),
+    "contacts.resetTopPeerRating": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
+    "contacts.resolvePhone": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PHONE_NOT_OCCUPIED"),
     "contacts.resolveUsername": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -11026,11 +10434,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "COLLECTIBLE_INVALID",
         "COLLECTIBLE_NOT_FOUND",
     ),
-    "help.acceptTermsOfService": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "DATA_JSON_INVALID",
-    ),
+    "help.acceptTermsOfService": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "DATA_JSON_INVALID"),
     "help.dismissSuggestion": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "help.editUserInfo": (
         "AUTH_KEY_UNREGISTERED",
@@ -11062,25 +10466,13 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
     "help.getPromoData": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "help.getRecentMeUrls": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "help.getSupport": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
-    "help.getSupportName": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "USER_INVALID",
-    ),
+    "help.getSupportName": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "USER_INVALID"),
     "help.getTermsOfServiceUpdate": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "help.getTimezonesList": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
-    "help.getUserInfo": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "USER_INVALID",
-    ),
+    "help.getUserInfo": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "USER_INVALID"),
     "help.hidePromoData": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "help.saveAppLog": ("BUSINESS_CONNECTION_NOT_ALLOWED",),
-    "help.setBotUpdatesStatus": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "USER_BOT_REQUIRED",
-    ),
+    "help.setBotUpdatesStatus": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "USER_BOT_REQUIRED"),
     "initConnection": ("CONNECTION_LAYER_INVALID",),
     "invokeWithLayer": (
         "AUTH_BYTES_INVALID",
@@ -11097,17 +10489,9 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "LANG_CODE_NOT_SUPPORTED",
         "LANG_PACK_INVALID",
     ),
-    "langpack.getLanguage": (
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "LANG_CODE_NOT_SUPPORTED",
-        "LANG_PACK_INVALID",
-    ),
+    "langpack.getLanguage": ("BUSINESS_CONNECTION_NOT_ALLOWED", "LANG_CODE_NOT_SUPPORTED", "LANG_PACK_INVALID"),
     "langpack.getLanguages": ("BUSINESS_CONNECTION_NOT_ALLOWED", "LANG_PACK_INVALID"),
-    "langpack.getStrings": (
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "LANG_CODE_NOT_SUPPORTED",
-        "LANG_PACK_INVALID",
-    ),
+    "langpack.getStrings": ("BUSINESS_CONNECTION_NOT_ALLOWED", "LANG_CODE_NOT_SUPPORTED", "LANG_PACK_INVALID"),
     "messages.acceptEncryption": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -11136,11 +10520,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "USER_PRIVACY_RESTRICTED",
         "YOU_BLOCKED_USER",
     ),
-    "messages.addPollAnswer": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
+    "messages.addPollAnswer": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
     "messages.appendTodoList": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -11174,11 +10554,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "BUSINESS_CONNECTION_NOT_ALLOWED",
         "PREMIUM_ACCOUNT_REQUIRED",
     ),
-    "messages.checkUrlAuthMatchCode": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "URL_INVALID",
-    ),
+    "messages.checkUrlAuthMatchCode": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "URL_INVALID"),
     "messages.clearAllDrafts": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.clearRecentReactions": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.clearRecentStickers": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
@@ -11212,11 +10588,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "PEER_ID_INVALID",
         "PREMIUM_ACCOUNT_REQUIRED",
     ),
-    "messages.declineUrlAuth": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "URL_INVALID",
-    ),
+    "messages.declineUrlAuth": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "URL_INVALID"),
     "messages.deleteChat": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -11281,11 +10653,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "PEER_ID_INVALID",
     ),
     "messages.deletePhoneCallHistory": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
-    "messages.deletePollAnswer": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
+    "messages.deletePollAnswer": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
     "messages.deleteQuickReplyMessages": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -11302,11 +10670,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "BUSINESS_CONNECTION_NOT_ALLOWED",
         "PEER_ID_INVALID",
     ),
-    "messages.deleteSavedHistory": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
+    "messages.deleteSavedHistory": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
     "messages.deleteScheduledMessages": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -11314,11 +10678,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "MESSAGE_DELETE_FORBIDDEN",
         "PEER_ID_INVALID",
     ),
-    "messages.deleteTopicHistory": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "CHANNEL_INVALID",
-    ),
+    "messages.deleteTopicHistory": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "CHANNEL_INVALID"),
     "messages.discardEncryption": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -11379,11 +10739,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "PEER_ID_INVALID",
         "UNTIL_DATE_INVALID",
     ),
-    "messages.editChatParticipantRank": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
+    "messages.editChatParticipantRank": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
     "messages.editChatPhoto": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -11514,17 +10870,8 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "SUBSCRIPTION_PERIOD_INVALID",
         "USAGE_LIMIT_INVALID",
     ),
-    "messages.faveSticker": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "STICKER_ID_INVALID",
-    ),
-    "messages.forwardMessage": (
-        "CHAT_ID_INVALID",
-        "MESSAGE_ID_INVALID",
-        "PEER_ID_INVALID",
-        "YOU_BLOCKED_USER",
-    ),
+    "messages.faveSticker": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "STICKER_ID_INVALID"),
+    "messages.forwardMessage": ("CHAT_ID_INVALID", "MESSAGE_ID_INVALID", "PEER_ID_INVALID", "YOU_BLOCKED_USER"),
     "messages.forwardMessages": (
         "ALLOW_PAYMENT_REQUIRED",
         "ALLOW_PAYMENT_REQUIRED_%d",
@@ -11596,17 +10943,9 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
     "messages.getAllDrafts": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.getAllStickers": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.getArchivedStickers": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
-    "messages.getAttachMenuBot": (
-        "AUTH_KEY_UNREGISTERED",
-        "BOT_INVALID",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "messages.getAttachMenuBot": ("AUTH_KEY_UNREGISTERED", "BOT_INVALID", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.getAttachMenuBots": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
-    "messages.getAttachedStickers": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "MEDIA_EMPTY",
-    ),
+    "messages.getAttachedStickers": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "MEDIA_EMPTY"),
     "messages.getAvailableEffects": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.getAvailableReactions": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.getBotApp": (
@@ -11653,17 +10992,10 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "MSG_ID_INVALID",
         "USER_ID_INVALID",
     ),
-    "messages.getCustomEmojiDocuments": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "messages.getCustomEmojiDocuments": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.getDefaultHistoryTTL": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.getDefaultTagReactions": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
-    "messages.getDhConfig": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "RANDOM_LENGTH_INVALID",
-    ),
+    "messages.getDhConfig": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "RANDOM_LENGTH_INVALID"),
     "messages.getDialogFilters": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.getDialogUnreadMarks": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.getDialogs": (
@@ -11685,26 +11017,13 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "PEER_ID_INVALID",
         "TOPIC_ID_INVALID",
     ),
-    "messages.getDocumentByHash": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "SHA256_HASH_INVALID",
-    ),
+    "messages.getDocumentByHash": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "SHA256_HASH_INVALID"),
     "messages.getEmojiGameInfo": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.getEmojiGroups": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.getEmojiKeywords": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
-    "messages.getEmojiKeywordsDifference": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
-    "messages.getEmojiKeywordsLanguages": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
-    "messages.getEmojiProfilePhotoGroups": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "messages.getEmojiKeywordsDifference": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
+    "messages.getEmojiKeywordsLanguages": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
+    "messages.getEmojiProfilePhotoGroups": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.getEmojiStatusGroups": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.getEmojiStickerGroups": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.getEmojiStickers": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
@@ -11731,16 +11050,9 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "PEER_ID_INVALID",
     ),
     "messages.getExtendedMedia": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
-    "messages.getFactCheck": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
+    "messages.getFactCheck": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
     "messages.getFavedStickers": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
-    "messages.getFeaturedEmojiStickers": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "messages.getFeaturedEmojiStickers": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.getFeaturedStickers": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.getForumTopics": (
         "AUTH_KEY_UNREGISTERED",
@@ -11896,11 +11208,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "USER_BOT_REQUIRED",
         "USER_ID_INVALID",
     ),
-    "messages.getPinnedDialogs": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "FOLDER_ID_INVALID",
-    ),
+    "messages.getPinnedDialogs": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "FOLDER_ID_INVALID"),
     "messages.getPinnedSavedDialogs": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.getPollResults": (
         "AUTH_KEY_UNREGISTERED",
@@ -11922,11 +11230,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "ID_INVALID",
     ),
     "messages.getQuickReplies": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
-    "messages.getQuickReplyMessages": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "SHORTCUT_INVALID",
-    ),
+    "messages.getQuickReplyMessages": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "SHORTCUT_INVALID"),
     "messages.getRecentLocations": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.getRecentReactions": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.getRecentStickers": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
@@ -11939,11 +11243,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "PEER_ID_INVALID",
         "TOPIC_ID_INVALID",
     ),
-    "messages.getRichMessage": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "MESSAGE_ID_INVALID",
-    ),
+    "messages.getRichMessage": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "MESSAGE_ID_INVALID"),
     "messages.getSavedDialogs": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.getSavedDialogsByID": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.getSavedGifs": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
@@ -11954,11 +11254,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "PARENT_PEER_INVALID",
         "PEER_ID_INVALID",
     ),
-    "messages.getSavedReactionTags": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
+    "messages.getSavedReactionTags": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
     "messages.getScheduledHistory": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -11972,11 +11268,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "CHAT_ADMIN_REQUIRED",
         "PEER_ID_INVALID",
     ),
-    "messages.getSearchCounters": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
+    "messages.getSearchCounters": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
     "messages.getSearchResultsCalendar": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -12004,15 +11296,8 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "EMOTICON_STICKERPACK_MISSING",
         "STICKERSET_INVALID",
     ),
-    "messages.getStickers": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "EMOTICON_EMPTY",
-    ),
-    "messages.getSuggestedDialogFilters": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "messages.getStickers": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "EMOTICON_EMPTY"),
+    "messages.getSuggestedDialogFilters": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.getTopReactions": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.getUnreadMentions": (
         "AUTH_KEY_UNREGISTERED",
@@ -12022,21 +11307,9 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "MSG_ID_INVALID",
         "PEER_ID_INVALID",
     ),
-    "messages.getUnreadPollVotes": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
-    "messages.getUnreadReactions": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
-    "messages.getWebPage": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "WC_CONVERT_URL_INVALID",
-    ),
+    "messages.getUnreadPollVotes": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
+    "messages.getUnreadReactions": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
+    "messages.getWebPage": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "WC_CONVERT_URL_INVALID"),
     "messages.getWebPagePreview": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -12071,11 +11344,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "USER_CHANNELS_TOO_MUCH",
         "USER_ID_INVALID",
     ),
-    "messages.hidePeerSettingsBar": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
+    "messages.hidePeerSettingsBar": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
     "messages.hideReportSpam": ("PEER_ID_INVALID",),
     "messages.importChatInvite": (
         "AUTH_KEY_UNREGISTERED",
@@ -12106,16 +11375,8 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "PREVIOUS_CHAT_IMPORT_ACTIVE_WAIT_%dMIN",
         "USER_NOT_MUTUAL_CONTACT",
     ),
-    "messages.installStickerSet": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "STICKERSET_INVALID",
-    ),
-    "messages.markDialogUnread": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
+    "messages.installStickerSet": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "STICKERSET_INVALID"),
+    "messages.markDialogUnread": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
     "messages.migrateChat": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -12125,11 +11386,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "CHAT_INVALID",
         "PEER_ID_INVALID",
     ),
-    "messages.prolongWebView": (
-        "AUTH_KEY_UNREGISTERED",
-        "BOT_INVALID",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "messages.prolongWebView": ("AUTH_KEY_UNREGISTERED", "BOT_INVALID", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.rateTranscribedAudio": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.readDiscussion": (
         "AUTH_KEY_UNREGISTERED",
@@ -12164,16 +11421,8 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "PEER_ID_INVALID",
     ),
     "messages.readMessageContents": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
-    "messages.readPollVotes": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
-    "messages.readReactions": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
+    "messages.readPollVotes": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
+    "messages.readReactions": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
     "messages.readSavedHistory": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -12187,20 +11436,13 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "MAX_QTS_INVALID",
         "MSG_WAIT_FAILED",
     ),
-    "messages.reorderPinnedDialogs": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
+    "messages.reorderPinnedDialogs": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
     "messages.reorderPinnedForumTopics": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
         "CHANNEL_INVALID",
     ),
-    "messages.reorderPinnedSavedDialogs": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "messages.reorderPinnedSavedDialogs": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.reorderQuickReplies": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -12216,16 +11458,8 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "OPTION_INVALID",
         "PEER_ID_INVALID",
     ),
-    "messages.reportEncryptedSpam": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "CHAT_ID_INVALID",
-    ),
-    "messages.reportMessagesDelivery": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
+    "messages.reportEncryptedSpam": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "CHAT_ID_INVALID"),
+    "messages.reportMessagesDelivery": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
     "messages.reportMusicListen": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.reportReaction": (
         "AUTH_KEY_UNREGISTERED",
@@ -12261,11 +11495,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "USER_ID_INVALID",
         "USER_IS_BLOCKED",
     ),
-    "messages.requestMainWebView": (
-        "AUTH_KEY_UNREGISTERED",
-        "BOT_INVALID",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "messages.requestMainWebView": ("AUTH_KEY_UNREGISTERED", "BOT_INVALID", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.requestSimpleWebView": (
         "AUTH_KEY_UNREGISTERED",
         "BOT_INVALID",
@@ -12311,11 +11541,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "MSG_ID_INVALID",
         "PEER_ID_INVALID",
     ),
-    "messages.saveGif": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "GIF_ID_INVALID",
-    ),
+    "messages.saveGif": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "GIF_ID_INVALID"),
     "messages.savePreparedInlineMessage": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -12324,11 +11550,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "USER_BOT_REQUIRED",
         "USER_ID_INVALID",
     ),
-    "messages.saveRecentSticker": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "STICKER_ID_INVALID",
-    ),
+    "messages.saveRecentSticker": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "STICKER_ID_INVALID"),
     "messages.search": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -12346,11 +11568,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "TAKEOUT_INVALID",
         "USER_ID_INVALID",
     ),
-    "messages.searchCustomEmoji": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "EMOTICON_EMPTY",
-    ),
+    "messages.searchCustomEmoji": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "EMOTICON_EMPTY"),
     "messages.searchEmojiStickerSets": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.searchGifs": ("METHOD_INVALID", "SEARCH_QUERY_EMPTY"),
     "messages.searchGlobal": (
@@ -12360,11 +11578,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "INPUT_FILTER_INVALID",
         "SEARCH_QUERY_EMPTY",
     ),
-    "messages.searchSentMedia": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "FILTER_NOT_SUPPORTED",
-    ),
+    "messages.searchSentMedia": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "FILTER_NOT_SUPPORTED"),
     "messages.searchStickerSets": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.searchStickers": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.sendBotRequestedPeer": (
@@ -12759,11 +11973,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "POLL_MEMBER_RESTRICTED",
         "REVOTE_NOT_ALLOWED",
     ),
-    "messages.sendWebViewData": (
-        "AUTH_KEY_UNREGISTERED",
-        "BOT_INVALID",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "messages.sendWebViewData": ("AUTH_KEY_UNREGISTERED", "BOT_INVALID", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.sendWebViewResultMessage": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -12820,21 +12030,9 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "WALLPAPER_INVALID",
         "WALLPAPER_NOT_FOUND",
     ),
-    "messages.setDefaultHistoryTTL": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "TTL_PERIOD_INVALID",
-    ),
-    "messages.setDefaultReaction": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "REACTION_INVALID",
-    ),
-    "messages.setEncryptedTyping": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "CHAT_ID_INVALID",
-    ),
+    "messages.setDefaultHistoryTTL": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "TTL_PERIOD_INVALID"),
+    "messages.setDefaultReaction": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "REACTION_INVALID"),
+    "messages.setEncryptedTyping": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "CHAT_ID_INVALID"),
     "messages.setGameScore": (
         "AUTH_KEY_UNREGISTERED",
         "BOT_SCORE_NOT_MODIFIED",
@@ -12954,11 +12152,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "MSG_ID_INVALID",
         "PEER_ID_INVALID",
     ),
-    "messages.toggleBotInAttachMenu": (
-        "AUTH_KEY_UNREGISTERED",
-        "BOT_INVALID",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "messages.toggleBotInAttachMenu": ("AUTH_KEY_UNREGISTERED", "BOT_INVALID", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.toggleChatAdmins": ("CHAT_ID_INVALID", "CHAT_NOT_MODIFIED"),
     "messages.toggleDialogFilterTags": (
         "AUTH_KEY_UNREGISTERED",
@@ -12987,27 +12181,15 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "PEER_ID_INVALID",
         "REACTION_EMPTY",
     ),
-    "messages.togglePeerTranslations": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
-    "messages.toggleSavedDialogPin": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
+    "messages.togglePeerTranslations": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
+    "messages.toggleSavedDialogPin": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
     "messages.toggleStickerSets": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "messages.toggleSuggestedPostApproval": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
         "PEER_ID_INVALID",
     ),
-    "messages.toggleTodoCompleted": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
+    "messages.toggleTodoCompleted": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
     "messages.transcribeAudio": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -13031,11 +12213,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "TRANSLATIONS_DISABLED",
         "TRANSLATION_TIMEOUT",
     ),
-    "messages.uninstallStickerSet": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "STICKERSET_INVALID",
-    ),
+    "messages.uninstallStickerSet": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "STICKERSET_INVALID"),
     "messages.unpinAllMessages": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -13056,15 +12234,8 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "MSG_ID_INVALID",
         "PEER_ID_INVALID",
     ),
-    "messages.updateDialogFiltersOrder": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
-    "messages.updatePinnedForumTopic": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "CHANNEL_INVALID",
-    ),
+    "messages.updateDialogFiltersOrder": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
+    "messages.updatePinnedForumTopic": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "CHANNEL_INVALID"),
     "messages.updatePinnedMessage": (
         "AUTH_KEY_UNREGISTERED",
         "BOT_ONESIDE_NOT_AVAIL",
@@ -13088,11 +12259,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "PREMIUM_ACCOUNT_REQUIRED",
         "REACTION_INVALID",
     ),
-    "messages.uploadEncryptedFile": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "CHAT_ID_INVALID",
-    ),
+    "messages.uploadEncryptedFile": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "CHAT_ID_INVALID"),
     "messages.uploadImportedMedia": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -13131,41 +12298,22 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "GIFT_SLUG_INVALID",
         "PREMIUM_SUB_ACTIVE_UNTIL_%d",
     ),
-    "payments.assignAppStoreTransaction": (
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "INPUT_PURPOSE_INVALID",
-        "RECEIPT_EMPTY",
-    ),
-    "payments.assignPlayMarketTransaction": (
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "DATA_JSON_INVALID",
-    ),
+    "payments.assignAppStoreTransaction": ("BUSINESS_CONNECTION_NOT_ALLOWED", "INPUT_PURPOSE_INVALID", "RECEIPT_EMPTY"),
+    "payments.assignPlayMarketTransaction": ("BUSINESS_CONNECTION_NOT_ALLOWED", "DATA_JSON_INVALID"),
     "payments.botCancelStarsSubscription": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
         "CHARGE_ID_INVALID",
         "USER_ID_INVALID",
     ),
-    "payments.canPurchasePremium": (
-        "PREMIUM_CURRENTLY_UNAVAILABLE",
-        "USER_GIFT_UNAVAILABLE",
-        "USER_ID_INVALID",
-    ),
+    "payments.canPurchasePremium": ("PREMIUM_CURRENTLY_UNAVAILABLE", "USER_GIFT_UNAVAILABLE", "USER_ID_INVALID"),
     "payments.canPurchaseStore": (
         "BUSINESS_CONNECTION_NOT_ALLOWED",
         "INPUT_PURPOSE_INVALID",
         "PREMIUM_CURRENTLY_UNAVAILABLE",
     ),
-    "payments.changeStarsSubscription": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
-    "payments.checkCanSendGift": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "STARGIFT_INVALID",
-    ),
+    "payments.changeStarsSubscription": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
+    "payments.checkCanSendGift": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "STARGIFT_INVALID"),
     "payments.checkGiftCode": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -13183,11 +12331,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "STARGIFT_PEER_INVALID",
         "USER_ID_INVALID",
     ),
-    "payments.craftStarGift": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "SAVED_ID_EMPTY",
-    ),
+    "payments.craftStarGift": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "SAVED_ID_EMPTY"),
     "payments.createStarGiftCollection": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -13226,20 +12370,9 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "BANK_CARD_NUMBER_INVALID",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
     ),
-    "payments.getConnectedStarRefBot": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
-    "payments.getConnectedStarRefBots": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
-    "payments.getCraftStarGifts": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "STARGIFT_INVALID",
-    ),
+    "payments.getConnectedStarRefBot": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
+    "payments.getConnectedStarRefBots": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
+    "payments.getCraftStarGifts": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "STARGIFT_INVALID"),
     "payments.getGiveawayInfo": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -13285,15 +12418,8 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "UNTIL_DATE_INVALID",
         "USER_DISALLOWED_STARGIFTS",
     ),
-    "payments.getPaymentReceipt": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "MESSAGE_ID_INVALID",
-    ),
-    "payments.getPremiumGiftCodeOptions": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "payments.getPaymentReceipt": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "MESSAGE_ID_INVALID"),
+    "payments.getPremiumGiftCodeOptions": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "payments.getResaleStarGifts": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -13316,10 +12442,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "MSG_ID_INVALID",
         "PEER_ID_INVALID",
     ),
-    "payments.getStarGiftActiveAuctions": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "payments.getStarGiftActiveAuctions": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "payments.getStarGiftAuctionAcquiredGifts": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -13330,11 +12453,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "BUSINESS_CONNECTION_NOT_ALLOWED",
         "STARGIFT_INVALID",
     ),
-    "payments.getStarGiftCollections": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
+    "payments.getStarGiftCollections": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
     "payments.getStarGiftUpgradeAttributes": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -13361,10 +12480,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "USER_GIFT_UNAVAILABLE",
         "USER_ID_INVALID",
     ),
-    "payments.getStarsGiveawayOptions": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-    ),
+    "payments.getStarsGiveawayOptions": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "payments.getStarsRevenueAdsAccountUrl": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -13393,11 +12509,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "BUSINESS_CONNECTION_NOT_ALLOWED",
         "PEER_ID_INVALID",
     ),
-    "payments.getStarsSubscriptions": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
+    "payments.getStarsSubscriptions": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
     "payments.getStarsTopupOptions": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "payments.getStarsTransactions": (
         "AUTH_KEY_UNREGISTERED",
@@ -13412,27 +12524,15 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "PEER_ID_INVALID",
         "TRANSACTION_ID_INVALID",
     ),
-    "payments.getSuggestedStarRefBots": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
-    "payments.getUniqueStarGift": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "STARGIFT_SLUG_INVALID",
-    ),
+    "payments.getSuggestedStarRefBots": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
+    "payments.getUniqueStarGift": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "STARGIFT_SLUG_INVALID"),
     "payments.getUniqueStarGiftValueInfo": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
         "STARGIFT_SLUG_INVALID",
     ),
     "payments.getUserStarGifts": ("USER_ID_INVALID",),
-    "payments.launchPrepaidGiveaway": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
+    "payments.launchPrepaidGiveaway": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
     "payments.refundStarsCharge": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -13603,11 +12703,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "BUSINESS_CONNECTION_NOT_ALLOWED",
         "GROUPCALL_INVALID",
     ),
-    "phone.deleteGroupCallMessages": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "GROUPCALL_INVALID",
-    ),
+    "phone.deleteGroupCallMessages": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "GROUPCALL_INVALID"),
     "phone.deleteGroupCallParticipantMessages": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -13659,22 +12755,14 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "GROUPCALL_FORBIDDEN",
         "GROUPCALL_INVALID",
     ),
-    "phone.getGroupCallChainBlocks": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "GROUPCALL_INVALID",
-    ),
+    "phone.getGroupCallChainBlocks": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "GROUPCALL_INVALID"),
     "phone.getGroupCallJoinAs": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
         "CHANNEL_INVALID",
         "PEER_ID_INVALID",
     ),
-    "phone.getGroupCallStars": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "GROUPCALL_INVALID",
-    ),
+    "phone.getGroupCallStars": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "GROUPCALL_INVALID"),
     "phone.getGroupCallStreamChannels": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -13687,11 +12775,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "CHAT_ADMIN_REQUIRED",
         "PEER_ID_INVALID",
     ),
-    "phone.getGroupParticipants": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "GROUPCALL_INVALID",
-    ),
+    "phone.getGroupParticipants": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "GROUPCALL_INVALID"),
     "phone.inviteConferenceCallParticipant": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -13725,11 +12809,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "GROUPCALL_INVALID",
         "PARTICIPANT_JOIN_MISSING",
     ),
-    "phone.leaveGroupCall": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "GROUPCALL_INVALID",
-    ),
+    "phone.leaveGroupCall": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "GROUPCALL_INVALID"),
     "phone.leaveGroupCallPresentation": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -13759,22 +12839,14 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "CALL_PEER_INVALID",
         "DATA_JSON_INVALID",
     ),
-    "phone.saveCallLog": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "CALL_PEER_INVALID",
-    ),
+    "phone.saveCallLog": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "CALL_PEER_INVALID"),
     "phone.saveDefaultGroupCallJoinAs": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
         "JOIN_AS_PEER_INVALID",
         "PEER_ID_INVALID",
     ),
-    "phone.saveDefaultSendAs": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "GROUPCALL_INVALID",
-    ),
+    "phone.saveDefaultSendAs": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "GROUPCALL_INVALID"),
     "phone.sendConferenceCallBroadcast": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -13797,11 +12869,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "CALL_NOT_ACTIVE",
         "CALL_PEER_INVALID",
     ),
-    "phone.setCallRating": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "CALL_PEER_INVALID",
-    ),
+    "phone.setCallRating": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "CALL_PEER_INVALID"),
     "phone.startScheduledGroupCall": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -13893,34 +12961,14 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "PEER_ID_INVALID",
     ),
     "premium.getMyBoosts": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
-    "premium.getUserBoosts": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
-    "smsjobs.finishJob": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "SMSJOB_ID_INVALID",
-    ),
-    "smsjobs.getSmsJob": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "SMSJOB_ID_INVALID",
-    ),
+    "premium.getUserBoosts": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
+    "smsjobs.finishJob": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "SMSJOB_ID_INVALID"),
+    "smsjobs.getSmsJob": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "SMSJOB_ID_INVALID"),
     "smsjobs.getStatus": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "NOT_JOINED"),
-    "smsjobs.isEligibleToJoin": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "NOT_ELIGIBLE",
-    ),
+    "smsjobs.isEligibleToJoin": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "NOT_ELIGIBLE"),
     "smsjobs.join": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "NOT_ELIGIBLE"),
     "smsjobs.leave": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "NOT_JOINED"),
-    "smsjobs.updateSettings": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "NOT_JOINED",
-    ),
+    "smsjobs.updateSettings": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "NOT_JOINED"),
     "stats.getBroadcastRevenueStats": ("CHANNEL_INVALID", "CHAT_ADMIN_REQUIRED", "PEER_ID_INVALID"),
     "stats.getBroadcastRevenueTransactions": ("CHANNEL_INVALID", "PEER_ID_INVALID"),
     "stats.getBroadcastRevenueWithdrawalUrl": (
@@ -13960,16 +13008,8 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "MESSAGE_ID_INVALID",
         "PEER_ID_INVALID",
     ),
-    "stats.getPollStats": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
-    "stats.getStoryPublicForwards": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
+    "stats.getPollStats": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
+    "stats.getStoryPublicForwards": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
     "stats.getStoryStats": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -13993,16 +13033,8 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "STICKER_PNG_NOPNG",
         "STICKER_TGS_NOTGS",
     ),
-    "stickers.changeSticker": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "STICKER_INVALID",
-    ),
-    "stickers.changeStickerPosition": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "STICKER_INVALID",
-    ),
+    "stickers.changeSticker": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "STICKER_INVALID"),
+    "stickers.changeStickerPosition": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "STICKER_INVALID"),
     "stickers.checkShortName": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -14032,26 +13064,10 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "STICKER_VIDEO_NOWEBM",
         "USER_ID_INVALID",
     ),
-    "stickers.deleteStickerSet": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "STICKERSET_INVALID",
-    ),
-    "stickers.removeStickerFromSet": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "STICKER_INVALID",
-    ),
-    "stickers.renameStickerSet": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "STICKERSET_INVALID",
-    ),
-    "stickers.replaceSticker": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "STICKER_INVALID",
-    ),
+    "stickers.deleteStickerSet": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "STICKERSET_INVALID"),
+    "stickers.removeStickerFromSet": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "STICKER_INVALID"),
+    "stickers.renameStickerSet": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "STICKERSET_INVALID"),
+    "stickers.replaceSticker": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "STICKER_INVALID"),
     "stickers.setStickerSetThumb": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -14059,11 +13075,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "STICKER_THUMB_PNG_NOPNG",
         "STICKER_THUMB_TGS_NOTGS",
     ),
-    "stickers.suggestShortName": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "TITLE_INVALID",
-    ),
+    "stickers.suggestShortName": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "TITLE_INVALID"),
     "stories.activateStealthMode": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -14083,16 +13095,8 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "STORY_SEND_FLOOD_MONTHLY_%d",
         "STORY_SEND_FLOOD_WEEKLY_%d",
     ),
-    "stories.createAlbum": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
-    "stories.deleteAlbum": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
+    "stories.createAlbum": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
+    "stories.deleteAlbum": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
     "stories.deleteStories": (
         "AUTH_KEY_UNREGISTERED",
         "BOT_ACCESS_FORBIDDEN",
@@ -14115,16 +13119,8 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "STORY_ID_EMPTY",
         "USER_PUBLIC_MISSING",
     ),
-    "stories.getAlbumStories": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
-    "stories.getAlbums": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
+    "stories.getAlbumStories": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
+    "stories.getAlbums": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
     "stories.getAllReadPeerStories": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "stories.getAllStories": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
     "stories.getBoostersList": ("CHANNEL_INVALID", "CHAT_ADMIN_REQUIRED", "PEER_ID_INVALID"),
@@ -14170,11 +13166,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "PEER_ID_INVALID",
         "STORY_ID_EMPTY",
     ),
-    "stories.getStoryReactionsList": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
+    "stories.getStoryReactionsList": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
     "stories.getStoryViewsList": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -14195,21 +13187,9 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "PEER_ID_INVALID",
         "STORIES_NEVER_CREATED",
     ),
-    "stories.reorderAlbums": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
-    "stories.report": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
-    "stories.searchPosts": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "HASHTAG_INVALID",
-    ),
+    "stories.reorderAlbums": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
+    "stories.report": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
+    "stories.searchPosts": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "HASHTAG_INVALID"),
     "stories.sendReaction": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -14250,27 +13230,15 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "STORY_LIVE_ALREADY_%d",
     ),
     "stories.toggleAllStoriesHidden": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
-    "stories.togglePeerStoriesHidden": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
-    "stories.togglePinned": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
+    "stories.togglePeerStoriesHidden": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
+    "stories.togglePinned": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
     "stories.togglePinnedToTop": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
         "PEER_ID_INVALID",
         "STORY_ID_INVALID",
     ),
-    "stories.updateAlbum": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "PEER_ID_INVALID",
-    ),
+    "stories.updateAlbum": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "PEER_ID_INVALID"),
     "updates.getChannelDifference": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -14337,11 +13305,7 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "OFFSET_INVALID",
         "PEER_ID_INVALID",
     ),
-    "upload.getFileHashes": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "LOCATION_INVALID",
-    ),
+    "upload.getFileHashes": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "LOCATION_INVALID"),
     "upload.getWebFile": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",
@@ -14386,16 +13350,8 @@ METHOD_TO_ERROR_NAMES: dict[str, tuple[str, ...]] = {
         "USER_ID_INVALID",
     ),
     "users.getRequirementsToContact": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED"),
-    "users.getSavedMusic": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "USER_ID_INVALID",
-    ),
-    "users.getSavedMusicByID": (
-        "AUTH_KEY_UNREGISTERED",
-        "BUSINESS_CONNECTION_NOT_ALLOWED",
-        "USER_ID_INVALID",
-    ),
+    "users.getSavedMusic": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "USER_ID_INVALID"),
+    "users.getSavedMusicByID": ("AUTH_KEY_UNREGISTERED", "BUSINESS_CONNECTION_NOT_ALLOWED", "USER_ID_INVALID"),
     "users.getUsers": (
         "AUTH_KEY_UNREGISTERED",
         "BUSINESS_CONNECTION_NOT_ALLOWED",

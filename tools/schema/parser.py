@@ -10,9 +10,7 @@ from typing import Any, Literal
 
 SchemaKind = Literal["type", "function"]
 
-_LINE_RE = re.compile(
-    r"^(?P<name>[A-Za-z0-9_.]+)#(?P<constructor_id>[0-9A-Fa-f]+)(?P<body>.*?)= (?P<result>.+);$"
-)
+_LINE_RE = re.compile(r"^(?P<name>[A-Za-z0-9_.]+)#(?P<constructor_id>[0-9A-Fa-f]+)(?P<body>.*?)= (?P<result>.+);$")
 _FLAG_RE = re.compile(r"^(?P<flag>[A-Za-z_][A-Za-z0-9_]*)\.(?P<index>\d+)\?(?P<inner>.+)$")
 _VECTOR_RE = re.compile(r"^[Vv]ector[< ](?P<inner>.+?)[>]?$")
 _RESERVED_NAMES = frozenset({"self"})
@@ -109,9 +107,7 @@ def parse_schema(text: str) -> TLSchema:
             kind = "function"
             comments.clear()
             continue
-        entries.append(
-            _parse_entry(line, kind=kind, line_number=line_number, comments=tuple(comments))
-        )
+        entries.append(_parse_entry(line, kind=kind, line_number=line_number, comments=tuple(comments)))
         comments.clear()
     _validate_unique_entries(entries)
     return TLSchema(entries=tuple(entries), rpc_errors=tuple(errors))
@@ -145,9 +141,7 @@ def schema_to_tl(schema: TLSchema) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _parse_entry(
-    line: str, *, kind: SchemaKind, line_number: int, comments: tuple[str, ...]
-) -> TLEntry:
+def _parse_entry(line: str, *, kind: SchemaKind, line_number: int, comments: tuple[str, ...]) -> TLEntry:
     match = _LINE_RE.match(line)
     if match is None:
         raise TLSchemaParseError(f"line {line_number}: expected TL declaration, got {line!r}")
@@ -217,15 +211,11 @@ def _parse_json_param(item: object, *, line_number: int) -> TLParameter:
     if not isinstance(name, str) or not name:
         raise TLSchemaParseError(f"JSON schema entry {line_number}: parameter missing name")
     if not isinstance(type_name, str) or not type_name:
-        raise TLSchemaParseError(
-            f"JSON schema entry {line_number}: parameter {name!r} missing type"
-        )
+        raise TLSchemaParseError(f"JSON schema entry {line_number}: parameter {name!r} missing type")
     return _parse_param(f"{name}:{type_name}")
 
 
-def _json_entry_source_line(
-    name: str, constructor_id_hex: str, params: Sequence[TLParameter], result_type: str
-) -> str:
+def _json_entry_source_line(name: str, constructor_id_hex: str, params: Sequence[TLParameter], result_type: str) -> str:
     body = " ".join(f"{param.name}:{param.type}" for param in params)
     if body:
         return f"{name}#{constructor_id_hex} {body} = {result_type};"
@@ -237,27 +227,17 @@ def _parse_param(part: str) -> TLParameter:
         inner = part[1:-1]
         name, _, type_name = inner.partition(":")
         return TLParameter(
-            name=name,
-            python_name=_python_field_name(name),
-            type=type_name or "Type",
-            is_template=True,
-            is_generic=True,
+            name=name, python_name=_python_field_name(name), type=type_name or "Type", is_template=True, is_generic=True
         )
     if part == "#":
         return TLParameter(name="#", python_name="_bare", type="#", is_bare=True)
     if ":" not in part:
         return TLParameter(
-            name=part,
-            python_name=_python_field_name(part),
-            type=part,
-            is_bare=True,
-            is_generic=part[:1].isupper(),
+            name=part, python_name=_python_field_name(part), type=part, is_bare=True, is_generic=part[:1].isupper()
         )
     name, type_name = part.split(":", 1)
     if type_name == "#":
-        return TLParameter(
-            name=name, python_name=_python_field_name(name), type=type_name, is_flags_marker=True
-        )
+        return TLParameter(name=name, python_name=_python_field_name(name), type=type_name, is_flags_marker=True)
     flag: str | None = None
     flag_index: int | None = None
     is_optional = False
@@ -268,9 +248,7 @@ def _parse_param(part: str) -> TLParameter:
         type_name = flag_match.group("inner")
         is_optional = True
     vector_item = _vector_item_type(type_name)
-    is_generic = type_name.startswith("!") or (
-        type_name[:1].isupper() and type_name.endswith("Type")
-    )
+    is_generic = type_name.startswith("!") or (type_name[:1].isupper() and type_name.endswith("Type"))
     return TLParameter(
         name=name,
         python_name=_python_field_name(name),
@@ -351,8 +329,4 @@ def _validate_unique_entries(entries: Sequence[TLEntry]) -> None:
 
 
 def iter_public_params(params: Iterable[TLParameter]) -> tuple[TLParameter, ...]:
-    return tuple(
-        param
-        for param in params
-        if not param.is_template and not param.is_flags_marker and not param.is_bare
-    )
+    return tuple(param for param in params if not param.is_template and not param.is_flags_marker and not param.is_bare)

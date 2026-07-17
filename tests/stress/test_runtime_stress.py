@@ -38,8 +38,10 @@ class FakeSender:
         body: bytes | object,
         *,
         content_related: bool = True,
+        retry_safe: bool,
         request_timeout: float | None = None,
     ) -> object:
+        del content_related, retry_safe, request_timeout
         self.requests.append(body)
         if not self.responses:
             raise AssertionError("fake sender has no queued response")
@@ -70,9 +72,7 @@ class DownloadInvoker:
         offset = int(request.offset)
         limit = int(request.limit)
         return types.UploadFile(
-            type=types.StorageFileUnknown(),
-            mtime=1_700_000_000,
-            bytes=self.payload[offset : offset + limit],
+            type=types.StorageFileUnknown(), mtime=1_700_000_000, bytes=self.payload[offset : offset + limit]
         )
 
 
@@ -96,26 +96,15 @@ def test_stress_large_upload_and_download_roundtrip_buffers() -> None:
         payload = bytes((index * 29) % 256 for index in range(16 * 1024 * 1024))
         upload_invoker = UploadInvoker()
         upload = await upload_file(
-            upload_invoker,
-            payload,
-            file_name="stress.bin",
-            part_size=DEFAULT_CHUNK_SIZE,
-            concurrency=8,
-            file_id=55,
+            upload_invoker, payload, file_name="stress.bin", part_size=DEFAULT_CHUNK_SIZE, concurrency=8, file_id=55
         )
         assert upload.size == len(payload)
         assert len(upload_invoker.requests) == len(payload) // DEFAULT_CHUNK_SIZE
 
         download_invoker = DownloadInvoker(payload)
-        location = types.InputDocumentFileLocation(
-            id=10, access_hash=20, file_reference=b"ref", thumb_size=""
-        )
+        location = types.InputDocumentFileLocation(id=10, access_hash=20, file_reference=b"ref", thumb_size="")
         download = await download_file(
-            download_invoker,
-            location,
-            limit=len(payload),
-            part_size=DEFAULT_CHUNK_SIZE,
-            total_size=len(payload),
+            download_invoker, location, limit=len(payload), part_size=DEFAULT_CHUNK_SIZE, total_size=len(payload)
         )
         assert download.data == payload
         assert download.bytes_downloaded == len(payload)
@@ -146,15 +135,11 @@ def test_stress_sends_many_messages_through_cached_peer() -> None:
         count = 1_000
         sender = FakeSender(
             [
-                types.UpdateShortSentMessage(
-                    id=index, pts=index, pts_count=1, date=1_700_000_000 + index
-                )
+                types.UpdateShortSentMessage(id=index, pts=index, pts_count=1, date=1_700_000_000 + index)
                 for index in range(count)
             ]
         )
-        client = Client(
-            ClientConfig(api_id=1, api_hash="hash", session_storage=storage_with_auth())
-        )
+        client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage_with_auth()))
         client._sender = sender
         await client.connect()
         for index in range(count):
@@ -168,7 +153,7 @@ def test_stress_sends_many_messages_through_cached_peer() -> None:
 def test_stress_repeated_client_lifecycle_does_not_leak_tasks() -> None:
     async def scenario() -> None:
         for _ in range(500):
-            client = Client(ClientConfig(api_id=1, api_hash="hash"))
+            client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=InMemorySessionStorage()))
             await client.connect()
             await client.disconnect()
             assert not client.is_connected

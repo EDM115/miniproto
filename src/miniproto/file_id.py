@@ -28,17 +28,11 @@ class DecodedFileId:
         location: object
         if self.kind == "photo":
             location = types.InputPhotoFileLocation(
-                id=self.id,
-                access_hash=self.access_hash,
-                file_reference=self.file_reference,
-                thumb_size=self.thumb_size,
+                id=self.id, access_hash=self.access_hash, file_reference=self.file_reference, thumb_size=self.thumb_size
             )
         else:
             location = types.InputDocumentFileLocation(
-                id=self.id,
-                access_hash=self.access_hash,
-                file_reference=self.file_reference,
-                thumb_size=self.thumb_size,
+                id=self.id, access_hash=self.access_hash, file_reference=self.file_reference, thumb_size=self.thumb_size
             )
         return Media(
             id=self.id,
@@ -62,16 +56,12 @@ class DecodedFileId:
         if self.kind == "photo":
             return types.InputMediaPhoto(
                 spoiler=spoiler,
-                id=types.InputPhoto(
-                    id=self.id, access_hash=self.access_hash, file_reference=self.file_reference
-                ),
+                id=types.InputPhoto(id=self.id, access_hash=self.access_hash, file_reference=self.file_reference),
                 ttl_seconds=ttl_seconds,
             )
         return types.InputMediaDocument(
             spoiler=spoiler,
-            id=types.InputDocument(
-                id=self.id, access_hash=self.access_hash, file_reference=self.file_reference
-            ),
+            id=types.InputDocument(id=self.id, access_hash=self.access_hash, file_reference=self.file_reference),
             video_cover=video_cover,
             video_timestamp=video_timestamp,
             ttl_seconds=ttl_seconds,
@@ -149,10 +139,7 @@ def input_media_from_file_id(
     video_timestamp: int | None = None,
 ) -> object:
     return decode_file_id(file_id).to_input_media(
-        spoiler=spoiler,
-        ttl_seconds=ttl_seconds,
-        video_cover=video_cover,
-        video_timestamp=video_timestamp,
+        spoiler=spoiler, ttl_seconds=ttl_seconds, video_cover=video_cover, video_timestamp=video_timestamp
     )
 
 
@@ -160,11 +147,7 @@ def _decoded_from_media(media: Media | object) -> DecodedFileId:
     if isinstance(media, Media):
         if media.location is not None:
             location = _decoded_from_location(
-                media.location,
-                size=media.size,
-                file_name=media.file_name,
-                mime_type=media.mime_type,
-                dc_id=media.dc_id,
+                media.location, size=media.size, file_name=media.file_name, mime_type=media.mime_type, dc_id=media.dc_id
             )
             return location
         if media.access_hash is not None and media.file_reference is not None:

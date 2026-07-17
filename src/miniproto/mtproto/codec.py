@@ -205,11 +205,7 @@ def encode_message_body(body: ByteBuffer | object) -> bytes:
         case MsgsStateReq(msg_ids=msg_ids):
             return encode_constructor_id(_MSGS_STATE_REQ_ID) + encode_vector(msg_ids, "long")
         case MsgsStateInfo(req_msg_id=req_msg_id, info=info):
-            return (
-                encode_constructor_id(_MSGS_STATE_INFO_ID)
-                + _pack_i64(req_msg_id)
-                + encode_bytes(info)
-            )
+            return encode_constructor_id(_MSGS_STATE_INFO_ID) + _pack_i64(req_msg_id) + encode_bytes(info)
         case MsgResendReq(msg_ids=msg_ids):
             return encode_constructor_id(_MSG_RESEND_REQ_ID) + encode_vector(msg_ids, "long")
         case MessageContainer(messages=messages):
@@ -227,10 +223,7 @@ def encode_message_body(body: ByteBuffer | object) -> bytes:
         case Pong(msg_id=msg_id, ping_id=ping_id):
             return encode_constructor_id(_PONG_ID) + _pack_i64(msg_id) + _pack_i64(ping_id)
         case BadServerSalt(
-            bad_msg_id=bad_msg_id,
-            bad_msg_seq_no=bad_msg_seq_no,
-            error_code=error_code,
-            new_server_salt=new_server_salt,
+            bad_msg_id=bad_msg_id, bad_msg_seq_no=bad_msg_seq_no, error_code=error_code, new_server_salt=new_server_salt
         ):
             return (
                 encode_constructor_id(_BAD_SERVER_SALT_ID)
@@ -239,18 +232,14 @@ def encode_message_body(body: ByteBuffer | object) -> bytes:
                 + encode_int(error_code)
                 + _pack_u64(new_server_salt)
             )
-        case BadMsgNotification(
-            bad_msg_id=bad_msg_id, bad_msg_seq_no=bad_msg_seq_no, error_code=error_code
-        ):
+        case BadMsgNotification(bad_msg_id=bad_msg_id, bad_msg_seq_no=bad_msg_seq_no, error_code=error_code):
             return (
                 encode_constructor_id(_BAD_MSG_NOTIFICATION_ID)
                 + _pack_i64(bad_msg_id)
                 + encode_int(bad_msg_seq_no)
                 + encode_int(error_code)
             )
-        case NewSessionCreated(
-            first_msg_id=first_msg_id, unique_id=unique_id, server_salt=server_salt
-        ):
+        case NewSessionCreated(first_msg_id=first_msg_id, unique_id=unique_id, server_salt=server_salt):
             return (
                 encode_constructor_id(_NEW_SESSION_CREATED_ID)
                 + _pack_i64(first_msg_id)
@@ -258,17 +247,9 @@ def encode_message_body(body: ByteBuffer | object) -> bytes:
                 + _pack_u64(server_salt)
             )
         case RpcErrorBody(error_code=error_code, error_message=error_message):
-            return (
-                encode_constructor_id(_RPC_ERROR_ID)
-                + encode_int(error_code)
-                + encode_string(error_message)
-            )
+            return encode_constructor_id(_RPC_ERROR_ID) + encode_int(error_code) + encode_string(error_message)
         case RpcResult(req_msg_id=req_msg_id, result=result):
-            return (
-                encode_constructor_id(_RPC_RESULT_ID)
-                + _pack_i64(req_msg_id)
-                + encode_message_body(result)
-            )
+            return encode_constructor_id(_RPC_RESULT_ID) + _pack_i64(req_msg_id) + encode_message_body(result)
         case _:
             raise TypeError(f"cannot encode MTProto body {type(body).__name__}")
 
@@ -335,27 +316,20 @@ def decode_message_body(data: ByteBuffer) -> ByteBuffer | object:
         new_server_salt = _unpack_u64(data, offset)
         _require_consumed(data, offset + 8)
         return BadServerSalt(
-            bad_msg_id=bad_msg_id,
-            bad_msg_seq_no=bad_msg_seq_no,
-            error_code=error_code,
-            new_server_salt=new_server_salt,
+            bad_msg_id=bad_msg_id, bad_msg_seq_no=bad_msg_seq_no, error_code=error_code, new_server_salt=new_server_salt
         )
     if constructor_id == _BAD_MSG_NOTIFICATION_ID:
         bad_msg_id = _unpack_i64(data, offset)
         bad_msg_seq_no, offset = decode_int(data, offset + 8)
         error_code, offset = decode_int(data, offset)
         _require_consumed(data, offset)
-        return BadMsgNotification(
-            bad_msg_id=bad_msg_id, bad_msg_seq_no=bad_msg_seq_no, error_code=error_code
-        )
+        return BadMsgNotification(bad_msg_id=bad_msg_id, bad_msg_seq_no=bad_msg_seq_no, error_code=error_code)
     if constructor_id == _NEW_SESSION_CREATED_ID:
         first_msg_id = _unpack_i64(data, offset)
         unique_id = _unpack_i64(data, offset + 8)
         server_salt = _unpack_u64(data, offset + 16)
         _require_consumed(data, offset + 24)
-        return NewSessionCreated(
-            first_msg_id=first_msg_id, unique_id=unique_id, server_salt=server_salt
-        )
+        return NewSessionCreated(first_msg_id=first_msg_id, unique_id=unique_id, server_salt=server_salt)
     if constructor_id == _RPC_ERROR_ID:
         error_code, offset = decode_int(data, offset)
         error_message, offset = decode_string(data, offset)
@@ -372,11 +346,7 @@ def encode_ping(ping_id: int) -> bytes:
 
 
 def encode_ping_delay_disconnect(ping_id: int, disconnect_delay: int) -> bytes:
-    return (
-        encode_constructor_id(_PING_DELAY_DISCONNECT_ID)
-        + _pack_i64(ping_id)
-        + encode_int(disconnect_delay)
-    )
+    return encode_constructor_id(_PING_DELAY_DISCONNECT_ID) + _pack_i64(ping_id) + encode_int(disconnect_delay)
 
 
 def gzip_pack(body: ByteBuffer | object) -> GzipPacked:

@@ -7,11 +7,16 @@
   "generated_file_manifest": [
     "src/miniproto/raw/base.py",
     "src/miniproto/raw/types.py",
+    "src/miniproto/raw/types.pyi",
     "src/miniproto/raw/functions.py",
+    "src/miniproto/raw/functions.pyi",
+    "src/miniproto/raw/_registry.py",
+    "src/miniproto/raw/_types_shards/*.py",
+    "src/miniproto/raw/_function_shards/*.py",
     "src/miniproto/raw/errors.py",
     "docs/raw-api.md"
   ],
-  "generator_version": "2",
+  "generator_version": "3",
   "layer": 223,
   "rpc_error_count": 818,
   "rpc_error_download_url": "https://core.telegram.org/api/errors.json",

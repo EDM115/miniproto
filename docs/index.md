@@ -1,10 +1,10 @@
 # miniproto Documentation
 
-Status: initial documentation scaffold.
+Status: pre-alpha implementation documentation. The core SDK is implemented and tested with unit and fake-server coverage; live Telegram validation, minimum-Python CI, documentation build, and release-artifact gates remain incomplete.
 
 ## Install
 
-`miniproto` is planned as a Python 3.13+ package built with `uv`, `maturin`, and a bundled Rust/PyO3 extension. The PyPI `miniproto` name and crates.io `miniproto` name are already reserved with dummy low-version packages.
+`miniproto` is a Python 3.13+ package built with `uv`, `maturin`, and a bundled Rust/PyO3 extension. The PyPI `miniproto` name and crates.io `miniproto` name are already reserved with dummy low-version packages.
 
 ## Package Boundary
 
@@ -13,16 +13,20 @@ Use `miniproto` as the protocol SDK: connect, authorize, persist sessions, invok
 ## Quickstart Shape
 
 ```python
-from miniproto import Client, ClientConfig
+from miniproto import Client, ClientConfig, InMemorySessionStorage
 from miniproto.raw import functions
 
-async with Client(ClientConfig(api_id=12345, api_hash="...")) as client:
+async with Client(
+    ClientConfig(api_id=12345, api_hash="...", session_storage=InMemorySessionStorage())
+) as client:
     raw_config = await client.invoke(functions.help.GetConfig())
 ```
 
+`InMemorySessionStorage()` is deliberately explicit here because this is a throwaway example. Durable clients use encrypted SQLite by default and require an adequate constructor key or `MINIPROTO_SESSION_KEY` before construction; see [Session Security](./session-security.md).
+
 ## Current Scope
 
-The current implementation exposes the public API shape, lifecycle scaffold, storage protocols, typed session models, encrypted SQLite persistence, redaction helpers, generated Layer 214 raw API metadata classes, generated RPC error mappings, error types, update queue dispatch, native-extension fallback loading, auth plumbing, raw invocation, peer/text-message helpers, media upload/download primitives, and gated production-live Telegram smoke tests. Live Telegram integration remains opt-in and credential-controlled.
+The current implementation exposes the public API, lifecycle, storage protocols, typed session models, encrypted SQLite persistence, redaction helpers, generated Layer 223 raw API classes, generated RPC error mappings, error types, update queue dispatch, native-extension fallback loading, auth plumbing, raw invocation, peer/text-message helpers, media upload/download primitives, and gated production-live Telegram smoke tests. Live Telegram integration remains opt-in and credential-controlled.
 
 ## Session Security
 
@@ -30,7 +34,7 @@ See [Session Security](./session-security.md) for durable session key requiremen
 
 ## Raw API
 
-See [Raw API](./raw-api.md) for schema source metadata, generated raw class scope, and current serialization limits.
+See [Raw API](./raw-api.md) for generated schema source metadata, lazy loading, raw class scope, and runtime behavior.
 
 ## Media Primitives
 

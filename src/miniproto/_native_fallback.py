@@ -36,18 +36,14 @@ def mtproto_auth_key_id(auth_key: bytes) -> bytes:
     return sha1_digest(auth_key)[-8:]
 
 
-def mtproto_message_key(
-    auth_key: bytes, plaintext_with_padding: bytes, client_to_server: bool
-) -> bytes:
+def mtproto_message_key(auth_key: bytes, plaintext_with_padding: bytes, client_to_server: bool) -> bytes:
     _validate_auth_key(auth_key)
     x = _direction_offset(client_to_server)
     msg_key_large = sha256_digest(auth_key[88 + x : 120 + x] + plaintext_with_padding)
     return msg_key_large[8:24]
 
 
-def mtproto_derive_aes_key_iv(
-    auth_key: bytes, msg_key: bytes, client_to_server: bool
-) -> tuple[bytes, bytes]:
+def mtproto_derive_aes_key_iv(auth_key: bytes, msg_key: bytes, client_to_server: bool) -> tuple[bytes, bytes]:
     _validate_auth_key(auth_key)
     _validate_msg_key(msg_key)
     x = _direction_offset(client_to_server)
@@ -65,16 +61,10 @@ def mtproto_encrypt_payload(
     _validate_block_multiple(plaintext_with_padding)
     msg_key = mtproto_message_key(auth_key, plaintext_with_padding, client_to_server)
     aes_key, aes_iv = mtproto_derive_aes_key_iv(auth_key, msg_key, client_to_server)
-    return (
-        mtproto_auth_key_id(auth_key),
-        msg_key,
-        aes_256_ige_encrypt(plaintext_with_padding, aes_key, aes_iv),
-    )
+    return (mtproto_auth_key_id(auth_key), msg_key, aes_256_ige_encrypt(plaintext_with_padding, aes_key, aes_iv))
 
 
-def mtproto_decrypt_payload(
-    auth_key: bytes, msg_key: bytes, ciphertext: bytes, client_to_server: bool
-) -> bytes:
+def mtproto_decrypt_payload(auth_key: bytes, msg_key: bytes, ciphertext: bytes, client_to_server: bool) -> bytes:
     _validate_auth_key(auth_key)
     _validate_msg_key(msg_key)
     _validate_block_multiple(ciphertext)
@@ -110,9 +100,7 @@ def mtproto_encode_message(
         padding = os.urandom(_mtproto_padding_length(len(plaintext)))
     _validate_mtproto_padding(len(plaintext), padding)
     plaintext.extend(padding)
-    auth_key_id, msg_key, ciphertext = mtproto_encrypt_payload(
-        auth_key, bytes(plaintext), client_to_server
-    )
+    auth_key_id, msg_key, ciphertext = mtproto_encrypt_payload(auth_key, bytes(plaintext), client_to_server)
     return auth_key_id + msg_key + ciphertext
 
 
@@ -126,6 +114,8 @@ def mtproto_decode_message(
     msg_key = packet[8:24]
     ciphertext = packet[24:]
     plaintext = mtproto_decrypt_payload(auth_key, msg_key, ciphertext, client_to_server)
+    if not compare_digest(auth_key_id, mtproto_auth_key_id(auth_key)):
+        raise ValueError("encrypted MTProto auth_key_id does not match auth_key")
     if len(plaintext) < _MT_PROTO_ENVELOPE_HEADER_SIZE:
         raise ValueError("encrypted MTProto plaintext is too short")
     server_salt = int.from_bytes(plaintext[0:8], "little", signed=False)
@@ -135,10 +125,13 @@ def mtproto_decode_message(
     body_len = int.from_bytes(plaintext[28:32], "little", signed=True)
     if body_len < 0:
         raise ValueError("encrypted MTProto body length is invalid")
+    if body_len % 4:
+        raise ValueError("encrypted MTProto body length must be divisible by 4")
     body_offset = _MT_PROTO_ENVELOPE_HEADER_SIZE
     padding_offset = body_offset + body_len
     if padding_offset > len(plaintext):
         raise ValueError("encrypted MTProto body length is invalid")
+    _validate_mtproto_padding(padding_offset, plaintext[padding_offset:])
     return (
         auth_key_id,
         server_salt,
@@ -153,9 +146,7 @@ def mtproto_decode_message(
 def xor_bytes(left: bytes, right: bytes) -> bytes:
     if len(left) != len(right):
         raise ValueError("xor inputs must have the same length")
-    return (int.from_bytes(left, "little") ^ int.from_bytes(right, "little")).to_bytes(
-        len(left), "little"
-    )
+    return (int.from_bytes(left, "little") ^ int.from_bytes(right, "little")).to_bytes(len(left), "little")
 
 
 def aes_256_ige_encrypt(plaintext: bytes, key: bytes, iv: bytes) -> bytes:
@@ -315,20 +306,26 @@ def tl_decode_string(data: bytes, offset: int) -> tuple[str, int]:
 
 
 def tl_encode_int_vector(values: tuple[int, ...]) -> bytes:
+    count = len(values)
+    if count > 2**31 - 1:
+        raise ValueError("vector count exceeds i32 limit")
     encoded = bytearray(tl_encode_uint(_TL_VECTOR_CONSTRUCTOR_ID))
-    encoded.extend(tl_encode_int(len(values)))
+    encoded.extend(tl_encode_int(count))
     for value in values:
         encoded.extend(tl_encode_int(value))
     return bytes(encoded)
 
 
 def tl_decode_int_vector(data: bytes, offset: int) -> tuple[tuple[int, ...], int]:
+    _checked_offset(data, offset, 8)
     constructor_id, offset = tl_decode_uint(data, offset)
     if constructor_id != _TL_VECTOR_CONSTRUCTOR_ID:
         raise ValueError(f"expected Vector constructor, got 0x{constructor_id:08x}")
     count, offset = tl_decode_int(data, offset)
     if count < 0:
         raise ValueError("TL vector count cannot be negative")
+    if count > (len(data) - offset) // 4:
+        raise ValueError("vector count exceeds remaining payload")
     values: list[int] = []
     for _ in range(count):
         value, offset = tl_decode_int(data, offset)
@@ -337,20 +334,26 @@ def tl_decode_int_vector(data: bytes, offset: int) -> tuple[tuple[int, ...], int
 
 
 def tl_encode_long_vector(values: tuple[int, ...]) -> bytes:
+    count = len(values)
+    if count > 2**31 - 1:
+        raise ValueError("vector count exceeds i32 limit")
     encoded = bytearray(tl_encode_uint(_TL_VECTOR_CONSTRUCTOR_ID))
-    encoded.extend(tl_encode_int(len(values)))
+    encoded.extend(tl_encode_int(count))
     for value in values:
         encoded.extend(tl_encode_long(value))
     return bytes(encoded)
 
 
 def tl_decode_long_vector(data: bytes, offset: int) -> tuple[tuple[int, ...], int]:
+    _checked_offset(data, offset, 8)
     constructor_id, offset = tl_decode_uint(data, offset)
     if constructor_id != _TL_VECTOR_CONSTRUCTOR_ID:
         raise ValueError(f"expected Vector constructor, got 0x{constructor_id:08x}")
     count, offset = tl_decode_int(data, offset)
     if count < 0:
         raise ValueError("TL vector count cannot be negative")
+    if count > (len(data) - offset) // 8:
+        raise ValueError("vector count exceeds remaining payload")
     values: list[int] = []
     for _ in range(count):
         value, offset = tl_decode_long(data, offset)
@@ -375,8 +378,7 @@ def _direction_offset(client_to_server: bool) -> int:
 def _mtproto_padding_length(plaintext_length: int) -> int:
     return (
         _MT_PROTO_MIN_PADDING
-        + (_AES_BLOCK_SIZE - ((plaintext_length + _MT_PROTO_MIN_PADDING) % _AES_BLOCK_SIZE))
-        % _AES_BLOCK_SIZE
+        + (_AES_BLOCK_SIZE - ((plaintext_length + _MT_PROTO_MIN_PADDING) % _AES_BLOCK_SIZE)) % _AES_BLOCK_SIZE
     )
 
 
@@ -412,9 +414,7 @@ def _aes_ecb_block_cipher(key: bytes) -> Cipher:
 
 
 def _blocks(data: bytes) -> tuple[bytes, ...]:
-    return tuple(
-        data[index : index + _AES_BLOCK_SIZE] for index in range(0, len(data), _AES_BLOCK_SIZE)
-    )
+    return tuple(data[index : index + _AES_BLOCK_SIZE] for index in range(0, len(data), _AES_BLOCK_SIZE))
 
 
 def _is_prime(value: int) -> bool:

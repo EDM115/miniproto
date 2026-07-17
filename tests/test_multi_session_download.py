@@ -4,24 +4,12 @@ from itertools import pairwise
 
 import pytest
 
-from miniproto.media.multi_session import (
-    MIB,
-    assemble_download_parts,
-    download_session_count,
-    plan_download_ranges,
-)
+from miniproto.media.multi_session import MIB, assemble_download_parts, download_session_count, plan_download_ranges
 
 
 @pytest.mark.parametrize(
     ("size", "expected"),
-    [
-        (1, 1),
-        (50 * MIB, 1),
-        (50 * MIB + 1, 2),
-        (250 * MIB, 2),
-        (250 * MIB + 1, 4),
-        (2_000 * MIB, 4),
-    ],
+    [(1, 1), (50 * MIB, 1), (50 * MIB + 1, 2), (250 * MIB, 2), (250 * MIB + 1, 4), (2_000 * MIB, 4)],
 )
 def test_download_session_count_uses_benchmarked_thresholds(size: int, expected: int) -> None:
     assert download_session_count(size) == expected

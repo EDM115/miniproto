@@ -36,9 +36,7 @@ class TcpAbridgedTransport(StreamTransportBase):
                 reader, length_words * 4 - len(payload_prefix), self.config.max_payload_size
             )
         else:
-            length_words = int.from_bytes(
-                await read_exactly_bounded(reader, 3, self.config.max_payload_size), "little"
-            )
+            length_words = int.from_bytes(await read_exactly_bounded(reader, 3, self.config.max_payload_size), "little")
         return await read_exactly_bounded(reader, length_words * 4, self.config.max_payload_size)
 
 

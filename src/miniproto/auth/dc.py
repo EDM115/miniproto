@@ -19,8 +19,7 @@ class RawDCOption(Protocol):
 
 
 TEST_DC_OPTIONS: tuple[DCOption, ...] = tuple(
-    DCOption(id=dc_id, ip_address=f"test-dc-{dc_id}.telegram.local", port=443, static=True)
-    for dc_id in range(1, 6)
+    DCOption(id=dc_id, ip_address=f"test-dc-{dc_id}.telegram.local", port=443, static=True) for dc_id in range(1, 6)
 )
 
 PRODUCTION_DC_OPTIONS: tuple[DCOption, ...] = (
@@ -72,11 +71,7 @@ def dc_options_from_raw(raw_options: Iterable[RawDCOption]) -> tuple[DCOption, .
 
 
 def select_dc_option(
-    options: Iterable[DCOption],
-    dc_id: int,
-    *,
-    prefer_ipv6: bool = False,
-    allow_media_only: bool = False,
+    options: Iterable[DCOption], dc_id: int, *, prefer_ipv6: bool = False, allow_media_only: bool = False
 ) -> DCOption:
     candidates = [option for option in options if option.id == dc_id]
     if not candidates:

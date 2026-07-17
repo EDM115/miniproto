@@ -40,9 +40,7 @@ class RawUpdateUnit:
 
 
 class UpdateManager:
-    def __init__(
-        self, config: ClientConfig, storage: SessionStorage, invoke: UpdateInvoker
-    ) -> None:
+    def __init__(self, config: ClientConfig, storage: SessionStorage, invoke: UpdateInvoker) -> None:
         self._config = config
         self._storage = storage
         self._invoke = invoke
@@ -82,11 +80,7 @@ class UpdateManager:
             exc = task.exception()
             if exc is not None:
                 _emit_update_event(
-                    "updates.stop",
-                    started,
-                    outcome="error",
-                    error_type=type(exc).__name__,
-                    had_task=True,
+                    "updates.stop", started, outcome="error", error_type=type(exc).__name__, had_task=True
                 )
                 raise exc
             _emit_update_event("updates.stop", started, outcome="success", had_task=True)
@@ -109,19 +103,13 @@ class UpdateManager:
         for event in events:
             await self.emit_update(event)
         _emit_update_event(
-            "updates.handle_raw",
-            started,
-            outcome="success",
-            raw_type=type(raw_update).__name__,
-            emitted=len(events),
+            "updates.handle_raw", started, outcome="success", raw_type=type(raw_update).__name__, emitted=len(events)
         )
 
     async def emit_update(self, update: Update) -> None:
         if not self._offer_queue(self._updates, update):
             record_metric(
-                "updates.queue_dropped",
-                1,
-                attributes={"queue": "public", "policy": self._config.update_queue_overflow},
+                "updates.queue_dropped", 1, attributes={"queue": "public", "policy": self._config.update_queue_overflow}
             )
             return
         await self._dispatch_handlers(update)
@@ -131,14 +119,10 @@ class UpdateManager:
             yield await self._updates.get()
 
     @overload
-    def on(
-        self, update_type: type[UpdateT]
-    ) -> Callable[[UpdateHandler[UpdateT]], UpdateHandler[UpdateT]]: ...
+    def on(self, update_type: type[UpdateT]) -> Callable[[UpdateHandler[UpdateT]], UpdateHandler[UpdateT]]: ...
 
     @overload
-    def on(
-        self, update_type: type[UpdateT], handler: UpdateHandler[UpdateT]
-    ) -> UpdateHandler[UpdateT]: ...
+    def on(self, update_type: type[UpdateT], handler: UpdateHandler[UpdateT]) -> UpdateHandler[UpdateT]: ...
 
     def on(
         self, update_type: type[UpdateT], handler: UpdateHandler[UpdateT] | None = None
@@ -158,9 +142,7 @@ class UpdateManager:
         async with self._state_lock:
             await self._ensure_loaded()
             self._set_cursor(
-                self._current_cursor().with_state(
-                    pts=result.pts, qts=result.qts, seq=result.seq, date=result.date
-                )
+                self._current_cursor().with_state(pts=result.pts, qts=result.qts, seq=result.seq, date=result.date)
             )
             await self._persist_cursor()
             return self._current_cursor()
@@ -175,30 +157,26 @@ class UpdateManager:
             return
         payload = await self._storage.load()
         record = session_record_from_mapping(payload or {})
-        self._cursor = UpdateCursor.from_record(
-            record, duplicate_window=self._config.update_duplicate_window
-        )
-        self._duplicates = DuplicateTracker(
-            self._cursor.duplicate_keys, max_size=self._config.update_duplicate_window
-        )
+        self._cursor = UpdateCursor.from_record(record, duplicate_window=self._config.update_duplicate_window)
+        self._duplicates = DuplicateTracker(self._cursor.duplicate_keys, max_size=self._config.update_duplicate_window)
 
     async def _persist_cursor(self) -> None:
         cursor = self._current_cursor().with_duplicate_keys(self._duplicates.keys())
         self._cursor = cursor
-        payload = await self._storage.load()
-        record = session_record_from_mapping(payload or {})
-        updated = SessionRecord(
-            dc_id=record.dc_id,
-            auth_key=record.auth_key,
-            dc_options=record.dc_options,
-            user=record.user,
-            update_state=cursor.to_update_state(),
-            peers=merge_peer_cache_entries(record.peers, cursor.entities),
-            metadata=metadata_with_duplicate_keys(
-                record.metadata, cursor.duplicate_keys, cursor.channel_cursors
-            ),
-        )
-        await self._storage.save(updated)
+
+        def persist(payload):
+            record = session_record_from_mapping(payload or {})
+            return SessionRecord(
+                dc_id=record.dc_id,
+                auth_key=record.auth_key,
+                dc_options=record.dc_options,
+                user=record.user,
+                update_state=cursor.to_update_state(),
+                peers=merge_peer_cache_entries(record.peers, cursor.entities),
+                metadata=metadata_with_duplicate_keys(record.metadata, cursor.duplicate_keys, cursor.channel_cursors),
+            )
+
+        await self._storage.mutate(persist)
 
     async def _process_raw_update(self, raw_update: object) -> list[Update]:
         self._remember_entities(_extract_entity_references(raw_update))
@@ -237,9 +215,7 @@ class UpdateManager:
         for _ in range(_MAX_DIFFERENCE_ROUNDS):
             cursor = self._current_cursor()
             difference = await self._invoke(
-                functions.UpdatesGetDifference(
-                    pts=cursor.pts, date=int(cursor.date.timestamp()), qts=cursor.qts
-                )
+                functions.UpdatesGetDifference(pts=cursor.pts, date=int(cursor.date.timestamp()), qts=cursor.qts)
             )
             if not isinstance(
                 difference,
@@ -252,17 +228,9 @@ class UpdateManager:
             recovered.extend(self._apply_difference(difference))
             if not isinstance(difference, types.UpdatesDifferenceSlice):
                 events = _ordered_events(recovered)
-                _emit_update_event(
-                    "updates.recover_gap",
-                    started,
-                    outcome="success",
-                    rounds=_ + 1,
-                    emitted=len(events),
-                )
+                _emit_update_event("updates.recover_gap", started, outcome="success", rounds=_ + 1, emitted=len(events))
                 return events
-        _emit_update_event(
-            "updates.recover_gap", started, outcome="error", error_type="NoConvergence"
-        )
+        _emit_update_event("updates.recover_gap", started, outcome="error", error_type="NoConvergence")
         raise RuntimeError("updates.getDifference did not converge")
 
     async def _recover_channel_gap(self, channel_id: int) -> list[Update]:
@@ -285,10 +253,7 @@ class UpdateManager:
             cursor = self._current_cursor().channel_cursor(channel_id)
             difference = await self._invoke(
                 functions.UpdatesGetChannelDifference(
-                    channel=input_channel,
-                    filter=types.ChannelMessagesFilterEmpty(),
-                    pts=cursor.pts,
-                    limit=100,
+                    channel=input_channel, filter=types.ChannelMessagesFilterEmpty(), pts=cursor.pts, limit=100
                 )
             )
             if not isinstance(
@@ -297,9 +262,7 @@ class UpdateManager:
                 | types.UpdatesChannelDifference
                 | types.UpdatesChannelDifferenceTooLong,
             ):
-                raise TypeError(
-                    "updates.getChannelDifference returned a non-channel difference result"
-                )
+                raise TypeError("updates.getChannelDifference returned a non-channel difference result")
             recovered.extend(self._apply_channel_difference(channel_id, difference))
             if getattr(difference, "final", True):
                 events = _ordered_events(recovered)
@@ -313,20 +276,14 @@ class UpdateManager:
                 )
                 return events
         _emit_update_event(
-            "updates.recover_channel_gap",
-            started,
-            outcome="error",
-            error_type="NoConvergence",
-            channel_id=channel_id,
+            "updates.recover_channel_gap", started, outcome="error", error_type="NoConvergence", channel_id=channel_id
         )
         raise RuntimeError("updates.getChannelDifference did not converge")
 
     def _apply_difference(self, difference: object) -> list[Update]:
         self._remember_entities(_extract_entity_references(difference))
         if isinstance(difference, types.UpdatesDifferenceEmpty):
-            self._set_cursor(
-                self._current_cursor().with_state(seq=difference.seq, date=difference.date)
-            )
+            self._set_cursor(self._current_cursor().with_state(seq=difference.seq, date=difference.date))
             return []
         if isinstance(difference, types.UpdatesDifferenceTooLong):
             self._set_cursor(self._current_cursor().with_state(pts=difference.pts))
@@ -344,9 +301,7 @@ class UpdateManager:
             )
             if isinstance(state, types.UpdatesState):
                 self._set_cursor(
-                    self._current_cursor().with_state(
-                        pts=state.pts, qts=state.qts, seq=state.seq, date=state.date
-                    )
+                    self._current_cursor().with_state(pts=state.pts, qts=state.qts, seq=state.seq, date=state.date)
                 )
             return _ordered_events(events)
         return []
@@ -354,9 +309,7 @@ class UpdateManager:
     def _apply_channel_difference(self, channel_id: int, difference: object) -> list[Update]:
         self._remember_entities(_extract_entity_references(difference))
         if isinstance(difference, types.UpdatesChannelDifferenceEmpty):
-            self._set_cursor(
-                self._current_cursor().with_channel_state(channel_id, pts=difference.pts)
-            )
+            self._set_cursor(self._current_cursor().with_channel_state(channel_id, pts=difference.pts))
             return []
         if isinstance(difference, types.UpdatesChannelDifference):
             events: list[Update] = []
@@ -364,9 +317,7 @@ class UpdateManager:
                 events.extend(self._apply_update_unit(RawUpdateUnit(raw=message)))
             for update in difference.other_updates:
                 events.extend(self._apply_update_unit(RawUpdateUnit(raw=update)))
-            self._set_cursor(
-                self._current_cursor().with_channel_state(channel_id, pts=difference.pts)
-            )
+            self._set_cursor(self._current_cursor().with_channel_state(channel_id, pts=difference.pts))
             return _ordered_events(events)
         if isinstance(difference, types.UpdatesChannelDifferenceTooLong):
             events = [
@@ -383,9 +334,7 @@ class UpdateManager:
         cursor = self._current_cursor()
         pts = _optional_int_attr(raw, "pts")
         channel_id = _channel_id_from_update(raw)
-        comparison_pts = (
-            cursor.channel_cursor(channel_id).pts if channel_id is not None else cursor.pts
-        )
+        comparison_pts = cursor.channel_cursor(channel_id).pts if channel_id is not None else cursor.pts
         if pts is not None and pts <= comparison_pts:
             self._duplicates.add(key)
             return []
@@ -436,9 +385,7 @@ class UpdateManager:
             pts_count = _optional_int_attr(unit.raw, "pts_count")
             if pts is None or pts_count is None:
                 continue
-            expected_pts = expected_by_channel.get(
-                channel_id, self._current_cursor().channel_cursor(channel_id).pts
-            )
+            expected_pts = expected_by_channel.get(channel_id, self._current_cursor().channel_cursor(channel_id).pts)
             if expected_pts == 0:
                 expected_by_channel[channel_id] = max(expected_pts, pts)
                 continue
@@ -475,17 +422,13 @@ class UpdateManager:
     def _offer_queue(self, queue: asyncio.Queue[Any], item: Any) -> bool:
         try:
             queue.put_nowait(item)
-            record_metric(
-                "updates.queue_depth", queue.qsize(), attributes={"max_size": queue.maxsize}
-            )
+            record_metric("updates.queue_depth", queue.qsize(), attributes={"max_size": queue.maxsize})
             return True
         except asyncio.QueueFull:
             policy = self._config.update_queue_overflow
             if policy == "drop_newest":
                 record_metric(
-                    "updates.queue_dropped",
-                    1,
-                    attributes={"policy": policy, "item_type": type(item).__name__},
+                    "updates.queue_dropped", 1, attributes={"policy": policy, "item_type": type(item).__name__}
                 )
                 return False
             if policy == "drop_oldest":
@@ -493,9 +436,7 @@ class UpdateManager:
                     queue.get_nowait()
                 queue.put_nowait(item)
                 record_metric(
-                    "updates.queue_dropped",
-                    1,
-                    attributes={"policy": policy, "item_type": type(item).__name__},
+                    "updates.queue_dropped", 1, attributes={"policy": policy, "item_type": type(item).__name__}
                 )
                 return True
             raise
@@ -518,11 +459,7 @@ class UpdateManager:
 
     def _input_channel_for_channel(self, channel_id: int) -> object | None:
         for entity in self._current_cursor().entities:
-            if (
-                entity.kind == "channel"
-                and entity.id == channel_id
-                and entity.access_hash is not None
-            ):
+            if entity.kind == "channel" and entity.id == channel_id and entity.access_hash is not None:
                 return types.InputChannel(channel_id=channel_id, access_hash=entity.access_hash)
         return None
 
@@ -531,13 +468,8 @@ def _iter_update_units(raw_update: object) -> tuple[RawUpdateUnit, ...]:
     if isinstance(raw_update, types.UpdateShort):
         return (RawUpdateUnit(raw=raw_update.update, date=raw_update.date),)
     if isinstance(raw_update, types.Updates | types.UpdatesCombined):
-        return tuple(
-            RawUpdateUnit(raw=update, date=raw_update.date) for update in raw_update.updates
-        )
-    if isinstance(
-        raw_update,
-        types.UpdateShortMessage | types.UpdateShortChatMessage | types.UpdateShortSentMessage,
-    ):
+        return tuple(RawUpdateUnit(raw=update, date=raw_update.date) for update in raw_update.updates)
+    if isinstance(raw_update, types.UpdateShortMessage | types.UpdateShortChatMessage | types.UpdateShortSentMessage):
         return (RawUpdateUnit(raw=raw_update, date=raw_update.date),)
     return (RawUpdateUnit(raw=raw_update),)
 
@@ -551,11 +483,7 @@ def _public_updates_from_raw(raw: object, fallback_date: object | None = None) -
     if isinstance(raw, types.UpdateShortChatMessage):
         peer = Peer(id=raw.chat_id, kind="chat")
         message = Message(id=raw.id, peer=peer, text=raw.message, date=date, raw=raw)
-        return [
-            NewMessage(
-                date=date, raw=raw, message=message, metadata=_metadata(raw, from_id=raw.from_id)
-            )
-        ]
+        return [NewMessage(date=date, raw=raw, message=message, metadata=_metadata(raw, from_id=raw.from_id))]
     if isinstance(raw, types.UpdateNewMessage | types.UpdateNewChannelMessage):
         return _public_updates_from_message(raw.message, raw)
     if isinstance(raw, types.Message):
@@ -569,12 +497,7 @@ def _public_updates_from_message(raw_message: object, raw_update: object) -> lis
     date = _raw_date(raw_message, None)
     peer = _peer_from_raw_peer(raw_message.peer_id)
     message = Message(
-        id=raw_message.id,
-        peer=peer,
-        text=raw_message.message,
-        date=date,
-        media=raw_message.media,
-        raw=raw_message,
+        id=raw_message.id, peer=peer, text=raw_message.message, date=date, media=raw_message.media, raw=raw_message
     )
     return [NewMessage(date=date, raw=raw_update, message=message, metadata=_metadata(raw_update))]
 
@@ -611,8 +534,7 @@ def _extract_entity_references(raw: object) -> tuple[EntityReference, ...]:
                     access_hash=None if user.min else user.access_hash,
                     username=user.username,
                     phone=user.phone,
-                    title=" ".join(part for part in (user.first_name, user.last_name) if part)
-                    or None,
+                    title=" ".join(part for part in (user.first_name, user.last_name) if part) or None,
                 )
             )
     for chat in _iter_attr_tuple(raw, "chats"):
@@ -658,9 +580,7 @@ def _metadata(raw: object, **extra: object) -> dict[str, object]:
 
 
 def _ordered_events(events: Iterable[Update]) -> list[Update]:
-    return [
-        event for _, event in sorted(enumerate(events), key=lambda item: (item[1].date, item[0]))
-    ]
+    return [event for _, event in sorted(enumerate(events), key=lambda item: (item[1].date, item[0]))]
 
 
 def _raw_update_key(raw: object) -> str:

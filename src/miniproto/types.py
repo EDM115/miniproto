@@ -32,9 +32,7 @@ class User:
 
     @property
     def peer(self) -> Peer:
-        return Peer(
-            id=self.id, kind="self" if self.is_self else "user", access_hash=self.access_hash
-        )
+        return Peer(id=self.id, kind="self" if self.is_self else "user", access_hash=self.access_hash)
 
 
 @dataclass(slots=True, frozen=True)

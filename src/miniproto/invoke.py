@@ -84,6 +84,7 @@ class RawSender(Protocol):
         body: bytes | object,
         *,
         content_related: bool = True,
+        retry_safe: bool,
         request_timeout: float | None = None,
     ) -> object: ...
     async def disconnect(self) -> None: ...
@@ -93,11 +94,7 @@ SenderFactory = Callable[[SessionRecord], RawSender | Awaitable[RawSender]]
 
 
 def wrap_raw_request(
-    raw_request: object,
-    config: ClientConfig,
-    *,
-    needs_init: bool = True,
-    without_updates: bool = False,
+    raw_request: object, config: ClientConfig, *, needs_init: bool = True, without_updates: bool = False
 ) -> object:
     """Wrap a raw request for transmission.
 
@@ -142,9 +139,7 @@ def decode_rpc_response(raw_result: object, raw_request: object) -> object:
     expected_type = result_type_for_request(raw_request)
     result = decode_result_payload(raw_result, expected_type)
     if isinstance(result, RpcErrorBody):
-        raise classify_rpc_error(
-            RpcError(result.error_message, code=result.error_code, request=raw_request)
-        )
+        raise classify_rpc_error(RpcError(result.error_message, code=result.error_code, request=raw_request))
     if isinstance(result, types.Error):
         raise classify_rpc_error(RpcError(result.text, code=result.code, request=raw_request))
     validate_result_type(result, expected_type, raw_request)
@@ -190,9 +185,7 @@ def _is_retryable_request_type(request_type: type[object]) -> bool:
 
 
 def should_retry_rpc_error(error: RpcError) -> bool:
-    return isinstance(error, RpcTimeout | InternalServerError) or (
-        error.code is not None and error.code >= 500
-    )
+    return isinstance(error, RpcTimeout | InternalServerError) or (error.code is not None and error.code >= 500)
 
 
 def should_sleep_for_flood_wait(error: FloodWait, threshold: int | None) -> bool:
@@ -258,9 +251,7 @@ async def build_sender_from_session(
     # preserving the persisted salt/auth key.
     session_id = secrets.randbits(64)
     reconnect_attempts = (
-        config.max_reconnect_attempts
-        if config.max_reconnect_attempts is not None
-        else config.max_request_retries + 1
+        config.max_reconnect_attempts if config.max_reconnect_attempts is not None else config.max_request_retries + 1
     )
     return MTProtoSender(
         ConnectionEndpoint(option.ip_address, option.port),
@@ -273,11 +264,13 @@ async def build_sender_from_session(
 
 
 async def clear_invalid_auth_key(storage: SessionStorage, config: ClientConfig) -> None:
-    payload = await storage.load()
-    record = load_session_record(payload, config.dc_id)
-    if record.auth_key is None and record.user is None:
-        return
-    await storage.save(replace(record, auth_key=None, user=None))
+    def clear_auth(payload: Mapping[str, Any] | None) -> SessionRecord:
+        record = load_session_record(payload, config.dc_id)
+        if record.auth_key is None and record.user is None:
+            return record
+        return replace(record, auth_key=None, user=None)
+
+    await storage.mutate(clear_auth)
 
 
 def wrap_transport_failure(exc: BaseException, raw_request: object, *, connected: bool) -> RpcError:
@@ -377,9 +370,7 @@ def _record_from_legacy_mapping(data: Mapping[str, Any], dc_id: int) -> SessionR
 
 
 def _looks_like_phase2_record(data: Mapping[str, Any]) -> bool:
-    return "version" in data and any(
-        key in data for key in ("dc_options", "user", "update_state", "peers", "metadata")
-    )
+    return "version" in data and any(key in data for key in ("dc_options", "user", "update_state", "peers", "metadata"))
 
 
 def _optional_int(value: object) -> int | None:

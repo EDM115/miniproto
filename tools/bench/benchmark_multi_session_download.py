@@ -132,17 +132,13 @@ def main(argv: list[str] | None = None) -> int:
     return event_loop.run(run_benchmark(args, env))
 
 
-def parse_args(
-    argv: list[str] | None = None, env: Mapping[str, str] | None = None
-) -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None, env: Mapping[str, str] | None = None) -> argparse.Namespace:
     values = {} if env is None else env
     json_path = env_value(values, "MINIPROTO_MULTI_SESSION_DOWNLOAD_JSON") or env_value(
         values, "MINIPROTO_LIVE_BENCH_JSON"
     )
     output_path = env_value(values, "MINIPROTO_MULTI_SESSION_DOWNLOAD_OUTPUT")
-    verify_digest_against = env_value(
-        values, "MINIPROTO_MULTI_SESSION_DOWNLOAD_VERIFY_DIGEST_AGAINST"
-    )
+    verify_digest_against = env_value(values, "MINIPROTO_MULTI_SESSION_DOWNLOAD_VERIFY_DIGEST_AGAINST")
     parser = argparse.ArgumentParser(
         description="Run an opt-in live benchmark that splits one Telegram download across multiple independent miniproto session files."
     )
@@ -179,9 +175,7 @@ def parse_args(
         type=int,
         default=int(
             env_value(
-                values,
-                "MINIPROTO_MULTI_SESSION_DOWNLOAD_DC_ID",
-                env_value(values, "MINIPROTO_LIVE_BENCH_DC_ID", "2"),
+                values, "MINIPROTO_MULTI_SESSION_DOWNLOAD_DC_ID", env_value(values, "MINIPROTO_LIVE_BENCH_DC_ID", "2")
             )
             or "2"
         ),
@@ -202,10 +196,7 @@ def parse_args(
         help=f"directory for parts and assembled output; defaults to {DEFAULT_DOWNLOAD_DIR}",
     )
     parser.add_argument(
-        "--output",
-        type=Path,
-        default=Path(output_path) if output_path else None,
-        help="optional assembled output path",
+        "--output", type=Path, default=Path(output_path) if output_path else None, help="optional assembled output path"
     )
     parser.add_argument(
         "--no-assemble",
@@ -228,17 +219,13 @@ def parse_args(
     parser.add_argument(
         "--request-timeout",
         type=float,
-        default=float(
-            env_value(values, "MINIPROTO_MULTI_SESSION_DOWNLOAD_REQUEST_TIMEOUT", "120") or "120"
-        ),
+        default=float(env_value(values, "MINIPROTO_MULTI_SESSION_DOWNLOAD_REQUEST_TIMEOUT", "120") or "120"),
         help="base MTProto request timeout in seconds",
     )
     parser.add_argument(
         "--download-request-timeout",
         type=float,
-        default=float(
-            env_value(values, "MINIPROTO_MULTI_SESSION_DOWNLOAD_PART_TIMEOUT", "30") or "30"
-        ),
+        default=float(env_value(values, "MINIPROTO_MULTI_SESSION_DOWNLOAD_PART_TIMEOUT", "30") or "30"),
         help="per upload.getFile part timeout in seconds",
     )
     parser.add_argument(
@@ -246,18 +233,14 @@ def parse_args(
         type=int,
         default=int(
             env_value(
-                values,
-                "MINIPROTO_MULTI_SESSION_DOWNLOAD_PER_SESSION_CONCURRENCY",
-                str(DEFAULT_PER_SESSION_CONCURRENCY),
+                values, "MINIPROTO_MULTI_SESSION_DOWNLOAD_PER_SESSION_CONCURRENCY", str(DEFAULT_PER_SESSION_CONCURRENCY)
             )
             or str(DEFAULT_PER_SESSION_CONCURRENCY)
         ),
         help=f"download concurrency inside each independent session; defaults to {DEFAULT_PER_SESSION_CONCURRENCY} to isolate auth-key scaling",
     )
     media_lanes = env_value(
-        values,
-        "MINIPROTO_MULTI_SESSION_DOWNLOAD_PER_SESSION_MEDIA_LANES",
-        str(DEFAULT_PER_SESSION_MEDIA_LANES),
+        values, "MINIPROTO_MULTI_SESSION_DOWNLOAD_PER_SESSION_MEDIA_LANES", str(DEFAULT_PER_SESSION_MEDIA_LANES)
     )
     parser.add_argument(
         "--per-session-media-lanes",
@@ -269,9 +252,7 @@ def parse_args(
         "--download-chunk-size",
         type=int,
         default=int(
-            env_value(
-                values, "MINIPROTO_MULTI_SESSION_DOWNLOAD_CHUNK_SIZE", str(DEFAULT_CHUNK_SIZE)
-            )
+            env_value(values, "MINIPROTO_MULTI_SESSION_DOWNLOAD_CHUNK_SIZE", str(DEFAULT_CHUNK_SIZE))
             or str(DEFAULT_CHUNK_SIZE)
         ),
         help=f"initial upload.getFile chunk size; defaults to {DEFAULT_CHUNK_SIZE}",
@@ -280,11 +261,7 @@ def parse_args(
         "--download-max-chunk-size",
         type=int,
         default=int(
-            env_value(
-                values,
-                "MINIPROTO_MULTI_SESSION_DOWNLOAD_MAX_CHUNK_SIZE",
-                str(MAX_DOWNLOAD_CHUNK_SIZE),
-            )
+            env_value(values, "MINIPROTO_MULTI_SESSION_DOWNLOAD_MAX_CHUNK_SIZE", str(MAX_DOWNLOAD_CHUNK_SIZE))
             or str(MAX_DOWNLOAD_CHUNK_SIZE)
         ),
         help=f"adaptive maximum upload.getFile chunk size; defaults to {MAX_DOWNLOAD_CHUNK_SIZE}",
@@ -312,9 +289,7 @@ def parse_args(
         dest="download_adaptive_concurrency",
         help="disable per-session adaptive concurrency",
     )
-    default_adaptive_part_size = env_bool(
-        values, "MINIPROTO_MULTI_SESSION_DOWNLOAD_ADAPTIVE_PART_SIZE", default=True
-    )
+    default_adaptive_part_size = env_bool(values, "MINIPROTO_MULTI_SESSION_DOWNLOAD_ADAPTIVE_PART_SIZE", default=True)
     parser.set_defaults(download_adaptive_part_size=default_adaptive_part_size)
     parser.add_argument(
         "--download-adaptive-part-size",
@@ -337,18 +312,13 @@ def parse_args(
     parser.add_argument(
         "--download-flood-sleep-threshold",
         type=int,
-        default=int(
-            env_value(values, "MINIPROTO_MULTI_SESSION_DOWNLOAD_FLOOD_SLEEP_THRESHOLD", "30")
-            or "30"
-        ),
+        default=int(env_value(values, "MINIPROTO_MULTI_SESSION_DOWNLOAD_FLOOD_SLEEP_THRESHOLD", "30") or "30"),
         help="maximum FLOOD_WAIT seconds to sleep and retry inside each part",
     )
     parser.add_argument(
         "--allow-duplicate-auth-keys",
         action="store_true",
-        default=env_bool(
-            values, "MINIPROTO_MULTI_SESSION_DOWNLOAD_ALLOW_DUPLICATE_AUTH_KEYS", default=False
-        ),
+        default=env_bool(values, "MINIPROTO_MULTI_SESSION_DOWNLOAD_ALLOW_DUPLICATE_AUTH_KEYS", default=False),
         help="allow running even when two session files contain the same MTProto auth key id",
     )
     parser.add_argument(
@@ -360,9 +330,7 @@ def parse_args(
     parser.add_argument(
         "--progress-interval",
         type=float,
-        default=float(
-            env_value(values, "MINIPROTO_MULTI_SESSION_DOWNLOAD_PROGRESS_INTERVAL", "5") or "5"
-        ),
+        default=float(env_value(values, "MINIPROTO_MULTI_SESSION_DOWNLOAD_PROGRESS_INTERVAL", "5") or "5"),
         help="seconds between progress lines; set 0 to disable",
     )
     parser.add_argument(
@@ -400,16 +368,9 @@ def parse_args(
     if args.download_chunk_size <= 0:
         parser.error("--download-chunk-size must be positive")
     if args.download_max_chunk_size < args.download_chunk_size:
-        parser.error(
-            "--download-max-chunk-size must be greater than or equal to --download-chunk-size"
-        )
-    if (
-        args.download_max_in_flight_bytes is not None
-        and args.download_max_in_flight_bytes < args.download_chunk_size
-    ):
-        parser.error(
-            "--download-max-in-flight-bytes must be greater than or equal to --download-chunk-size"
-        )
+        parser.error("--download-max-chunk-size must be greater than or equal to --download-chunk-size")
+    if args.download_max_in_flight_bytes is not None and args.download_max_in_flight_bytes < args.download_chunk_size:
+        parser.error("--download-max-in-flight-bytes must be greater than or equal to --download-chunk-size")
     if args.download_part_retries < 0:
         parser.error("--download-part-retries must not be negative")
     if args.download_flood_sleep_threshold < 0:
@@ -444,9 +405,7 @@ async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int
             )
             clients.append(client)
             session_summaries.append(session)
-        duplicate_groups = duplicate_auth_key_groups(
-            tuple(session.auth_key_id_hex for session in session_summaries)
-        )
+        duplicate_groups = duplicate_auth_key_groups(tuple(session.auth_key_id_hex for session in session_summaries))
         if duplicate_groups and not args.allow_duplicate_auth_keys:
             groups = ", ".join(f"{key}:{indices}" for key, indices in duplicate_groups.items())
             raise SystemExit(
@@ -502,8 +461,7 @@ async def run_download_split(
     run_id = int(time.time())
     target_name = safe_file_name(media.file_name or f"telegram-file-{size}.bin")
     part_paths = tuple(
-        args.download_dir / f"multi-session-{args.actor}-{run_id}-worker{shard.index:02d}.part"
-        for shard in ranges
+        args.download_dir / f"multi-session-{args.actor}-{run_id}-worker{shard.index:02d}.part" for shard in ranges
     )
     output_path = (
         None
@@ -567,16 +525,13 @@ async def run_download_split(
         await asyncio.to_thread(assemble_parts, part_paths, output_path, expected_size=size)
         if args.verify_digest_against is not None:
             source_digest, target_digest = await asyncio.gather(
-                asyncio.to_thread(file_digest, args.verify_digest_against),
-                asyncio.to_thread(file_digest, output_path),
+                asyncio.to_thread(file_digest, args.verify_digest_against), asyncio.to_thread(file_digest, output_path)
             )
             if source_digest != target_digest:
                 raise RuntimeError(f"assembled digest mismatch: {source_digest} != {target_digest}")
             digest_verified = True
         if not args.keep_parts:
-            await asyncio.gather(
-                *(asyncio.to_thread(path.unlink, missing_ok=True) for path in part_paths)
-            )
+            await asyncio.gather(*(asyncio.to_thread(path.unlink, missing_ok=True) for path in part_paths))
         duration += max(time.perf_counter() - finalize_started, 0.0)
     counters = transfer_counters(metrics, "download", transfer_duration)
     return MultiSessionDownloadSummary(
@@ -609,9 +564,7 @@ async def run_download_split(
         sessions=sessions,
         workers=worker_summaries,
         output_path=str(output_path) if output_path is not None else None,
-        part_paths=tuple(
-            str(path) for path in part_paths if args.keep_parts or output_path is None
-        ),
+        part_paths=tuple(str(path) for path in part_paths if args.keep_parts or output_path is None),
         digest_verified=digest_verified,
     )
 
@@ -648,9 +601,7 @@ async def download_worker(
     )
     duration = max(time.perf_counter() - started, 1e-9)
     if result.bytes_downloaded != shard.limit:
-        raise RuntimeError(
-            f"worker {shard.index} size mismatch: expected {shard.limit}, got {result.bytes_downloaded}"
-        )
+        raise RuntimeError(f"worker {shard.index} size mismatch: expected {shard.limit}, got {result.bytes_downloaded}")
     return WorkerSummary(
         index=shard.index,
         session_path=str(session_path),
@@ -664,24 +615,15 @@ async def download_worker(
 
 
 async def authorized_client_for_session(
-    *,
-    actor: Actor,
-    session_path: Path,
-    session_index: int,
-    args: argparse.Namespace,
-    env: Mapping[str, str],
+    *, actor: Actor, session_path: Path, session_index: int, args: argparse.Namespace, env: Mapping[str, str]
 ) -> tuple[Client, SessionSummary]:
-    storage = EncryptedSQLiteSessionStorage(
-        session_path, key=required_env(env, "MINIPROTO_SESSION_KEY")
-    )
+    storage = EncryptedSQLiteSessionStorage(session_path, key=required_env(env, "MINIPROTO_SESSION_KEY"))
     client = Client(
         ClientConfig(
             api_id=int(required_env(env, "MINIPROTO_API_ID")),
             api_hash=required_env(env, "MINIPROTO_API_HASH"),
             session_storage=storage,
-            transport=TransportConfig(
-                read_timeout=args.request_timeout, write_timeout=args.request_timeout
-            ),
+            transport=TransportConfig(read_timeout=args.request_timeout, write_timeout=args.request_timeout),
             dc_id=args.dc_id,
             test_mode=False,
             request_timeout=args.request_timeout,
@@ -695,9 +637,7 @@ async def authorized_client_for_session(
         if record.user is None or not record.user.is_bot:
             await client.sign_in_bot(required_env(env, "MINIPROTO_BOT_TOKEN"))
     elif record.user is None or record.user.is_bot:
-        await client.sign_in_phone(
-            required_env(env, "MINIPROTO_REAL_PHONE"), lambda: prompt_code(env)
-        )
+        await client.sign_in_phone(required_env(env, "MINIPROTO_REAL_PHONE"), lambda: prompt_code(env))
     record = load_session_record(await storage.load(), client.config.dc_id)
     if actor == "bot" and (record.user is None or not record.user.is_bot):
         raise RuntimeError(f"session {session_path} is not authorized as a bot")
@@ -725,9 +665,7 @@ def download_size(args: argparse.Namespace, media: Media) -> int:
     if args.size:
         return parse_size(str(args.size))
     if media.size is None:
-        raise SystemExit(
-            "file id does not include size metadata; pass --size or MINIPROTO_MULTI_SESSION_DOWNLOAD_SIZE"
-        )
+        raise SystemExit("file id does not include size metadata; pass --size or MINIPROTO_MULTI_SESSION_DOWNLOAD_SIZE")
     return int(media.size)
 
 
@@ -740,8 +678,7 @@ def resolve_session_paths(args: argparse.Namespace, env: Mapping[str, str]) -> t
         if paths:
             return paths
     return tuple(
-        Path(".tmp")
-        / f"miniproto-multi-session-download-{args.actor}-{index}-dc{args.dc_id}.sqlite"
+        Path(".tmp") / f"miniproto-multi-session-download-{args.actor}-{index}-dc{args.dc_id}.sqlite"
         for index in range(args.clients)
     )
 
@@ -804,9 +741,7 @@ def require_common_live_env(env: Mapping[str, str]) -> None:
     if env_value(env, "MINIPROTO_REAL_INTEGRATION") != "1":
         raise SystemExit("set MINIPROTO_REAL_INTEGRATION=1 for production Telegram benchmarks")
     missing = [
-        name
-        for name in ("MINIPROTO_API_ID", "MINIPROTO_API_HASH", "MINIPROTO_SESSION_KEY")
-        if not env_value(env, name)
+        name for name in ("MINIPROTO_API_ID", "MINIPROTO_API_HASH", "MINIPROTO_SESSION_KEY") if not env_value(env, name)
     ]
     if missing:
         raise SystemExit(f"missing live benchmark environment variables: {', '.join(missing)}")

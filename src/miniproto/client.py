@@ -12,11 +12,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any, TypeVar, cast, overload
 
-from miniproto.auth.bootstrap import (
-    UnencryptedAuthKeyTransport,
-    ensure_auth_key,
-    telegram_rsa_public_keys,
-)
+from miniproto.auth.bootstrap import UnencryptedAuthKeyTransport, ensure_auth_key, telegram_rsa_public_keys
 from miniproto.auth.dc import select_dc_option
 from miniproto.auth.key_exchange import AuthKeyExchange
 from miniproto.auth.service import AuthService
@@ -29,15 +25,11 @@ from miniproto.errors import (
     FloodWait,
     InvalidDatacenter,
     RpcError,
+    SessionStorageError,
     Unauthorized,
     classify_rpc_error,
 )
-from miniproto.file_id import (
-    decode_file_id,
-    input_media_from_file_id,
-    is_file_id,
-    media_from_file_id,
-)
+from miniproto.file_id import decode_file_id, input_media_from_file_id, is_file_id, media_from_file_id
 from miniproto.invoke import (
     RawSender,
     SenderFactory,
@@ -66,11 +58,7 @@ from miniproto.media import (
     upload_file,
 )
 from miniproto.media import download_media as download_media_file
-from miniproto.media.multi_session import (
-    assemble_download_parts,
-    download_session_count,
-    plan_download_ranges,
-)
+from miniproto.media.multi_session import assemble_download_parts, download_session_count, plan_download_ranges
 from miniproto.media.upload import DEFAULT_UPLOAD_CONCURRENCY
 from miniproto.messages import (
     make_random_id,
@@ -84,7 +72,7 @@ from miniproto.observability import emit_event, get_logger, record_metric
 from miniproto.peers import PeerCache, input_channel_from_peer, input_peer_from_peer
 from miniproto.raw import functions, types
 from miniproto.session.storage import (
-    InMemorySessionStorage,
+    EncryptedSQLiteSessionStorage,
     SessionPayload,
     SessionStorage,
     deserialize_session_data,
@@ -104,28 +92,108 @@ class _CachedSessionStorage:
     def __init__(self, storage: SessionStorage) -> None:
         self._storage = storage
         self._cached: Mapping[str, Any] | None | object = _SESSION_CACHE_EMPTY
+        self._lock = asyncio.Lock()
+        self._closed = False
+        self._revisions = dict(storage.domain_revisions())
 
     async def load(self) -> Mapping[str, Any] | None:
-        if self._cached is _SESSION_CACHE_EMPTY:
-            self._cached = await self._storage.load()
-        return _copy_session_payload(self._cached)
+        async with self._lock:
+            self._ensure_open()
+            if self._cached is _SESSION_CACHE_EMPTY:
+                await _complete_storage_operation(self._storage.load(), lambda loaded: self._reconcile(loaded))
+            return _copy_session_payload(self._cached)
 
     async def save(self, data: SessionPayload) -> None:
-        await self._storage.save(data)
-        self._cached = _copy_session_payload(data)
+        async with self._lock:
+            self._ensure_open()
+            await _complete_storage_operation(self._storage.save(data), lambda _result: self._reconcile(data))
+
+    async def mutate(
+        self, transform: Callable[[Mapping[str, Any] | None], SessionPayload | None]
+    ) -> Mapping[str, Any] | None:
+        async with self._lock:
+            self._ensure_open()
+            committed = await _complete_storage_operation(self._storage.mutate(transform), self._reconcile)
+            return _copy_session_payload(committed)
+
+    def domain_revisions(self) -> Mapping[str, int]:
+        return dict(self._revisions)
 
     async def clear(self) -> None:
-        await self._storage.clear()
-        self._cached = None
+        async with self._lock:
+            self._ensure_open()
+            await _complete_storage_operation(self._storage.clear(), lambda _result: self._reconcile(None))
 
     async def close(self) -> None:
-        await self._storage.close()
+        async with self._lock:
+            if self._closed:
+                return
+            await _complete_storage_operation(self._storage.close(), lambda _result: setattr(self, "_closed", True))
+
+    def _reconcile(self, data: SessionPayload | None) -> None:
+        self._cached = _copy_session_payload(data)
+        self._revisions = dict(self._storage.domain_revisions())
+
+    def _ensure_open(self) -> None:
+        if self._closed:
+            raise SessionStorageError("session storage is closed")
+
+
+async def _complete_storage_operation[StorageResultT](
+    operation: Awaitable[StorageResultT], reconcile: Callable[[StorageResultT], None]
+) -> StorageResultT:
+    pending = asyncio.ensure_future(operation)
+    cancellation: asyncio.CancelledError | None = None
+    while not pending.done():
+        try:
+            await asyncio.shield(pending)
+        except asyncio.CancelledError as exc:
+            if cancellation is None:
+                cancellation = exc
+        except BaseException:
+            break
+    try:
+        result = pending.result()
+    except BaseException:
+        if cancellation is not None:
+            raise cancellation from None
+        raise
+    reconcile(result)
+    if cancellation is not None:
+        raise cancellation
+    return result
 
 
 def _copy_session_payload(data: SessionPayload | object | None) -> Mapping[str, Any] | None:
     if data is None or data is _SESSION_CACHE_EMPTY:
         return None
     return deserialize_session_data(serialize_session_data(cast(SessionPayload, data)))
+
+
+async def _cleanup_auxiliary_download_client(auxiliary: Client, *, auxiliary_index: int) -> None:
+    cleanup = asyncio.create_task(auxiliary.disconnect(), name=f"miniproto-auxiliary-cleanup-{auxiliary_index}")
+    cancellation: asyncio.CancelledError | None = None
+    while not cleanup.done():
+        try:
+            await asyncio.shield(cleanup)
+        except asyncio.CancelledError as exc:
+            if cancellation is None:
+                cancellation = exc
+        except BaseException:
+            break
+    try:
+        cleanup.result()
+    except BaseException as exc:
+        emit_event(
+            _LOGGER,
+            logging.ERROR,
+            "client.download_media.auxiliary_cleanup_failed",
+            outcome="error",
+            auxiliary_index=auxiliary_index,
+            error_type=type(exc).__name__,
+        )
+    if cancellation is not None:
+        raise cancellation
 
 
 class Client:
@@ -136,7 +204,11 @@ class Client:
 
     def __init__(self, config: ClientConfig, *, _updates_enabled: bool = True) -> None:
         self.config = config
-        self._session_storage_backend = config.session_storage or InMemorySessionStorage()
+        self._session_storage_backend = (
+            config.session_storage
+            if config.session_storage is not None
+            else EncryptedSQLiteSessionStorage(config.session_path)
+        )
         self._storage: SessionStorage = _CachedSessionStorage(self._session_storage_backend)
         self._updates_enabled = _updates_enabled
         self._bot_token = config.bot_token
@@ -182,11 +254,7 @@ class Client:
             if self._updates_enabled:
                 await self._update_manager.start()
         _emit_client_event(
-            "client.connect",
-            started,
-            outcome="success",
-            dc_id=self.config.dc_id,
-            test_mode=self.config.test_mode,
+            "client.connect", started, outcome="success", dc_id=self.config.dc_id, test_mode=self.config.test_mode
         )
 
     async def disconnect(self) -> None:
@@ -221,9 +289,7 @@ class Client:
             except BaseException as exc:
                 errors.append(exc)
             try:
-                await self._disconnect_auxiliary_download_clients(
-                    tuple(self._auxiliary_download_clients.values())
-                )
+                await self._disconnect_auxiliary_download_clients(tuple(self._auxiliary_download_clients.values()))
             except BaseException as exc:
                 errors.append(exc)
             try:
@@ -231,12 +297,7 @@ class Client:
             except BaseException as exc:
                 errors.append(exc)
             if errors:
-                _emit_client_event(
-                    "client.disconnect",
-                    started,
-                    outcome="error",
-                    error_type=type(errors[0]).__name__,
-                )
+                _emit_client_event("client.disconnect", started, outcome="error", error_type=type(errors[0]).__name__)
                 raise errors[0]
         _emit_client_event("client.disconnect", started, outcome="success")
 
@@ -257,22 +318,16 @@ class Client:
         await self.connect()
         await self._ensure_authorization_key()
         try:
-            result = await AuthService(
-                self.config, self._storage, self._invoke_auth_request
-            ).sign_in_phone(phone, code_callback, password_callback)
+            result = await AuthService(self.config, self._storage, self._invoke_auth_request).sign_in_phone(
+                phone, code_callback, password_callback
+            )
             await self._update_manager.sync_state()
         except BaseException as exc:
             _emit_client_event(
-                "client.sign_in_phone",
-                started,
-                outcome="error",
-                error_type=type(exc).__name__,
-                dc_id=self.config.dc_id,
+                "client.sign_in_phone", started, outcome="error", error_type=type(exc).__name__, dc_id=self.config.dc_id
             )
             raise
-        _emit_client_event(
-            "client.sign_in_phone", started, outcome="success", dc_id=self.config.dc_id
-        )
+        _emit_client_event("client.sign_in_phone", started, outcome="success", dc_id=self.config.dc_id)
         return result
 
     async def sign_in_bot(self, token: str) -> object:
@@ -281,50 +336,30 @@ class Client:
         await self.connect()
         await self._ensure_authorization_key()
         try:
-            result = await AuthService(
-                self.config, self._storage, self._invoke_auth_request
-            ).sign_in_bot(token)
+            result = await AuthService(self.config, self._storage, self._invoke_auth_request).sign_in_bot(token)
             if self._updates_enabled:
                 await self._update_manager.sync_state()
         except BaseException as exc:
             _emit_client_event(
-                "client.sign_in_bot",
-                started,
-                outcome="error",
-                error_type=type(exc).__name__,
-                dc_id=self.config.dc_id,
+                "client.sign_in_bot", started, outcome="error", error_type=type(exc).__name__, dc_id=self.config.dc_id
             )
             raise
-        _emit_client_event(
-            "client.sign_in_bot", started, outcome="success", dc_id=self.config.dc_id
-        )
+        _emit_client_event("client.sign_in_bot", started, outcome="success", dc_id=self.config.dc_id)
         return result
 
     async def get_me(self, *, refresh: bool = False) -> User:
         started = time.perf_counter()
         if not await self.is_authorized():
-            _emit_client_event(
-                "client.get_me",
-                started,
-                outcome="error",
-                error_type="Unauthorized",
-                refresh=refresh,
-            )
+            _emit_client_event("client.get_me", started, outcome="error", error_type="Unauthorized", refresh=refresh)
             raise Unauthorized("get_me requires an authorized session")
         try:
             user = await self._peer_cache.get_me(refresh=refresh)
         except BaseException as exc:
             _emit_client_event(
-                "client.get_me",
-                started,
-                outcome="error",
-                error_type=type(exc).__name__,
-                refresh=refresh,
+                "client.get_me", started, outcome="error", error_type=type(exc).__name__, refresh=refresh
             )
             raise
-        _emit_client_event(
-            "client.get_me", started, outcome="success", refresh=refresh, is_bot=user.is_bot
-        )
+        _emit_client_event("client.get_me", started, outcome="success", refresh=refresh, is_bot=user.is_bot)
         return user
 
     async def resolve_peer(self, peer: Peer | str | int) -> Peer:
@@ -341,11 +376,7 @@ class Client:
             )
             raise
         _emit_client_event(
-            "client.resolve_peer",
-            started,
-            outcome="success",
-            input_type=type(peer).__name__,
-            peer_kind=resolved.kind,
+            "client.resolve_peer", started, outcome="success", input_type=type(peer).__name__, peer_kind=resolved.kind
         )
         return resolved
 
@@ -365,11 +396,7 @@ class Client:
         started = time.perf_counter()
         options = _send_message_options(kwargs)
         resolved_peer = await self._peer_cache.resolve_peer(peer)
-        parsed = (
-            parse_message_text(text, parse_mode)
-            if entities is None
-            else parse_message_text(text, None)
-        )
+        parsed = parse_message_text(text, parse_mode) if entities is None else parse_message_text(text, None)
         request_entities = parsed.entities if entities is None else tuple(entities)
         request = functions.MessagesSendMessage(
             peer=input_peer_from_peer(resolved_peer),
@@ -380,15 +407,10 @@ class Client:
         )
         try:
             result = await self.invoke(
-                request,
-                request_timeout=request_timeout,
-                flood_sleep_threshold=flood_sleep_threshold,
-                retry=retry,
+                request, request_timeout=request_timeout, flood_sleep_threshold=flood_sleep_threshold, retry=retry
             )
             await self._peer_cache.remember_raw_entities(result)
-            message = message_from_send_result(
-                result, peer=resolved_peer, text=parsed.text, entities=request_entities
-            )
+            message = message_from_send_result(result, peer=resolved_peer, text=parsed.text, entities=request_entities)
         except BaseException as exc:
             _emit_client_event(
                 "client.send_message",
@@ -440,10 +462,7 @@ class Client:
         )
         try:
             result = await self.invoke(
-                request,
-                request_timeout=request_timeout,
-                flood_sleep_threshold=flood_sleep_threshold,
-                retry=retry,
+                request, request_timeout=request_timeout, flood_sleep_threshold=flood_sleep_threshold, retry=retry
             )
             await self._peer_cache.remember_raw_entities(result)
             messages = messages_from_history_result(result, fallback_peer=resolved_peer)
@@ -487,11 +506,7 @@ class Client:
     ) -> Message:
         started = time.perf_counter()
         resolved_peer = await self._peer_cache.resolve_peer(peer)
-        parsed = (
-            parse_message_text(text, parse_mode)
-            if entities is None
-            else parse_message_text(text, None)
-        )
+        parsed = parse_message_text(text, parse_mode) if entities is None else parse_message_text(text, None)
         request_entities = parsed.entities if entities is None else tuple(entities)
         request = functions.MessagesEditMessage(
             no_webpage=bool(no_webpage),
@@ -507,17 +522,11 @@ class Client:
         )
         try:
             result = await self.invoke(
-                request,
-                request_timeout=request_timeout,
-                flood_sleep_threshold=flood_sleep_threshold,
-                retry=retry,
+                request, request_timeout=request_timeout, flood_sleep_threshold=flood_sleep_threshold, retry=retry
             )
             await self._peer_cache.remember_raw_entities(result)
             message = message_from_update_result(
-                result,
-                fallback_peer=resolved_peer,
-                fallback_text=parsed.text,
-                entities=request_entities,
+                result, fallback_peer=resolved_peer, fallback_text=parsed.text, entities=request_entities
             )
         except BaseException as exc:
             _emit_client_event(
@@ -530,11 +539,7 @@ class Client:
             )
             raise
         _emit_client_event(
-            "client.edit_message",
-            started,
-            outcome="success",
-            peer_kind=resolved_peer.kind,
-            message_id=message_id,
+            "client.edit_message", started, outcome="success", peer_kind=resolved_peer.kind, message_id=message_id
         )
         return message
 
@@ -552,17 +557,12 @@ class Client:
         ids = _message_id_tuple(message_ids)
         resolved_peer = await self._peer_cache.resolve_peer(peer)
         if resolved_peer.kind == "channel":
-            request = functions.ChannelsDeleteMessages(
-                channel=input_channel_from_peer(resolved_peer), id=ids
-            )
+            request = functions.ChannelsDeleteMessages(channel=input_channel_from_peer(resolved_peer), id=ids)
         else:
             request = functions.MessagesDeleteMessages(revoke=bool(revoke), id=ids)
         try:
             result = await self.invoke(
-                request,
-                request_timeout=request_timeout,
-                flood_sleep_threshold=flood_sleep_threshold,
-                retry=retry,
+                request, request_timeout=request_timeout, flood_sleep_threshold=flood_sleep_threshold, retry=retry
             )
         except BaseException as exc:
             _emit_client_event(
@@ -575,11 +575,7 @@ class Client:
             )
             raise
         _emit_client_event(
-            "client.delete_messages",
-            started,
-            outcome="success",
-            peer_kind=resolved_peer.kind,
-            message_count=len(ids),
+            "client.delete_messages", started, outcome="success", peer_kind=resolved_peer.kind, message_count=len(ids)
         )
         return result
 
@@ -595,20 +591,14 @@ class Client:
             uploaded = None
             if decoded_file_id is None:
                 async with _MediaInvokeContext(
-                    self,
-                    _media_lane_count(file_options["media_lanes"], file_options["concurrency"]),
-                    kind="upload",
+                    self, _media_lane_count(file_options["media_lanes"], file_options["concurrency"]), kind="upload"
                 ) as media_invoke:
                     upload_kwargs: dict[str, Any] = {}
                     if upload_flood_threshold_given:
-                        upload_kwargs["flood_sleep_threshold"] = file_options[
-                            "flood_sleep_threshold"
-                        ]
+                        upload_kwargs["flood_sleep_threshold"] = file_options["flood_sleep_threshold"]
                     upload_limit_parts = file_options["upload_limit_parts"]
                     if upload_limit_parts == "app_config":
-                        upload_kwargs[
-                            "max_file_parts"
-                        ] = await self._upload_limit_parts_from_app_config()
+                        upload_kwargs["max_file_parts"] = await self._upload_limit_parts_from_app_config()
                     elif upload_limit_parts is not None:
                         upload_kwargs["max_file_parts"] = int(upload_limit_parts)
                     uploaded = await upload_file(
@@ -639,18 +629,12 @@ class Client:
                 if file_options["entities"] is None
                 else parse_message_text(file_options["caption"], None)
             )
-            request_entities = (
-                parsed.entities
-                if file_options["entities"] is None
-                else tuple(file_options["entities"])
-            )
+            request_entities = parsed.entities if file_options["entities"] is None else tuple(file_options["entities"])
             request = functions.MessagesSendMedia(
                 peer=input_peer_from_peer(resolved_peer),
                 media=input_media,
                 message=parsed.text,
-                random_id=make_random_id()
-                if file_options["random_id"] is None
-                else int(file_options["random_id"]),
+                random_id=make_random_id() if file_options["random_id"] is None else int(file_options["random_id"]),
                 entities=request_entities or None,
                 **file_options["send_options"],
             )
@@ -661,9 +645,7 @@ class Client:
                 retry=file_options["retry"],
             )
             await self._peer_cache.remember_raw_entities(result)
-            message = message_from_send_result(
-                result, peer=resolved_peer, text=parsed.text, entities=request_entities
-            )
+            message = message_from_send_result(result, peer=resolved_peer, text=parsed.text, entities=request_entities)
         except BaseException as exc:
             _emit_client_event(
                 "client.send_file",
@@ -699,18 +681,12 @@ class Client:
         try:
             use_multi_session = bool(options.pop("multi_session"))
             total_size = _resolve_download_total_size(media, options.get("total_size"))
-            if use_multi_session and await self._can_use_multi_session_download(
-                options, total_size
-            ):
+            if use_multi_session and await self._can_use_multi_session_download(options, total_size):
                 assert total_size is not None
                 session_count = download_session_count(total_size)
                 if session_count > 1:
                     result = await self._download_media_multi_session(
-                        media,
-                        destination,
-                        options,
-                        total_size=total_size,
-                        session_count=session_count,
+                        media, destination, options, total_size=total_size, session_count=session_count
                     )
                 else:
                     result = await self._download_media_single(media, destination, options)
@@ -742,9 +718,7 @@ class Client:
         download_options = dict(options)
         download_options.pop("media_lanes", None)
         if download_options.get("file_reference_refresher") is None:
-            download_options["file_reference_refresher"] = self._message_file_reference_refresher(
-                media
-            )
+            download_options["file_reference_refresher"] = self._message_file_reference_refresher(media)
         async with _MediaInvokeContext(
             self,
             _media_lane_count(options["media_lanes"], options["concurrency"]),
@@ -753,9 +727,7 @@ class Client:
         ) as media_invoke:
             return await download_media_file(media_invoke, media, destination, **download_options)
 
-    async def _can_use_multi_session_download(
-        self, options: Mapping[str, Any], total_size: int | None
-    ) -> bool:
+    async def _can_use_multi_session_download(self, options: Mapping[str, Any], total_size: int | None) -> bool:
         record = load_session_record(await self._storage.load(), self.config.dc_id)
         if record.user is None or not record.user.is_bot:
             _emit_multi_session_ignored("account_is_not_bot")
@@ -780,14 +752,10 @@ class Client:
         async with self._multi_session_download_lock:
             auxiliaries = await self._ensure_auxiliary_download_clients(session_count)
             available = 1 + len(auxiliaries)
-            active_count = (
-                4 if session_count == 4 and available >= 4 else 2 if available >= 2 else 1
-            )
+            active_count = 4 if session_count == 4 and available >= 4 else 2 if available >= 2 else 1
             if active_count < session_count:
                 _emit_multi_session_ignored(
-                    "auxiliary_sessions_unavailable",
-                    requested_sessions=session_count,
-                    active_sessions=active_count,
+                    "auxiliary_sessions_unavailable", requested_sessions=session_count, active_sessions=active_count
                 )
             active_auxiliaries = auxiliaries[: active_count - 1]
             if active_count == 1:
@@ -810,13 +778,9 @@ class Client:
 
             try:
                 with tempfile.TemporaryDirectory(prefix="miniproto-download-") as temporary:
-                    part_paths = tuple(
-                        Path(temporary) / f"worker-{item.index}.part" for item in ranges
-                    )
+                    part_paths = tuple(Path(temporary) / f"worker-{item.index}.part" for item in ranges)
 
-                    async def download_worker(
-                        worker_client: Client, worker_index: int
-                    ) -> MediaDownloadResult:
+                    async def download_worker(worker_client: Client, worker_index: int) -> MediaDownloadResult:
                         item = ranges[worker_index]
                         worker_options = dict(options)
                         worker_options.update(
@@ -840,10 +804,7 @@ class Client:
                         )
 
                     results = await asyncio.gather(
-                        *(
-                            download_worker(worker_client, index)
-                            for index, worker_client in enumerate(clients)
-                        )
+                        *(download_worker(worker_client, index) for index, worker_client in enumerate(clients))
                     )
                     for item, result in zip(ranges, results, strict=True):
                         if result.bytes_downloaded != item.limit:
@@ -878,57 +839,77 @@ class Client:
             if auxiliary is None:
                 auxiliary_storage = sibling(f"download-{index}")
                 auxiliary = Client(
-                    replace(
-                        self.config, session_storage=auxiliary_storage, bot_token=self._bot_token
-                    ),
+                    replace(self.config, session_storage=auxiliary_storage, bot_token=self._bot_token),
                     _updates_enabled=False,
                 )
                 auxiliary._sender_factory = self._sender_factory
-                auxiliary_record = load_session_record(
-                    await auxiliary._storage.load(), self.config.dc_id
-                )
-                if auxiliary_record.user is not None and (
-                    not auxiliary_record.user.is_bot or auxiliary_record.user.id != primary_user.id
-                ):
-                    _emit_multi_session_ignored(
-                        "auxiliary_session_identity_mismatch", auxiliary_index=index
-                    )
-                    await auxiliary._storage.close()
-                    break
-                if auxiliary_record.auth_key is None or auxiliary_record.user is None:
-                    if self._bot_token is None:
-                        _emit_multi_session_ignored(
-                            "bot_token_required_for_auxiliary_session", auxiliary_index=index
-                        )
-                        await auxiliary._storage.close()
-                        break
-                    try:
-                        await auxiliary.sign_in_bot(self._bot_token)
-                    except asyncio.CancelledError:
-                        raise
-                    except BaseException as exc:
-                        _emit_multi_session_ignored(
-                            "auxiliary_session_authorization_failed",
-                            auxiliary_index=index,
-                            error_type=type(exc).__name__,
-                        )
-                        await auxiliary.disconnect()
-                        break
-                    auxiliary_record = load_session_record(
-                        await auxiliary._storage.load(), self.config.dc_id
-                    )
-                    if (
-                        auxiliary_record.auth_key is None
-                        or auxiliary_record.user is None
-                        or not auxiliary_record.user.is_bot
-                        or auxiliary_record.user.id != primary_user.id
+                cancellation: asyncio.CancelledError | None = None
+                cleanup_required = True
+                stop_adding_auxiliaries = False
+                try:
+                    auxiliary_record = load_session_record(await auxiliary._storage.load(), self.config.dc_id)
+                    if auxiliary_record.user is not None and (
+                        not auxiliary_record.user.is_bot or auxiliary_record.user.id != primary_user.id
                     ):
-                        _emit_multi_session_ignored(
-                            "auxiliary_session_identity_mismatch", auxiliary_index=index
-                        )
-                        await auxiliary.disconnect()
-                        break
-                self._auxiliary_download_clients[index] = auxiliary
+                        _emit_multi_session_ignored("auxiliary_session_identity_mismatch", auxiliary_index=index)
+                        stop_adding_auxiliaries = True
+                    elif auxiliary_record.auth_key is None or auxiliary_record.user is None:
+                        if self._bot_token is None:
+                            _emit_multi_session_ignored(
+                                "bot_token_required_for_auxiliary_session", auxiliary_index=index
+                            )
+                            stop_adding_auxiliaries = True
+                        else:
+                            try:
+                                await auxiliary.sign_in_bot(self._bot_token)
+                            except asyncio.CancelledError:
+                                raise
+                            except BaseException as exc:
+                                _emit_multi_session_ignored(
+                                    "auxiliary_session_authorization_failed",
+                                    auxiliary_index=index,
+                                    error_type=type(exc).__name__,
+                                )
+                                stop_adding_auxiliaries = True
+                            if not stop_adding_auxiliaries:
+                                auxiliary_record = load_session_record(
+                                    await auxiliary._storage.load(), self.config.dc_id
+                                )
+                                if (
+                                    auxiliary_record.auth_key is None
+                                    or auxiliary_record.user is None
+                                    or not auxiliary_record.user.is_bot
+                                    or auxiliary_record.user.id != primary_user.id
+                                ):
+                                    _emit_multi_session_ignored(
+                                        "auxiliary_session_identity_mismatch", auxiliary_index=index
+                                    )
+                                    stop_adding_auxiliaries = True
+                    if not stop_adding_auxiliaries:
+                        if not auxiliary.is_connected:
+                            await auxiliary.connect()
+                        self._auxiliary_download_clients[index] = auxiliary
+                        cleanup_required = False
+                except asyncio.CancelledError as exc:
+                    cancellation = exc
+                except BaseException as exc:
+                    if self._auxiliary_download_clients.get(index) is auxiliary:
+                        self._auxiliary_download_clients.pop(index)
+                    _emit_multi_session_ignored(
+                        "auxiliary_session_setup_failed", auxiliary_index=index, error_type=type(exc).__name__
+                    )
+                    stop_adding_auxiliaries = True
+                finally:
+                    if cleanup_required:
+                        try:
+                            await _cleanup_auxiliary_download_client(auxiliary, auxiliary_index=index)
+                        except asyncio.CancelledError as exc:
+                            if cancellation is None:
+                                cancellation = exc
+                if cancellation is not None:
+                    raise cancellation
+                if stop_adding_auxiliaries:
+                    break
             if not auxiliary.is_connected:
                 await auxiliary.connect()
             clients.append(auxiliary)
@@ -937,9 +918,7 @@ class Client:
     async def _disconnect_auxiliary_download_clients(self, clients: Iterable[Client]) -> None:
         connected = tuple(client for client in clients if client.is_connected)
         if connected:
-            results = await asyncio.gather(
-                *(client.disconnect() for client in connected), return_exceptions=True
-            )
+            results = await asyncio.gather(*(client.disconnect() for client in connected), return_exceptions=True)
             for client, result in zip(connected, results, strict=True):
                 if isinstance(result, BaseException):
                     emit_event(
@@ -965,9 +944,7 @@ class Client:
             return self._upload_limit_parts_cache
         return None
 
-    def _message_file_reference_refresher(
-        self, media: object
-    ) -> Callable[[object], Awaitable[object]] | None:
+    def _message_file_reference_refresher(self, media: object) -> Callable[[object], Awaitable[object]] | None:
         raw_message = _raw_message_from_media(media)
         if raw_message is None:
             return None
@@ -983,9 +960,7 @@ class Client:
         peer_id = message.peer_id
         if isinstance(peer_id, types.PeerChannel):
             peer = await self._peer_cache.resolve_peer(Peer(id=peer_id.channel_id, kind="channel"))
-            request: object = functions.ChannelsGetMessages(
-                channel=input_channel_from_peer(peer), id=(input_message,)
-            )
+            request: object = functions.ChannelsGetMessages(channel=input_channel_from_peer(peer), id=(input_message,))
         else:
             request = functions.MessagesGetMessages(id=(input_message,))
         result = await self.invoke(request)
@@ -993,9 +968,7 @@ class Client:
         for candidate in _iter_result_messages(result):
             if isinstance(candidate, types.Message) and candidate.id == message.id:
                 return candidate
-        raise RpcError(
-            "refreshed message did not include the requested media", request="messages.getMessages"
-        )
+        raise RpcError("refreshed message did not include the requested media", request="messages.getMessages")
 
     def _apply_media_config_defaults(self, kwargs: dict[str, Any]) -> None:
         if "concurrency" not in kwargs and self.config.media_concurrency is not None:
@@ -1036,11 +1009,7 @@ class Client:
             raise ConnectionError("client must be connected before invoking raw requests")
         started = time.perf_counter()
         timeout = self.config.request_timeout if request_timeout is None else request_timeout
-        threshold = (
-            self.config.flood_sleep_threshold
-            if flood_sleep_threshold is None
-            else flood_sleep_threshold
-        )
+        threshold = self.config.flood_sleep_threshold if flood_sleep_threshold is None else flood_sleep_threshold
         retryable = is_retryable_request(raw_request, retry)
         attempts = 0
         request_name = _request_name(raw_request)
@@ -1055,25 +1024,17 @@ class Client:
             )
             try:
                 raw_result = await sender.request(
-                    wrapped_request, content_related=True, request_timeout=timeout
+                    wrapped_request, content_related=True, retry_safe=retryable, request_timeout=timeout
                 )
                 mark_sender_initialized(sender)
                 result = decode_rpc_response(raw_result, raw_request)
                 _emit_rpc_event(
-                    started,
-                    outcome="success",
-                    request=request_name,
-                    attempts=attempts + 1,
-                    retryable=retryable,
+                    started, outcome="success", request=request_name, attempts=attempts + 1, retryable=retryable
                 )
                 return result
             except asyncio.CancelledError:
                 _emit_rpc_event(
-                    started,
-                    outcome="cancelled",
-                    request=request_name,
-                    attempts=attempts + 1,
-                    retryable=retryable,
+                    started, outcome="cancelled", request=request_name, attempts=attempts + 1, retryable=retryable
                 )
                 raise
             except FloodWait as exc:
@@ -1084,15 +1045,11 @@ class Client:
                     attributes={
                         "request": request_name,
                         "action": "sleep"
-                        if should_sleep_for_flood_wait(exc, threshold)
-                        and attempts < self.config.max_request_retries
+                        if should_sleep_for_flood_wait(exc, threshold) and attempts < self.config.max_request_retries
                         else "raise",
                     },
                 )
-                if (
-                    should_sleep_for_flood_wait(exc, threshold)
-                    and attempts < self.config.max_request_retries
-                ):
+                if should_sleep_for_flood_wait(exc, threshold) and attempts < self.config.max_request_retries:
                     attempts += 1
                     await asyncio.sleep(exc.seconds)
                     continue
@@ -1162,11 +1119,7 @@ class Client:
                 raise
             except RpcError as exc:
                 typed = classify_rpc_error(exc)
-                if (
-                    retryable
-                    and should_retry_rpc_error(typed)
-                    and attempts < self.config.max_request_retries
-                ):
+                if retryable and should_retry_rpc_error(typed) and attempts < self.config.max_request_retries:
                     # Server-side 5xx/timeouts are retried on the same connection; dropping
                     # the sender here would fail every other in-flight request on the lane.
                     attempts += 1
@@ -1186,9 +1139,7 @@ class Client:
                 # A per-request failure must not tear down the shared connection. Genuine
                 # transport failures are detected by the sender's receive loop, which
                 # reconnects internally; dead senders are replaced lazily by ensure_sender.
-                typed = wrap_transport_failure(
-                    exc, raw_request, connected=self.is_connected and sender.is_connected
-                )
+                typed = wrap_transport_failure(exc, raw_request, connected=self.is_connected and sender.is_connected)
                 if self.is_connected and retryable and attempts < self.config.max_request_retries:
                     attempts += 1
                     continue
@@ -1207,14 +1158,10 @@ class Client:
             yield update
 
     @overload
-    def on(
-        self, update_type: type[UpdateT]
-    ) -> Callable[[UpdateHandler[UpdateT]], UpdateHandler[UpdateT]]: ...
+    def on(self, update_type: type[UpdateT]) -> Callable[[UpdateHandler[UpdateT]], UpdateHandler[UpdateT]]: ...
 
     @overload
-    def on(
-        self, update_type: type[UpdateT], handler: UpdateHandler[UpdateT]
-    ) -> UpdateHandler[UpdateT]: ...
+    def on(self, update_type: type[UpdateT], handler: UpdateHandler[UpdateT]) -> UpdateHandler[UpdateT]: ...
 
     def on(
         self, update_type: type[UpdateT], handler: UpdateHandler[UpdateT] | None = None
@@ -1299,9 +1246,7 @@ class Client:
         self._dispatch_sender = sender
         self._receive_dispatch_task = asyncio.create_task(self._receive_dispatch_loop(sender))
 
-    async def _stop_receive_dispatch(
-        self, *, for_sender: RawSender | None = None
-    ) -> BaseException | None:
+    async def _stop_receive_dispatch(self, *, for_sender: RawSender | None = None) -> BaseException | None:
         task = self._receive_dispatch_task
         if task is None:
             return None
@@ -1316,9 +1261,7 @@ class Client:
         except asyncio.CancelledError:
             return None
         except BaseException as exc:
-            record_metric(
-                "client.receive_dispatch_errors", 1, attributes={"error_type": type(exc).__name__}
-            )
+            record_metric("client.receive_dispatch_errors", 1, attributes={"error_type": type(exc).__name__})
             return exc
         return None
 
@@ -1329,9 +1272,7 @@ class Client:
             try:
                 raw_update = _decode_pushed_payload(message.body)
             except (TLCodecError, ValueError) as exc:
-                record_metric(
-                    "client.update_decode_errors", 1, attributes={"error_type": type(exc).__name__}
-                )
+                record_metric("client.update_decode_errors", 1, attributes={"error_type": type(exc).__name__})
                 continue
             if raw_update is None:
                 continue
@@ -1352,9 +1293,7 @@ class Client:
         except asyncio.CancelledError:
             raise
         except Exception as exc:
-            record_metric(
-                "client.salt_persist_errors", 1, attributes={"error_type": type(exc).__name__}
-            )
+            record_metric("client.salt_persist_errors", 1, attributes={"error_type": type(exc).__name__})
 
     async def _flush_server_salt(self) -> None:
         task = self._salt_persist_task
@@ -1370,15 +1309,17 @@ class Client:
         if salt is None or not self._salt_dirty:
             return
         self._salt_dirty = False
-        record = load_session_record(await self._storage.load(), self.config.dc_id)
-        metadata = dict(record.metadata)
-        metadata["server_salt"] = salt
-        await self._storage.save(replace(record, metadata=metadata))
+
+        def persist(payload: Mapping[str, Any] | None) -> SessionPayload:
+            record = load_session_record(payload, self.config.dc_id)
+            metadata = dict(record.metadata)
+            metadata["server_salt"] = salt
+            return replace(record, metadata=metadata)
+
+        await self._storage.mutate(persist)
         record_metric("client.server_salt_persisted", 1)
 
-    async def _get_media_pool(
-        self, *, kind: str, lane_count: int, dc_id: int | None = None
-    ) -> _MediaSenderPool:
+    async def _get_media_pool(self, *, kind: str, lane_count: int, dc_id: int | None = None) -> _MediaSenderPool:
         target_dc = dc_id if dc_id is not None else await self._current_dc_id()
         # Pools are keyed by (kind, dc) only: asking for a different lane count
         # resizes the existing pool instead of building a disjoint socket set.
@@ -1468,9 +1409,7 @@ class Client:
                 raise InvalidDatacenter(f"no DC options stored for dc_id={dc_id}")
             option = select_dc_option(record.dc_options, dc_id, allow_media_only=True)
             started = time.perf_counter()
-            transport = UnencryptedAuthKeyTransport(
-                ConnectionEndpoint(option.ip_address, option.port), self.config
-            )
+            transport = UnencryptedAuthKeyTransport(ConnectionEndpoint(option.ip_address, option.port), self.config)
             try:
                 result = await AuthKeyExchange(
                     transport,
@@ -1481,37 +1420,33 @@ class Client:
             finally:
                 await transport.close()
             auth = (result.auth_key, result.server_salt)
-            record = load_session_record(await self._storage.load(), self.config.dc_id)
-            metadata = dict(record.metadata)
-            dc_auth = dict(cast(Mapping[str, Any], metadata.get("dc_auth") or {}))
-            dc_auth[str(dc_id)] = {"key": result.auth_key, "salt": result.server_salt}
-            metadata["dc_auth"] = dc_auth
-            await self._storage.save(replace(record, metadata=metadata))
+
+            def persist(payload: Mapping[str, Any] | None) -> SessionPayload:
+                current = load_session_record(payload, self.config.dc_id)
+                metadata = dict(current.metadata)
+                dc_auth = dict(cast(Mapping[str, Any], metadata.get("dc_auth") or {}))
+                dc_auth[str(dc_id)] = {"key": result.auth_key, "salt": result.server_salt}
+                metadata["dc_auth"] = dc_auth
+                return replace(current, metadata=metadata)
+
+            await self._storage.mutate(persist)
             self._dc_auth_cache[dc_id] = auth
-            _emit_client_event(
-                "client.media_dc_auth", started, outcome="success", target_dc_id=dc_id
-            )
+            _emit_client_event("client.media_dc_auth", started, outcome="success", target_dc_id=dc_id)
             return auth
 
     async def _import_media_authorization(self, sender: RawSender, dc_id: int) -> None:
         started = time.perf_counter()
-        exported = await AuthService(self.config, self._storage, self.invoke).export_authorization(
-            dc_id
-        )
+        exported = await AuthService(self.config, self._storage, self.invoke).export_authorization(dc_id)
         record_metric("client.media_auth_exports", 1, attributes={"target_dc_id": dc_id})
         request = functions.AuthImportAuthorization(id=exported.id, bytes=exported.bytes)
-        wrapped = wrap_raw_request(
-            request, self.config, needs_init=sender_needs_init(sender), without_updates=True
-        )
+        wrapped = wrap_raw_request(request, self.config, needs_init=sender_needs_init(sender), without_updates=True)
         raw_result = await sender.request(
-            wrapped, content_related=True, request_timeout=self.config.request_timeout
+            wrapped, content_related=True, retry_safe=False, request_timeout=self.config.request_timeout
         )
         mark_sender_initialized(sender)
         decode_rpc_response(raw_result, request)
         record_metric("client.media_auth_imports", 1, attributes={"target_dc_id": dc_id})
-        _emit_client_event(
-            "client.media_auth_import", started, outcome="success", target_dc_id=dc_id
-        )
+        _emit_client_event("client.media_auth_import", started, outcome="success", target_dc_id=dc_id)
 
     def _on_media_dc_salt(self, dc_id: int, server_salt: int) -> None:
         cached = self._dc_auth_cache.get(dc_id)
@@ -1520,9 +1455,7 @@ class Client:
 
 
 class _MediaInvokeContext:
-    def __init__(
-        self, client: Client, lane_count: int, *, kind: str, dc_id: int | None = None
-    ) -> None:
+    def __init__(self, client: Client, lane_count: int, *, kind: str, dc_id: int | None = None) -> None:
         self._client = client
         self._lane_count = lane_count
         self._kind = kind
@@ -1532,9 +1465,7 @@ class _MediaInvokeContext:
     async def __aenter__(self) -> Callable[..., Awaitable[object]]:
         if self._lane_count <= 0:
             return self._client.invoke
-        self._pool = await self._client._get_media_pool(
-            kind=self._kind, lane_count=self._lane_count, dc_id=self._dc_id
-        )
+        self._pool = await self._client._get_media_pool(kind=self._kind, lane_count=self._lane_count, dc_id=self._dc_id)
         await self._pool.prewarm()
         return self._invoke
 
@@ -1554,11 +1485,7 @@ class _MediaInvokeContext:
             # FILE_MIGRATE_X: the file lives on another DC. Re-resolve the pool
             # to that DC (exported-auth lanes) and retry; the main session's DC
             # stays untouched. Subsequent parts use the migrated pool directly.
-            record_metric(
-                "client.media_file_migrations",
-                1,
-                attributes={"kind": self._kind, "target_dc_id": exc.dc_id},
-            )
+            record_metric("client.media_file_migrations", 1, attributes={"kind": self._kind, "target_dc_id": exc.dc_id})
             self._pool = await self._client._get_media_pool(
                 kind=self._kind, lane_count=self._lane_count, dc_id=exc.dc_id
             )
@@ -1572,8 +1499,7 @@ class _MediaSenderPool:
         self._kind = kind
         self._dc_id = dc_id
         self._lanes: list[_MediaSenderLane] = [
-            _MediaSenderLane(client, index, kind=kind, dc_id=dc_id)
-            for index in range(max(1, lane_count))
+            _MediaSenderLane(client, index, kind=kind, dc_id=dc_id) for index in range(max(1, lane_count))
         ]
         self._lock = asyncio.Lock()
         self._next_lane_index = 0
@@ -1592,9 +1518,7 @@ class _MediaSenderPool:
         # Grow-only: shrinking would orphan in-flight requests; idle lanes are
         # closed by the reaper instead.
         while len(self._lanes) < lane_count:
-            self._lanes.append(
-                _MediaSenderLane(self._client, len(self._lanes), kind=self._kind, dc_id=self._dc_id)
-            )
+            self._lanes.append(_MediaSenderLane(self._client, len(self._lanes), kind=self._kind, dc_id=self._dc_id))
             record_metric(
                 "client.media_lane_pool_resized",
                 1,
@@ -1603,20 +1527,14 @@ class _MediaSenderPool:
 
     async def prewarm(self) -> None:
         """Open all lane senders in parallel so the first requests skip connect+init."""
-        results = await asyncio.gather(
-            *(lane.ensure_sender() for lane in tuple(self._lanes)), return_exceptions=True
-        )
+        results = await asyncio.gather(*(lane.ensure_sender() for lane in tuple(self._lanes)), return_exceptions=True)
         for result in results:
             if isinstance(result, BaseException):
                 # Lazily rebuilt on first use; prewarm is best-effort.
                 record_metric(
                     "client.media_lane_prewarm_errors",
                     1,
-                    attributes={
-                        "kind": self._kind,
-                        "dc_id": self._dc_id,
-                        "error_type": type(result).__name__,
-                    },
+                    attributes={"kind": self._kind, "dc_id": self._dc_id, "error_type": type(result).__name__},
                 )
 
     async def invoke(
@@ -1663,11 +1581,7 @@ class _MediaSenderPool:
             await asyncio.sleep(tick)
             now = time.monotonic()
             for lane in tuple(self._lanes):
-                if (
-                    lane.active_requests == 0
-                    and lane.has_sender
-                    and now - lane.last_used >= idle_close
-                ):
+                if lane.active_requests == 0 and lane.has_sender and now - lane.last_used >= idle_close:
                     await lane.drop_sender(reason="idle")
 
     async def _acquire_lane(self) -> _MediaSenderLane:
@@ -1767,12 +1681,7 @@ class _MediaSenderLane:
                 record_metric(
                     "client.media_lane_drop_skipped",
                     1,
-                    attributes={
-                        "kind": self._kind,
-                        "dc_id": self._dc_id,
-                        "lane": self._index,
-                        "reason": reason,
-                    },
+                    attributes={"kind": self._kind, "dc_id": self._dc_id, "lane": self._index, "reason": reason},
                 )
                 return
             self._sender = None
@@ -1781,12 +1690,7 @@ class _MediaSenderLane:
             record_metric(
                 "client.media_lane_drops",
                 1,
-                attributes={
-                    "kind": self._kind,
-                    "dc_id": self._dc_id,
-                    "lane": self._index,
-                    "reason": reason,
-                },
+                attributes={"kind": self._kind, "dc_id": self._dc_id, "lane": self._index, "reason": reason},
             )
 
     async def close(self) -> None:
@@ -1873,9 +1777,7 @@ def _send_message_options(kwargs: dict[str, Any]) -> dict[str, Any]:
     unknown = sorted(set(kwargs) - set(_SEND_MESSAGE_OPTION_DEFAULTS))
     if unknown:
         raise TypeError(f"unsupported send_message options: {', '.join(unknown)}")
-    return {
-        name: kwargs.get(name, default) for name, default in _SEND_MESSAGE_OPTION_DEFAULTS.items()
-    }
+    return {name: kwargs.get(name, default) for name, default in _SEND_MESSAGE_OPTION_DEFAULTS.items()}
 
 
 _SEND_MEDIA_OPTION_DEFAULTS: dict[str, object] = {
@@ -1962,9 +1864,7 @@ def _send_file_options(kwargs: dict[str, Any]) -> dict[str, Any]:
     unknown = sorted(set(kwargs) - known)
     if unknown:
         raise TypeError(f"unsupported send_file options: {', '.join(unknown)}")
-    options = {
-        name: kwargs.get(name, default) for name, default in _SEND_FILE_OPTION_DEFAULTS.items()
-    }
+    options = {name: kwargs.get(name, default) for name, default in _SEND_FILE_OPTION_DEFAULTS.items()}
     options["caption"] = str(options["caption"] or "")
     if options["file_name"] is not None:
         options["file_name"] = str(options["file_name"])
@@ -1977,9 +1877,7 @@ def _send_file_options(kwargs: dict[str, Any]) -> dict[str, Any]:
         options["upload_limit_parts"] = int(options["upload_limit_parts"])
     if options["media_lanes"] is not None:
         options["media_lanes"] = int(options["media_lanes"])
-    options["send_options"] = {
-        name: kwargs.get(name, default) for name, default in _SEND_MEDIA_OPTION_DEFAULTS.items()
-    }
+    options["send_options"] = {name: kwargs.get(name, default) for name, default in _SEND_MEDIA_OPTION_DEFAULTS.items()}
     return options
 
 
@@ -2019,9 +1917,7 @@ def _download_media_options(kwargs: dict[str, Any]) -> dict[str, Any]:
     unknown = sorted(set(kwargs) - set(_DOWNLOAD_MEDIA_OPTION_DEFAULTS))
     if unknown:
         raise TypeError(f"unsupported download_media options: {', '.join(unknown)}")
-    options = {
-        name: kwargs.get(name, default) for name, default in _DOWNLOAD_MEDIA_OPTION_DEFAULTS.items()
-    }
+    options = {name: kwargs.get(name, default) for name, default in _DOWNLOAD_MEDIA_OPTION_DEFAULTS.items()}
     options["offset"] = int(options["offset"])
     if options["limit"] is not None:
         options["limit"] = int(options["limit"])
@@ -2057,31 +1953,19 @@ def _resolve_download_total_size(media: object, configured: object) -> int | Non
     if configured is not None:
         return int(cast(Any, configured))
     resolved = (
-        media
-        if isinstance(media, Media)
-        else media_from_file_id(media)
-        if is_file_id(media)
-        else media_from_raw(media)
+        media if isinstance(media, Media) else media_from_file_id(media) if is_file_id(media) else media_from_raw(media)
     )
     return resolved.size if resolved is not None else None
 
 
 def _emit_multi_session_ignored(reason: str, **fields: object) -> None:
     emit_event(
-        _LOGGER,
-        logging.ERROR,
-        "client.download_media.multi_session_ignored",
-        outcome="error",
-        reason=reason,
-        **fields,
+        _LOGGER, logging.ERROR, "client.download_media.multi_session_ignored", outcome="error", reason=reason, **fields
     )
 
 
 def _message_id_tuple(message_ids: int | Iterable[int]) -> tuple[int, ...]:
-    if isinstance(message_ids, int):
-        ids = (int(message_ids),)
-    else:
-        ids = tuple(int(message_id) for message_id in message_ids)
+    ids = (int(message_ids),) if isinstance(message_ids, int) else tuple(int(message_id) for message_id in message_ids)
     if not ids:
         raise ValueError("message_ids must not be empty")
     return ids
@@ -2160,9 +2044,7 @@ def _emit_rpc_event(
         attributes={"outcome": outcome, "request": request, "retryable": retryable},
     )
     if outcome == "error":
-        record_metric(
-            "rpc.errors", 1, attributes={"request": request, "error_type": error_type or "unknown"}
-        )
+        record_metric("rpc.errors", 1, attributes={"request": request, "error_type": error_type or "unknown"})
     if level is None:
         level = logging.ERROR if outcome == "error" else logging.DEBUG
     emit_event(

@@ -68,10 +68,7 @@ def test_update_snapshot_derives_tl_from_json_when_html_has_no_raw_schema() -> N
     snapshot = build_upstream_snapshot(fetch_url=fetch_url, fetch_date="2026-07-08")
 
     assert snapshot.schema_tl_source_kind == "json_derived"
-    assert (
-        snapshot.schema_tl_text
-        == "boolTrue#997275b5 = Bool;\n---functions---\nhelp.getConfig#c4f9186b = Config;\n"
-    )
+    assert snapshot.schema_tl_text == "boolTrue#997275b5 = Bool;\n---functions---\nhelp.getConfig#c4f9186b = Config;\n"
 
 
 def test_stale_pinned_files_reports_only_changed_inputs(tmp_path: Path) -> None:
@@ -112,9 +109,7 @@ def test_stale_pinned_files_ignores_metadata_fetch_date(tmp_path: Path) -> None:
     metadata_path = tmp_path / "tools/schema/schema-metadata.json"
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
     metadata["fetch_date"] = "2026-07-09"
-    metadata_path.write_text(
-        json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    metadata_path.write_text(json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     assert stale_pinned_files(files) == ()
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from functools import cache
 from typing import Any, cast
 
@@ -10,20 +10,9 @@ from miniproto.crypto import native as _native
 VECTOR_CONSTRUCTOR_ID = 0x1CB5C415
 BOOL_FALSE_ID = 0xBC799737
 BOOL_TRUE_ID = 0x997275B5
-_PRIMITIVES = {
-    "int",
-    "#",
-    "long",
-    "int128",
-    "int256",
-    "double",
-    "bytes",
-    "string",
-    "Bool",
-    "bool",
-    "true",
-}
+_PRIMITIVES = {"int", "#", "long", "int128", "int256", "double", "bytes", "string", "Bool", "bool", "true"}
 _VECTOR_RE = re.compile(r"^[Vv]ector[< ](?P<inner>.+?)[>)]?$")
+_constructor_class_cache: dict[int, type[Any]] = {}
 
 
 class TLCodecError(ValueError):
@@ -129,9 +118,7 @@ def encode_vector(values: Iterable[Any], item_type: str) -> bytes:
     return bytes(output)
 
 
-def decode_vector(
-    data: bytes | memoryview, offset: int, item_type: str
-) -> tuple[tuple[Any, ...], int]:
+def decode_vector(data: bytes | memoryview, offset: int, item_type: str) -> tuple[tuple[Any, ...], int]:
     clean_item_type = _clean_type(item_type)
     if clean_item_type in {"int", "#"}:
         return _native.tl_decode_int_vector(data, offset)
@@ -181,9 +168,7 @@ def deserialize_object[TLObjectT](
     return cls(**values), offset
 
 
-def decode_object(
-    data: bytes | memoryview, offset: int = 0, expected_type: str | None = None
-) -> tuple[Any, int]:
+def decode_object(data: bytes | memoryview, offset: int = 0, expected_type: str | None = None) -> tuple[Any, int]:
     if expected_type is not None and _clean_type(expected_type) in _PRIMITIVES:
         return decode_value(expected_type, data, offset)
     constructor_id, value_offset = decode_constructor_id(data, offset)
@@ -191,7 +176,11 @@ def decode_object(
         return True, value_offset
     if constructor_id == BOOL_FALSE_ID:
         return False, value_offset
-    cls = _constructor_maps().get(constructor_id)
+    cls = _constructor_class_cache.get(constructor_id)
+    if cls is None:
+        cls = _constructor_maps().get(constructor_id)
+        if cls is not None:
+            _constructor_class_cache[constructor_id] = cls
     if cls is None:
         raise TLCodecError(f"unknown TL constructor 0x{constructor_id:08x}")
     generated_deserialize = getattr(cls, "_deserialize", None)
@@ -257,9 +246,7 @@ def decode_value(type_name: str, data: bytes | memoryview, offset: int) -> tuple
             return True, offset
         case _:
             if _is_bare_type(type_name):
-                raise TLCodecError(
-                    f"cannot deserialize bare TL value {type_name!r} without a concrete class"
-                )
+                raise TLCodecError(f"cannot deserialize bare TL value {type_name!r} without a concrete class")
             return decode_object(data, offset, clean)
 
 
@@ -284,9 +271,7 @@ def _serialize_fields(obj: Any, cls: type[Any]) -> bytes:
     return bytes(output)
 
 
-def _deserialize_fields(
-    cls: type[Any], data: bytes | memoryview, offset: int
-) -> tuple[dict[str, Any], int]:
+def _deserialize_fields(cls: type[Any], data: bytes | memoryview, offset: int) -> tuple[dict[str, Any], int]:
     fields = tuple(getattr(cls, "TL_FIELDS", ()))
     flag_groups = tuple(getattr(cls, "TL_FLAG_GROUPS", ()))
     flag_values: dict[str, int] = {}
@@ -329,13 +314,10 @@ def _flag_groups_by_index(flag_groups: tuple[Any, ...]) -> dict[int, tuple[Any, 
 
 
 @cache
-def _constructor_maps() -> dict[int, type[Any]]:
-    from miniproto.raw import functions, types
+def _constructor_maps() -> Mapping[int, type[Any]]:
+    from miniproto.raw._registry import CONSTRUCTORS
 
-    mapping: dict[int, type[Any]] = {}
-    mapping.update(types.CONSTRUCTOR_ID_MAP)
-    mapping.update(functions.CONSTRUCTOR_ID_MAP)
-    return mapping
+    return CONSTRUCTORS
 
 
 def _looks_like_tl_object(value: Any) -> bool:

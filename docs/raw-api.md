@@ -1,6 +1,6 @@
 # Raw API
 
-Status: generated documentation stub for Telegram Schema Layer 223.
+Status: generated Telegram Schema Layer 223 surface with implemented runtime transport support and lazy raw loading.
 
 ## Source
 
@@ -15,7 +15,7 @@ RPC error metadata is generated from Telegram's error database linked from [http
 - RPC errors: 818
 - RPC errors layer: 227
 - Latest changelog layer observed during update: 225
-- Generated files: src/miniproto/raw/base.py, src/miniproto/raw/types.py, src/miniproto/raw/functions.py, src/miniproto/raw/errors.py, docs/raw-api.md
+- Generated files: src/miniproto/raw/base.py, src/miniproto/raw/types.py, src/miniproto/raw/types.pyi, src/miniproto/raw/functions.py, src/miniproto/raw/functions.pyi, src/miniproto/raw/_registry.py, src/miniproto/raw/_types_shards/*.py, src/miniproto/raw/_function_shards/*.py, src/miniproto/raw/errors.py, docs/raw-api.md
 
 ## Usage Shape
 
@@ -25,9 +25,17 @@ from miniproto.raw import functions
 request = functions.help.GetConfig()
 ```
 
+## Lazy Loading and Typing
+
+Facade imports stay lightweight: they load generated facades and the registry, not implementation shards. Requested symbols load and cache their generated shard on first attribute, namespace, constructor-ID, or name-map lookup. Mapping and sequence iteration may realize classes as needed. The `.pyi` facades retain static type declarations. Update generated artifacts only through `python -m tools.schema.generate`.
+
+## Current Runtime Scope
+
+The runtime handles binary TL primitive encoding, generated object serialization/deserialization, flags, vectors, boxed constructors, RPC error metadata, gzip-packed payloads, message containers, transport framing, and RPC response correlation.
+
 ## Current Limits
 
-Phase 4 implements binary TL primitive encoding, generated object serialization/deserialization, flags, vectors, boxed constructors, and RPC error metadata. Gzip payload handling, message containers, transport framing, and RPC response correlation land in later runtime phases.
+Transport-level quick-ack frame decoding and its fake-server/live-trace validation remain deferred.
 
 ## Samples
 

@@ -4,15 +4,9 @@ from typing import cast
 
 from miniproto.auth.key_exchange import AuthKeyExchangeResult
 from miniproto.config import ClientConfig, TransportConfig
-from miniproto.errors import RpcError
+from miniproto.errors import AmbiguousRpcResult, ProtocolValidationError, RpcError
 from miniproto.raw import functions
-from miniproto.security.redaction import (
-    REDACTED,
-    is_sensitive_key,
-    redact_mapping,
-    redact_text,
-    safe_repr,
-)
+from miniproto.security.redaction import REDACTED, is_sensitive_key, redact_mapping, redact_text, safe_repr
 from miniproto.session.models import (
     AuthKey,
     DCOption,
@@ -74,9 +68,7 @@ def test_nested_mapping_redaction_covers_phase_two_secret_names() -> None:
 
 
 def test_redact_text_handles_log_style_key_value_pairs() -> None:
-    rendered = redact_text(
-        "api_hash=do-not-leak phone:+12025550123 bot-token='123:abc' proxy=socks5://secret"
-    )
+    rendered = redact_text("api_hash=do-not-leak phone:+12025550123 bot-token='123:abc' proxy=socks5://secret")
     assert "do-not-leak" not in rendered
     assert "+12025550123" not in rendered
     assert "123:abc" not in rendered
@@ -197,9 +189,7 @@ def test_repr_redaction_does_not_change_equality_or_session_serialization() -> N
 
 def test_safe_repr_summarizes_binary_payloads_without_dumping_contents() -> None:
     payload = (b"miniproto-live-media-limit:0000000000000404\n" * 8) + b"x" * 128
-    request = functions.UploadSaveBigFilePart(
-        file_id=1, file_part=2, file_total_parts=3, bytes=payload
-    )
+    request = functions.UploadSaveBigFilePart(file_id=1, file_part=2, file_total_parts=3, bytes=payload)
     rendered = str(RpcError("sender disconnected", request=request))
     assert "miniproto-live-media-limit" not in rendered
     assert "b'" not in rendered
@@ -223,3 +213,28 @@ def test_rpc_error_string_and_repr_redact_context_and_request_data() -> None:
     assert "do-not-leak" not in debug
     assert "hash-secret" not in debug
     assert "token-secret" not in debug
+
+
+def test_ambiguous_rpc_result_redacts_request_and_context_data() -> None:
+    error = AmbiguousRpcResult(
+        "uncertain password=do-not-leak",
+        request={"api_hash": "hash-secret", "query": "visible"},
+        context={"bot_token": "token-secret", "attempts": 1},
+    )
+    rendered = str(error)
+    debug = repr(error)
+    for secret in ("do-not-leak", "hash-secret", "token-secret"):
+        assert secret not in rendered
+        assert secret not in debug
+    assert "visible" in rendered
+    assert "attempts" in rendered
+
+
+def test_protocol_validation_error_redacts_sensitive_context() -> None:
+    error = ProtocolValidationError("msg_key", context={"auth_key": "key-secret", "msg_id": 123})
+    rendered = str(error)
+    debug = repr(error)
+    assert error.reason == "msg_key"
+    assert "key-secret" not in rendered
+    assert "key-secret" not in debug
+    assert "msg_id" in rendered

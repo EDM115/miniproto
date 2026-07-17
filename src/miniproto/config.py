@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from typing import Literal
 
@@ -30,9 +31,7 @@ class TransportConfig:
         if self.reconnect_backoff_initial < 0:
             raise ValueError("reconnect_backoff_initial must not be negative")
         if self.reconnect_backoff_max < self.reconnect_backoff_initial:
-            raise ValueError(
-                "reconnect_backoff_max must be greater than or equal to reconnect_backoff_initial"
-            )
+            raise ValueError("reconnect_backoff_max must be greater than or equal to reconnect_backoff_initial")
         if self.max_payload_size <= 0:
             raise ValueError("max_payload_size must be positive")
 
@@ -51,6 +50,7 @@ class ClientConfig:
     api_id: int
     api_hash: str = field(repr=False)
     session_storage: SessionStorage | None = field(default=None, repr=False)
+    session_path: str | os.PathLike[str] = "miniproto.session.sqlite"
     transport: TransportConfig = field(default_factory=TransportConfig)
     device: DeviceInfo = field(default_factory=DeviceInfo)
     update_queue_size: int = 1000

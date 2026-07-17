@@ -6,10 +6,7 @@ from dataclasses import dataclass, field
 
 from miniproto.config import TransportConfig
 from miniproto.connection.tcp_abridged import TcpAbridgedTransport
-from miniproto.connection.tcp_intermediate import (
-    TcpIntermediateTransport,
-    TcpPaddedIntermediateTransport,
-)
+from miniproto.connection.tcp_intermediate import TcpIntermediateTransport, TcpPaddedIntermediateTransport
 from miniproto.connection.transport import ConnectionEndpoint
 from miniproto.mtproto.codec import (
     DecodedEncryptedMessage,
@@ -22,9 +19,7 @@ from miniproto.mtproto.codec import (
 )
 from miniproto.mtproto.state import MTProtoState
 
-FakeHandler = Callable[
-    [DecodedEncryptedMessage], Awaitable[bytes | object | None] | bytes | object | None
-]
+FakeHandler = Callable[[DecodedEncryptedMessage], Awaitable[bytes | object | None] | bytes | object | None]
 
 
 @dataclass(slots=True)
@@ -59,9 +54,7 @@ class FakeMTProtoServer:
         await self.close()
 
     async def start(self) -> None:
-        self._state = MTProtoState(
-            auth_key=self.auth_key, server_salt=self.server_salt, session_id=self.session_id
-        )
+        self._state = MTProtoState(auth_key=self.auth_key, server_salt=self.server_salt, session_id=self.session_id)
         self._server = await asyncio.start_server(self._handle_client, self.host, 0)
 
     async def close(self) -> None:
@@ -71,9 +64,7 @@ class FakeMTProtoServer:
         await self._server.wait_closed()
         self._server = None
 
-    async def _handle_client(
-        self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
-    ) -> None:
+    async def _handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         transport = _ServerTransport(reader, writer, self.config)
         try:
             await transport.read_handshake()
@@ -121,11 +112,7 @@ class FakeMTProtoServer:
             yield incoming
             return
         for item in body.messages:
-            body_bytes = (
-                item.body
-                if isinstance(item.body, bytes | memoryview)
-                else encode_message_body(item.body)
-            )
+            body_bytes = item.body if isinstance(item.body, bytes | memoryview) else encode_message_body(item.body)
             nested_body = decode_message_body(body_bytes)
             if isinstance(nested_body, MsgsAck):
                 self.acks_received.extend(nested_body.msg_ids)
@@ -143,9 +130,7 @@ class FakeMTProtoServer:
 
 
 class _ServerTransport:
-    def __init__(
-        self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, config: TransportConfig
-    ) -> None:
+    def __init__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, config: TransportConfig) -> None:
         self.reader = reader
         self.writer = writer
         self.config = config
@@ -155,9 +140,7 @@ class _ServerTransport:
             case "tcp_intermediate":
                 self._codec = TcpIntermediateTransport(ConnectionEndpoint("127.0.0.1", 1), config)
             case "tcp_padded_intermediate":
-                self._codec = TcpPaddedIntermediateTransport(
-                    ConnectionEndpoint("127.0.0.1", 1), config
-                )
+                self._codec = TcpPaddedIntermediateTransport(ConnectionEndpoint("127.0.0.1", 1), config)
             case _:
                 raise ValueError(f"unsupported transport mode {config.mode!r}")
 
