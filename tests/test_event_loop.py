@@ -76,6 +76,35 @@ def test_event_loop_run_uses_runner_cleanup_and_debug() -> None:
     assert generator_closed
 
 
+@pytest.mark.parametrize(("backend_name", "backend_version"), [("uvloop", "0.22.1"), ("winloop", "0.6.3")])
+def test_event_loop_run_uses_stdlib_debug_runner_for_unsafe_backends(
+    monkeypatch: pytest.MonkeyPatch, backend_name: str, backend_version: str
+) -> None:
+    if sys.version_info < (3, 14):
+        pytest.skip("the optimized debug-runner crash starts on Python 3.14")
+
+    optimized_factory_called = False
+
+    def installed_version(package_name: str) -> str:
+        assert package_name == backend_name
+        return backend_version
+
+    def optimized_factory() -> asyncio.AbstractEventLoop:
+        nonlocal optimized_factory_called
+        optimized_factory_called = True
+        return asyncio.new_event_loop()
+
+    async def compute() -> bool:
+        return asyncio.get_running_loop().get_debug()
+
+    monkeypatch.setattr(event_loop, "_BACKEND_NAME", backend_name)
+    monkeypatch.setattr(event_loop.metadata, "version", installed_version)
+    monkeypatch.setattr(event_loop, "new_event_loop", optimized_factory)
+
+    assert event_loop.run(compute(), debug=True)
+    assert not optimized_factory_called
+
+
 def test_event_loop_run_propagates_factory_and_coroutine_errors(monkeypatch: pytest.MonkeyPatch) -> None:
     async def fail() -> None:
         raise LookupError("sentinel")

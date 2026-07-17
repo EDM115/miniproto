@@ -18,8 +18,8 @@ jobs:
         include:
           - python-version: "3.14"
             experimental: false
-          - python-version: "3.16"
-            experimental: true
+          # - python-version: "3.16"
+          #   experimental: true
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v8.2.0

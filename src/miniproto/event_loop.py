@@ -16,6 +16,11 @@ _BACKEND_LOADED = False
 _BACKEND_LOAD_ERROR: Exception | None = None
 _INSTALL_ERROR: Exception | None = None
 _INSTALLED = False
+_STDLIB_DEBUG_FALLBACK_THROUGH = {
+    # https://github.com/MagicStack/uvloop/issues/715
+    "uvloop": (0, 22, 1),
+    "winloop": (0, 6, 3),
+}
 
 
 def backend_name() -> str:
@@ -107,10 +112,13 @@ def run[T](main: Coroutine[Any, Any, T], *, debug: bool | None = None) -> T:
 
 
 def _requires_stdlib_debug_runner(debug: bool | None) -> bool:
-    if not debug or _BACKEND_NAME != "winloop" or sys.version_info < (3, 14):
+    if not debug or sys.version_info < (3, 14):
+        return False
+    fallback_through = _STDLIB_DEBUG_FALLBACK_THROUGH.get(_BACKEND_NAME)
+    if fallback_through is None:
         return False
     try:
-        installed_version = metadata.version("winloop")
+        installed_version = metadata.version(_BACKEND_NAME)
     except metadata.PackageNotFoundError:
         return False
     numeric_parts = tuple(
@@ -118,7 +126,7 @@ def _requires_stdlib_debug_runner(debug: bool | None) -> bool:
         for part in installed_version.split(".")[:3]
         if (digits := "".join(character for character in part if character.isdigit()))
     )
-    return numeric_parts <= (0, 6, 3)
+    return numeric_parts <= fallback_through
 
 
 def _load_backend() -> ModuleType | None:
