@@ -16,3 +16,4 @@
 - Added initial docs, tests, CI workflow, and implementation progress tracking.
 - Removed import-time asyncio policy installation, made optimized loop backends lazy, and moved script execution to `asyncio.Runner(loop_factory=...)`; the legacy explicit installer is deprecated and unavailable on Python 3.16+.
 - Avoided native crashes during Python 3.14+ debug-mode async-generator cleanup by using the stdlib event loop with affected `uvloop` and `winloop` versions while retaining optimized loops for normal execution.
+- Fixed delayed standalone acknowledgements after inbound validation by keeping pending-ack age timestamps on the monotonic clock.

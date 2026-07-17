@@ -94,7 +94,7 @@ class MTProtoState:
         while len(self._seen_msg_ids) > self.duplicate_window:
             self._seen_msg_ids.pop(min(self._seen_msg_ids))
         if content_related:
-            self._pending_acks[msg_id] = time.monotonic() if now is None else now
+            self._pending_acks[msg_id] = time.monotonic()
         if not self._time_trusted:
             server_time = msg_id >> 32
             if server_time > 0:
