@@ -22,7 +22,7 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
-  "cryptography==49.0.0",
+  "cryptography==50.0.0",
   "uvloop==0.22.1; (sys_platform == 'linux' or sys_platform == 'darwin') and implementation_name == 'cpython'",
   "winloop==0.6.3; (sys_platform == 'win32' or sys_platform == 'cygwin' or sys_platform == 'cli') and implementation_name == 'cpython'",
 ]
