@@ -16,9 +16,7 @@ Use `miniproto` as the protocol SDK: connect, authorize, persist sessions, invok
 from miniproto import Client, ClientConfig, InMemorySessionStorage
 from miniproto.raw import functions
 
-async with Client(
-    ClientConfig(api_id=12345, api_hash="...", session_storage=InMemorySessionStorage())
-) as client:
+async with Client(ClientConfig(api_id=12345, api_hash="...", session_storage=InMemorySessionStorage())) as client:
     raw_config = await client.invoke(functions.help.GetConfig())
 ```
 

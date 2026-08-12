@@ -18,9 +18,7 @@ An explicit `session_storage` always takes precedence over `session_path`. Use `
 ```python
 from miniproto import Client, ClientConfig, InMemorySessionStorage
 
-client = Client(
-    ClientConfig(api_id=12345, api_hash="...", session_storage=InMemorySessionStorage())
-)
+client = Client(ClientConfig(api_id=12345, api_hash="...", session_storage=InMemorySessionStorage()))
 ```
 
 ## Session Keys
@@ -29,6 +27,7 @@ Provide at least 16 bytes of key material; 32 bytes or more is recommended. The 
 
 ```python
 from miniproto import Client, ClientConfig, EncryptedSQLiteSessionStorage
+
 storage = EncryptedSQLiteSessionStorage("client.session.sqlite", key="use-a-long-random-secret-value")
 client = Client(ClientConfig(api_id=12345, api_hash="...", session_storage=storage))
 ```

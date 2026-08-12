@@ -91,7 +91,7 @@ _SESSION_CACHE_EMPTY = object()
 class _CachedSessionStorage:
     def __init__(self, storage: SessionStorage) -> None:
         self._storage = storage
-        self._cached: Mapping[str, Any] | None | object = _SESSION_CACHE_EMPTY
+        self._cached: Mapping[str, Any] | object | None = _SESSION_CACHE_EMPTY
         self._lock = asyncio.Lock()
         self._closed = False
         self._revisions = dict(storage.domain_revisions())

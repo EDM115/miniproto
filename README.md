@@ -23,13 +23,7 @@ Importing `miniproto` never installs or replaces the process-wide asyncio policy
 ```python
 from miniproto import Client, ClientConfig, InMemorySessionStorage
 
-client = Client(
-    ClientConfig(
-        api_id=12345,
-        api_hash="...",
-        session_storage=InMemorySessionStorage(),
-    )
-)
+client = Client(ClientConfig(api_id=12345, api_hash="...", session_storage=InMemorySessionStorage()))
 ```
 
 `InMemorySessionStorage()` intentionally does not persist credentials; use it only for tests or throwaway clients. For durable clients, provision a unique `MINIPROTO_SESSION_KEY` through your deployment secret manager (or pass constructor key material) before constructing the default client, and choose a distinct `session_path` for each account. `session_storage=` takes precedence over `session_path`. See [Session Security](docs/session-security.md) for key handling, envelope behavior, persisted session data, migration guidance, and redaction rules.

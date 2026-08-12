@@ -318,7 +318,7 @@ def test_http_code_prompt_accepts_posted_code() -> None:
         url = f"http://127.0.0.1:{port}/{path_secret}"
         wait_for_http_prompt(url)
         payload = urlencode({"code": " 12345 "}).encode("ascii")
-        with urlopen(url, data=payload, timeout=2) as response:  # noqa: S310
+        with urlopen(url, data=payload, timeout=2) as response:
             assert response.status == 200
         assert future.result(timeout=3) == "12345"
 
