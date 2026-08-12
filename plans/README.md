@@ -70,6 +70,7 @@ These candidates were considered but intentionally rejected or routed elsewhere:
 
 ## Historical and active dated reports
 
+- [2026-08-12 v0.1.0 Alpha completion plan](2026-08-12-v0.1.0-alpha-completion-plan.md): active risk-first execution plan; Wave 0 multi-source Layer 228 schema work is complete and Wave 1 has not started.
 - [2026-06-25 implementation progress](2026-06-25-implementation-progress.md): first implementation slice, verification status, and remaining work.
 - [2026-06-26 package boundary and ecosystem intent](2026-06-26-package-boundary-and-ecosystem-intent.md): decision separating miniproto protocol SDK responsibilities from mpgram framework responsibilities.
 - [2026-06-29 package boundary progress](2026-06-29-package-boundary-progress.md): applied repository and documentation boundary work.

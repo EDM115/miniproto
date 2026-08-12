@@ -1,0 +1,600 @@
+{
+  "canonical_source": "tdlib",
+  "tdlib_vs_core": {
+    "changed": [
+      {
+        "core_signature": "channels.getAdminedPublicChannels#f8b036af flags:# by_location:true check_limit:true for_personal:true = messages.Chats;",
+        "kind": "function",
+        "name": "channels.getAdminedPublicChannels",
+        "tdlib_signature": "channels.getAdminedPublicChannels#f8b036af flags:# by_location:flags.0?true check_limit:flags.1?true for_personal:flags.2?true for_community_peer:flags.3?true = messages.Chats;"
+      },
+      {
+        "core_signature": "channels.joinChannel#24b524c5 channel:InputChannel = Updates;",
+        "kind": "function",
+        "name": "channels.joinChannel",
+        "tdlib_signature": "channels.joinChannel#7f6a1e22 channel:InputChannel = messages.ChatInviteJoinResult;"
+      },
+      {
+        "core_signature": "channels.toggleJoinRequest#4c2985b6 channel:InputChannel enabled:Bool = Updates;",
+        "kind": "function",
+        "name": "channels.toggleJoinRequest",
+        "tdlib_signature": "channels.toggleJoinRequest#ecc2618 flags:# apply_to_invites:flags.1?true channel:InputChannel enabled:Bool guard_bot:flags.0?InputUser = Updates;"
+      },
+      {
+        "core_signature": "contacts.getTopPeers#973478b6 flags:# correspondents:true bots_pm:true bots_inline:true phone_calls:true forward_users:true forward_chats:true groups:true channels:true bots_app:true offset:int limit:int hash:long = contacts.TopPeers;",
+        "kind": "function",
+        "name": "contacts.getTopPeers",
+        "tdlib_signature": "contacts.getTopPeers#973478b6 flags:# correspondents:flags.0?true bots_pm:flags.1?true bots_inline:flags.2?true phone_calls:flags.3?true forward_users:flags.4?true forward_chats:flags.5?true groups:flags.10?true channels:flags.15?true bots_app:flags.16?true bots_guestchat:flags.17?true offset:int limit:int hash:long = contacts.TopPeers;"
+      },
+      {
+        "core_signature": "contacts.search#11f812d8 q:string limit:int = contacts.Found;",
+        "kind": "function",
+        "name": "contacts.search",
+        "tdlib_signature": "contacts.search#5f58d0f flags:# broadcasts:flags.0?true bots:flags.1?true q:string limit:int = contacts.Found;"
+      },
+      {
+        "core_signature": "initConnection#c1cd5ea9 flags:# api_id:int device_model:string system_version:string app_version:string system_lang_code:string lang_pack:string lang_code:string proxy:InputClientProxy params:JSONValue query:!X = X;",
+        "kind": "function",
+        "name": "initConnection",
+        "tdlib_signature": "initConnection#c1cd5ea9 {X:Type} flags:# api_id:int device_model:string system_version:string app_version:string system_lang_code:string lang_pack:string lang_code:string proxy:flags.0?InputClientProxy params:flags.1?JSONValue query:!X = X;"
+      },
+      {
+        "core_signature": "invokeAfterMsg#cb9f372d msg_id:long query:!X = X;",
+        "kind": "function",
+        "name": "invokeAfterMsg",
+        "tdlib_signature": "invokeAfterMsg#cb9f372d {X:Type} msg_id:long query:!X = X;"
+      },
+      {
+        "core_signature": "invokeAfterMsgs#3dc4b4f0 msg_ids:Vector<long> query:!X = X;",
+        "kind": "function",
+        "name": "invokeAfterMsgs",
+        "tdlib_signature": "invokeAfterMsgs#3dc4b4f0 {X:Type} msg_ids:Vector<long> query:!X = X;"
+      },
+      {
+        "core_signature": "invokeWithApnsSecret#0dae54f8 nonce:string secret:string query:!X = X;",
+        "kind": "function",
+        "name": "invokeWithApnsSecret",
+        "tdlib_signature": "invokeWithApnsSecret#0dae54f8 {X:Type} nonce:string secret:string query:!X = X;"
+      },
+      {
+        "core_signature": "invokeWithBusinessConnection#dd289f8e connection_id:string query:!X = X;",
+        "kind": "function",
+        "name": "invokeWithBusinessConnection",
+        "tdlib_signature": "invokeWithBusinessConnection#dd289f8e {X:Type} connection_id:string query:!X = X;"
+      },
+      {
+        "core_signature": "invokeWithGooglePlayIntegrity#1df92984 nonce:string token:string query:!X = X;",
+        "kind": "function",
+        "name": "invokeWithGooglePlayIntegrity",
+        "tdlib_signature": "invokeWithGooglePlayIntegrity#1df92984 {X:Type} nonce:string token:string query:!X = X;"
+      },
+      {
+        "core_signature": "invokeWithLayer#da9b0d0d layer:int query:!X = X;",
+        "kind": "function",
+        "name": "invokeWithLayer",
+        "tdlib_signature": "invokeWithLayer#da9b0d0d {X:Type} layer:int query:!X = X;"
+      },
+      {
+        "core_signature": "invokeWithMessagesRange#365275f2 range:MessageRange query:!X = X;",
+        "kind": "function",
+        "name": "invokeWithMessagesRange",
+        "tdlib_signature": "invokeWithMessagesRange#365275f2 {X:Type} range:MessageRange query:!X = X;"
+      },
+      {
+        "core_signature": "invokeWithReCaptcha#adbb0f94 token:string query:!X = X;",
+        "kind": "function",
+        "name": "invokeWithReCaptcha",
+        "tdlib_signature": "invokeWithReCaptcha#adbb0f94 {X:Type} token:string query:!X = X;"
+      },
+      {
+        "core_signature": "invokeWithTakeout#aca9fd2e takeout_id:long query:!X = X;",
+        "kind": "function",
+        "name": "invokeWithTakeout",
+        "tdlib_signature": "invokeWithTakeout#aca9fd2e {X:Type} takeout_id:long query:!X = X;"
+      },
+      {
+        "core_signature": "invokeWithoutUpdates#bf9459b7 query:!X = X;",
+        "kind": "function",
+        "name": "invokeWithoutUpdates",
+        "tdlib_signature": "invokeWithoutUpdates#bf9459b7 {X:Type} query:!X = X;"
+      },
+      {
+        "core_signature": "messages.editInlineBotMessage#83557dba flags:# no_webpage:true invert_media:true id:InputBotInlineMessageID message:string media:InputMedia reply_markup:ReplyMarkup entities:Vector<MessageEntity> = Bool;",
+        "kind": "function",
+        "name": "messages.editInlineBotMessage",
+        "tdlib_signature": "messages.editInlineBotMessage#a423bb51 flags:# no_webpage:flags.1?true invert_media:flags.16?true id:InputBotInlineMessageID message:flags.11?string media:flags.14?InputMedia reply_markup:flags.2?ReplyMarkup entities:flags.3?Vector<MessageEntity> rich_message:flags.23?InputRichMessage = Bool;"
+      },
+      {
+        "core_signature": "messages.editMessage#51e842e1 flags:# no_webpage:true invert_media:true peer:InputPeer id:int message:string media:InputMedia reply_markup:ReplyMarkup entities:Vector<MessageEntity> schedule_date:int schedule_repeat_period:int quick_reply_shortcut_id:int = Updates;",
+        "kind": "function",
+        "name": "messages.editMessage",
+        "tdlib_signature": "messages.editMessage#b106e66c flags:# no_webpage:flags.1?true invert_media:flags.16?true peer:InputPeer id:int message:flags.11?string media:flags.14?InputMedia reply_markup:flags.2?ReplyMarkup entities:flags.3?Vector<MessageEntity> schedule_date:flags.15?int schedule_repeat_period:flags.18?int quick_reply_shortcut_id:flags.17?int rich_message:flags.23?InputRichMessage = Updates;"
+      },
+      {
+        "core_signature": "messages.getPollResults#73bb643b peer:InputPeer msg_id:int = Updates;",
+        "kind": "function",
+        "name": "messages.getPollResults",
+        "tdlib_signature": "messages.getPollResults#eda3e33b peer:InputPeer msg_id:int poll_hash:long = Updates;"
+      },
+      {
+        "core_signature": "messages.importChatInvite#6c50051c hash:string = Updates;",
+        "kind": "function",
+        "name": "messages.importChatInvite",
+        "tdlib_signature": "messages.importChatInvite#de91436e hash:string = messages.ChatInviteJoinResult;"
+      },
+      {
+        "core_signature": "messages.saveDraft#54ae308e flags:# no_webpage:true invert_media:true reply_to:InputReplyTo peer:InputPeer message:string entities:Vector<MessageEntity> media:InputMedia effect:long suggested_post:SuggestedPost = Bool;",
+        "kind": "function",
+        "name": "messages.saveDraft",
+        "tdlib_signature": "messages.saveDraft#ad0fa15c flags:# no_webpage:flags.1?true invert_media:flags.6?true reply_to:flags.4?InputReplyTo peer:InputPeer message:string entities:flags.3?Vector<MessageEntity> media:flags.5?InputMedia effect:flags.7?long suggested_post:flags.8?SuggestedPost rich_message:flags.9?InputRichMessage = Bool;"
+      },
+      {
+        "core_signature": "messages.searchGlobal#4bc6589a flags:# broadcasts_only:true groups_only:true users_only:true folder_id:int q:string filter:MessagesFilter min_date:int max_date:int offset_rate:int offset_peer:InputPeer offset_id:int limit:int = messages.Messages;",
+        "kind": "function",
+        "name": "messages.searchGlobal",
+        "tdlib_signature": "messages.searchGlobal#6126a43c flags:# broadcasts_only:flags.1?true groups_only:flags.2?true users_only:flags.3?true folder_id:flags.0?int community:flags.4?InputChannel q:string filter:MessagesFilter min_date:int max_date:int offset_rate:int offset_peer:InputPeer offset_id:int limit:int = messages.Messages;"
+      },
+      {
+        "core_signature": "messages.sendBotRequestedPeer#91b2d060 peer:InputPeer msg_id:int button_id:int requested_peers:Vector<InputPeer> = Updates;",
+        "kind": "function",
+        "name": "messages.sendBotRequestedPeer",
+        "tdlib_signature": "messages.sendBotRequestedPeer#6c5cf2a7 flags:# peer:InputPeer msg_id:flags.0?int webapp_req_id:flags.1?string button_id:int requested_peers:Vector<InputPeer> = Updates;"
+      },
+      {
+        "core_signature": "messages.sendMessage#545cd15a flags:# no_webpage:true silent:true background:true clear_draft:true noforwards:true update_stickersets_order:true invert_media:true allow_paid_floodskip:true peer:InputPeer reply_to:InputReplyTo message:string random_id:long reply_markup:ReplyMarkup entities:Vector<MessageEntity> schedule_date:int schedule_repeat_period:int send_as:InputPeer quick_reply_shortcut:InputQuickReplyShortcut effect:long allow_paid_stars:long suggested_post:SuggestedPost = Updates;",
+        "kind": "function",
+        "name": "messages.sendMessage",
+        "tdlib_signature": "messages.sendMessage#fef48f62 flags:# no_webpage:flags.1?true silent:flags.5?true background:flags.6?true clear_draft:flags.7?true noforwards:flags.14?true update_stickersets_order:flags.15?true invert_media:flags.16?true allow_paid_floodskip:flags.19?true peer:InputPeer reply_to:flags.0?InputReplyTo message:string random_id:long reply_markup:flags.2?ReplyMarkup entities:flags.3?Vector<MessageEntity> schedule_date:flags.10?int schedule_repeat_period:flags.24?int send_as:flags.13?InputPeer quick_reply_shortcut:flags.17?InputQuickReplyShortcut effect:flags.18?long allow_paid_stars:flags.21?long suggested_post:flags.22?SuggestedPost rich_message:flags.23?InputRichMessage = Updates;"
+      },
+      {
+        "core_signature": "messages.summarizeText#9d4104e2 flags:# peer:InputPeer id:int to_lang:string = TextWithEntities;",
+        "kind": "function",
+        "name": "messages.summarizeText",
+        "tdlib_signature": "messages.summarizeText#abbbd346 flags:# peer:InputPeer id:int to_lang:flags.0?string tone:flags.2?string = TextWithEntities;"
+      },
+      {
+        "core_signature": "messages.translateText#63183030 flags:# peer:InputPeer id:Vector<int> text:Vector<TextWithEntities> to_lang:string = messages.TranslatedText;",
+        "kind": "function",
+        "name": "messages.translateText",
+        "tdlib_signature": "messages.translateText#a5eec345 flags:# peer:flags.0?InputPeer id:flags.0?Vector<int> text:flags.1?Vector<TextWithEntities> to_lang:string tone:flags.2?string = messages.TranslatedText;"
+      },
+      {
+        "core_signature": "stories.editStory#b583ba46 flags:# peer:InputPeer id:int media:InputMedia media_areas:Vector<MediaArea> caption:string entities:Vector<MessageEntity> privacy_rules:Vector<InputPrivacyRule> = Updates;",
+        "kind": "function",
+        "name": "stories.editStory",
+        "tdlib_signature": "stories.editStory#2c63a72b flags:# peer:InputPeer id:int media:flags.0?InputMedia media_areas:flags.3?Vector<MediaArea> caption:flags.1?string entities:flags.1?Vector<MessageEntity> privacy_rules:flags.2?Vector<InputPrivacyRule> music:flags.4?InputDocument = Updates;"
+      },
+      {
+        "core_signature": "stories.sendStory#737fc2ec flags:# pinned:true noforwards:true fwd_modified:true peer:InputPeer media:InputMedia media_areas:Vector<MediaArea> caption:string entities:Vector<MessageEntity> privacy_rules:Vector<InputPrivacyRule> random_id:long period:int fwd_from_id:InputPeer fwd_from_story:int albums:Vector<int> = Updates;",
+        "kind": "function",
+        "name": "stories.sendStory",
+        "tdlib_signature": "stories.sendStory#8f9e6898 flags:# pinned:flags.2?true noforwards:flags.4?true fwd_modified:flags.7?true peer:InputPeer media:InputMedia media_areas:flags.5?Vector<MediaArea> caption:flags.0?string entities:flags.1?Vector<MessageEntity> privacy_rules:Vector<InputPrivacyRule> random_id:long period:flags.3?int fwd_from_id:flags.6?InputPeer fwd_from_story:flags.6?int albums:flags.8?Vector<int> music:flags.9?InputDocument = Updates;"
+      },
+      {
+        "core_signature": "auth.sentCodePaymentRequired#e0955a3c store_product:string phone_code_hash:string support_email_address:string support_email_subject:string currency:string amount:long = auth.SentCode;",
+        "kind": "type",
+        "name": "auth.sentCodePaymentRequired",
+        "tdlib_signature": "auth.sentCodePaymentRequired#f8827ebf store_product:string phone_code_hash:string support_email_address:string support_email_subject:string premium_days:int currency:string amount:long = auth.SentCode;"
+      },
+      {
+        "core_signature": "botCommand#c27ac8c7 command:string description:string = BotCommand;",
+        "kind": "type",
+        "name": "botCommand",
+        "tdlib_signature": "botCommand#9852d6d2 flags:# ephemeral:flags.0?true command:string description:string = BotCommand;"
+      },
+      {
+        "core_signature": "channel#1c32b11c flags:# creator:true left:true broadcast:true verified:true megagroup:true restricted:true signatures:true min:true scam:true has_link:true has_geo:true slowmode_enabled:true call_active:true call_not_empty:true fake:true gigagroup:true noforwards:true join_to_send:true join_request:true forum:true flags2:# stories_hidden:true stories_hidden_min:true stories_unavailable:true signature_profiles:true autotranslation:true broadcast_messages_allowed:true monoforum:true forum_tabs:true id:long access_hash:long title:string username:string photo:ChatPhoto date:int restriction_reason:Vector<RestrictionReason> admin_rights:ChatAdminRights banned_rights:ChatBannedRights default_banned_rights:ChatBannedRights participants_count:int usernames:Vector<Username> stories_max_id:RecentStory color:PeerColor profile_color:PeerColor emoji_status:EmojiStatus level:int subscription_until_date:int bot_verification_icon:long send_paid_messages_stars:long linked_monoforum_id:long = Chat;",
+        "kind": "type",
+        "name": "channel",
+        "tdlib_signature": "channel#d49f34c6 flags:# creator:flags.0?true left:flags.2?true broadcast:flags.5?true verified:flags.7?true megagroup:flags.8?true restricted:flags.9?true signatures:flags.11?true min:flags.12?true scam:flags.19?true has_link:flags.20?true has_geo:flags.21?true slowmode_enabled:flags.22?true call_active:flags.23?true call_not_empty:flags.24?true fake:flags.25?true gigagroup:flags.26?true noforwards:flags.27?true join_to_send:flags.28?true join_request:flags.29?true forum:flags.30?true flags2:# stories_hidden:flags2.1?true stories_hidden_min:flags2.2?true stories_unavailable:flags2.3?true signature_profiles:flags2.12?true autotranslation:flags2.15?true broadcast_messages_allowed:flags2.16?true monoforum:flags2.17?true forum_tabs:flags2.19?true id:long access_hash:flags.13?long title:string username:flags.6?string photo:ChatPhoto date:int restriction_reason:flags.9?Vector<RestrictionReason> admin_rights:flags.14?ChatAdminRights banned_rights:flags.15?ChatBannedRights default_banned_rights:flags.18?ChatBannedRights participants_count:flags.17?int usernames:flags2.0?Vector<Username> stories_max_id:flags2.4?RecentStory color:flags2.7?PeerColor profile_color:flags2.8?PeerColor emoji_status:flags2.9?EmojiStatus level:flags2.10?int subscription_until_date:flags2.11?int bot_verification_icon:flags2.13?long send_paid_messages_stars:flags2.14?long linked_monoforum_id:flags2.18?long linked_community_id:flags2.20?long = Chat;"
+      },
+      {
+        "core_signature": "channelFull#e4e0b29d flags:# can_view_participants:true can_set_username:true can_set_stickers:true hidden_prehistory:true can_set_location:true has_scheduled:true can_view_stats:true blocked:true flags2:# can_delete_channel:true antispam:true participants_hidden:true translations_disabled:true stories_pinned_available:true view_forum_as_messages:true restricted_sponsored:true can_view_revenue:true paid_media_allowed:true can_view_stars_revenue:true paid_reactions_available:true stargifts_available:true paid_messages_available:true id:long about:string participants_count:int admins_count:int kicked_count:int banned_count:int online_count:int read_inbox_max_id:int read_outbox_max_id:int unread_count:int chat_photo:Photo notify_settings:PeerNotifySettings exported_invite:ExportedChatInvite bot_info:Vector<BotInfo> migrated_from_chat_id:long migrated_from_max_id:int pinned_msg_id:int stickerset:StickerSet available_min_id:int folder_id:int linked_chat_id:long location:ChannelLocation slowmode_seconds:int slowmode_next_send_date:int stats_dc:int pts:int call:InputGroupCall ttl_period:int pending_suggestions:Vector<string> groupcall_default_join_as:Peer theme_emoticon:string requests_pending:int recent_requesters:Vector<long> default_send_as:Peer available_reactions:ChatReactions reactions_limit:int stories:PeerStories wallpaper:WallPaper boosts_applied:int boosts_unrestrict:int emojiset:StickerSet bot_verification:BotVerification stargifts_count:int send_paid_messages_stars:long main_tab:ProfileTab = ChatFull;",
+        "kind": "type",
+        "name": "channelFull",
+        "tdlib_signature": "channelFull#a04e8d3a flags:# can_view_participants:flags.3?true can_set_username:flags.6?true can_set_stickers:flags.7?true hidden_prehistory:flags.10?true can_set_location:flags.16?true has_scheduled:flags.19?true can_view_stats:flags.20?true blocked:flags.22?true flags2:# can_delete_channel:flags2.0?true antispam:flags2.1?true participants_hidden:flags2.2?true translations_disabled:flags2.3?true stories_pinned_available:flags2.5?true view_forum_as_messages:flags2.6?true restricted_sponsored:flags2.11?true can_view_revenue:flags2.12?true paid_media_allowed:flags2.14?true can_view_stars_revenue:flags2.15?true paid_reactions_available:flags2.16?true stargifts_available:flags2.19?true paid_messages_available:flags2.20?true id:long about:string participants_count:flags.0?int admins_count:flags.1?int kicked_count:flags.2?int banned_count:flags.2?int online_count:flags.13?int read_inbox_max_id:int read_outbox_max_id:int unread_count:int chat_photo:Photo notify_settings:PeerNotifySettings exported_invite:flags.23?ExportedChatInvite bot_info:Vector<BotInfo> migrated_from_chat_id:flags.4?long migrated_from_max_id:flags.4?int pinned_msg_id:flags.5?int stickerset:flags.8?StickerSet available_min_id:flags.9?int folder_id:flags.11?int linked_chat_id:flags.14?long location:flags.15?ChannelLocation slowmode_seconds:flags.17?int slowmode_next_send_date:flags.18?int stats_dc:flags.12?int pts:int call:flags.21?InputGroupCall ttl_period:flags.24?int pending_suggestions:flags.25?Vector<string> groupcall_default_join_as:flags.26?Peer theme_emoticon:flags.27?string requests_pending:flags.28?int recent_requesters:flags.28?Vector<long> default_send_as:flags.29?Peer available_reactions:flags.30?ChatReactions reactions_limit:flags2.13?int stories:flags2.4?PeerStories wallpaper:flags2.7?WallPaper boosts_applied:flags2.8?int boosts_unrestrict:flags2.9?int emojiset:flags2.10?StickerSet bot_verification:flags2.17?BotVerification stargifts_count:flags2.18?int send_paid_messages_stars:flags2.21?long main_tab:flags2.22?ProfileTab guard_bot_id:flags2.23?long = ChatFull;"
+      },
+      {
+        "core_signature": "chatAdminRights#5fb224d5 flags:# change_info:true post_messages:true edit_messages:true delete_messages:true ban_users:true invite_users:true pin_messages:true add_admins:true anonymous:true manage_call:true other:true manage_topics:true post_stories:true edit_stories:true delete_stories:true manage_direct_messages:true manage_ranks:true = ChatAdminRights;",
+        "kind": "type",
+        "name": "chatAdminRights",
+        "tdlib_signature": "chatAdminRights#5fb224d5 flags:# change_info:flags.0?true post_messages:flags.1?true edit_messages:flags.2?true delete_messages:flags.3?true ban_users:flags.4?true invite_users:flags.5?true pin_messages:flags.7?true add_admins:flags.9?true anonymous:flags.10?true manage_call:flags.11?true other:flags.12?true manage_topics:flags.13?true post_stories:flags.14?true edit_stories:flags.15?true delete_stories:flags.16?true manage_direct_messages:flags.17?true manage_ranks:flags.18?true manage_linked_peers:flags.19?true = ChatAdminRights;"
+      },
+      {
+        "core_signature": "chatBannedRights#9f120418 flags:# view_messages:true send_messages:true send_media:true send_stickers:true send_gifs:true send_games:true send_inline:true embed_links:true send_polls:true change_info:true invite_users:true pin_messages:true manage_topics:true send_photos:true send_videos:true send_roundvideos:true send_audios:true send_voices:true send_docs:true send_plain:true edit_rank:true until_date:int = ChatBannedRights;",
+        "kind": "type",
+        "name": "chatBannedRights",
+        "tdlib_signature": "chatBannedRights#9f120418 flags:# view_messages:flags.0?true send_messages:flags.1?true send_media:flags.2?true send_stickers:flags.3?true send_gifs:flags.4?true send_games:flags.5?true send_inline:flags.6?true embed_links:flags.7?true send_polls:flags.8?true change_info:flags.10?true invite_users:flags.15?true pin_messages:flags.17?true manage_topics:flags.18?true send_photos:flags.19?true send_videos:flags.20?true send_roundvideos:flags.21?true send_audios:flags.22?true send_voices:flags.23?true send_docs:flags.24?true send_plain:flags.25?true edit_rank:flags.26?true send_reactions:flags.27?true manage_linked_peers:flags.28?true until_date:int = ChatBannedRights;"
+      },
+      {
+        "core_signature": "connectedBot#cd64636c flags:# bot_id:long recipients:BusinessBotRecipients rights:BusinessBotRights = ConnectedBot;",
+        "kind": "type",
+        "name": "connectedBot",
+        "tdlib_signature": "connectedBot#33ed001 flags:# bot_id:long recipients:BusinessBotRecipients rights:BusinessBotRights device:flags.0?string date:flags.1?int location:flags.2?string = ConnectedBot;"
+      },
+      {
+        "core_signature": "dialog#d58a08c6 flags:# pinned:true unread_mark:true view_forum_as_messages:true peer:Peer top_message:int read_inbox_max_id:int read_outbox_max_id:int unread_count:int unread_mentions_count:int unread_reactions_count:int notify_settings:PeerNotifySettings pts:int draft:DraftMessage folder_id:int ttl_period:int = Dialog;",
+        "kind": "type",
+        "name": "dialog",
+        "tdlib_signature": "dialog#fc89f7f3 flags:# pinned:flags.2?true unread_mark:flags.3?true view_forum_as_messages:flags.6?true peer:Peer top_message:int read_inbox_max_id:int read_outbox_max_id:int unread_count:int unread_mentions_count:int unread_reactions_count:int unread_poll_votes_count:int notify_settings:PeerNotifySettings pts:flags.0?int draft:flags.1?DraftMessage folder_id:flags.4?int ttl_period:flags.5?int = Dialog;"
+      },
+      {
+        "core_signature": "draftMessage#96eaa5eb flags:# no_webpage:true invert_media:true reply_to:InputReplyTo message:string entities:Vector<MessageEntity> media:InputMedia date:int effect:long suggested_post:SuggestedPost = DraftMessage;",
+        "kind": "type",
+        "name": "draftMessage",
+        "tdlib_signature": "draftMessage#60fe3294 flags:# no_webpage:flags.1?true invert_media:flags.6?true reply_to:flags.4?InputReplyTo message:string entities:flags.3?Vector<MessageEntity> media:flags.5?InputMedia date:int effect:flags.7?long suggested_post:flags.8?SuggestedPost rich_message:flags.9?RichMessage = DraftMessage;"
+      },
+      {
+        "core_signature": "forumTopic#cdff0eca flags:# my:true closed:true pinned:true short:true hidden:true title_missing:true id:int date:int peer:Peer title:string icon_color:int icon_emoji_id:long top_message:int read_inbox_max_id:int read_outbox_max_id:int unread_count:int unread_mentions_count:int unread_reactions_count:int from_id:Peer notify_settings:PeerNotifySettings draft:DraftMessage = ForumTopic;",
+        "kind": "type",
+        "name": "forumTopic",
+        "tdlib_signature": "forumTopic#fcdad815 flags:# my:flags.1?true closed:flags.2?true pinned:flags.3?true short:flags.5?true hidden:flags.6?true title_missing:flags.7?true id:int date:int peer:Peer title:string icon_color:int icon_emoji_id:flags.0?long top_message:int read_inbox_max_id:int read_outbox_max_id:int unread_count:int unread_mentions_count:int unread_reactions_count:int unread_poll_votes_count:int from_id:Peer notify_settings:PeerNotifySettings draft:flags.4?DraftMessage = ForumTopic;"
+      },
+      {
+        "core_signature": "inputMediaPhoto#b3ba0635 flags:# spoiler:true id:InputPhoto ttl_seconds:int = InputMedia;",
+        "kind": "type",
+        "name": "inputMediaPhoto",
+        "tdlib_signature": "inputMediaPhoto#e3af4434 flags:# spoiler:flags.1?true live_photo:flags.2?true id:InputPhoto ttl_seconds:flags.0?int video:flags.2?InputDocument = InputMedia;"
+      },
+      {
+        "core_signature": "inputMediaPoll#0f94e5f1 flags:# poll:Poll correct_answers:Vector<bytes> solution:string solution_entities:Vector<MessageEntity> = InputMedia;",
+        "kind": "type",
+        "name": "inputMediaPoll",
+        "tdlib_signature": "inputMediaPoll#883a4108 flags:# poll:Poll correct_answers:flags.0?Vector<int> attached_media:flags.3?InputMedia solution:flags.1?string solution_entities:flags.1?Vector<MessageEntity> solution_media:flags.2?InputMedia = InputMedia;"
+      },
+      {
+        "core_signature": "inputMediaUploadedPhoto#1e287d04 flags:# spoiler:true file:InputFile stickers:Vector<InputDocument> ttl_seconds:int = InputMedia;",
+        "kind": "type",
+        "name": "inputMediaUploadedPhoto",
+        "tdlib_signature": "inputMediaUploadedPhoto#7d8375da flags:# spoiler:flags.2?true live_photo:flags.3?true file:InputFile stickers:flags.0?Vector<InputDocument> ttl_seconds:flags.1?int video:flags.3?InputDocument = InputMedia;"
+      },
+      {
+        "core_signature": "inputReplyToMessage#869fbe10 flags:# reply_to_msg_id:int top_msg_id:int reply_to_peer_id:InputPeer quote_text:string quote_entities:Vector<MessageEntity> quote_offset:int monoforum_peer_id:InputPeer todo_item_id:int = InputReplyTo;",
+        "kind": "type",
+        "name": "inputReplyToMessage",
+        "tdlib_signature": "inputReplyToMessage#3bd4b7c2 flags:# reply_to_msg_id:int top_msg_id:flags.0?int reply_to_peer_id:flags.1?InputPeer quote_text:flags.2?string quote_entities:flags.3?Vector<MessageEntity> quote_offset:flags.4?int monoforum_peer_id:flags.5?InputPeer todo_item_id:flags.6?int poll_option:flags.7?bytes = InputReplyTo;"
+      },
+      {
+        "core_signature": "inputStorePaymentAuthCode#9bb2636d flags:# restore:true phone_number:string phone_code_hash:string currency:string amount:long = InputStorePaymentPurpose;",
+        "kind": "type",
+        "name": "inputStorePaymentAuthCode",
+        "tdlib_signature": "inputStorePaymentAuthCode#3fc18057 flags:# restore:flags.0?true phone_number:string phone_code_hash:string premium_days:int currency:string amount:long = InputStorePaymentPurpose;"
+      },
+      {
+        "core_signature": "message#3ae56482 flags:# out:true mentioned:true media_unread:true silent:true post:true from_scheduled:true legacy:true edit_hide:true pinned:true noforwards:true invert_media:true flags2:# offline:true video_processing_pending:true paid_suggested_post_stars:true paid_suggested_post_ton:true id:int from_id:Peer from_boosts_applied:int from_rank:string peer_id:Peer saved_peer_id:Peer fwd_from:MessageFwdHeader via_bot_id:long via_business_bot_id:long reply_to:MessageReplyHeader date:int message:string media:MessageMedia reply_markup:ReplyMarkup entities:Vector<MessageEntity> views:int forwards:int replies:MessageReplies edit_date:int post_author:string grouped_id:long reactions:MessageReactions restriction_reason:Vector<RestrictionReason> ttl_period:int quick_reply_shortcut_id:int effect:long factcheck:FactCheck report_delivery_until_date:int paid_message_stars:long suggested_post:SuggestedPost schedule_repeat_period:int summary_from_language:string = Message;",
+        "kind": "type",
+        "name": "message",
+        "tdlib_signature": "message#7600b9d3 flags:# out:flags.1?true mentioned:flags.4?true media_unread:flags.5?true silent:flags.13?true post:flags.14?true from_scheduled:flags.18?true legacy:flags.19?true edit_hide:flags.21?true pinned:flags.24?true noforwards:flags.26?true invert_media:flags.27?true flags2:# offline:flags2.1?true video_processing_pending:flags2.4?true paid_suggested_post_stars:flags2.8?true paid_suggested_post_ton:flags2.9?true id:int from_id:flags.8?Peer from_boosts_applied:flags.29?int from_rank:flags2.12?string peer_id:Peer saved_peer_id:flags.28?Peer fwd_from:flags.2?MessageFwdHeader via_bot_id:flags.11?long via_business_bot_id:flags2.0?long guestchat_via_from:flags2.19?Peer reply_to:flags.3?MessageReplyHeader date:int message:string media:flags.9?MessageMedia reply_markup:flags.6?ReplyMarkup entities:flags.7?Vector<MessageEntity> views:flags.10?int forwards:flags.10?int replies:flags.23?MessageReplies edit_date:flags.15?int post_author:flags.16?string grouped_id:flags.17?long reactions:flags.20?MessageReactions restriction_reason:flags.22?Vector<RestrictionReason> ttl_period:flags.25?int quick_reply_shortcut_id:flags.30?int effect:flags2.2?long factcheck:flags2.3?FactCheck report_delivery_until_date:flags2.5?int paid_message_stars:flags2.6?long suggested_post:flags2.7?SuggestedPost schedule_repeat_period:flags2.10?int summary_from_language:flags2.11?string rich_message:flags2.13?RichMessage = Message;"
+      },
+      {
+        "core_signature": "messageMediaPhoto#695150d7 flags:# spoiler:true photo:Photo ttl_seconds:int = MessageMedia;",
+        "kind": "type",
+        "name": "messageMediaPhoto",
+        "tdlib_signature": "messageMediaPhoto#e216eb63 flags:# spoiler:flags.3?true live_photo:flags.4?true photo:flags.0?Photo ttl_seconds:flags.2?int video:flags.4?Document = MessageMedia;"
+      },
+      {
+        "core_signature": "messageMediaPoll#4bd6e798 poll:Poll results:PollResults = MessageMedia;",
+        "kind": "type",
+        "name": "messageMediaPoll",
+        "tdlib_signature": "messageMediaPoll#773f4e66 flags:# poll:Poll results:PollResults attached_media:flags.0?MessageMedia = MessageMedia;"
+      },
+      {
+        "core_signature": "messageReplyHeader#6917560b flags:# reply_to_scheduled:true forum_topic:true quote:true reply_to_msg_id:int reply_to_peer_id:Peer reply_from:MessageFwdHeader reply_media:MessageMedia reply_to_top_id:int quote_text:string quote_entities:Vector<MessageEntity> quote_offset:int todo_item_id:int = MessageReplyHeader;",
+        "kind": "type",
+        "name": "messageReplyHeader",
+        "tdlib_signature": "messageReplyHeader#1b97dd66 flags:# reply_to_scheduled:flags.2?true forum_topic:flags.3?true quote:flags.9?true reply_to_ephemeral:flags.13?true reply_to_msg_id:flags.4?int reply_to_peer_id:flags.0?Peer reply_from:flags.5?MessageFwdHeader reply_media:flags.8?MessageMedia reply_to_top_id:flags.1?int quote_text:flags.6?string quote_entities:flags.7?Vector<MessageEntity> quote_offset:flags.10?int todo_item_id:flags.11?int poll_option:flags.12?bytes = MessageReplyHeader;"
+      },
+      {
+        "core_signature": "pageBlockOrderedList#9a8ae1e1 items:Vector<PageListOrderedItem> = PageBlock;",
+        "kind": "type",
+        "name": "pageBlockOrderedList",
+        "tdlib_signature": "pageBlockOrderedList#1fd6f6c1 flags:# reversed:flags.2?true items:Vector<PageListOrderedItem> start:flags.0?int type:flags.1?string = PageBlock;"
+      },
+      {
+        "core_signature": "pageBlockPhoto#1759c560 flags:# photo_id:long caption:PageCaption url:string webpage_id:long = PageBlock;",
+        "kind": "type",
+        "name": "pageBlockPhoto",
+        "tdlib_signature": "pageBlockPhoto#1759c560 flags:# spoiler:flags.1?true photo_id:long caption:PageCaption url:flags.0?string webpage_id:flags.0?long = PageBlock;"
+      },
+      {
+        "core_signature": "pageBlockVideo#7c8fe7b6 flags:# autoplay:true loop:true video_id:long caption:PageCaption = PageBlock;",
+        "kind": "type",
+        "name": "pageBlockVideo",
+        "tdlib_signature": "pageBlockVideo#7c8fe7b6 flags:# autoplay:flags.0?true loop:flags.1?true spoiler:flags.2?true video_id:long caption:PageCaption = PageBlock;"
+      },
+      {
+        "core_signature": "pageListItemBlocks#25e073fc blocks:Vector<PageBlock> = PageListItem;",
+        "kind": "type",
+        "name": "pageListItemBlocks",
+        "tdlib_signature": "pageListItemBlocks#63ca67aa flags:# checkbox:flags.0?true checked:flags.1?true blocks:Vector<PageBlock> = PageListItem;"
+      },
+      {
+        "core_signature": "pageListItemText#b92fb6cd text:RichText = PageListItem;",
+        "kind": "type",
+        "name": "pageListItemText",
+        "tdlib_signature": "pageListItemText#2f58683c flags:# checkbox:flags.0?true checked:flags.1?true text:RichText = PageListItem;"
+      },
+      {
+        "core_signature": "pageListOrderedItemBlocks#98dd8936 num:string blocks:Vector<PageBlock> = PageListOrderedItem;",
+        "kind": "type",
+        "name": "pageListOrderedItemBlocks",
+        "tdlib_signature": "pageListOrderedItemBlocks#8ff2d5f0 flags:# checkbox:flags.0?true checked:flags.1?true num:flags.2?string blocks:Vector<PageBlock> value:flags.3?int type:flags.4?string = PageListOrderedItem;"
+      },
+      {
+        "core_signature": "pageListOrderedItemText#5e068047 num:string text:RichText = PageListOrderedItem;",
+        "kind": "type",
+        "name": "pageListOrderedItemText",
+        "tdlib_signature": "pageListOrderedItemText#15031189 flags:# checkbox:flags.0?true checked:flags.1?true num:flags.2?string text:RichText value:flags.3?int type:flags.4?string = PageListOrderedItem;"
+      },
+      {
+        "core_signature": "poll#58747131 id:long flags:# closed:true public_voters:true multiple_choice:true quiz:true question:TextWithEntities answers:Vector<PollAnswer> close_period:int close_date:int = Poll;",
+        "kind": "type",
+        "name": "poll",
+        "tdlib_signature": "poll#966e2dbf id:long flags:# closed:flags.0?true public_voters:flags.1?true multiple_choice:flags.2?true quiz:flags.3?true open_answers:flags.6?true revoting_disabled:flags.7?true shuffle_answers:flags.8?true hide_results_until_close:flags.9?true creator:flags.10?true subscribers_only:flags.11?true question:TextWithEntities answers:Vector<PollAnswer> close_period:flags.4?int close_date:flags.5?int countries_iso2:flags.12?Vector<string> hash:long = Poll;"
+      },
+      {
+        "core_signature": "pollAnswer#ff16e2ca text:TextWithEntities option:bytes = PollAnswer;",
+        "kind": "type",
+        "name": "pollAnswer",
+        "tdlib_signature": "pollAnswer#4b7d786a flags:# text:TextWithEntities option:bytes media:flags.0?MessageMedia added_by:flags.1?Peer date:flags.1?int = PollAnswer;"
+      },
+      {
+        "core_signature": "pollAnswerVoters#3b6ddad2 flags:# chosen:true correct:true option:bytes voters:int = PollAnswerVoters;",
+        "kind": "type",
+        "name": "pollAnswerVoters",
+        "tdlib_signature": "pollAnswerVoters#3645230a flags:# chosen:flags.0?true correct:flags.1?true option:bytes voters:flags.2?int recent_voters:flags.2?Vector<Peer> = PollAnswerVoters;"
+      },
+      {
+        "core_signature": "pollResults#7adf2420 flags:# min:true results:Vector<PollAnswerVoters> total_voters:int recent_voters:Vector<Peer> solution:string solution_entities:Vector<MessageEntity> = PollResults;",
+        "kind": "type",
+        "name": "pollResults",
+        "tdlib_signature": "pollResults#ba7bb15e flags:# min:flags.0?true has_unread_votes:flags.6?true can_view_stats:flags.7?true results:flags.1?Vector<PollAnswerVoters> total_voters:flags.2?int recent_voters:flags.3?Vector<Peer> solution:flags.4?string solution_entities:flags.4?Vector<MessageEntity> solution_media:flags.5?MessageMedia = PollResults;"
+      },
+      {
+        "core_signature": "reactionsNotifySettings#56e34970 flags:# messages_notify_from:ReactionNotificationsFrom stories_notify_from:ReactionNotificationsFrom sound:NotificationSound show_previews:Bool = ReactionsNotifySettings;",
+        "kind": "type",
+        "name": "reactionsNotifySettings",
+        "tdlib_signature": "reactionsNotifySettings#71e4ea58 flags:# messages_notify_from:flags.0?ReactionNotificationsFrom stories_notify_from:flags.1?ReactionNotificationsFrom poll_votes_notify_from:flags.2?ReactionNotificationsFrom sound:NotificationSound show_previews:Bool = ReactionsNotifySettings;"
+      },
+      {
+        "core_signature": "storyItem#edf164f1 flags:# pinned:true public:true close_friends:true min:true noforwards:true edited:true contacts:true selected_contacts:true out:true id:int date:int from_id:Peer fwd_from:StoryFwdHeader expire_date:int caption:string entities:Vector<MessageEntity> media:MessageMedia media_areas:Vector<MediaArea> privacy:Vector<PrivacyRule> views:StoryViews sent_reaction:Reaction albums:Vector<int> = StoryItem;",
+        "kind": "type",
+        "name": "storyItem",
+        "tdlib_signature": "storyItem#16a4b93c flags:# pinned:flags.5?true public:flags.7?true close_friends:flags.8?true min:flags.9?true noforwards:flags.10?true edited:flags.11?true contacts:flags.12?true selected_contacts:flags.13?true out:flags.16?true id:int date:int from_id:flags.18?Peer fwd_from:flags.17?StoryFwdHeader expire_date:int caption:flags.0?string entities:flags.1?Vector<MessageEntity> media:MessageMedia media_areas:flags.14?Vector<MediaArea> privacy:flags.2?Vector<PrivacyRule> views:flags.3?StoryViews sent_reaction:flags.15?Reaction albums:flags.19?Vector<int> music:flags.20?Document = StoryItem;"
+      },
+      {
+        "core_signature": "updateBotChatInviteRequester#11dfa986 peer:Peer date:int user_id:long about:string invite:ExportedChatInvite qts:int = Update;",
+        "kind": "type",
+        "name": "updateBotChatInviteRequester",
+        "tdlib_signature": "updateBotChatInviteRequester#7cb34d79 flags:# peer:Peer date:int user_id:long about:string invite:ExportedChatInvite qts:int query_id:flags.0?long = Update;"
+      },
+      {
+        "core_signature": "updateMessagePoll#aca1657b flags:# poll_id:long poll:Poll results:PollResults = Update;",
+        "kind": "type",
+        "name": "updateMessagePoll",
+        "tdlib_signature": "updateMessagePoll#d64c522b flags:# peer:flags.1?Peer msg_id:flags.1?int top_msg_id:flags.2?int poll_id:long poll:flags.0?Poll results:PollResults = Update;"
+      },
+      {
+        "core_signature": "updateMessagePollVote#24f40e77 poll_id:long peer:Peer options:Vector<bytes> qts:int = Update;",
+        "kind": "type",
+        "name": "updateMessagePollVote",
+        "tdlib_signature": "updateMessagePollVote#7699f014 poll_id:long peer:Peer options:Vector<bytes> positions:Vector<int> qts:int = Update;"
+      },
+      {
+        "core_signature": "urlAuthResultRequest#f8f8eb1e flags:# request_write_access:true request_phone_number:true match_codes_first:true bot:User domain:string browser:string platform:string ip:string region:string match_codes:Vector<string> user_id_hint:long = UrlAuthResult;",
+        "kind": "type",
+        "name": "urlAuthResultRequest",
+        "tdlib_signature": "urlAuthResultRequest#3cd623ec flags:# request_write_access:flags.0?true request_phone_number:flags.1?true match_codes_first:flags.5?true is_app:flags.6?true bot:User domain:string browser:flags.2?string platform:flags.2?string ip:flags.2?string region:flags.2?string match_codes:flags.3?Vector<string> user_id_hint:flags.4?long verified_app_name:flags.7?string = UrlAuthResult;"
+      },
+      {
+        "core_signature": "user#31774388 flags:# self:true contact:true mutual_contact:true deleted:true bot:true bot_chat_history:true bot_nochats:true verified:true restricted:true min:true bot_inline_geo:true support:true scam:true apply_min_photo:true fake:true bot_attach_menu:true premium:true attach_menu_enabled:true flags2:# bot_can_edit:true close_friend:true stories_hidden:true stories_unavailable:true contact_require_premium:true bot_business:true bot_has_main_app:true bot_forum_view:true bot_forum_can_manage_topics:true id:long access_hash:long first_name:string last_name:string username:string phone:string photo:UserProfilePhoto status:UserStatus bot_info_version:int restriction_reason:Vector<RestrictionReason> bot_inline_placeholder:string lang_code:string emoji_status:EmojiStatus usernames:Vector<Username> stories_max_id:RecentStory color:PeerColor profile_color:PeerColor bot_active_users:int bot_verification_icon:long send_paid_messages_stars:long = User;",
+        "kind": "type",
+        "name": "user",
+        "tdlib_signature": "user#b1b8cc83 flags:# self:flags.10?true contact:flags.11?true mutual_contact:flags.12?true deleted:flags.13?true bot:flags.14?true bot_chat_history:flags.15?true bot_nochats:flags.16?true verified:flags.17?true restricted:flags.18?true min:flags.20?true bot_inline_geo:flags.21?true support:flags.23?true scam:flags.24?true apply_min_photo:flags.25?true fake:flags.26?true bot_attach_menu:flags.27?true premium:flags.28?true attach_menu_enabled:flags.29?true flags2:# bot_can_edit:flags2.1?true close_friend:flags2.2?true stories_hidden:flags2.3?true stories_unavailable:flags2.4?true contact_require_premium:flags2.10?true bot_business:flags2.11?true bot_has_main_app:flags2.13?true bot_forum_view:flags2.16?true bot_forum_can_manage_topics:flags2.17?true bot_can_manage_bots:flags2.18?true bot_guestchat:flags2.19?true bot_guard:flags2.20?true id:long access_hash:flags.0?long first_name:flags.1?string last_name:flags.2?string username:flags.3?string phone:flags.4?string photo:flags.5?UserProfilePhoto status:flags.6?UserStatus bot_info_version:flags.14?int restriction_reason:flags.18?Vector<RestrictionReason> bot_inline_placeholder:flags.19?string lang_code:flags.22?string emoji_status:flags.30?EmojiStatus usernames:flags2.0?Vector<Username> stories_max_id:flags2.5?RecentStory color:flags2.8?PeerColor profile_color:flags2.9?PeerColor bot_active_users:flags2.12?int bot_verification_icon:flags2.14?long send_paid_messages_stars:flags2.15?long linked_community_id:flags2.21?long = User;"
+      },
+      {
+        "core_signature": "userFull#a02bc13e flags:# blocked:true phone_calls_available:true phone_calls_private:true can_pin_message:true has_scheduled:true video_calls_available:true voice_messages_forbidden:true translations_disabled:true stories_pinned_available:true blocked_my_stories_from:true wallpaper_overridden:true contact_require_premium:true read_dates_private:true flags2:# sponsored_enabled:true can_view_revenue:true bot_can_manage_emoji_status:true display_gifts_button:true noforwards_my_enabled:true noforwards_peer_enabled:true id:long about:string settings:PeerSettings personal_photo:Photo profile_photo:Photo fallback_photo:Photo notify_settings:PeerNotifySettings bot_info:BotInfo pinned_msg_id:int common_chats_count:int folder_id:int ttl_period:int theme:ChatTheme private_forward_name:string bot_group_admin_rights:ChatAdminRights bot_broadcast_admin_rights:ChatAdminRights wallpaper:WallPaper stories:PeerStories business_work_hours:BusinessWorkHours business_location:BusinessLocation business_greeting_message:BusinessGreetingMessage business_away_message:BusinessAwayMessage business_intro:BusinessIntro birthday:Birthday personal_channel_id:long personal_channel_message:int stargifts_count:int starref_program:StarRefProgram bot_verification:BotVerification send_paid_messages_stars:long disallowed_gifts:DisallowedGiftsSettings stars_rating:StarsRating stars_my_pending_rating:StarsRating stars_my_pending_rating_date:int main_tab:ProfileTab saved_music:Document note:TextWithEntities = UserFull;",
+        "kind": "type",
+        "name": "userFull",
+        "tdlib_signature": "userFull#6cbe645 flags:# blocked:flags.0?true phone_calls_available:flags.4?true phone_calls_private:flags.5?true can_pin_message:flags.7?true has_scheduled:flags.12?true video_calls_available:flags.13?true voice_messages_forbidden:flags.20?true translations_disabled:flags.23?true stories_pinned_available:flags.26?true blocked_my_stories_from:flags.27?true wallpaper_overridden:flags.28?true contact_require_premium:flags.29?true read_dates_private:flags.30?true flags2:# sponsored_enabled:flags2.7?true can_view_revenue:flags2.9?true bot_can_manage_emoji_status:flags2.10?true display_gifts_button:flags2.16?true noforwards_my_enabled:flags2.23?true noforwards_peer_enabled:flags2.24?true unofficial_security_risk:flags2.26?true id:long about:flags.1?string settings:PeerSettings personal_photo:flags.21?Photo profile_photo:flags.2?Photo fallback_photo:flags.22?Photo notify_settings:PeerNotifySettings bot_info:flags.3?BotInfo pinned_msg_id:flags.6?int common_chats_count:int folder_id:flags.11?int ttl_period:flags.14?int theme:flags.15?ChatTheme private_forward_name:flags.16?string bot_group_admin_rights:flags.17?ChatAdminRights bot_broadcast_admin_rights:flags.18?ChatAdminRights wallpaper:flags.24?WallPaper stories:flags.25?PeerStories business_work_hours:flags2.0?BusinessWorkHours business_location:flags2.1?BusinessLocation business_greeting_message:flags2.2?BusinessGreetingMessage business_away_message:flags2.3?BusinessAwayMessage business_intro:flags2.4?BusinessIntro birthday:flags2.5?Birthday personal_channel_id:flags2.6?long personal_channel_message:flags2.6?int stargifts_count:flags2.8?int starref_program:flags2.11?StarRefProgram bot_verification:flags2.12?BotVerification send_paid_messages_stars:flags2.14?long disallowed_gifts:flags2.15?DisallowedGiftsSettings stars_rating:flags2.17?StarsRating stars_my_pending_rating:flags2.18?StarsRating stars_my_pending_rating_date:flags2.18?int main_tab:flags2.20?ProfileTab saved_music:flags2.21?Document note:flags2.22?TextWithEntities bot_manager_id:flags2.25?long = UserFull;"
+      },
+      {
+        "core_signature": "vector#1cb5c415 = Vector t;",
+        "kind": "type",
+        "name": "vector",
+        "tdlib_signature": "vector#1cb5c415 {t:Type} # [ t ] = Vector t;"
+      },
+      {
+        "core_signature": "webViewResultUrl#4d22ff98 flags:# fullsize:true fullscreen:true query_id:long url:string = WebViewResult;",
+        "kind": "type",
+        "name": "webViewResultUrl",
+        "tdlib_signature": "webViewResultUrl#4d22ff98 flags:# fullsize:flags.1?true fullscreen:flags.2?true same_origin:flags.3?true query_id:flags.0?long url:string = WebViewResult;"
+      }
+    ],
+    "core_only": [
+      "null"
+    ],
+    "overlap_count": 2302,
+    "tdlib_only": [
+      "accessPointRule",
+      "account.confirmBotConnection",
+      "account.deleteWebBrowserSettingsExceptions",
+      "account.getWebBrowserSettings",
+      "account.toggleWebBrowserSettingsException",
+      "account.updateWebBrowserSettings",
+      "account.webBrowserSettings",
+      "account.webBrowserSettingsNotModified",
+      "aiComposeTone",
+      "aiComposeToneDefault",
+      "aiComposeToneExample",
+      "aicompose.createTone",
+      "aicompose.deleteTone",
+      "aicompose.getTone",
+      "aicompose.getToneExample",
+      "aicompose.getTones",
+      "aicompose.saveTone",
+      "aicompose.tones",
+      "aicompose.tonesNotModified",
+      "aicompose.updateTone",
+      "botInlineMessageRichMessage",
+      "bots.accessSettings",
+      "bots.checkUsername",
+      "bots.createBot",
+      "bots.editAccessSettings",
+      "bots.exportBotToken",
+      "bots.exportedBotToken",
+      "bots.getAccessSettings",
+      "bots.getRequestedWebViewButton",
+      "bots.requestWebViewButton",
+      "bots.requestedButton",
+      "bots.setJoinChatResults",
+      "communities.create",
+      "communities.getJoinedCommunities",
+      "communities.getParticipantJoinedChats",
+      "communities.getPeerLinkRequests",
+      "communities.participantJoinedChats",
+      "communities.peerLinkRequests",
+      "communities.toggleAllPeerLinkRequestApproval",
+      "communities.toggleCommunityCollapsedInDialogs",
+      "communities.toggleParticipantBanned",
+      "communities.togglePeerLink",
+      "communities.togglePeerLinkRequestApproval",
+      "community",
+      "communityForbidden",
+      "communityFull",
+      "communityPeer",
+      "communityPeerRequest",
+      "dialogCommunity",
+      "dialogPeerCommunity",
+      "ephemeral.deleteMessage",
+      "ephemeral.editMessage",
+      "ephemeral.getCallbackAnswer",
+      "ephemeral.reportMessage",
+      "ephemeral.sendMessage",
+      "ephemeralMessage",
+      "help.configSimple",
+      "inputAiComposeToneDefault",
+      "inputAiComposeToneID",
+      "inputAiComposeToneSingleUse",
+      "inputAiComposeToneSlug",
+      "inputBotInlineMessageRichMessage",
+      "inputDialogPeerCommunity",
+      "inputMessageReadMetric",
+      "inputMessagesFilterPoll",
+      "inputNotifyCommunity",
+      "inputPageBlockMap",
+      "inputPeerPhotoFileLocationLegacy",
+      "inputPollAnswer",
+      "inputReplyToEphemeralMessage",
+      "inputRichFileDocument",
+      "inputRichFilePhoto",
+      "inputRichMessage",
+      "inputRichMessageHTML",
+      "inputRichMessageMarkdown",
+      "inputSendMessageRichMessageDraftAction",
+      "inputStickerSetThumbLegacy",
+      "invokeWithApnsSecretPrefix",
+      "invokeWithBusinessConnectionPrefix",
+      "invokeWithGooglePlayIntegrityPrefix",
+      "invokeWithReCaptchaPrefix",
+      "ipPort",
+      "ipPortSecret",
+      "joinChatBotResultApproved",
+      "joinChatBotResultDeclined",
+      "joinChatBotResultQueued",
+      "joinChatBotResultWebView",
+      "messageActionChangeCommunity",
+      "messageActionManagedBotCreated",
+      "messageActionPollAppendAnswer",
+      "messageActionPollDeleteAnswer",
+      "messageEntityDiffDelete",
+      "messageEntityDiffInsert",
+      "messageEntityDiffReplace",
+      "messages.addPollAnswer",
+      "messages.chatInviteJoinResultOk",
+      "messages.chatInviteJoinResultWebView",
+      "messages.composeMessageWithAI",
+      "messages.composeRichMessageWithAI",
+      "messages.composedMessageWithAI",
+      "messages.composedRichMessageWithAI",
+      "messages.deleteParticipantReaction",
+      "messages.deleteParticipantReactions",
+      "messages.deletePollAnswer",
+      "messages.getPersonalChannelHistory",
+      "messages.getRichMessage",
+      "messages.getUnreadPollVotes",
+      "messages.readPollVotes",
+      "messages.reportMusicListen",
+      "messages.reportReadMetrics",
+      "messages.requestChatJoinWebView",
+      "messages.setBotGuestChatResult",
+      "messages.translateRichMessage",
+      "messages.translatedRichMessage",
+      "notifyCommunity",
+      "pageBlockBlockquoteBlocks",
+      "pageBlockHeading1",
+      "pageBlockHeading2",
+      "pageBlockHeading3",
+      "pageBlockHeading4",
+      "pageBlockHeading5",
+      "pageBlockHeading6",
+      "pageBlockMath",
+      "pageBlockThinking",
+      "requestPeerTypeCreateBot",
+      "richMessage",
+      "sendMessageRichMessageDraftAction",
+      "stats.getPollStats",
+      "stats.pollStats",
+      "textAutoEmail",
+      "textAutoPhone",
+      "textAutoUrl",
+      "textBankCard",
+      "textBotCommand",
+      "textCashtag",
+      "textCustomEmoji",
+      "textDate",
+      "textDiff",
+      "textHashtag",
+      "textMath",
+      "textMention",
+      "textMentionName",
+      "textSpoiler",
+      "topPeerCategoryBotsGuestChat",
+      "updateAiComposeTones",
+      "updateBotGuestChatQuery",
+      "updateBotStarsSubscription",
+      "updateDeleteEphemeralMessages",
+      "updateEditEphemeralMessage",
+      "updateEphemeralBotCallbackQuery",
+      "updateJoinChatWebViewDecision",
+      "updateManagedBot",
+      "updateNewBotConnection",
+      "updateNewEphemeralMessage",
+      "updateWebBrowserException",
+      "updateWebBrowserSettings",
+      "webDomainException",
+      "webPageAttributeAiComposeTone"
+    ]
+  },
+  "tdlib_vs_tdesktop": {
+    "changed": [],
+    "overlap_count": 2448,
+    "tdesktop_only": [
+      "null"
+    ],
+    "tdlib_only": [
+      "accessPointRule",
+      "ephemeral.editMessage",
+      "help.configSimple",
+      "inputPeerPhotoFileLocationLegacy",
+      "inputStickerSetThumbLegacy",
+      "invokeWithApnsSecretPrefix",
+      "invokeWithBusinessConnectionPrefix",
+      "invokeWithGooglePlayIntegrityPrefix",
+      "invokeWithReCaptchaPrefix",
+      "ipPort",
+      "ipPortSecret",
+      "updateEphemeralBotCallbackQuery"
+    ]
+  }
+}

@@ -24,7 +24,7 @@ async with Client(ClientConfig(api_id=12345, api_hash="...", session_storage=InM
 
 ## Current Scope
 
-The current implementation exposes the public API, lifecycle, storage protocols, typed session models, encrypted SQLite persistence, redaction helpers, generated Layer 223 raw API classes, generated RPC error mappings, error types, update queue dispatch, native-extension fallback loading, auth plumbing, raw invocation, peer/text-message helpers, media upload/download primitives, and gated production-live Telegram smoke tests. Live Telegram integration remains opt-in and credential-controlled.
+The current implementation exposes the public API, lifecycle, storage protocols, typed session models, encrypted SQLite persistence, redaction helpers, generated Layer 228 raw API classes from the canonical TDLib schema, generated RPC error mappings, error types, update queue dispatch, native-extension fallback loading, auth plumbing, raw invocation, peer/text-message helpers, media upload/download primitives, and gated production-live Telegram smoke tests. Live Telegram integration remains opt-in and credential-controlled.
 
 ## Session Security
 

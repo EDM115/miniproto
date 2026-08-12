@@ -177,7 +177,7 @@ def test_generation_is_deterministic_for_real_schema_slice(tmp_path) -> None:
 def test_generated_committed_raw_modules_match_full_schema_metadata() -> None:
     schema = parse_schema_file(SCHEMA)
     metadata = __import__("json").loads(METADATA.read_text(encoding="utf-8"))
-    assert metadata["schema_layer"] == 223
+    assert metadata["schema_layer"] == 228
     assert metadata["changelog_latest_layer"] == 225
     assert metadata["rpc_error_layer"] == 227
     outputs = render_outputs(
@@ -188,8 +188,43 @@ def test_generated_committed_raw_modules_match_full_schema_metadata() -> None:
         ROOT / "docs" / "raw-api.md",
     )
     assert not stale_outputs(outputs)
-    assert len(schema.constructors) == 1546
-    assert len(schema.functions) == 757
+    assert len(schema.constructors) == 1649
+    assert len(schema.functions) == 811
+
+
+def test_committed_layer_228_raw_surface_exposes_tdlib_additions_and_changed_methods() -> None:
+    from miniproto.raw import functions, types
+
+    assert types.InputPeerPhotoFileLocationLegacy.CONSTRUCTOR_ID == 0x27D69997
+    assert functions.InvokeWithReCaptchaPrefix.CONSTRUCTOR_ID == 0xADBB0F94
+    assert functions.EphemeralEditMessage.CONSTRUCTOR_ID == 0x13F250EE
+    assert functions.ChannelsJoinChannel.CONSTRUCTOR_ID == 0x7F6A1E22
+    assert functions.ChannelsJoinChannel.RESULT_TYPE == "messages.ChatInviteJoinResult"
+    assert not hasattr(types, "Null")
+
+
+def test_generation_preserves_tdlib_prefix_aliases_and_decodes_to_canonical_function(tmp_path: Path) -> None:
+    outputs = render_outputs(
+        ROOT / "tests" / "fixtures" / "schema" / "tdlib-layer228-slice.tl",
+        tmp_path / "schema-metadata.json",
+        ERRORS,
+        tmp_path / "raw",
+        tmp_path / "raw-api.md",
+    )
+    namespace: dict[str, object] = {}
+    exec(  # noqa: S102 - validates generated registry source in an isolated namespace.
+        compile(outputs.files[tmp_path / "raw" / "_registry.py"], str(tmp_path / "raw" / "_registry.py"), "exec"),
+        namespace,
+    )
+
+    function_specs = namespace["FUNCTION_SPECS"]
+    function_constructors = namespace["FUNCTION_CONSTRUCTORS"]
+
+    assert _is_registry_specs(function_specs)
+    assert _is_constructor_registry(function_constructors)
+    assert "InvokeWithReCaptchaPrefix" in function_specs
+    assert "InvokeWithReCaptcha" in function_specs
+    assert function_constructors[0xADBB0F94] == "InvokeWithReCaptcha"
 
 
 def test_stale_generation_detection_reports_modified_output(tmp_path) -> None:
@@ -229,11 +264,32 @@ def test_generation_accepts_json_schema_and_preserves_upstream_layer_metadata(tm
     metadata_path = tmp_path / "schema-metadata.json"
     metadata_path.write_text(
         """{
+  "canonical_source": "tdlib",
   "changelog_latest_layer": 225,
+  "documentation_merge_precedence": ["tdlib", "tdesktop", "core_json"],
   "fetch_date": "2026-07-08",
+  "layer_source_url": "https://raw.githubusercontent.com/telegramdesktop/tdesktop/refs/heads/dev/Telegram/SourceFiles/mtproto/scheme/api.tl",
   "schema_layer": 223,
+  "schema_source_url": "https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/telegram_api.tl",
   "schema_tl_sha256": "tl-sha",
-  "schema_tl_source_kind": "json_derived"
+  "schema_tl_source_kind": "tdlib_verbatim",
+  "source_note": "TDLib is canonical; Telegram Desktop supplies the validated layer.",
+  "source_url": "https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/telegram_api.tl",
+  "source_comparison_summary": {
+    "tdlib_vs_tdesktop": {
+      "changed_count": 0,
+      "overlap_count": 2,
+      "tdesktop_only": ["null"],
+      "tdlib_only": ["invokeWithReCaptchaPrefix"]
+    },
+    "tdlib_vs_core": {
+      "changed_count": 1,
+      "core_only_count": 1,
+      "overlap_count": 1,
+      "tdlib_only_count": 1
+    }
+  },
+  "sources": {"tdlib": {"declaration_count": 2}}
 }
 """,
         encoding="utf-8",
@@ -245,13 +301,22 @@ def test_generation_accepts_json_schema_and_preserves_upstream_layer_metadata(tm
     assert metadata["layer"] == 223
     assert metadata["schema_layer"] == 223
     assert metadata["schema_format"] == "json"
-    assert metadata["source_url"] == "https://core.telegram.org/schema/json"
+    assert metadata["canonical_source"] == "tdlib"
+    assert metadata["source_url"].endswith("td/generate/scheme/telegram_api.tl")
+    assert metadata["layer_source_url"].endswith("Telegram/SourceFiles/mtproto/scheme/api.tl")
+    assert metadata["documentation_merge_precedence"] == ["tdlib", "tdesktop", "core_json"]
+    assert metadata["sources"] == {"tdlib": {"declaration_count": 2}}
     assert metadata["rpc_error_layer"] == 227
     assert metadata["rpc_error_download_url"] == "https://core.telegram.org/api/errors.json"
     assert metadata["changelog_latest_layer"] == 225
-    assert metadata["schema_tl_source_kind"] == "json_derived"
+    assert metadata["schema_tl_source_kind"] == "tdlib_verbatim"
+    assert metadata["source_comparison_summary"]["tdlib_vs_tdesktop"]["tdesktop_only"] == ["null"]
     assert "RAW_API_LAYER = 223" in outputs.files[tmp_path / "raw" / "base.py"]
     assert "Telegram Schema Layer 223" in outputs.files[tmp_path / "raw-api.md"]
+    assert "TDLib canonical TL schema" in outputs.files[tmp_path / "raw-api.md"]
+    assert "Telegram Desktop" in outputs.files[tmp_path / "raw-api.md"]
+    assert "generated `Null` class is intentionally absent" in outputs.files[tmp_path / "raw-api.md"]
+    assert "`tools/schema/schema-source-diff.json`" in outputs.files[tmp_path / "raw-api.md"]
     assert "RPC errors layer: 227" in outputs.files[tmp_path / "raw-api.md"]
 
 

@@ -30,7 +30,7 @@ client = Client(ClientConfig(api_id=12345, api_hash="...", session_storage=InMem
 
 ## Raw API
 
-The generated raw API is pinned to Telegram Schema Layer 223 from the official schema page. See [Raw API](docs/raw-api.md) for the generated source metadata, lazy facade/shard layout, RPC error database details, and current runtime scope.
+The generated raw API is pinned to Telegram Schema Layer 228: TDLib is the canonical structural source, and Telegram Desktop supplies the validated layer after exact shared-declaration checks. See [Raw API](docs/raw-api.md) for source provenance and drift, the lazy facade/shard layout, RPC error database details, and current runtime scope.
 
 ## Non-Goals For v1
 

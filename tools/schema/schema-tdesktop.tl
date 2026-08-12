@@ -1,39 +1,13 @@
-int ? = Int;
-long ? = Long;
-double ? = Double;
-string ? = String;
-
-bytes = Bytes;
-int256 = Int256;
-
-true#3fedd339 = True;
-
 boolFalse#bc799737 = Bool;
 boolTrue#997275b5 = Bool;
+
+true#3fedd339 = True;
 
 vector#1cb5c415 {t:Type} # [ t ] = Vector t;
 
 error#c4b9f9bb code:int text:string = Error;
 
-ipPort#d433ad73 ipv4:int port:int = IpPort;
-ipPortSecret#37982646 ipv4:int port:int secret:bytes = IpPort;
-accessPointRule#4679b65f phone_prefix_rules:string dc_id:int ips:vector<IpPort> = AccessPointRule;
-help.configSimple#5a592a6c date:int expires:int rules:vector<AccessPointRule> = help.ConfigSimple;
-
-inputPeerPhotoFileLocationLegacy#27d69997 flags:# big:flags.0?true peer:InputPeer volume_id:long local_id:int = InputFileLocation;
-inputStickerSetThumbLegacy#dbaeae9 stickerset:InputStickerSet volume_id:long local_id:int = InputFileLocation;
-
----functions---
-
-test.useConfigSimple = help.ConfigSimple;
-test.parseInputAppEvent = InputAppEvent;
-
-invokeWithBusinessConnectionPrefix#dd289f8e connection_id:string = Error;
-invokeWithGooglePlayIntegrityPrefix#1df92984 nonce:string token:string = Error;
-invokeWithApnsSecretPrefix#0dae54f8 nonce:string secret:string = Error;
-invokeWithReCaptchaPrefix#adbb0f94 token:string = Error;
-
----types---
+null#56730bcc = Null;
 
 inputPeerEmpty#7f3b18ea = InputPeer;
 inputPeerSelf#7da07ec9 = InputPeer;
@@ -506,7 +480,6 @@ updateWebBrowserException#140502d1 flags:# delete:flags.1?true open_external_bro
 updateNewEphemeralMessage#20bcbba1 message:EphemeralMessage = Update;
 updateDeleteEphemeralMessages#56dbfcf8 peer:Peer ids:Vector<int> = Update;
 updateEditEphemeralMessage#4bbb8f01 message:EphemeralMessage = Update;
-updateEphemeralBotCallbackQuery#9b380762 query_id:long user_id:long peer:Peer msg_id:int data:bytes message:EphemeralMessage = Update;
 updateBotStarsSubscription#6c0d8e23 flags:# canceled:flags.0?true payment_failed:flags.1?true restored:flags.2?true user_id:long payload:bytes qts:int = Update;
 
 updates.state#a56c2a3e pts:int qts:int date:int seq:int unread_count:int = updates.State;
@@ -3110,4 +3083,5 @@ ephemeral.sendMessage#68cbd09f flags:# peer:InputPeer receiver_id:InputUser quer
 ephemeral.deleteMessage#a3c0d511 peer:InputPeer receiver_id:InputUser id:int = Bool;
 ephemeral.reportMessage#8704f2bf peer:InputPeer id:int option:bytes message:string = ReportResult;
 ephemeral.getCallbackAnswer#3fa464c8 flags:# peer:InputPeer id:int data:flags.1?bytes = messages.BotCallbackAnswer;
-ephemeral.editMessage#13f250ee flags:# peer:InputPeer receiver_id:InputUser id:int message:flags.0?string media:flags.3?InputMedia entities:flags.1?Vector<MessageEntity> reply_markup:flags.2?ReplyMarkup = Updates;
+
+// LAYER 228

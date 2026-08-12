@@ -2,7 +2,7 @@
 goal: Deliver miniproto v1 as a secure async MTProto engine and SDK for Python with bundled Rust acceleration
 version: 1.0
 date_created: 2026-06-30
-last_updated: 2026-07-17
+last_updated: 2026-08-12
 owner: EDM115
 status: "In progress"
 tags: [implementation, mtproto, python, rust, pyo3, release]
@@ -14,7 +14,7 @@ tags: [implementation, mtproto, python, rust, pyo3, release]
 Session-default completion (2026-07-16): omitted `session_storage` now selects fail-closed encrypted SQLite at relative `miniproto.session.sqlite`; explicit `InMemorySessionStorage` remains the test/throwaway opt-in. Focused client/session/media coverage verifies missing and short keys, storage precedence, default/sibling paths, restart persistence, and no construction-time session artifact; `.gitignore` covers only the documented default and sibling names.
 This file is the root implementation tracker for `miniproto` v1. It consolidates `PLAN.md`, `plans/2026-06-25-implementation-progress.md`, `plans/2026-06-26-package-boundary-and-ecosystem-intent.md`, and `plans/2026-06-29-package-boundary-progress.md` into one actionable plan that future agents must update as work progresses.  
 Tracking rules: update the relevant task row when code, docs, tests, and verification for that task are complete; keep the `Completed` column as `yes`, `in progress`, `blocked`, or `no`; record the completion date as `YYYY-MM-DD`; add new tasks only when they are required for v1 readiness; do not move framework behavior from future `mpgram` into `miniproto`.  
-Current baseline on 2026-07-17: the pre-alpha SDK includes encrypted fail-closed default session storage, atomic domain storage and revisions, generated Layer 223 raw facades/shards, native/fallback protocol paths with parity requirements, TCP transports and encrypted MTProto runtime, auth/service plumbing, retry/cancellation/disconnect behavior, ordered update recovery and sender-backed pushed-update dispatch, indexed peer resolution, message edit/delete helpers, media upload/download/CDN primitives, fake-server coverage, gated live-test scaffolding, and CI. Release readiness remains incomplete: the CI matrix lacks the declared Python 3.13 minimum, and docs-build, wheel-build, packaging, and release gates remain outstanding.
+Current baseline on 2026-08-12: the pre-alpha SDK includes encrypted fail-closed default session storage, atomic domain storage and revisions, generated Layer 228 raw facades/shards from canonical TDLib structure with a validated Telegram Desktop layer, independently pinned core drift/error sources, scheduled/manual upstream freshness reporting, native/fallback protocol paths with parity requirements, TCP transports and encrypted MTProto runtime, auth/service plumbing, retry/cancellation/disconnect behavior, ordered update recovery and sender-backed pushed-update dispatch, indexed peer resolution, message edit/delete helpers, media upload/download/CDN primitives, fake-server coverage, gated live-test scaffolding, and CI. Wave 0 of `plans/2026-08-12-v0.1.0-alpha-completion-plan.md` is complete; Wave 1 and later release work remain incomplete, including the Python 3.13 CI minimum, docs build, wheel matrix, packaging, and release gates.
 
 ## 1. Requirements & Constraints
 
@@ -160,6 +160,12 @@ Current baseline on 2026-07-17: the pre-alpha SDK includes encrypted fail-closed
   | TASK-026 | Add golden schema fixtures under `tests/fixtures/schema/` and tests in `tests/test_schema_parser.py` and `tests/test_schema_generation.py`.                                                                             | yes       | 2026-06-30 |
   | TASK-027 | Add a stale-generation check command to `tools/schema/README.md`, `docs/development.md`, and CI so generated files must match committed generator output.                                                               | yes       | 2026-06-30 |
   | TASK-028 | Add docs stubs generated from schema metadata under `docs/raw-api.md` or `docs/raw/` without turning docs generation into a release blocker for every schema comment.                                                   | yes       | 2026-06-30 |
+  | V1-SCHEMA-001 | Revalidate current structural/supporting schema sources, hashes, declaration counts, layer marker, overlap, pre-change focused tests, and read-only Git baseline before Wave 0 edits. | yes | 2026-08-12 |
+  | V1-SCHEMA-002 | Pin verbatim TDLib/Desktop/core inputs independently, derive normalized canonical JSON, validate the complete snapshot before replacement, and preserve non-mutating source-specific upstream checks. | yes | 2026-08-12 |
+  | V1-SCHEMA-003 | Parse the full TDLib schema strictly, classify only known constructor-ID-free declarations, validate structured comments, and allow only the four exact official prefix/canonical constructor-ID alias pairs. | yes | 2026-08-12 |
+  | V1-SCHEMA-004 | Use TDLib structure, validated Telegram Desktop Layer 228, TDLib/Desktop/core documentation precedence, and independent core error provenance throughout metadata and generated headers/docs. | yes | 2026-08-12 |
+  | V1-SCHEMA-005 | Regenerate the complete Layer 228 raw surface, stubs, shards, registry, errors, metadata, source comparison, and summary docs; test TDLib-only additions, changed methods, and intentional `Null` removal. | yes | 2026-08-12 |
+  | V1-SCHEMA-006 | Add scheduled/manual upstream freshness automation with an always-uploaded machine-readable comparison report while keeping pull-request generation checks deterministic and offline. | yes | 2026-08-12 |
 
 ### Implementation Phase 4 - Native And Fallback Crypto/TL Primitives
 

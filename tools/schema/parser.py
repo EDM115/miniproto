@@ -9,11 +9,32 @@ from pathlib import Path
 from typing import Any, Literal
 
 SchemaKind = Literal["type", "function"]
+IgnoredDeclarationKind = Literal["primitive", "alias", "test_combinator"]
 
 _LINE_RE = re.compile(r"^(?P<name>[A-Za-z0-9_.]+)#(?P<constructor_id>[0-9A-Fa-f]+)(?P<body>.*?)= (?P<result>.+);$")
 _FLAG_RE = re.compile(r"^(?P<flag>[A-Za-z_][A-Za-z0-9_]*)\.(?P<index>\d+)\?(?P<inner>.+)$")
 _VECTOR_RE = re.compile(r"^[Vv]ector[< ](?P<inner>.+?)[>]?$")
+_PARAM_COMMENT_RE = re.compile(r"^@param\s+(?P<name>\S+)(?:\s+.+)?$")
+_LAYER_COMMENT_RE = re.compile(r"^LAYER\s+[1-9]\d*$")
 _RESERVED_NAMES = frozenset({"self"})
+_KNOWN_NON_ID_DECLARATIONS: dict[str, IgnoredDeclarationKind] = {
+    "int ? = Int;": "primitive",
+    "long ? = Long;": "primitive",
+    "double ? = Double;": "primitive",
+    "string ? = String;": "primitive",
+    "bytes = Bytes;": "alias",
+    "int256 = Int256;": "alias",
+    "test.useConfigSimple = help.ConfigSimple;": "test_combinator",
+    "test.parseInputAppEvent = InputAppEvent;": "test_combinator",
+}
+_KNOWN_CONSTRUCTOR_ID_ALIAS_PAIRS = frozenset(
+    {
+        frozenset({"invokeWithBusinessConnectionPrefix", "invokeWithBusinessConnection"}),
+        frozenset({"invokeWithGooglePlayIntegrityPrefix", "invokeWithGooglePlayIntegrity"}),
+        frozenset({"invokeWithApnsSecretPrefix", "invokeWithApnsSecret"}),
+        frozenset({"invokeWithReCaptchaPrefix", "invokeWithReCaptcha"}),
+    }
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,9 +78,19 @@ class RPCErrorSpec:
 
 
 @dataclass(frozen=True, slots=True)
+class TLIgnoredDeclaration:
+    kind: SchemaKind
+    name: str
+    source_line: str
+    line_number: int
+    classification: IgnoredDeclarationKind
+
+
+@dataclass(frozen=True, slots=True)
 class TLSchema:
     entries: tuple[TLEntry, ...]
     rpc_errors: tuple[RPCErrorSpec, ...] = ()
+    ignored_declarations: tuple[TLIgnoredDeclaration, ...] = ()
 
     @property
     def constructors(self) -> tuple[TLEntry, ...]:
@@ -86,6 +117,7 @@ def parse_schema(text: str) -> TLSchema:
     kind: SchemaKind = "type"
     entries: list[TLEntry] = []
     errors: list[RPCErrorSpec] = []
+    ignored_declarations: list[TLIgnoredDeclaration] = []
     comments: list[str] = []
     for line_number, raw_line in enumerate(text.splitlines(), start=1):
         line = raw_line.strip()
@@ -93,6 +125,8 @@ def parse_schema(text: str) -> TLSchema:
             continue
         if line.startswith("//"):
             comment = line[2:].strip()
+            if _LAYER_COMMENT_RE.fullmatch(comment):
+                continue
             error = _parse_rpc_error_comment(comment)
             if error is not None:
                 errors.append(error)
@@ -107,10 +141,17 @@ def parse_schema(text: str) -> TLSchema:
             kind = "function"
             comments.clear()
             continue
-        entries.append(_parse_entry(line, kind=kind, line_number=line_number, comments=tuple(comments)))
+        ignored = _parse_known_non_id_declaration(line, kind=kind, line_number=line_number)
+        if ignored is not None:
+            ignored_declarations.append(ignored)
+            comments.clear()
+            continue
+        entry = _parse_entry(line, kind=kind, line_number=line_number, comments=tuple(comments))
+        _validate_entry_comments(entry)
+        entries.append(entry)
         comments.clear()
     _validate_unique_entries(entries)
-    return TLSchema(entries=tuple(entries), rpc_errors=tuple(errors))
+    return TLSchema(entries=tuple(entries), rpc_errors=tuple(errors), ignored_declarations=tuple(ignored_declarations))
 
 
 def parse_schema_json_file(path: str | Path) -> TLSchema:
@@ -144,6 +185,8 @@ def schema_to_tl(schema: TLSchema) -> str:
 def _parse_entry(line: str, *, kind: SchemaKind, line_number: int, comments: tuple[str, ...]) -> TLEntry:
     match = _LINE_RE.match(line)
     if match is None:
+        if " = " in line and line.endswith(";") and "#" not in line:
+            raise TLSchemaParseError(f"line {line_number}: unknown constructor-id-free TL declaration {line!r}")
         raise TLSchemaParseError(f"line {line_number}: expected TL declaration, got {line!r}")
     raw_name = match.group("name")
     namespace, short_name = _split_qualified_name(raw_name)
@@ -310,9 +353,35 @@ def _parse_rpc_error_comment(comment: str) -> RPCErrorSpec | None:
     return RPCErrorSpec(name=name, code=int(code), description=" ".join(description))
 
 
+def _parse_known_non_id_declaration(line: str, *, kind: SchemaKind, line_number: int) -> TLIgnoredDeclaration | None:
+    classification = _KNOWN_NON_ID_DECLARATIONS.get(line)
+    if classification is None:
+        return None
+    name = line.split(maxsplit=1)[0]
+    return TLIgnoredDeclaration(
+        kind=kind, name=name, source_line=line, line_number=line_number, classification=classification
+    )
+
+
+def _validate_entry_comments(entry: TLEntry) -> None:
+    parameter_names = {parameter.name for parameter in entry.params}
+    for comment in entry.comments:
+        if not comment.startswith("@param"):
+            continue
+        match = _PARAM_COMMENT_RE.fullmatch(comment)
+        if match is None:
+            raise TLSchemaParseError(f"line {entry.line_number}: malformed @param comment {comment!r}")
+        parameter_name = match.group("name")
+        if parameter_name not in parameter_names:
+            raise TLSchemaParseError(
+                f"line {entry.line_number}: @param documents unknown parameter {parameter_name!r} on {entry.name!r}"
+            )
+
+
 def _validate_unique_entries(entries: Sequence[TLEntry]) -> None:
     seen: dict[tuple[SchemaKind, str], int] = {}
     class_names: dict[tuple[SchemaKind, str], int] = {}
+    constructor_ids: dict[int, tuple[str, int]] = {}
     for entry in entries:
         key = (entry.kind, entry.name)
         if key in seen:
@@ -326,6 +395,15 @@ def _validate_unique_entries(entries: Sequence[TLEntry]) -> None:
                 f"duplicate generated class {entry.python_class_name!r} at lines {class_names[class_key]} and {entry.line_number}"
             )
         class_names[class_key] = entry.line_number
+        duplicate_id = constructor_ids.get(entry.constructor_id)
+        if duplicate_id is not None:
+            previous_name, previous_line = duplicate_id
+            if frozenset({previous_name, entry.name}) not in _KNOWN_CONSTRUCTOR_ID_ALIAS_PAIRS:
+                raise TLSchemaParseError(
+                    f"duplicate constructor id {entry.constructor_id_hex} for {previous_name!r} at line {previous_line} "
+                    f"and {entry.name!r} at line {entry.line_number}"
+                )
+        constructor_ids[entry.constructor_id] = (entry.name, entry.line_number)
 
 
 def iter_public_params(params: Iterable[TLParameter]) -> tuple[TLParameter, ...]:

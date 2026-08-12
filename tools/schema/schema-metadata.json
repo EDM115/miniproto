@@ -1,9 +1,15 @@
 {
+  "canonical_source": "tdlib",
   "changelog_latest_layer": 225,
   "changelog_source_url": "https://core.telegram.org/api/layers",
-  "constructor_count": 1546,
-  "fetch_date": "2026-07-08",
-  "function_count": 757,
+  "constructor_count": 1649,
+  "documentation_merge_precedence": [
+    "tdlib",
+    "tdesktop",
+    "core_json"
+  ],
+  "fetch_date": "2026-08-12",
+  "function_count": 811,
   "generated_file_manifest": [
     "src/miniproto/raw/base.py",
     "src/miniproto/raw/types.py",
@@ -16,22 +22,113 @@
     "src/miniproto/raw/errors.py",
     "docs/raw-api.md"
   ],
-  "generator_version": "3",
-  "layer": 223,
+  "generator_version": "4",
+  "layer": 228,
+  "layer_source_url": "https://raw.githubusercontent.com/telegramdesktop/tdesktop/refs/heads/dev/Telegram/SourceFiles/mtproto/scheme/api.tl",
   "rpc_error_count": 818,
   "rpc_error_download_url": "https://core.telegram.org/api/errors.json",
   "rpc_error_layer": 227,
-  "rpc_error_sha256": "7cb5ea5c8574e61b300c538e75290b742760d595a879552a5d0b613cd9fdf029",
+  "rpc_error_sha256": "fb7304a7f7e66a6750f9ca842dd1406ed3798eebd6f4f2d993924135848ee82e",
   "rpc_error_source_url": "https://core.telegram.org/api/errors",
   "schema_doc_url": "https://core.telegram.org/schema",
   "schema_format": "json",
-  "schema_json_sha256": "7440a69d834e495fb0be30cb4ee0e4dd101199f83574aa5ece64598c5b8ea1ac",
-  "schema_layer": 223,
-  "schema_sha256": "7440a69d834e495fb0be30cb4ee0e4dd101199f83574aa5ece64598c5b8ea1ac",
-  "schema_source_url": "https://core.telegram.org/schema/json",
-  "schema_tl_sha256": "e91d38be1709d0af9ae28bfd41ffa0c04e5092bc62dba0ad560f1660ca098ef5",
-  "schema_tl_source_kind": "html_extracted",
-  "sha256": "7440a69d834e495fb0be30cb4ee0e4dd101199f83574aa5ece64598c5b8ea1ac",
-  "source_note": "Official Telegram JSON schema fetched from core.telegram.org/schema/json and pinned in tools/schema/schema.json; tools/schema/schema.tl is kept as a mirror for review and interoperability.",
-  "source_url": "https://core.telegram.org/schema/json"
+  "schema_json_sha256": "1ca3f912010f05991a67367485396139e75efc47e6c2c62fcce56352867f9805",
+  "schema_layer": 228,
+  "schema_sha256": "1ca3f912010f05991a67367485396139e75efc47e6c2c62fcce56352867f9805",
+  "schema_source_url": "https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/telegram_api.tl",
+  "schema_tl_sha256": "921a58e71f2baebb840609366c506fb92ffac8db3c5bb832423aacd7cd6817cf",
+  "schema_tl_source_kind": "tdlib_verbatim",
+  "sha256": "1ca3f912010f05991a67367485396139e75efc47e6c2c62fcce56352867f9805",
+  "source_comparison_summary": {
+    "tdlib_vs_core": {
+      "changed_count": 68,
+      "core_only_count": 1,
+      "overlap_count": 2302,
+      "tdlib_only_count": 158
+    },
+    "tdlib_vs_tdesktop": {
+      "changed_count": 0,
+      "overlap_count": 2448,
+      "tdesktop_only": [
+        "null"
+      ],
+      "tdlib_only": [
+        "accessPointRule",
+        "ephemeral.editMessage",
+        "help.configSimple",
+        "inputPeerPhotoFileLocationLegacy",
+        "inputStickerSetThumbLegacy",
+        "invokeWithApnsSecretPrefix",
+        "invokeWithBusinessConnectionPrefix",
+        "invokeWithGooglePlayIntegrityPrefix",
+        "invokeWithReCaptchaPrefix",
+        "ipPort",
+        "ipPortSecret",
+        "updateEphemeralBotCallbackQuery"
+      ]
+    }
+  },
+  "source_note": "Canonical structure is the pinned TDLib telegram_api.tl; Layer 228 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.",
+  "source_url": "https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/telegram_api.tl",
+  "sources": {
+    "core_json": {
+      "bytes": 501685,
+      "constructor_count": 1546,
+      "declaration_count": 2303,
+      "function_count": 757,
+      "role": "documentation_and_drift",
+      "sha256": "287817f49fea78191c5f4342ad683ba2aed6c3bc2acc89757fc64f68ea24d846",
+      "url": "https://core.telegram.org/schema/json"
+    },
+    "core_schema_page": {
+      "bytes": 691787,
+      "constructor_count": 0,
+      "declaration_count": 0,
+      "derived_tl_sha256": "e91d38be1709d0af9ae28bfd41ffa0c04e5092bc62dba0ad560f1660ca098ef5",
+      "derived_tl_source_kind": "html_extracted",
+      "function_count": 0,
+      "normalization": "trailing_page_generation_timing_removed",
+      "role": "documentation_and_tl_mirror",
+      "sha256": "757e19f270bd405387105f22b9ae3f4b69560c8bbeea8b839b750800b7174313",
+      "url": "https://core.telegram.org/schema"
+    },
+    "layer_changelog": {
+      "bytes": 902694,
+      "constructor_count": 0,
+      "declaration_count": 0,
+      "function_count": 0,
+      "normalization": "trailing_page_generation_timing_removed",
+      "role": "drift_context",
+      "sha256": "a93eb99160a1eb6f7c8d4524ffa3ce83a67a04e5016aa8f92e28fd063153d849",
+      "url": "https://core.telegram.org/api/layers"
+    },
+    "rpc_errors": {
+      "bytes": 223094,
+      "constructor_count": 0,
+      "declaration_count": 0,
+      "function_count": 0,
+      "role": "rpc_error_database",
+      "sha256": "fb7304a7f7e66a6750f9ca842dd1406ed3798eebd6f4f2d993924135848ee82e",
+      "url": "https://core.telegram.org/api/errors.json"
+    },
+    "tdesktop": {
+      "bytes": 278916,
+      "constructor_count": 1643,
+      "declaration_count": 2449,
+      "function_count": 806,
+      "role": "layer_and_documentation",
+      "sha256": "bbddd9c4c3f5ff16fd4abbf39f2a864fdac7553e9f05b6bf9ead2aeb9c8eb566",
+      "url": "https://raw.githubusercontent.com/telegramdesktop/tdesktop/refs/heads/dev/Telegram/SourceFiles/mtproto/scheme/api.tl"
+    },
+    "tdlib": {
+      "bytes": 280275,
+      "constructor_count": 1649,
+      "declaration_count": 2460,
+      "function_count": 811,
+      "role": "canonical_structure",
+      "sha256": "921a58e71f2baebb840609366c506fb92ffac8db3c5bb832423aacd7cd6817cf",
+      "url": "https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/telegram_api.tl"
+    }
+  },
+  "structural_source_url": "https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/telegram_api.tl"
 }

@@ -52,7 +52,7 @@ Use `uv sync --extra dev` for normal development. Use `uv lock` after dependency
 uv run python -m tools.schema.generate
 ```
 
-Run this after changing `tools/schema/schema.json`, `tools/schema/schema.tl`, `tools/schema/rpc-errors.json`, `tools/schema/generate.py`, or `tools/schema/parser.py`.
+Run this after changing any pinned input under `tools/schema/`, `tools/schema/generate.py`, or `tools/schema/parser.py`. It rewrites the Layer 228 lazy facades, stubs, registries, shards, errors, generated metadata, and `docs/raw-api.md` from the normalized TDLib canonical model.
 
 ## Update Pinned Schema Inputs
 
@@ -60,7 +60,7 @@ Run this after changing `tools/schema/schema.json`, `tools/schema/schema.tl`, `t
 uv run python -m tools.schema.update
 ```
 
-This fetches the current official Telegram schema JSON, schema page, layer changelog, and RPC error JSON, then rewrites `tools/schema/schema.json`, `tools/schema/schema.tl`, `tools/schema/rpc-errors.json`, and `tools/schema/schema-metadata.json`. Run `uv run python -m tools.schema.generate` afterwards to refresh generated raw modules and docs.
+This fetches the TDLib and Telegram Desktop TL schemas plus the core JSON, schema page, layer changelog, and RPC error sources. It validates every source in memory before atomically staging the independent pins: verbatim TDLib `schema.tl`, normalized canonical `schema.json`, verbatim `schema-tdesktop.tl`, core mirrors, RPC errors, source diff, and metadata. TDLib owns structure; Layer 228 comes only from Telegram Desktop's strict end-of-file marker after all shared declarations match; documentation falls back from TDLib to Telegram Desktop to core JSON. Run `uv run python -m tools.schema.generate` afterwards to refresh generated raw modules and docs.
 
 ## Schema Freshness Check
 
@@ -73,10 +73,12 @@ This fails when committed raw API files or schema metadata drift from the pinned
 ## Upstream Schema Freshness Check
 
 ```pwsh
-uv run python -m tools.schema.update --check-upstream
+uv run python -m tools.schema.update --check-upstream --report .tmp/schema-upstream-report.json
 ```
 
-This network-dependent check fails when the upstream Telegram schema or RPC error database differs from the pinned inputs. Use it manually or in a scheduled workflow; routine CI should keep using the offline generation check above.
+This network-dependent check fails when any independently pinned upstream input differs, prints the stale pin paths, and writes source hashes plus the declaration comparison to the requested JSON report without updating pins. The scheduled/manual `.github/workflows/schema-upstream.yml` job always uploads that report. Routine pull-request CI keeps using the offline generation check above so external availability cannot make deterministic CI flaky.
+
+When reviewing an update, inspect `tools/schema/schema-source-diff.json`, `tools/schema/schema-metadata.json`, and the generated code diff before accepting it. Do not accept a newer file merely because its timestamp moved: a missing/malformed Desktop layer marker, any structural disagreement in shared TDLib/Desktop declarations, an unexpected constructor-ID collision, or an unknown TL declaration is a hard failure. The current TDLib canonical snapshot intentionally omits Desktop's `null`, so the old generated `miniproto.raw.types.Null` class is no longer part of Layer 228.
 
 ## Format
 
