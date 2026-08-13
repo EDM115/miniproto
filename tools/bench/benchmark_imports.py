@@ -64,7 +64,7 @@ def _child_code(statement: str, *, tracemalloc_enabled: bool) -> str:
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Benchmark fresh-process miniproto import paths.")
-    parser.add_argument("--runs", type=int, default=5)
+    parser.add_argument("--runs", type=int, default=10)
     args = parser.parse_args(argv)
     if args.runs < 1:
         parser.error("--runs must be at least one")

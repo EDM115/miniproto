@@ -5,12 +5,14 @@ on:
     branches: ["master", "main", "codex/**"]
   pull_request:
     branches: ["master", "main"]
+  workflow_dispatch:
 
 jobs:
   python:
     runs-on: ubuntu-latest
     continue-on-error: ${{ matrix.experimental }}
     env:
+      MINIPROTO_STRESS: 1
       UV_PYTHON: ${{ matrix.python-version }}
     strategy:
       fail-fast: false
@@ -22,32 +24,99 @@ jobs:
           #   experimental: true
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v8.2.0
+
+      - uses: astral-sh/setup-uv@v10.0.0
+
       - name: Install Python
         run: uv python install ${{ matrix.python-version }}
+
       - name: Sync
         run: uv sync --extra dev
+
       - name: Ruff format check
         run: uv run ruff format --check .
+
       - name: Ruff lint
         run: uv run ruff check .
+
       - name: Type check
         run: uv run ty check
+
       - name: Schema freshness
         run: uv run python -m tools.schema.generate --check
+
       - name: Tests
         run: uv run pytest
+
+      - name: Stress tests
+        run: uv run pytest tests/stress
   rust:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           components: clippy, rustfmt
           toolchain: stable
+
       - name: Format check
         run: cargo fmt --check
+
       - name: Clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: cargo clippy --all-targets --all-features -- -D warning
+ 
       - name: Tests
         run: cargo test --all-features
+  build:
+    needs: [python, rust]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python-version: "3.14"
+            experimental: false
+          # - python-version: "3.16"
+          #   experimental: true
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.0.0
+
+      - name: Install Python
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Sync
+        run: uv sync --extra dev
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: clippy, rustfmt
+          toolchain: stable
+
+      - name: Build
+        run: |
+          cargo build --release --all-features
+          uv run maturin build --release --out dist
+
+      - name: Upload Python artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: python
+          path: dist/
+          compression-level: 0
+
+      - name: Upload Rust artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: rust
+          path: target/release/miniproto_native*
+          compression-level: 0
+
+      - name: Benchmarks
+        run: |
+          uv run python tools/bench/benchmark_imports.py
+          uv run python tools/bench/benchmark_native_fallback_crypto.py
+          uv run python tools/bench/benchmark_runtime_paths.py
+          uv run python tools/bench/profile_lazy_raw_codec.py

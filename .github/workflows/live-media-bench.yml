@@ -159,11 +159,15 @@ jobs:
       PYTHONUNBUFFERED: "1"
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v8.2.0
+
+      - uses: astral-sh/setup-uv@v10.0.0
+
       - name: Install Python
         run: uv python install 3.14
+
       - name: Sync
         run: uv sync --extra dev
+
       - name: Restore optional benchmark sessions
         shell: bash
         run: |
@@ -181,6 +185,7 @@ jobs:
           }
           restore_session "user" "${MINIPROTO_LIVE_BENCH_USER_SESSION_B64:-}"
           restore_session "bot" "${MINIPROTO_LIVE_BENCH_BOT_SESSION_B64:-}"
+
       - name: Check non-interactive session requirements
         shell: bash
         run: |
@@ -189,6 +194,7 @@ jobs:
             echo "::error::User benchmarks on GitHub-hosted runners need MINIPROTO_LIVE_BENCH_USER_SESSION_B64."
             exit 2
           fi
+
       - name: Run live media benchmark
         shell: bash
         run: |
@@ -239,6 +245,7 @@ jobs:
             --download-request-timeout "${{ inputs.download_request_timeout }}" \
             --json .tmp/live-bench-results/summary.json \
             "${extra_args[@]}" 2>&1 | tee .tmp/live-bench-results/live-media-bench.log
+
       - name: Upload benchmark summary
         uses: actions/upload-artifact@v7
         if: always()
@@ -247,4 +254,3 @@ jobs:
           path: |
             .tmp/live-bench-results/summary.json
             .tmp/live-bench-results/live-media-bench.log
-          if-no-files-found: warn

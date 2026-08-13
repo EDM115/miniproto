@@ -87,13 +87,6 @@ uv run ruff format .
 cargo fmt
 ```
 
-## Format Check
-
-```pwsh
-uv run ruff format --check .
-cargo fmt --check
-```
-
 ## Lint
 
 ```pwsh
@@ -174,8 +167,8 @@ uv run pytest tests/integration
 ## Build
 
 ```pwsh
-uv run maturin build
 cargo build --release --all-features
+uv run maturin build --release
 ```
 
 `maturin build` is the authoritative Python wheel build path. The Rust crate currently exists mainly as the Python extension source, even though the crates.io package name `miniproto` is reserved for this project.

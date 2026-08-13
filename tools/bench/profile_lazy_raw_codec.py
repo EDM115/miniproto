@@ -14,7 +14,7 @@ from miniproto.tl import codec as tl_codec
 from miniproto.tl import decode_object
 
 
-def _interleaved(cases: dict[str, Callable[[], Any]], *, rounds: int = 9) -> dict[str, dict[str, Any]]:
+def _interleaved(cases: dict[str, Callable[[], Any]], *, rounds: int = 10) -> dict[str, dict[str, Any]]:
     durations = {name: [] for name in cases}
     names = tuple(cases)
     was_enabled = gc.isenabled()
