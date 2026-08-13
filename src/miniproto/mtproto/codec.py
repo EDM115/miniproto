@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import gzip
 from dataclasses import dataclass
+from typing import cast
 
 from miniproto.crypto.native import mtproto_decode_message as _mtproto_decode_message
 from miniproto.crypto.native import mtproto_encode_message as _mtproto_encode_message
@@ -16,6 +17,7 @@ from miniproto.tl import (
     encode_string,
     encode_vector,
 )
+from miniproto.tl.fast import decode_fast, encode_fast
 
 _MSGS_ACK_ID = 0x62D6B459
 _MSGS_STATE_REQ_ID = 0xDA69FB52
@@ -31,6 +33,20 @@ _BAD_SERVER_SALT_ID = 0xEDAB447B
 _NEW_SESSION_CREATED_ID = 0x9EC20908
 _RPC_RESULT_ID = 0xF35C6D01
 _RPC_ERROR_ID = 0x2144CA19
+_FAST_SERVICE_IDS = frozenset(
+    {
+        _MSGS_ACK_ID,
+        _MSGS_STATE_REQ_ID,
+        _MSGS_STATE_INFO_ID,
+        _MSG_RESEND_REQ_ID,
+        _MSG_CONTAINER_ID,
+        _GZIP_PACKED_ID,
+        _PONG_ID,
+        _BAD_MSG_NOTIFICATION_ID,
+        _BAD_SERVER_SALT_ID,
+        _RPC_RESULT_ID,
+    }
+)
 type ByteBuffer = bytes | memoryview
 
 
@@ -201,31 +217,49 @@ def encode_message_body(body: ByteBuffer | object) -> bytes:
         return serialize()
     match body:
         case MsgsAck(msg_ids=msg_ids):
-            return encode_constructor_id(_MSGS_ACK_ID) + encode_vector(msg_ids, "long")
+            return encode_fast(_MSGS_ACK_ID, (msg_ids,)) or encode_constructor_id(_MSGS_ACK_ID) + encode_vector(
+                msg_ids, "long"
+            )
         case MsgsStateReq(msg_ids=msg_ids):
-            return encode_constructor_id(_MSGS_STATE_REQ_ID) + encode_vector(msg_ids, "long")
+            return encode_fast(_MSGS_STATE_REQ_ID, (msg_ids,)) or encode_constructor_id(
+                _MSGS_STATE_REQ_ID
+            ) + encode_vector(msg_ids, "long")
         case MsgsStateInfo(req_msg_id=req_msg_id, info=info):
-            return encode_constructor_id(_MSGS_STATE_INFO_ID) + _pack_i64(req_msg_id) + encode_bytes(info)
+            return encode_fast(_MSGS_STATE_INFO_ID, (req_msg_id, info)) or encode_constructor_id(
+                _MSGS_STATE_INFO_ID
+            ) + _pack_i64(req_msg_id) + encode_bytes(info)
         case MsgResendReq(msg_ids=msg_ids):
-            return encode_constructor_id(_MSG_RESEND_REQ_ID) + encode_vector(msg_ids, "long")
+            return encode_fast(_MSG_RESEND_REQ_ID, (msg_ids,)) or encode_constructor_id(
+                _MSG_RESEND_REQ_ID
+            ) + encode_vector(msg_ids, "long")
         case MessageContainer(messages=messages):
+            encoded_messages = tuple(
+                (message.msg_id, message.seq_no, encode_message_body(message.body)) for message in messages
+            )
+            native = encode_fast(_MSG_CONTAINER_ID, (encoded_messages,))
+            if native is not None:
+                return native
             output = bytearray(encode_constructor_id(_MSG_CONTAINER_ID))
             output.extend(encode_int(len(messages)))
-            for message in messages:
-                body_bytes = encode_message_body(message.body)
-                output.extend(_pack_i64(message.msg_id))
-                output.extend(encode_int(message.seq_no))
+            for msg_id, seq_no, body_bytes in encoded_messages:
+                output.extend(_pack_i64(msg_id))
+                output.extend(encode_int(seq_no))
                 output.extend(encode_int(len(body_bytes)))
                 output.extend(body_bytes)
             return bytes(output)
         case GzipPacked(packed_data=packed_data):
-            return encode_constructor_id(_GZIP_PACKED_ID) + encode_bytes(bytes(packed_data))
+            packed_bytes = bytes(packed_data)
+            return encode_fast(_GZIP_PACKED_ID, (packed_bytes,)) or encode_constructor_id(
+                _GZIP_PACKED_ID
+            ) + encode_bytes(packed_bytes)
         case Pong(msg_id=msg_id, ping_id=ping_id):
-            return encode_constructor_id(_PONG_ID) + _pack_i64(msg_id) + _pack_i64(ping_id)
+            return encode_fast(_PONG_ID, (msg_id, ping_id)) or encode_constructor_id(_PONG_ID) + _pack_i64(
+                msg_id
+            ) + _pack_i64(ping_id)
         case BadServerSalt(
             bad_msg_id=bad_msg_id, bad_msg_seq_no=bad_msg_seq_no, error_code=error_code, new_server_salt=new_server_salt
         ):
-            return (
+            return encode_fast(_BAD_SERVER_SALT_ID, (bad_msg_id, bad_msg_seq_no, error_code, new_server_salt)) or (
                 encode_constructor_id(_BAD_SERVER_SALT_ID)
                 + _pack_i64(bad_msg_id)
                 + encode_int(bad_msg_seq_no)
@@ -233,7 +267,7 @@ def encode_message_body(body: ByteBuffer | object) -> bytes:
                 + _pack_u64(new_server_salt)
             )
         case BadMsgNotification(bad_msg_id=bad_msg_id, bad_msg_seq_no=bad_msg_seq_no, error_code=error_code):
-            return (
+            return encode_fast(_BAD_MSG_NOTIFICATION_ID, (bad_msg_id, bad_msg_seq_no, error_code)) or (
                 encode_constructor_id(_BAD_MSG_NOTIFICATION_ID)
                 + _pack_i64(bad_msg_id)
                 + encode_int(bad_msg_seq_no)
@@ -249,7 +283,11 @@ def encode_message_body(body: ByteBuffer | object) -> bytes:
         case RpcErrorBody(error_code=error_code, error_message=error_message):
             return encode_constructor_id(_RPC_ERROR_ID) + encode_int(error_code) + encode_string(error_message)
         case RpcResult(req_msg_id=req_msg_id, result=result):
-            return encode_constructor_id(_RPC_RESULT_ID) + _pack_i64(req_msg_id) + encode_message_body(result)
+            result_bytes = encode_message_body(result)
+            return (
+                encode_fast(_RPC_RESULT_ID, (req_msg_id, result_bytes))
+                or encode_constructor_id(_RPC_RESULT_ID) + _pack_i64(req_msg_id) + result_bytes
+            )
         case _:
             raise TypeError(f"cannot encode MTProto body {type(body).__name__}")
 
@@ -257,6 +295,12 @@ def encode_message_body(body: ByteBuffer | object) -> bytes:
 def decode_message_body(data: ByteBuffer) -> ByteBuffer | object:
     data_view = memoryview(data)
     constructor_id, offset = decode_constructor_id(data, 0)
+    if constructor_id in _FAST_SERVICE_IDS and len(data) <= 4096:
+        native = decode_fast(constructor_id, bytes(data), 0)
+        if native is not None:
+            values, native_offset = native
+            _require_consumed(data, native_offset)
+            return _materialize_fast_service(constructor_id, values)
     if constructor_id == _MSGS_ACK_ID:
         msg_ids, offset = _decode_long_vector(data, offset)
         _require_consumed(data, offset)
@@ -339,6 +383,41 @@ def decode_message_body(data: ByteBuffer) -> ByteBuffer | object:
         req_msg_id = _unpack_i64(data, offset)
         return RpcResult(req_msg_id=req_msg_id, result=data_view[offset + 8 :])
     return data
+
+
+def _materialize_fast_service(constructor_id: int, values: tuple[object, ...]) -> object:
+    if constructor_id == _MSGS_ACK_ID:
+        return MsgsAck(msg_ids=tuple(cast(tuple[int, ...], values[0])))
+    if constructor_id == _MSGS_STATE_REQ_ID:
+        return MsgsStateReq(msg_ids=tuple(cast(tuple[int, ...], values[0])))
+    if constructor_id == _MSGS_STATE_INFO_ID:
+        return MsgsStateInfo(req_msg_id=cast(int, values[0]), info=cast(bytes, values[1]))
+    if constructor_id == _MSG_RESEND_REQ_ID:
+        return MsgResendReq(msg_ids=tuple(cast(tuple[int, ...], values[0])))
+    if constructor_id == _MSG_CONTAINER_ID:
+        messages = tuple(
+            MessageContainerItem(msg_id=item[0], seq_no=item[1], body=memoryview(item[2]))
+            for item in cast(tuple[tuple[int, int, bytes], ...], values[0])
+        )
+        return MessageContainer(messages=messages)
+    if constructor_id == _GZIP_PACKED_ID:
+        return GzipPacked(packed_data=memoryview(cast(bytes, values[0])))
+    if constructor_id == _PONG_ID:
+        return Pong(msg_id=cast(int, values[0]), ping_id=cast(int, values[1]))
+    if constructor_id == _BAD_MSG_NOTIFICATION_ID:
+        return BadMsgNotification(
+            bad_msg_id=cast(int, values[0]), bad_msg_seq_no=cast(int, values[1]), error_code=cast(int, values[2])
+        )
+    if constructor_id == _BAD_SERVER_SALT_ID:
+        return BadServerSalt(
+            bad_msg_id=cast(int, values[0]),
+            bad_msg_seq_no=cast(int, values[1]),
+            error_code=cast(int, values[2]),
+            new_server_salt=cast(int, values[3]),
+        )
+    if constructor_id == _RPC_RESULT_ID:
+        return RpcResult(req_msg_id=cast(int, values[0]), result=memoryview(cast(bytes, values[1])))
+    raise ValueError(f"unsupported generated MTProto service constructor 0x{constructor_id:08x}")
 
 
 def encode_ping(ping_id: int) -> bytes:

@@ -42,6 +42,30 @@ def test_public_api_imports() -> None:
     assert not client.is_connected
 
 
+def test_client_invoke_forwards_quick_ack_options(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def run() -> None:
+        client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=InMemorySessionStorage()))
+        captured: dict[str, object] = {}
+
+        async def invoke_via_sender(raw_request: object, **kwargs: object) -> object:
+            captured["raw_request"] = raw_request
+            captured.update(kwargs)
+            return b"result"
+
+        monkeypatch.setattr(client, "_invoke_via_sender", invoke_via_sender)
+
+        def callback(receipt: object) -> None:
+            del receipt
+
+        request = object()
+        assert await client.invoke(request, quick_ack=True, quick_ack_callback=callback) == b"result"
+        assert captured["raw_request"] is request
+        assert captured["quick_ack"] is True
+        assert captured["quick_ack_callback"] is callback
+
+    event_loop.run(run())
+
+
 def test_default_session_storage_requires_key_before_creating_file(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

@@ -114,3 +114,7 @@ This behavior wouldn't be the default but rather an option that users can toggle
 ## 2026-08-13 — GPT-5.6 Sol Ultra — Codex — "Wave 2 implementation"
 
 - Closing an outer async-generator wrapper while it is suspended at `yield` does not reliably close a separately owned inner async generator soon enough to cancel that inner generator's pending download-part tasks. Any public streaming wrapper that delegates to an internal iterator must explicitly `await inner.aclose()` in `finally`; merely using `async for` is insufficient for prompt scheduler-capacity and sender cleanup on early consumer exit.
+
+## 2026-08-13 — GPT-5.6 Sol Ultra — Codex — "Wave 3 implementation"
+
+- The generated Rust TL fast-path table intentionally mixes selected Telegram API constructors with static MTProto service constructors. `decode_message_body()` must restrict native materialization to the static service-ID set; otherwise an API result such as `upload.file` is decoded successfully by Rust and then incorrectly rejected as an unsupported MTProto service before generic result dispatch can construct its generated Python class. Keep generated API hooks and service materialization as separate consumers even though they share one native table.

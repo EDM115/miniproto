@@ -4,11 +4,13 @@ import asyncio
 import logging
 import secrets
 import time
+from collections import OrderedDict, deque
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass, field
 
 from miniproto.config import TransportConfig
+from miniproto.connection.framing import QuickAckFrame
 from miniproto.connection.transport import (
     ConnectionEndpoint,
     StreamConnector,
@@ -38,6 +40,7 @@ from miniproto.mtproto.codec import (
     encode_message_body,
     encode_ping_delay_disconnect,
 )
+from miniproto.mtproto.quick_ack import quick_ack_token
 from miniproto.mtproto.state import MTProtoState
 from miniproto.observability import emit_event, get_logger, record_metric
 
@@ -51,6 +54,19 @@ RECONNECT_FLAP_WINDOW = 10.0
 _GZIP_THREAD_THRESHOLD_BYTES = 64 * 1024
 
 _LOGGER = get_logger("connection.sender")
+_QUICK_ACK_HISTORY_LIMIT = 1024
+
+
+@dataclass(frozen=True, slots=True)
+class QuickAckReceipt:
+    """Early transport-acknowledgement metadata for one encrypted send attempt.
+
+    A receipt confirms only that Telegram accepted the encrypted transport packet; it does not complete the RPC or replace the later result, error, or MTProto service acknowledgement.
+    """
+
+    token: int
+    latency_ms: float
+    attempt: int
 
 
 @dataclass(slots=True)
@@ -62,6 +78,19 @@ class PendingRequest:
     attempts: int = 0
     transport: Transport | None = None
     aliases: set[int] = field(default_factory=set)
+    quick_ack: bool = False
+    quick_ack_callback: Callable[[QuickAckReceipt], None] | None = None
+    quick_ack_received: bool = False
+    quick_ack_waiters: list[QuickAckWaiter] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class QuickAckWaiter:
+    token: int
+    pending: PendingRequest
+    sent_at: float
+    attempt: int
+    transport: Transport
 
 
 @dataclass(frozen=True, slots=True)
@@ -117,6 +146,9 @@ class MTProtoSender:
         self._pending: dict[int, PendingRequest] = {}
         self._pending_slots_used = 0
         self._acks_received: set[int] = set()
+        self._quick_acks: dict[int, deque[QuickAckWaiter]] = {}
+        self._quick_ack_count = 0
+        self._quick_ack_history: OrderedDict[int, str] = OrderedDict()
         self._incoming: asyncio.Queue[DecodedEncryptedMessage] = asyncio.Queue(maxsize=max(1, incoming_queue_size))
 
     @property
@@ -203,6 +235,8 @@ class MTProtoSender:
         content_related: bool = True,
         retry_safe: bool = False,
         request_timeout: float | None = None,
+        quick_ack: bool = False,
+        quick_ack_callback: Callable[[QuickAckReceipt], None] | None = None,
     ) -> object:
         started = time.perf_counter()
         self._reserve_pending_slot()
@@ -210,7 +244,12 @@ class MTProtoSender:
         error_type: str | None = None
         try:
             return await self._request_core(
-                body, content_related=content_related, retry_safe=retry_safe, request_timeout=request_timeout
+                body,
+                content_related=content_related,
+                retry_safe=retry_safe,
+                request_timeout=request_timeout,
+                quick_ack=quick_ack or quick_ack_callback is not None,
+                quick_ack_callback=quick_ack_callback,
             )
         except asyncio.CancelledError:
             outcome = "cancelled"
@@ -239,16 +278,35 @@ class MTProtoSender:
         request_timeout: float | None = None,
     ) -> object:
         return await self._request_core(
-            body, content_related=content_related, retry_safe=retry_safe, request_timeout=request_timeout
+            body,
+            content_related=content_related,
+            retry_safe=retry_safe,
+            request_timeout=request_timeout,
+            quick_ack=False,
+            quick_ack_callback=None,
         )
 
     async def _request_core(
-        self, body: bytes | object, *, content_related: bool, retry_safe: bool, request_timeout: float | None
+        self,
+        body: bytes | object,
+        *,
+        content_related: bool,
+        retry_safe: bool,
+        request_timeout: float | None,
+        quick_ack: bool,
+        quick_ack_callback: Callable[[QuickAckReceipt], None] | None,
     ) -> object:
         await self.connect()
         loop = asyncio.get_running_loop()
         future: asyncio.Future[object] = loop.create_future()
-        pending = PendingRequest(body=body, content_related=content_related, future=future, retry_safe=retry_safe)
+        pending = PendingRequest(
+            body=body,
+            content_related=content_related,
+            future=future,
+            retry_safe=retry_safe,
+            quick_ack=quick_ack,
+            quick_ack_callback=quick_ack_callback,
+        )
         await self._send_pending(pending)
         try:
             result = await asyncio.wait_for(future, timeout=request_timeout)
@@ -331,8 +389,14 @@ class MTProtoSender:
                     self._pending[msg_id] = pending
                     pending.aliases.add(msg_id)
                 pending.transport = transport
+                self._remove_quick_acks(pending)
+                if pending.quick_ack:
+                    self._register_quick_ack(pending, payload, transport)
                 try:
-                    await transport.send(payload)
+                    if pending.quick_ack:
+                        await transport.send(payload, quick_ack=True)
+                    else:
+                        await transport.send(payload)
                 except asyncio.CancelledError:
                     if ack_ids:
                         self.state.requeue_acks(ack_ids)
@@ -341,6 +405,7 @@ class MTProtoSender:
                         pending.future.cancel()
                     raise
                 except BaseException as exc:
+                    self._remove_quick_acks(pending)
                     if ack_ids:
                         self.state.requeue_acks(ack_ids)
                     if isinstance(exc, TransportError):
@@ -448,6 +513,9 @@ class MTProtoSender:
                     await asyncio.sleep(0)
                     continue
                 packet = await transport.recv()
+                if isinstance(packet, QuickAckFrame):
+                    self._handle_quick_ack(packet.token)
+                    continue
                 try:
                     message = decode_encrypted_message(self.state.auth_key, packet, client_to_server=False)
                     await self._prevalidate_and_commit_incoming(message)
@@ -763,6 +831,7 @@ class MTProtoSender:
         record_metric("sender.pending_rpcs", self._pending_slots_used, unit="count")
 
     def _remove_pending(self, pending: PendingRequest, *, matched_msg_id: int | None = None) -> None:
+        self._remove_quick_acks(pending)
         if matched_msg_id is not None:
             self._pending.pop(matched_msg_id, None)
         for msg_id in pending.aliases:
@@ -779,7 +848,83 @@ class MTProtoSender:
         transport = self._transport
         self._transport = None
         if transport is not None:
+            self._remove_quick_acks_for_transport(transport)
             await transport.close()
+
+    def _register_quick_ack(self, pending: PendingRequest, payload: bytes, transport: Transport) -> None:
+        token = quick_ack_token(self.state.auth_key, payload)
+        waiter = QuickAckWaiter(
+            token=token, pending=pending, sent_at=time.perf_counter(), attempt=pending.attempts, transport=transport
+        )
+        self._quick_acks.setdefault(token, deque()).append(waiter)
+        pending.quick_ack_waiters.append(waiter)
+        self._quick_ack_count += 1
+        record_metric("sender.quick_ack_waiters", self._quick_ack_count, unit="count")
+
+    def _handle_quick_ack(self, token: int) -> None:
+        waiters = self._quick_acks.get(token)
+        if not waiters:
+            reason = self._quick_ack_history.get(token, "unknown")
+            record_metric("sender.quick_ack_ignored", 1, attributes={"reason": reason})
+            return
+        waiter = waiters.popleft()
+        if not waiters:
+            self._quick_acks.pop(token, None)
+        self._quick_ack_count -= 1
+        with suppress(ValueError):
+            waiter.pending.quick_ack_waiters.remove(waiter)
+        self._remember_quick_ack(token, "duplicate")
+        record_metric("sender.quick_ack_waiters", self._quick_ack_count, unit="count")
+        pending = waiter.pending
+        if pending.future.done() or pending.quick_ack_received:
+            record_metric("sender.quick_ack_ignored", 1, attributes={"reason": "stale"})
+            return
+        pending.quick_ack_received = True
+        latency_ms = max(0.0, (time.perf_counter() - waiter.sent_at) * 1000)
+        receipt = QuickAckReceipt(token=token, latency_ms=latency_ms, attempt=waiter.attempt)
+        record_metric("sender.quick_ack_latency", latency_ms, unit="ms")
+        record_metric("sender.quick_acks", 1)
+        callback = pending.quick_ack_callback
+        if callback is None:
+            return
+        try:
+            callback(receipt)
+        except Exception as exc:
+            record_metric("sender.quick_ack_callback_errors", 1, attributes={"error_type": type(exc).__name__})
+
+    def _remove_quick_acks(self, pending: PendingRequest) -> None:
+        for waiter in tuple(pending.quick_ack_waiters):
+            self._discard_quick_ack_waiter(waiter)
+        pending.quick_ack_waiters.clear()
+
+    def _remove_quick_acks_for_transport(self, transport: Transport) -> None:
+        for waiters in tuple(self._quick_acks.values()):
+            for waiter in tuple(waiters):
+                if waiter.transport is transport:
+                    self._discard_quick_ack_waiter(waiter)
+
+    def _discard_quick_ack_waiter(self, waiter: QuickAckWaiter) -> None:
+        waiters = self._quick_acks.get(waiter.token)
+        if waiters is None:
+            return
+        with suppress(ValueError):
+            waiters.remove(waiter)
+            self._quick_ack_count -= 1
+        if not waiters:
+            self._quick_acks.pop(waiter.token, None)
+        with suppress(ValueError):
+            waiter.pending.quick_ack_waiters.remove(waiter)
+        self._remember_quick_ack(waiter.token, "stale")
+        record_metric("sender.quick_ack_waiters", self._quick_ack_count, unit="count")
+
+    def _remember_quick_ack(self, token: int, reason: str) -> None:
+        self._quick_ack_history[token] = reason
+        self._quick_ack_history.move_to_end(token)
+        while len(self._quick_ack_history) > _QUICK_ACK_HISTORY_LIMIT:
+            self._quick_ack_history.popitem(last=False)
+
+    def _quick_ack_waiter_count(self) -> int:
+        return self._quick_ack_count
 
     async def _reconnect(self, *, failed_transport: Transport | None = None) -> None:
         started = time.perf_counter()

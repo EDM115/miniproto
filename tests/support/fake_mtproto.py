@@ -18,6 +18,7 @@ from miniproto.auth.key_exchange import (
     server_salt,
 )
 from miniproto.config import TransportConfig
+from miniproto.connection.framing import PayloadFrame, TransportErrorFrame
 from miniproto.connection.tcp_abridged import TcpAbridgedTransport
 from miniproto.connection.tcp_intermediate import TcpIntermediateTransport, TcpPaddedIntermediateTransport
 from miniproto.connection.transport import ConnectionEndpoint
@@ -33,6 +34,7 @@ from miniproto.mtproto.codec import (
     encode_message_body,
     encode_unencrypted_message,
 )
+from miniproto.mtproto.quick_ack import quick_ack_token
 from miniproto.mtproto.state import MTProtoState
 from miniproto.tl.codec import decode_bytes, decode_constructor_id, decode_int128, decode_long
 
@@ -48,9 +50,15 @@ class FakeMTProtoServer:
     session_id: int = 0x5555666677778888
     host: str = "127.0.0.1"
     drop_connections_before_packet: int = 0
+    drop_connections_after_packet: int = 0
+    quick_ack_enabled: bool = False
+    quick_ack_after_response: bool = False
     connections_accepted: int = 0
     acks_received: list[int] = field(default_factory=list)
     containered_bodies: int = 0
+    quick_acks_sent: list[int] = field(default_factory=list)
+    quick_ack_requests: list[int] = field(default_factory=list)
+    errors: list[BaseException] = field(default_factory=list)
     _server: asyncio.AbstractServer | None = None
     _state: MTProtoState | None = None
 
@@ -92,7 +100,17 @@ class FakeMTProtoServer:
                 self.drop_connections_before_packet -= 1
                 return
             while True:
-                packet = await transport.read_packet()
+                frame = await transport.read_frame()
+                packet = frame.payload
+                token = quick_ack_token(self.auth_key, packet) if frame.quick_ack_requested else None
+                if token is not None:
+                    self.quick_ack_requests.append(token)
+                if self.drop_connections_after_packet > 0:
+                    self.drop_connections_after_packet -= 1
+                    return
+                if token is not None and self.quick_ack_enabled and not self.quick_ack_after_response:
+                    await transport.send_quick_ack(token)
+                    self.quick_acks_sent.append(token)
                 incoming = decode_encrypted_message(self.auth_key, packet, client_to_server=True)
                 for leaf in self._leaves(incoming):
                     response = self.handler(leaf)
@@ -116,8 +134,13 @@ class FakeMTProtoServer:
                             client_to_server=False,
                         )
                     )
-        except (asyncio.IncompleteReadError, ConnectionError, ValueError):
+                if token is not None and self.quick_ack_enabled and self.quick_ack_after_response:
+                    await transport.send_quick_ack(token)
+                    self.quick_acks_sent.append(token)
+        except (asyncio.IncompleteReadError, ConnectionError):
             pass
+        except BaseException as exc:
+            self.errors.append(exc)
         finally:
             writer.close()
             await writer.wait_closed()
@@ -415,11 +438,13 @@ class _ServerTransport:
         self.config = config
         match config.mode:
             case "tcp_abridged":
-                self._codec = TcpAbridgedTransport(ConnectionEndpoint("127.0.0.1", 1), config)
+                self._codec = TcpAbridgedTransport(ConnectionEndpoint("127.0.0.1", 1), config, server_side=True)
             case "tcp_intermediate":
-                self._codec = TcpIntermediateTransport(ConnectionEndpoint("127.0.0.1", 1), config)
+                self._codec = TcpIntermediateTransport(ConnectionEndpoint("127.0.0.1", 1), config, server_side=True)
             case "tcp_padded_intermediate":
-                self._codec = TcpPaddedIntermediateTransport(ConnectionEndpoint("127.0.0.1", 1), config)
+                self._codec = TcpPaddedIntermediateTransport(
+                    ConnectionEndpoint("127.0.0.1", 1), config, server_side=True
+                )
             case _:
                 raise ValueError(f"unsupported transport mode {config.mode!r}")
 
@@ -431,8 +456,30 @@ class _ServerTransport:
                 raise ValueError("unexpected transport handshake tag")
 
     async def read_packet(self) -> bytes:
-        return await self._codec.read_packet(self.reader)
+        return (await self.read_frame()).payload
+
+    async def read_frame(self) -> PayloadFrame:
+        while True:
+            event = await self._codec.read_event(self.reader)
+            if isinstance(event, PayloadFrame):
+                return event
+            if isinstance(event, TransportErrorFrame):
+                raise ConnectionError(f"client transport error {event.code}")
 
     async def send_packet(self, payload: bytes) -> None:
         self.writer.write(self._codec.encode_packet(payload))
+        await self.writer.drain()
+
+    async def send_quick_ack(self, token: int) -> None:
+        match self.config.mode:
+            case "tcp_abridged":
+                encoded = token.to_bytes(4, "big")
+            case "tcp_intermediate":
+                encoded = token.to_bytes(4, "little")
+            case "tcp_padded_intermediate":
+                payload = b"\xff\xff\xff\xff" + token.to_bytes(4, "little")
+                encoded = len(payload).to_bytes(4, "little") + payload
+            case _:
+                raise ValueError(f"unsupported transport mode {self.config.mode!r}")
+        self.writer.write(encoded)
         await self.writer.drain()

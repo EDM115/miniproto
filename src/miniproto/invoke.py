@@ -13,7 +13,7 @@ from typing import Any, Protocol, cast, runtime_checkable
 
 from miniproto.auth.dc import select_dc_option
 from miniproto.config import ClientConfig
-from miniproto.connection.sender import MTProtoSender
+from miniproto.connection.sender import MTProtoSender, QuickAckReceipt
 from miniproto.connection.transport import ConnectionEndpoint
 from miniproto.errors import (
     AuthKeyNotFound,
@@ -91,6 +91,21 @@ class RawSender(Protocol):
         request_timeout: float | None = None,
     ) -> object: ...
     async def disconnect(self) -> None: ...
+
+
+class QuickAckRawSender(RawSender, Protocol):
+    """Sender capability used only by explicitly quick-ACK-enabled calls."""
+
+    async def request(
+        self,
+        body: bytes | object,
+        *,
+        content_related: bool = True,
+        retry_safe: bool,
+        request_timeout: float | None = None,
+        quick_ack: bool = False,
+        quick_ack_callback: Callable[[QuickAckReceipt], None] | None = None,
+    ) -> object: ...
 
 
 SenderFactory = Callable[[SessionRecord], RawSender | Awaitable[RawSender]]

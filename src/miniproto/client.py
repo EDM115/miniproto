@@ -17,6 +17,7 @@ from miniproto.auth.dc import select_dc_option
 from miniproto.auth.key_exchange import AuthKeyExchange
 from miniproto.auth.service import AuthService
 from miniproto.config import ClientConfig
+from miniproto.connection.sender import QuickAckReceipt
 from miniproto.connection.transport import ConnectionEndpoint, TransportError
 from miniproto.errors import (
     AuthKeyNotFound,
@@ -32,6 +33,7 @@ from miniproto.errors import (
 from miniproto.file_id import decode_file_id, input_media_from_file_id, is_file_id, media_from_file_id
 from miniproto.invoke import (
     MethodFloodWaitCache,
+    QuickAckRawSender,
     RawSender,
     SenderFactory,
     build_sender_from_session,
@@ -483,6 +485,8 @@ class Client:
         request_timeout: float | None = None,
         flood_sleep_threshold: int | None = None,
         retry: bool | None = None,
+        quick_ack: bool = False,
+        quick_ack_callback: Callable[[QuickAckReceipt], None] | None = None,
         **kwargs: Any,
     ) -> Message:
         started = time.perf_counter()
@@ -499,7 +503,12 @@ class Client:
         )
         try:
             result = await self.invoke(
-                request, request_timeout=request_timeout, flood_sleep_threshold=flood_sleep_threshold, retry=retry
+                request,
+                request_timeout=request_timeout,
+                flood_sleep_threshold=flood_sleep_threshold,
+                retry=retry,
+                quick_ack=quick_ack,
+                quick_ack_callback=quick_ack_callback,
             )
             await self._peer_cache.remember_raw_entities(result)
             message = message_from_send_result(result, peer=resolved_peer, text=parsed.text, entities=request_entities)
@@ -738,6 +747,8 @@ class Client:
                 request_timeout=file_options["request_timeout"],
                 flood_sleep_threshold=file_options["flood_sleep_threshold"],
                 retry=file_options["retry"],
+                quick_ack=file_options["quick_ack"],
+                quick_ack_callback=file_options["quick_ack_callback"],
             )
             await self._peer_cache.remember_raw_entities(result)
             message = message_from_send_result(result, peer=resolved_peer, text=parsed.text, entities=request_entities)
@@ -1107,6 +1118,8 @@ class Client:
         request_timeout: float | None = None,
         flood_sleep_threshold: int | None = None,
         retry: bool | None = None,
+        quick_ack: bool = False,
+        quick_ack_callback: Callable[[QuickAckReceipt], None] | None = None,
     ) -> object:
         return await self._invoke_via_sender(
             raw_request,
@@ -1115,6 +1128,8 @@ class Client:
             request_timeout=request_timeout,
             flood_sleep_threshold=flood_sleep_threshold,
             retry=retry,
+            quick_ack=quick_ack,
+            quick_ack_callback=quick_ack_callback,
         )
 
     async def _invoke_via_sender(
@@ -1126,6 +1141,8 @@ class Client:
         request_timeout: float | None = None,
         flood_sleep_threshold: int | None = None,
         retry: bool | None = None,
+        quick_ack: bool = False,
+        quick_ack_callback: Callable[[QuickAckReceipt], None] | None = None,
         without_updates: bool = False,
         migrate_session: bool = True,
     ) -> object:
@@ -1138,6 +1155,16 @@ class Client:
         attempts = 0
         slept_so_far = 0.0
         request_name = _request_name(raw_request)
+        quick_ack_delivered = False
+
+        def deliver_quick_ack(receipt: QuickAckReceipt) -> None:
+            nonlocal quick_ack_delivered
+            if quick_ack_delivered:
+                return
+            quick_ack_delivered = True
+            if quick_ack_callback is not None:
+                quick_ack_callback(receipt)
+
         while True:
             cached_flood_wait = self._method_flood_wait_cache.get(raw_request)
             if cached_flood_wait is not None:
@@ -1184,9 +1211,19 @@ class Client:
                 without_updates=(without_updates or not self._updates_enabled) and needs_init,
             )
             try:
-                raw_result = await sender.request(
-                    wrapped_request, content_related=True, retry_safe=retryable, request_timeout=timeout
-                )
+                if quick_ack or quick_ack_callback is not None:
+                    raw_result = await cast(QuickAckRawSender, sender).request(
+                        wrapped_request,
+                        content_related=True,
+                        retry_safe=retryable,
+                        request_timeout=timeout,
+                        quick_ack=True,
+                        quick_ack_callback=deliver_quick_ack,
+                    )
+                else:
+                    raw_result = await sender.request(
+                        wrapped_request, content_related=True, retry_safe=retryable, request_timeout=timeout
+                    )
                 mark_sender_initialized(sender)
                 result = decode_rpc_response(raw_result, raw_request)
                 _emit_rpc_event(
@@ -2074,6 +2111,8 @@ _SEND_FILE_OPTION_DEFAULTS: dict[str, object] = {
     "request_timeout": None,
     "flood_sleep_threshold": None,
     "retry": None,
+    "quick_ack": False,
+    "quick_ack_callback": None,
     "media_lanes": 2,
     "upload_limit_parts": None,
 }

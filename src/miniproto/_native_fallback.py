@@ -43,6 +43,14 @@ def mtproto_message_key(auth_key: bytes, plaintext_with_padding: bytes, client_t
     return msg_key_large[8:24]
 
 
+def quick_ack_token(auth_key: bytes, encrypted_packet: bytes) -> int:
+    _validate_auth_key(auth_key)
+    if len(encrypted_packet) <= 24:
+        raise ValueError("MTProto packet must contain an encrypted portion")
+    digest = sha256_digest(auth_key[88:120] + encrypted_packet[24:])
+    return int.from_bytes(digest[:4], "little") | 0x80000000
+
+
 def mtproto_derive_aes_key_iv(auth_key: bytes, msg_key: bytes, client_to_server: bool) -> tuple[bytes, bytes]:
     _validate_auth_key(auth_key)
     _validate_msg_key(msg_key)

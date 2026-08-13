@@ -5,16 +5,20 @@ import base64
 import logging
 import socket as socket_module
 import time
+from collections import deque
 from collections.abc import Awaitable, Callable
 from contextlib import suppress
 from dataclasses import dataclass
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 from urllib.parse import unquote, urlsplit
 
 from miniproto.config import TransportConfig
 from miniproto.errors import TransportFlood
 from miniproto.observability import emit_event, get_logger, record_metric
 from miniproto.security.redaction import safe_repr
+
+if TYPE_CHECKING:
+    from miniproto.connection.framing import FrameEvent, QuickAckFrame, TransportFrameCodec
 
 
 class TransportError(ConnectionError):
@@ -45,8 +49,8 @@ class Transport(Protocol):
     @property
     def is_connected(self) -> bool: ...
     async def connect(self) -> None: ...
-    async def send(self, payload: bytes) -> None: ...
-    async def recv(self) -> bytes: ...
+    async def send(self, payload: bytes, *, quick_ack: bool = False) -> None: ...
+    async def recv(self) -> bytes | QuickAckFrame: ...
     async def close(self) -> None: ...
 
 
@@ -241,13 +245,27 @@ async def open_transport(
 
 class StreamTransportBase:
     handshake_tag: bytes = b""
+    transport_mode: str | None = None
 
     def __init__(
-        self, endpoint: ConnectionEndpoint, config: TransportConfig, *, connector: StreamConnector | None = None
+        self,
+        endpoint: ConnectionEndpoint,
+        config: TransportConfig,
+        *,
+        connector: StreamConnector | None = None,
+        server_side: bool = False,
     ) -> None:
+        from miniproto.connection.framing import create_frame_codec
+
         self.endpoint = endpoint
         self.config = config
         self._connector = connector or default_stream_connector
+        self._server_side = server_side
+        mode = self.transport_mode or config.mode
+        self._frame_codec: TransportFrameCodec = create_frame_codec(
+            mode, max_payload_size=config.max_payload_size, server_side=server_side
+        )
+        self._frame_events: deque[bytes | FrameEvent] = deque()
         self._reader: asyncio.StreamReader | None = None
         self._writer: asyncio.StreamWriter | None = None
         self._closed = True
@@ -265,6 +283,7 @@ class StreamTransportBase:
         if self.is_connected:
             return
         await self._stop_watchdog()
+        self._reset_frame_codec()
         self._reader, self._writer = await self._connector(self.endpoint, self.config)
         _apply_socket_options(self._writer)
         self._closed = False
@@ -283,7 +302,7 @@ class StreamTransportBase:
             port=self.endpoint.port,
         )
 
-    async def send(self, payload: bytes) -> None:
+    async def send(self, payload: bytes, *, quick_ack: bool = False) -> None:
         started = time.perf_counter()
         if not self.is_connected:
             _emit_transport_event(
@@ -295,12 +314,14 @@ class StreamTransportBase:
                 "transport.send", started, outcome="error", error_type="TransportError", payload_bytes=len(payload)
             )
             raise TransportError("transport payload exceeds configured maximum")
-        await self._write_raw(self.encode_packet(payload))
+        await self._write_raw(self.encode_packet(payload, quick_ack=quick_ack))
         _emit_transport_event(
             "transport.send", started, outcome="success", payload_bytes=len(payload), mode=self.config.mode
         )
 
-    async def recv(self) -> bytes:
+    async def recv(self) -> bytes | QuickAckFrame:
+        from miniproto.connection.framing import PayloadFrame, QuickAckFrame, TransportErrorFrame
+
         started = time.perf_counter()
         if not self.is_connected or self._reader is None:
             _emit_transport_event(
@@ -313,7 +334,10 @@ class StreamTransportBase:
             self._last_activity = time.monotonic()
         self._reads_waiting += 1
         try:
-            payload = await self.read_packet(self._reader)
+            if type(self).read_packet is not StreamTransportBase.read_packet:
+                event = PayloadFrame(await self.read_packet(self._reader))
+            else:
+                event = await self.read_event(self._reader)
         except asyncio.IncompleteReadError as exc:
             self._closed = True
             if self._read_timed_out:
@@ -342,6 +366,17 @@ class StreamTransportBase:
         finally:
             self._reads_waiting -= 1
             self._last_activity = time.monotonic()
+        if isinstance(event, TransportErrorFrame):
+            raise_transport_error_frame(event.code)
+        if isinstance(event, QuickAckFrame):
+            record_metric("transport.quick_acks_received", 1, attributes={"mode": self.config.mode})
+            return event
+        if isinstance(event, bytes):
+            payload = event
+        elif isinstance(event, PayloadFrame):
+            payload = event.payload
+        else:
+            raise TransportError(f"unexpected transport frame event: {type(event).__name__}")
         if len(payload) > self.config.max_payload_size:
             _emit_transport_event(
                 "transport.recv", started, outcome="error", error_type="TransportError", payload_bytes=len(payload)
@@ -358,6 +393,7 @@ class StreamTransportBase:
         self._closed = True
         self._reader = None
         self._writer = None
+        self._frame_events.clear()
         await self._stop_watchdog()
         if writer is None:
             return
@@ -419,11 +455,42 @@ class StreamTransportBase:
         with suppress(asyncio.CancelledError):
             await watchdog
 
-    def encode_packet(self, payload: bytes) -> bytes:
-        raise NotImplementedError
+    def encode_packet(self, payload: bytes, *, quick_ack: bool = False) -> bytes:
+        return self._frame_codec.encode_packet(payload, quick_ack=quick_ack)
+
+    async def read_event(self, reader: asyncio.StreamReader) -> bytes | FrameEvent:
+        while not self._frame_events:
+            data = await reader.read(64 * 1024)
+            if not data:
+                raise asyncio.IncompleteReadError(partial=b"", expected=None)
+            self._last_activity = time.monotonic()
+            feed_transport_data = None if self._server_side else getattr(self._frame_codec, "feed_transport_data", None)
+            if callable(feed_transport_data):
+                self._frame_events.extend(feed_transport_data(data))
+            else:
+                self._frame_events.extend(self._frame_codec.feed_data(data))
+        return self._frame_events.popleft()
 
     async def read_packet(self, reader: asyncio.StreamReader) -> bytes:
-        raise NotImplementedError
+        from miniproto.connection.framing import PayloadFrame, TransportErrorFrame
+
+        while True:
+            event = await self.read_event(reader)
+            if isinstance(event, TransportErrorFrame):
+                raise_transport_error_frame(event.code)
+            if isinstance(event, bytes):
+                return event
+            if isinstance(event, PayloadFrame):
+                return event.payload
+
+    def _reset_frame_codec(self) -> None:
+        from miniproto.connection.framing import create_frame_codec
+
+        mode = self.transport_mode or self.config.mode
+        self._frame_codec = create_frame_codec(
+            mode, max_payload_size=self.config.max_payload_size, server_side=self._server_side
+        )
+        self._frame_events.clear()
 
 
 def _apply_socket_options(writer: asyncio.StreamWriter) -> None:

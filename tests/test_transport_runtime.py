@@ -83,7 +83,8 @@ class _ExplodingTransport:
     async def connect(self) -> None:
         return None
 
-    async def send(self, payload: bytes) -> None:
+    async def send(self, payload: bytes, *, quick_ack: bool = False) -> None:
+        del quick_ack
         del payload
 
     async def recv(self) -> bytes:
@@ -106,7 +107,8 @@ class _SinglePacketTransport:
     async def connect(self) -> None:
         return None
 
-    async def send(self, payload: bytes) -> None:
+    async def send(self, payload: bytes, *, quick_ack: bool = False) -> None:
+        del quick_ack
         del payload
 
     async def recv(self) -> bytes:
@@ -124,7 +126,8 @@ class _SentThenPacketTransport(_SinglePacketTransport):
         super().__init__(packet)
         self.sent = asyncio.Event()
 
-    async def send(self, payload: bytes) -> None:
+    async def send(self, payload: bytes, *, quick_ack: bool = False) -> None:
+        del quick_ack
         del payload
         self.sent.set()
 
@@ -138,7 +141,8 @@ class _SentThenExplodingTransport(_ExplodingTransport):
         super().__init__()
         self.sent = asyncio.Event()
 
-    async def send(self, payload: bytes) -> None:
+    async def send(self, payload: bytes, *, quick_ack: bool = False) -> None:
+        del quick_ack
         del payload
         self.sent.set()
 
@@ -155,7 +159,8 @@ class _SendExplodingTransport:
     async def connect(self) -> None:
         return None
 
-    async def send(self, payload: bytes) -> None:
+    async def send(self, payload: bytes, *, quick_ack: bool = False) -> None:
+        del quick_ack
         del payload
         raise RuntimeError("send failed before wait")
 
@@ -177,7 +182,8 @@ class _BlockingSendTransport:
     async def connect(self) -> None:
         return None
 
-    async def send(self, payload: bytes) -> None:
+    async def send(self, payload: bytes, *, quick_ack: bool = False) -> None:
+        del quick_ack
         del payload
         self.started.set()
         await asyncio.Future()
@@ -201,7 +207,8 @@ class _RecordingSendTransport:
     async def connect(self) -> None:
         return None
 
-    async def send(self, payload: bytes) -> None:
+    async def send(self, payload: bytes, *, quick_ack: bool = False) -> None:
+        del quick_ack
         message = decode_encrypted_message(AUTH_KEY, payload, client_to_server=True)
         self.msg_ids.append(message.msg_id)
         if self.fail:
@@ -237,7 +244,8 @@ class _ReceiveClosedTransport:
     async def connect(self) -> None:
         return None
 
-    async def send(self, payload: bytes) -> None:
+    async def send(self, payload: bytes, *, quick_ack: bool = False) -> None:
+        del quick_ack
         del payload
 
     async def recv(self) -> bytes:
@@ -259,7 +267,11 @@ def test_transport_framing_encodes_official_mode_tags_and_lengths() -> None:
     assert intermediate.handshake_tag == b"\xee\xee\xee\xee"
     assert intermediate.encode_packet(payload) == len(payload).to_bytes(4, "little", signed=True) + payload
     assert padded.handshake_tag == b"\xdd\xdd\xdd\xdd"
-    assert padded.encode_packet(payload) == intermediate.encode_packet(payload)
+    padded_packet = padded.encode_packet(payload)
+    padded_length = int.from_bytes(padded_packet[:4], "little")
+    assert len(payload) <= padded_length <= len(payload) + 15
+    assert padded_packet[4 : 4 + len(payload)] == payload
+    assert len(padded_packet) == 4 + padded_length
 
 
 def test_abridged_rejects_unaligned_payload() -> None:
@@ -2159,7 +2171,7 @@ def test_sender_generic_fatal_receive_failure_releases_public_request_slot() -> 
 def test_intermediate_transport_maps_negative_429_frame_to_transport_flood() -> None:
     async def run() -> None:
         reader = asyncio.StreamReader()
-        reader.feed_data((-429).to_bytes(4, "little", signed=True))
+        reader.feed_data((4).to_bytes(4, "little") + (-429).to_bytes(4, "little", signed=True))
         reader.feed_eof()
         transport = TcpIntermediateTransport(
             ConnectionEndpoint("127.0.0.1", 443), TransportConfig(mode="tcp_intermediate")
@@ -2246,7 +2258,7 @@ def test_default_stream_connector_supports_socks5_proxy() -> None:
 def test_abridged_transport_maps_negative_429_frame_to_transport_flood() -> None:
     async def run() -> None:
         reader = asyncio.StreamReader()
-        reader.feed_data((-429).to_bytes(4, "little", signed=True))
+        reader.feed_data(b"\x01" + (-429).to_bytes(4, "little", signed=True))
         reader.feed_eof()
         transport = TcpAbridgedTransport(ConnectionEndpoint("127.0.0.1", 443), TransportConfig(mode="tcp_abridged"))
         with pytest.raises(TransportFlood):

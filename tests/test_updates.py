@@ -51,7 +51,10 @@ class FakeUpdateClient(Client):
         request_timeout: float | None = None,
         flood_sleep_threshold: int | None = None,
         retry: bool | None = None,
+        quick_ack: bool = False,
+        quick_ack_callback: object | None = None,
     ) -> object:
+        del quick_ack, quick_ack_callback
         self.update_requests.append(raw_request)
         if not self.responses:
             raise AssertionError("fake update client has no queued invoke response")

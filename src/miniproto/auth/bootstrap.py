@@ -49,7 +49,10 @@ class UnencryptedAuthKeyTransport:
             self._transport = await open_transport(self.endpoint, self.config.transport)
         msg_id = self._next_msg_id()
         await self._transport.send(encode_unencrypted_message(msg_id, body))
-        return bytes(decode_unencrypted_message(await self._transport.recv()).body)
+        packet = await self._transport.recv()
+        if not isinstance(packet, bytes):
+            raise ConnectionError("unexpected quick ACK during unencrypted auth exchange")
+        return bytes(decode_unencrypted_message(packet).body)
 
     async def close(self) -> None:
         transport = self._transport

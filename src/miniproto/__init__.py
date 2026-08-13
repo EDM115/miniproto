@@ -4,6 +4,7 @@ from miniproto import event_loop
 from miniproto.auth import AuthKeyExchange, AuthKeyExchangeResult, AuthService
 from miniproto.client import Client
 from miniproto.config import ClientConfig, DeviceInfo, TransportConfig, UpdateQueueOverflowPolicy
+from miniproto.connection.sender import QuickAckReceipt
 from miniproto.errors import (
     AmbiguousRpcResult,
     AuthError,
@@ -119,6 +120,7 @@ __all__ = [
     "Peer",
     "PeerCacheEntry",
     "PendingRpcLimitExceeded",
+    "QuickAckReceipt",
     "RequestTimeout",
     "ResourceSnapshot",
     "ResultTypeMismatch",

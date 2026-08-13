@@ -25,7 +25,7 @@ RPC error metadata is generated from Telegram's error database linked from [http
 - RPC errors: 818
 - RPC errors layer: 227
 - Latest changelog layer observed during update: 225
-- Generated files: src/miniproto/raw/base.py, src/miniproto/raw/types.py, src/miniproto/raw/types.pyi, src/miniproto/raw/functions.py, src/miniproto/raw/functions.pyi, src/miniproto/raw/_registry.py, src/miniproto/raw/_types_shards/*.py, src/miniproto/raw/_function_shards/*.py, src/miniproto/raw/errors.py, docs/raw-api.md
+- Generated files: src/miniproto/raw/base.py, src/miniproto/raw/types.py, src/miniproto/raw/types.pyi, src/miniproto/raw/functions.py, src/miniproto/raw/functions.pyi, src/miniproto/raw/_registry.py, src/miniproto/raw/_types_shards/*.py, src/miniproto/raw/_function_shards/*.py, src/miniproto/raw/errors.py, src/miniproto/tl/fast_metadata.py, rust/miniproto/src/generated_tl.rs, docs/raw-api.md
 
 ## Usage Shape
 
@@ -41,11 +41,11 @@ Facade imports stay lightweight: they load generated facades and the registry, n
 
 ## Current Runtime Scope
 
-The runtime handles binary TL primitive encoding, generated object serialization/deserialization, flags, vectors, boxed constructors, RPC error metadata, gzip-packed payloads, message containers, transport framing, and RPC response correlation.
+The runtime handles binary TL primitive encoding, generated object serialization/deserialization, flags, vectors, boxed constructors, RPC error metadata, gzip-packed payloads, message containers, transport framing, quick-ACK correlation, and RPC response correlation. A reviewed manifest selects 30 Layer 228 media and MTProto service constructors for generated Rust encode/decode paths; complete supported signatures take the native path, while every other constructor remains on the generic Python codec.
 
 ## Current Limits
 
-Transport-level quick-ack frame decoding and its fake-server/live-trace validation remain deferred.
+Quick ACK is opt-in and confirms only early transport receipt, never RPC completion. No credentialed live Telegram trace has been run; deterministic framing, native/fallback parity, reconnect/resend, callback, and encrypted fake-server cases cover all three TCP modes.
 
 ## Samples
 

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, ClassVar, Self
+from typing import Any, ClassVar, Self, cast
 
 from miniproto.raw.base import TLConstructor, TLField, TLFlagGroup
 from miniproto.tl.codec import (
@@ -32,6 +32,7 @@ from miniproto.tl.codec import (
     encode_value,
     encode_vector,
 )
+from miniproto.tl.fast import decode_fast, encode_fast, materialize_empty_object
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -233,6 +234,13 @@ class InputPhotoLegacyFileLocation(TLConstructor):
         return self._serialize(boxed=True)
 
     def _serialize(self, *, boxed: bool = True) -> bytes:
+        native = encode_fast(
+            self.CONSTRUCTOR_ID,
+            (self.id, self.access_hash, self.file_reference, self.volume_id, self.local_id, self.secret),
+            boxed=boxed,
+        )
+        if native is not None:
+            return native
         output = bytearray()
         if boxed:
             output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
@@ -254,6 +262,22 @@ class InputPhotoLegacyFileLocation(TLConstructor):
     @classmethod
     def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
         raw_data = data
+        try:
+            native = decode_fast(cls.CONSTRUCTOR_ID, raw_data, offset, boxed=boxed)
+        except ValueError as exc:
+            if str(exc).startswith("expected constructor "):
+                raise TLCodecError(str(exc)) from exc
+            raise
+        if native is not None:
+            values, cursor = native
+            return cls(
+                id=cast(int, values[0]),
+                access_hash=cast(int, values[1]),
+                file_reference=cast(bytes, values[2]),
+                volume_id=cast(int, values[3]),
+                local_id=cast(int, values[4]),
+                secret=cast(int, values[5]),
+            ), cursor
         cursor = offset
         if boxed:
             constructor_id, cursor = decode_constructor_id(raw_data, cursor)

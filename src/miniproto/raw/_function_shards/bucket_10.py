@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, ClassVar, Self
+from typing import Any, ClassVar, Self, cast
 
 from miniproto.raw.base import TLField, TLFlagGroup, TLRequest
 from miniproto.tl.codec import (
@@ -32,6 +32,7 @@ from miniproto.tl.codec import (
     encode_value,
     encode_vector,
 )
+from miniproto.tl.fast import decode_fast, encode_fast, materialize_empty_object
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -1106,6 +1107,11 @@ class UploadGetFileHashes(TLRequest):
         return self._serialize(boxed=True)
 
     def _serialize(self, *, boxed: bool = True) -> bytes:
+        native = encode_fast(
+            self.CONSTRUCTOR_ID, (encode_value("InputFileLocation", self.location), self.offset), boxed=boxed
+        )
+        if native is not None:
+            return native
         output = bytearray()
         if boxed:
             output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))

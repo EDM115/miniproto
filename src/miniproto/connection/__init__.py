@@ -1,4 +1,4 @@
-from miniproto.connection.sender import MTProtoSender, PendingRequest, SenderState
+from miniproto.connection.sender import MTProtoSender, PendingRequest, QuickAckReceipt, SenderState
 from miniproto.connection.transport import (
     ConnectionEndpoint,
     StreamConnector,
@@ -13,6 +13,7 @@ __all__ = [
     "ConnectionEndpoint",
     "MTProtoSender",
     "PendingRequest",
+    "QuickAckReceipt",
     "SenderState",
     "StreamConnector",
     "Transport",

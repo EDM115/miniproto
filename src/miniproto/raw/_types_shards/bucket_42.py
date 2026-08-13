@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, ClassVar, Self
+from typing import Any, ClassVar, Self, cast
 
 from miniproto.raw.base import TLConstructor, TLField, TLFlagGroup
 from miniproto.tl.codec import (

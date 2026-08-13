@@ -70,7 +70,10 @@ class FakeAuthClient(Client):
         request_timeout: float | None = None,
         flood_sleep_threshold: int | None = None,
         retry: bool | None = None,
+        quick_ack: bool = False,
+        quick_ack_callback: object | None = None,
     ) -> object:
+        del quick_ack, quick_ack_callback
         self.requests.append(raw_request)
         result = self._handler(raw_request)
         return await result if inspect.isawaitable(result) else result

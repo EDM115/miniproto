@@ -20,6 +20,8 @@
     "src/miniproto/raw/_types_shards/*.py",
     "src/miniproto/raw/_function_shards/*.py",
     "src/miniproto/raw/errors.py",
+    "src/miniproto/tl/fast_metadata.py",
+    "rust/miniproto/src/generated_tl.rs",
     "docs/raw-api.md"
   ],
   "generator_version": "4",

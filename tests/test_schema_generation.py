@@ -100,7 +100,7 @@ def test_generated_raw_api_docs_describe_current_runtime_and_lazy_loading(tmp_pa
     outputs = render_outputs(FIXTURE, tmp_path / "schema-metadata.json", ERRORS, tmp_path / "raw", docs_path)
 
     docs = outputs.files[docs_path]
-    assert "gzip-packed payloads, message containers, transport framing, and RPC response correlation" in docs
+    assert "message containers, transport framing, quick-ACK correlation, and RPC response correlation" in docs
     assert "Facade imports stay lightweight" in docs
     assert "Requested symbols load and cache their generated shard" in docs
     assert "Mapping and sequence iteration may realize classes as needed" in docs
@@ -186,6 +186,9 @@ def test_generated_committed_raw_modules_match_full_schema_metadata() -> None:
         ERRORS,
         ROOT / "src" / "miniproto" / "raw",
         ROOT / "docs" / "raw-api.md",
+        ROOT / "tools" / "schema" / "rust-fast-paths.json",
+        ROOT / "rust" / "miniproto" / "src" / "generated_tl.rs",
+        ROOT / "src" / "miniproto" / "tl" / "fast_metadata.py",
     )
     assert not stale_outputs(outputs)
     assert len(schema.constructors) == 1649
