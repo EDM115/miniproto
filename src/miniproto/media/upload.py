@@ -12,7 +12,7 @@ import secrets
 import tempfile
 import time
 from collections.abc import AsyncIterable, Awaitable, Callable, Iterable, Iterator
-from contextlib import AbstractContextManager, contextmanager
+from contextlib import AbstractContextManager, contextmanager, suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, BinaryIO, cast
@@ -120,8 +120,21 @@ async def upload_file(
                 await read_queue.put((part_index, payload))
         finally:
             # Always unblock the consumer, even when a read fails; the awaited
-            # producer task re-raises the original error afterwards.
-            await read_queue.put(None)
+            # producer task re-raises the original error afterwards. If the
+            # producer itself is cancelled while the bounded queue is full,
+            # the consumer is already unwinding and cannot make room: do not
+            # deadlock cancellation waiting to enqueue an unused sentinel.
+            current_task = asyncio.current_task()
+            if current_task is not None and current_task.cancelling():
+                with suppress(asyncio.QueueFull):
+                    read_queue.put_nowait(None)
+            else:
+                try:
+                    await read_queue.put(None)
+                except asyncio.CancelledError:
+                    with suppress(asyncio.QueueFull):
+                        read_queue.put_nowait(None)
+                    raise
 
     async def upload_part(part_index: int, payload: bytes) -> None:
         nonlocal completed

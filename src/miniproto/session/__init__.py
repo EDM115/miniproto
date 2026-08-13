@@ -9,6 +9,7 @@ from miniproto.session.models import (
     session_record_to_mapping,
 )
 from miniproto.session.storage import EncryptedSQLiteSessionStorage, InMemorySessionStorage, SessionStorage
+from miniproto.session.strings import SessionString, SessionStringFormat, export_session_string, import_session_string
 
 __all__ = [
     "AuthKey",
@@ -18,8 +19,12 @@ __all__ = [
     "PeerCacheEntry",
     "SessionRecord",
     "SessionStorage",
+    "SessionString",
+    "SessionStringFormat",
     "UpdateState",
     "UserIdentity",
+    "export_session_string",
+    "import_session_string",
     "session_record_from_mapping",
     "session_record_to_mapping",
 ]

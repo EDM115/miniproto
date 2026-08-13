@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import inspect
+import math
 import secrets
+import time
+from collections import OrderedDict
 from collections.abc import Awaitable, Callable, Mapping
 from contextlib import suppress
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from functools import cache
 from typing import Any, Protocol, cast, runtime_checkable
 
@@ -190,6 +193,83 @@ def should_retry_rpc_error(error: RpcError) -> bool:
 
 def should_sleep_for_flood_wait(error: FloodWait, threshold: int | None) -> bool:
     return threshold is not None and error.seconds <= threshold
+
+
+@dataclass(frozen=True, slots=True)
+class _MethodFloodWaitEntry:
+    deadline: float
+    error_type: type[FloodWait]
+    error_name: str
+    code: int
+    context: Mapping[str, Any] | None
+
+
+class MethodFloodWaitCache:
+    """Bounded client-local cache for Telegram's method-scoped flood waits."""
+
+    def __init__(self, max_entries: int, *, clock: Callable[[], float] = time.monotonic) -> None:
+        if max_entries <= 0:
+            raise ValueError("max_entries must be positive")
+        self._max_entries = max_entries
+        self._clock = clock
+        self._entries: OrderedDict[str, _MethodFloodWaitEntry] = OrderedDict()
+
+    def __len__(self) -> int:
+        return len(self._entries)
+
+    def remember(self, request: object, error: FloodWait) -> bool:
+        error_name = _cacheable_flood_wait_name(error)
+        if error_name is None:
+            return False
+        key = method_name_for_request(request)
+        deadline = self._clock() + max(0, error.seconds)
+        current = self._entries.get(key)
+        if current is not None and current.deadline >= deadline:
+            self._entries.move_to_end(key)
+            return True
+        self._entries[key] = _MethodFloodWaitEntry(
+            deadline=deadline,
+            error_type=type(error),
+            error_name=error_name,
+            code=error.code or 420,
+            context=dict(error.context) if error.context is not None else None,
+        )
+        self._entries.move_to_end(key)
+        while len(self._entries) > self._max_entries:
+            self._entries.popitem(last=False)
+        return True
+
+    def get(self, request: object) -> FloodWait | None:
+        key = method_name_for_request(request)
+        entry = self._entries.get(key)
+        if entry is None:
+            return None
+        remaining = math.ceil(entry.deadline - self._clock())
+        if remaining <= 0:
+            del self._entries[key]
+            return None
+        self._entries.move_to_end(key)
+        return entry.error_type(
+            remaining,
+            message=f"{entry.error_name}_{remaining}",
+            code=entry.code,
+            request=request,
+            context=entry.context,
+        )
+
+
+def method_name_for_request(request: object) -> str:
+    innermost = _innermost_request(request)
+    return str(getattr(type(innermost), "QUALNAME", type(innermost).__name__))
+
+
+def _cacheable_flood_wait_name(error: FloodWait) -> str | None:
+    name = str(getattr(type(error), "RPC_ERROR_NAME", error.message)).upper()
+    if name.startswith("FLOOD_PREMIUM_WAIT_"):
+        return "FLOOD_PREMIUM_WAIT"
+    if name.startswith("FLOOD_WAIT_"):
+        return "FLOOD_WAIT"
+    return None
 
 
 def load_session_record(payload: Mapping[str, Any] | None, default_dc_id: int) -> SessionRecord:
@@ -386,6 +466,7 @@ def _optional_int(value: object) -> int | None:
 __all__ = [
     "INIT_CONNECTION_ENVELOPES",
     "TELEGRAM_LAYER",
+    "MethodFloodWaitCache",
     "RawSender",
     "SenderFactory",
     "build_sender_from_session",
@@ -395,6 +476,7 @@ __all__ = [
     "is_retryable_request",
     "load_session_record",
     "mark_sender_initialized",
+    "method_name_for_request",
     "result_type_for_request",
     "sender_needs_init",
     "should_retry_rpc_error",

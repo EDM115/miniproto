@@ -65,6 +65,7 @@ from miniproto.observability import (
 )
 from miniproto.session.models import AuthKey, DCOption, PeerCacheEntry, SessionRecord, UpdateState, UserIdentity
 from miniproto.session.storage import EncryptedSQLiteSessionStorage, InMemorySessionStorage, SessionStorage
+from miniproto.session.strings import SessionString, SessionStringFormat, export_session_string, import_session_string
 from miniproto.types import Media, Message, NewMessage, Peer, Update, User
 
 __all__ = [
@@ -120,6 +121,8 @@ __all__ = [
     "SessionRecord",
     "SessionStorage",
     "SessionStorageError",
+    "SessionString",
+    "SessionStringFormat",
     "SignUpRequired",
     "StructuredFormatter",
     "TransportConfig",
@@ -136,8 +139,10 @@ __all__ = [
     "emit_event",
     "encode_file_id",
     "event_loop",
+    "export_session_string",
     "get_logger",
     "get_metrics_sink",
+    "import_session_string",
     "input_media_from_file_id",
     "is_file_id",
     "media_from_file_id",

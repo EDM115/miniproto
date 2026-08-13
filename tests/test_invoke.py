@@ -8,6 +8,7 @@ from typing import Any, cast
 import pytest
 from tests.support.fake_mtproto import FakeMTProtoServer
 
+import miniproto.client as client_module
 import miniproto.invoke as invoke_module
 from miniproto import (
     AuthKey,
@@ -38,6 +39,7 @@ from miniproto.errors import (
 )
 from miniproto.invoke import (
     TELEGRAM_LAYER,
+    MethodFloodWaitCache,
     RawSender,
     build_sender_from_session,
     clear_invalid_auth_key,
@@ -45,6 +47,7 @@ from miniproto.invoke import (
     is_retryable_request,
 )
 from miniproto.mtproto.codec import BadServerSalt, RpcErrorBody, RpcResult, encode_message_body
+from miniproto.observability import InMemoryMetrics, get_metrics_sink, set_metrics_sink
 from miniproto.raw import functions, types
 from miniproto.session.models import PeerCacheEntry, UpdateState, session_record_from_mapping
 from miniproto.session.storage import SessionPayload
@@ -651,6 +654,202 @@ def test_invoke_raises_flood_wait_by_default_without_sleeping() -> None:
             await client.invoke(functions.HelpGetNearestDc())
         assert exc_info.value.seconds == 5
         assert len(sender.requests) == 1
+
+    run(scenario())
+
+
+def test_invoke_reuses_method_flood_wait_before_touching_the_sender() -> None:
+    async def scenario() -> None:
+        sender = FakeSender([rpc_error(420, "FLOOD_WAIT_5")])
+        client = await connected_client(sender)
+        request = functions.HelpGetNearestDc()
+
+        with pytest.raises(FloodWait) as server_wait:
+            await client.invoke(request)
+        with pytest.raises(FloodWait) as cached_wait:
+            await client.invoke(request)
+
+        assert server_wait.value.seconds == 5
+        assert cached_wait.value.seconds == 5
+        assert cached_wait.value.request is request
+        assert len(sender.requests) == 1
+
+    run(scenario())
+
+
+def test_invoke_method_flood_cache_keys_the_innermost_wrapped_request() -> None:
+    async def scenario() -> None:
+        sender = FakeSender([rpc_error(420, "FLOOD_PREMIUM_WAIT_7")])
+        client = await connected_client(sender)
+        request = functions.HelpGetNearestDc()
+        wrapped = functions.InvokeWithoutUpdates(query=request)
+
+        with pytest.raises(FloodPremiumWait):
+            await client.invoke(wrapped)
+        with pytest.raises(FloodPremiumWait) as cached_wait:
+            await client.invoke(request)
+
+        assert cached_wait.value.seconds == 7
+        assert cached_wait.value.request is request
+        assert len(sender.requests) == 1
+
+    run(scenario())
+
+
+def test_invoke_does_not_share_slowmode_waits_between_request_arguments() -> None:
+    async def scenario() -> None:
+        sender = FakeSender([rpc_error(420, "SLOWMODE_WAIT_5"), rpc_error(420, "SLOWMODE_WAIT_6")])
+        client = await connected_client(sender)
+        request = functions.HelpGetNearestDc()
+
+        with pytest.raises(FloodWait) as first_wait:
+            await client.invoke(request)
+        with pytest.raises(FloodWait) as second_wait:
+            await client.invoke(request)
+
+        assert type(first_wait.value).__name__ == "SlowmodeWait"
+        assert type(second_wait.value).__name__ == "SlowmodeWait"
+        assert len(sender.requests) == 2
+
+    run(scenario())
+
+
+def test_method_flood_cache_is_bounded_lazily_expires_and_never_shortens_a_deadline() -> None:
+    now = [100.0]
+    cache = MethodFloodWaitCache(2, clock=lambda: now[0])
+    first = type("FirstRequest", (), {"QUALNAME": "help.first"})()
+    second = type("SecondRequest", (), {"QUALNAME": "help.second"})()
+    third = type("ThirdRequest", (), {"QUALNAME": "help.third"})()
+
+    assert cache.remember(first, FloodWait(10, message="FLOOD_WAIT_10"))
+    now[0] += 1
+    assert cache.remember(first, FloodWait(2, message="FLOOD_WAIT_2"))
+    active = cache.get(first)
+    assert active is not None and active.seconds == 9
+
+    assert cache.remember(second, FloodPremiumWait(4, message="FLOOD_PREMIUM_WAIT_4"))
+    assert cache.remember(third, FloodWait(3, message="FLOOD_WAIT_3"))
+    assert len(cache) == 2
+    assert cache.get(first) is None
+    premium = cache.get(second)
+    assert isinstance(premium, FloodPremiumWait)
+
+    now[0] += 5
+    assert cache.get(second) is None
+    assert cache.get(third) is None
+    assert len(cache) == 0
+
+
+def test_invoke_concurrent_callers_share_a_populated_method_wait() -> None:
+    async def scenario() -> None:
+        sender = FakeSender([rpc_error(420, "FLOOD_WAIT_5")])
+        client = await connected_client(sender)
+        first, second = await asyncio.gather(
+            client.invoke(functions.HelpGetNearestDc()),
+            client.invoke(functions.HelpGetNearestDc()),
+            return_exceptions=True,
+        )
+
+        assert isinstance(first, FloodWait)
+        assert isinstance(second, FloodWait)
+        assert len(sender.requests) == 1
+
+    run(scenario())
+
+
+def test_invoke_method_flood_cache_does_not_block_distinct_methods() -> None:
+    class FirstRequest:
+        QUALNAME = "help.first"
+
+    class SecondRequest:
+        QUALNAME = "help.second"
+
+    async def scenario() -> None:
+        sender = FakeSender([rpc_error(420, "FLOOD_WAIT_5"), rpc_error(420, "FLOOD_WAIT_6")])
+        client = await connected_client(sender)
+        with pytest.raises(FloodWait) as first_wait:
+            await client.invoke(FirstRequest())
+        with pytest.raises(FloodWait) as second_wait:
+            await client.invoke(SecondRequest())
+        assert first_wait.value.seconds == 5
+        assert second_wait.value.seconds == 6
+        assert len(sender.requests) == 2
+
+    run(scenario())
+
+
+def test_client_config_rejects_non_positive_method_flood_cache_size() -> None:
+    with pytest.raises(ValueError, match="method_flood_cache_size"):
+        ClientConfig(api_id=1, api_hash="hash", method_flood_cache_size=0)
+
+
+def test_invoke_cached_flood_wait_can_sleep_before_sending(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def scenario() -> None:
+        now = [100.0]
+        sleeps: list[float] = []
+
+        async def advance_clock(delay: float) -> None:
+            sleeps.append(delay)
+            now[0] += delay
+
+        monkeypatch.setattr(client_module.asyncio, "sleep", advance_clock)
+        sender = FakeSender([rpc_error(420, "FLOOD_WAIT_2"), nearest_dc().serialize()])
+        client = await connected_client(sender)
+        client._method_flood_wait_cache = MethodFloodWaitCache(8, clock=lambda: now[0])
+
+        with pytest.raises(FloodWait):
+            await client.invoke(functions.HelpGetNearestDc())
+        result = await client.invoke(functions.HelpGetNearestDc(), flood_sleep_threshold=2)
+
+        assert result == nearest_dc()
+        assert sleeps == [2]
+        assert len(sender.requests) == 2
+
+    run(scenario())
+
+
+def test_invoke_cached_flood_sleep_is_cancellation_safe(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def scenario() -> None:
+        async def cancel_sleep(_delay: float) -> None:
+            raise asyncio.CancelledError
+
+        monkeypatch.setattr(client_module.asyncio, "sleep", cancel_sleep)
+        sender = FakeSender([rpc_error(420, "FLOOD_WAIT_5")])
+        client = await connected_client(sender)
+        with pytest.raises(FloodWait):
+            await client.invoke(functions.HelpGetNearestDc())
+        with pytest.raises(asyncio.CancelledError):
+            await client.invoke(functions.HelpGetNearestDc(), flood_sleep_threshold=5)
+        with pytest.raises(FloodWait):
+            await client.invoke(functions.HelpGetNearestDc())
+        assert len(sender.requests) == 1
+
+    run(scenario())
+
+
+def test_invoke_flood_metrics_distinguish_server_and_cache_without_arguments() -> None:
+    async def scenario() -> None:
+        metrics = InMemoryMetrics()
+        previous = get_metrics_sink()
+        set_metrics_sink(metrics)
+        try:
+            sender = FakeSender([rpc_error(420, "FLOOD_WAIT_5")])
+            client = await connected_client(sender)
+            request = functions.HelpGetNearestDc()
+            with pytest.raises(FloodWait):
+                await client.invoke(request)
+            with pytest.raises(FloodWait):
+                await client.invoke(request)
+        finally:
+            set_metrics_sink(previous)
+
+        waits = [event for event in metrics.events if event.name == "rpc.flood_wait_seconds"]
+        assert [event.attributes["source"] for event in waits] == ["server", "cache"]
+        assert all(event.attributes["request"] == "help.getNearestDc" for event in waits)
+        assert all(event.attributes["remaining_seconds"] == 5 for event in waits)
+        assert all(event.attributes["threshold"] is None for event in waits)
+        assert all(event.attributes["action"] == "raise" for event in waits)
+        assert all("request_args" not in event.attributes for event in waits)
 
     run(scenario())
 

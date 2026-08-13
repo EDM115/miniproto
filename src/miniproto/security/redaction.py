@@ -67,6 +67,8 @@ def safe_repr(value: object) -> str:
 
 
 def _redact_nested(value: object) -> object:
+    if getattr(value, "__miniproto_secret__", False) is True:
+        return REDACTED
     if isinstance(value, bytes | bytearray | memoryview):
         return _binary_summary(value)
     if isinstance(value, Mapping):

@@ -10,7 +10,7 @@ from collections.abc import AsyncIterator, Awaitable, Callable, Iterable, Mappin
 from contextlib import suppress
 from dataclasses import replace
 from pathlib import Path
-from typing import Any, TypeVar, cast, overload
+from typing import Any, Literal, TypeVar, cast, overload
 
 from miniproto.auth.bootstrap import UnencryptedAuthKeyTransport, ensure_auth_key, telegram_rsa_public_keys
 from miniproto.auth.dc import select_dc_option
@@ -31,6 +31,7 @@ from miniproto.errors import (
 )
 from miniproto.file_id import decode_file_id, input_media_from_file_id, is_file_id, media_from_file_id
 from miniproto.invoke import (
+    MethodFloodWaitCache,
     RawSender,
     SenderFactory,
     build_sender_from_session,
@@ -39,6 +40,7 @@ from miniproto.invoke import (
     is_retryable_request,
     load_session_record,
     mark_sender_initialized,
+    method_name_for_request,
     sender_needs_init,
     should_retry_rpc_error,
     should_sleep_for_flood_wait,
@@ -71,6 +73,7 @@ from miniproto.mtproto.codec import GzipPacked, decode_message_body
 from miniproto.observability import emit_event, get_logger, record_metric
 from miniproto.peers import PeerCache, input_channel_from_peer, input_peer_from_peer
 from miniproto.raw import functions, types
+from miniproto.session.models import SessionRecord
 from miniproto.session.storage import (
     EncryptedSQLiteSessionStorage,
     SessionPayload,
@@ -78,6 +81,9 @@ from miniproto.session.storage import (
     deserialize_session_data,
     serialize_session_data,
 )
+from miniproto.session.strings import SessionString, SessionStringFormat
+from miniproto.session.strings import export_session_string as export_loaded_session_string
+from miniproto.session.strings import import_session_string as parse_session_string
 from miniproto.tl.codec import TLCodecError, decode_object
 from miniproto.types import Media, Message, NewMessage, Peer, Update, User
 from miniproto.updates.manager import UpdateHandler, UpdateManager
@@ -233,6 +239,7 @@ class Client:
         self._upload_limit_parts_cache: int | None = None
         self._auxiliary_download_clients: dict[int, Client] = {}
         self._multi_session_download_lock = asyncio.Lock()
+        self._method_flood_wait_cache = MethodFloodWaitCache(config.method_flood_cache_size)
 
     async def __aenter__(self) -> Client:
         await self.connect()
@@ -247,12 +254,63 @@ class Client:
     def is_connected(self) -> bool:
         return self._connected
 
+    async def export_session_string(
+        self,
+        *,
+        format: Literal["miniproto", "telethon", "pyrogram"] = "miniproto",
+        passphrase: str | bytes | None = None,
+    ) -> SessionString:
+        """Export the current stored session as a portable bearer-secret string."""
+
+        payload = await self._storage.load()
+        if payload is None:
+            raise ValueError("cannot export an empty session")
+        record = load_session_record(payload, self.config.dc_id)
+        return export_loaded_session_string(
+            record, format=format, passphrase=passphrase, api_id=self.config.api_id, test_mode=self.config.test_mode
+        )
+
+    async def import_session_string(
+        self,
+        value: str,
+        *,
+        format: SessionStringFormat = "auto",
+        passphrase: str | bytes | None = None,
+        replace: bool = False,
+        allow_mismatch: bool = False,
+    ) -> SessionRecord:
+        """Import a portable session into a disconnected client."""
+
+        if self.is_connected:
+            raise ConnectionError("session import requires a disconnected client")
+        record = parse_session_string(value, format=format, passphrase=passphrase)
+        if not allow_mismatch:
+            _validate_imported_session_config(record, self.config)
+
+        def store(current: Mapping[str, Any] | None) -> SessionRecord:
+            if current is not None and not replace:
+                raise ValueError("session storage is not empty; pass replace=True to overwrite it")
+            return record
+
+        await self._storage.mutate(store)
+        return record
+
     async def connect(self) -> None:
         started = time.perf_counter()
         async with self._connect_lock:
             self._connected = True
-            if self._updates_enabled:
-                await self._update_manager.start()
+            try:
+                if self._updates_enabled:
+                    await self._update_manager.start()
+                    await self._bootstrap_imported_update_state()
+            except BaseException:
+                self._connected = False
+                if self._updates_enabled:
+                    with suppress(BaseException):
+                        await self._update_manager.stop()
+                with suppress(BaseException):
+                    await self._drop_sender()
+                raise
         _emit_client_event(
             "client.connect", started, outcome="success", dc_id=self.config.dc_id, test_mode=self.config.test_mode
         )
@@ -300,6 +358,21 @@ class Client:
                 _emit_client_event("client.disconnect", started, outcome="error", error_type=type(errors[0]).__name__)
                 raise errors[0]
         _emit_client_event("client.disconnect", started, outcome="success")
+
+    async def _bootstrap_imported_update_state(self) -> None:
+        payload = await self._storage.load()
+        record = load_session_record(payload, self.config.dc_id)
+        if record.metadata.get("update_state_bootstrap_required") is not True:
+            return
+        await self._update_manager.sync_state()
+
+        def clear_bootstrap_marker(current: Mapping[str, Any] | None) -> SessionRecord:
+            current_record = load_session_record(current, self.config.dc_id)
+            metadata = dict(current_record.metadata)
+            metadata.pop("update_state_bootstrap_required", None)
+            return replace(current_record, metadata=metadata)
+
+        await self._storage.mutate(clear_bootstrap_marker)
 
     async def is_authorized(self) -> bool:
         state = await self._storage.load()
@@ -1012,8 +1085,45 @@ class Client:
         threshold = self.config.flood_sleep_threshold if flood_sleep_threshold is None else flood_sleep_threshold
         retryable = is_retryable_request(raw_request, retry)
         attempts = 0
+        slept_so_far = 0.0
         request_name = _request_name(raw_request)
         while True:
+            cached_flood_wait = self._method_flood_wait_cache.get(raw_request)
+            if cached_flood_wait is not None:
+                should_sleep = (
+                    should_sleep_for_flood_wait(cached_flood_wait, threshold)
+                    and attempts < self.config.max_request_retries
+                )
+                _record_flood_wait_metric(
+                    cached_flood_wait,
+                    request=request_name,
+                    threshold=threshold,
+                    action="sleep" if should_sleep else "raise",
+                    source="cache",
+                    attempt=attempts + 1,
+                    slept_so_far=slept_so_far,
+                )
+                if should_sleep:
+                    attempts += 1
+                    try:
+                        await asyncio.sleep(cached_flood_wait.seconds)
+                    except asyncio.CancelledError:
+                        _emit_rpc_event(
+                            started, outcome="cancelled", request=request_name, attempts=attempts, retryable=retryable
+                        )
+                        raise
+                    slept_so_far += cached_flood_wait.seconds
+                    continue
+                _emit_rpc_event(
+                    started,
+                    outcome="error",
+                    request=request_name,
+                    attempts=attempts + 1,
+                    retryable=retryable,
+                    error_type=type(cached_flood_wait).__name__,
+                    level=logging.INFO if threshold == 0 else None,
+                )
+                raise cached_flood_wait
             sender = await ensure_sender()
             needs_init = sender_needs_init(sender)
             wrapped_request = wrap_raw_request(
@@ -1038,20 +1148,29 @@ class Client:
                 )
                 raise
             except FloodWait as exc:
-                record_metric(
-                    "rpc.flood_wait_seconds",
-                    exc.seconds,
-                    unit="s",
-                    attributes={
-                        "request": request_name,
-                        "action": "sleep"
-                        if should_sleep_for_flood_wait(exc, threshold) and attempts < self.config.max_request_retries
-                        else "raise",
-                    },
+                self._method_flood_wait_cache.remember(raw_request, exc)
+                should_sleep = (
+                    should_sleep_for_flood_wait(exc, threshold) and attempts < self.config.max_request_retries
                 )
-                if should_sleep_for_flood_wait(exc, threshold) and attempts < self.config.max_request_retries:
+                _record_flood_wait_metric(
+                    exc,
+                    request=request_name,
+                    threshold=threshold,
+                    action="sleep" if should_sleep else "raise",
+                    source="server",
+                    attempt=attempts + 1,
+                    slept_so_far=slept_so_far,
+                )
+                if should_sleep:
                     attempts += 1
-                    await asyncio.sleep(exc.seconds)
+                    try:
+                        await asyncio.sleep(exc.seconds)
+                    except asyncio.CancelledError:
+                        _emit_rpc_event(
+                            started, outcome="cancelled", request=request_name, attempts=attempts, retryable=retryable
+                        )
+                        raise
+                    slept_so_far += exc.seconds
                     continue
                 _emit_rpc_event(
                     started,
@@ -2010,7 +2129,50 @@ def _optional_tuple(value: object) -> tuple[object, ...] | None:
 
 
 def _request_name(request: object) -> str:
-    return str(getattr(type(request), "QUALNAME", type(request).__name__))
+    return method_name_for_request(request)
+
+
+def _validate_imported_session_config(record: SessionRecord, config: ClientConfig) -> None:
+    import_format = record.metadata.get("session_import_format")
+    if not isinstance(import_format, str) or not import_format.startswith("pyrogram-"):
+        return
+    imported_api_id = record.metadata.get("api_id")
+    if isinstance(imported_api_id, int) and not isinstance(imported_api_id, bool) and imported_api_id != config.api_id:
+        raise ValueError("Pyrogram session API ID does not match ClientConfig; pass allow_mismatch=True to override")
+    imported_test_mode = record.metadata.get("test_mode")
+    if isinstance(imported_test_mode, bool) and imported_test_mode != config.test_mode:
+        raise ValueError("Pyrogram session test mode does not match ClientConfig; pass allow_mismatch=True to override")
+    if config.bot_token is not None and record.user is not None and not record.user.is_bot:
+        raise ValueError(
+            "Pyrogram session account kind does not match bot ClientConfig; pass allow_mismatch=True to override"
+        )
+
+
+def _record_flood_wait_metric(
+    error: FloodWait,
+    *,
+    request: str,
+    threshold: int | None,
+    action: str,
+    source: str,
+    attempt: int,
+    slept_so_far: float,
+) -> None:
+    record_metric(
+        "rpc.flood_wait_seconds",
+        error.seconds,
+        unit="s",
+        attributes={
+            "request": request,
+            "wait_seconds": error.seconds,
+            "remaining_seconds": error.seconds,
+            "threshold": threshold,
+            "action": action,
+            "source": source,
+            "attempt": attempt,
+            "slept_so_far_seconds": slept_so_far,
+        },
+    )
 
 
 def _emit_client_event(event: str, started: float, *, outcome: str, **fields: object) -> None:

@@ -1,0 +1,71 @@
+{
+  "miniproto": {
+    "format": "mp1 fixed header with canonical URL-safe base64",
+    "record_fixture": "tests.test_session_strings.rich_record",
+    "plain": {
+      "length": 2204,
+      "sha256": "aafbd88f74cdadff39bea36309447d1b66e16dcf9a409251c59adf3e8f7b4fa9"
+    },
+    "protected": {
+      "passphrase": "golden passphrase",
+      "salt": "000102030405060708090a0b0c0d0e0f",
+      "nonce": "000102030405060708090a0b",
+      "length": 2220,
+      "sha256": "c5208e36a6a91d14f7c0acce6f3ef94bd76d930bfa9939477ece8eaadbc93086"
+    }
+  },
+  "telethon": {
+    "version": "1.44.0",
+    "revision": "2373d0058f88962812112234490199b46c3aad30",
+    "source": "https://codeberg.org/Lonami/Telethon/raw/commit/2373d0058f88962812112234490199b46c3aad30/telethon/sessions/string.py",
+    "auth_key": "bytes(range(256))",
+    "cases": {
+      "ipv4": {
+        "dc_id": 2,
+        "ip_address": "149.154.167.51",
+        "port": 443,
+        "value": "1ApWapzMBuwABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4fICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9AQUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVpbXF1eX2BhYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5ent8fX5_gIGCg4SFhoeIiYqLjI2Oj5CRkpOUlZaXmJmam5ydnp-goaKjpKWmp6ipqqusra6vsLGys7S1tre4ubq7vL2-v8DBwsPExcbHyMnKy8zNzs_Q0dLT1NXW19jZ2tvc3d7f4OHi4-Tl5ufo6err7O3u7_Dx8vP09fb3-Pn6-_z9_v8="
+      },
+      "ipv6": {
+        "dc_id": 4,
+        "ip_address": "2001:db8::4",
+        "port": 80,
+        "value": "1BCABDbgAAAAAAAAAAAAAAAQAUAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4fICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9AQUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVpbXF1eX2BhYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5ent8fX5_gIGCg4SFhoeIiYqLjI2Oj5CRkpOUlZaXmJmam5ydnp-goaKjpKWmp6ipqqusra6vsLGys7S1tre4ubq7vL2-v8DBwsPExcbHyMnKy8zNzs_Q0dLT1NXW19jZ2tvc3d7f4OHi4-Tl5ufo6err7O3u7_Dx8vP09fb3-Pn6-_z9_v8="
+      }
+    }
+  },
+  "pyrogram": {
+    "version": "2.0.106",
+    "revision": "30de1e21e3e8b5949971ba0bba56bb818ba43b71",
+    "storage_source": "https://github.com/pyrogram/pyrogram/blob/30de1e21e3e8b5949971ba0bba56bb818ba43b71/pyrogram/storage/storage.py",
+    "loader_source": "https://github.com/pyrogram/pyrogram/blob/30de1e21e3e8b5949971ba0bba56bb818ba43b71/pyrogram/storage/memory_storage.py",
+    "auth_key": "bytes(range(256))",
+    "cases": {
+      "modern": {
+        "layout": ">BI?256sQ?",
+        "dc_id": 4,
+        "api_id": 12345,
+        "test_mode": false,
+        "user_id": 9876543210,
+        "is_bot": true,
+        "value": "BAAAMDkAAAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn-AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq-wsbKztLW2t7i5uru8vb6_wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t_g4eLj5OXm5-jp6uvs7e7v8PHy8_T19vf4-fr7_P3-_wAAAAJMsBbqAQ"
+      },
+      "legacy32": {
+        "layout": ">B?256sI?",
+        "dc_id": 3,
+        "test_mode": true,
+        "user_id": 123456789,
+        "is_bot": false,
+        "value": "AwEAAQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyAhIiMkJSYnKCkqKywtLi8wMTIzNDU2Nzg5Ojs8PT4_QEFCQ0RFRkdISUpLTE1OT1BRUlNUVVZXWFlaW1xdXl9gYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXp7fH1-f4CBgoOEhYaHiImKi4yNjo-QkZKTlJWWl5iZmpucnZ6foKGio6SlpqeoqaqrrK2ur7CxsrO0tba3uLm6u7y9vr_AwcLDxMXGx8jJysvMzc7P0NHS09TV1tfY2drb3N3e3-Dh4uPk5ebn6Onq6-zt7u_w8fLz9PX29_j5-vv8_f7_B1vNFQA"
+      },
+      "legacy64": {
+        "layout": ">B?256sQ?",
+        "dc_id": 5,
+        "test_mode": false,
+        "user_id": 9876543210,
+        "is_bot": true,
+        "value": "BQAAAQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyAhIiMkJSYnKCkqKywtLi8wMTIzNDU2Nzg5Ojs8PT4_QEFCQ0RFRkdISUpLTE1OT1BRUlNUVVZXWFlaW1xdXl9gYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXp7fH1-f4CBgoOEhYaHiImKi4yNjo-QkZKTlJWWl5iZmpucnZ6foKGio6SlpqeoqaqrrK2ur7CxsrO0tba3uLm6u7y9vr_AwcLDxMXGx8jJysvMzc7P0NHS09TV1tfY2drb3N3e3-Dh4uPk5ebn6Onq6-zt7u_w8fLz9PX29_j5-vv8_f7_AAAAAkywFuoB"
+      }
+    }
+  }
+}

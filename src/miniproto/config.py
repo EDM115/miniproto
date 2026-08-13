@@ -63,6 +63,7 @@ class ClientConfig:
     max_reconnect_attempts: int | None = None
     max_pending_rpcs: int = 512
     flood_sleep_threshold: int | None = None
+    method_flood_cache_size: int = 512
     media_concurrency: int | None = None
     media_max_buffer_size: int | None = None
     # Media lanes idle-close after this many seconds without requests (mtcute
@@ -94,6 +95,8 @@ class ClientConfig:
             raise ValueError("max_pending_rpcs must be positive")
         if self.flood_sleep_threshold is not None and self.flood_sleep_threshold < 0:
             raise ValueError("flood_sleep_threshold must not be negative")
+        if self.method_flood_cache_size <= 0:
+            raise ValueError("method_flood_cache_size must be positive")
         if self.media_concurrency is not None and self.media_concurrency <= 0:
             raise ValueError("media_concurrency must be positive when set")
         if self.media_max_buffer_size is not None and self.media_max_buffer_size <= 0:
