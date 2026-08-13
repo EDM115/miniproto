@@ -380,6 +380,43 @@ def test_iter_download_consumer_backpressure_bounds_prefetched_bytes() -> None:
     run(scenario())
 
 
+def test_iter_download_can_disable_launch_stagger_for_controlled_benchmarks(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def scenario() -> None:
+        invoker = OffsetInvoker(b"z" * (2 * 1024))
+
+        async def fail_if_paced(self: object) -> None:
+            del self
+            raise AssertionError("launch pacer was used")
+
+        monkeypatch.setattr(media_download._DownloadLaunchPacer, "wait", fail_if_paced)
+        chunks = [
+            chunk
+            async for chunk in media_download.iter_download(
+                invoker,
+                document_location(),
+                limit=2 * 1024,
+                total_size=2 * 1024,
+                part_size=1024,
+                concurrency=2,
+                adaptive_concurrency=False,
+                adaptive_part_size=False,
+                launch_stagger=False,
+            )
+        ]
+
+        assert b"".join(chunks) == b"z" * (2 * 1024)
+
+    run(scenario())
+
+
+def test_client_download_options_forward_launch_stagger_control() -> None:
+    default = client_module._download_media_options({})
+    burst = client_module._download_media_options({"launch_stagger": False})
+
+    assert default["launch_stagger"] is True
+    assert burst["launch_stagger"] is False
+
+
 def test_read_ahead_marks_scheduler_requests_as_background_priority() -> None:
     async def scenario() -> None:
         cache = DownloadRangeCache(max_bytes=4096)

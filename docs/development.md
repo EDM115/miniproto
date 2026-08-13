@@ -109,17 +109,41 @@ $env:PATH = "$pythonBase;$env:PATH"
 cargo test --all-features
 ```
 
+## Canonical Release Check
+
+`tools.release_check` is the canonical non-mutating aggregate. It streams each command, stops at the first failure by default, preserves the failing exit code, and writes `release-check.json`, environment details, benchmark reports, distribution hashes, and clean-import evidence under a task-owned artifact directory. `--keep-going` records every later failure for diagnosis. No mode formats, fixes, publishes, tags, or stores secret-bearing CLI arguments.
+
+```pwsh
+uv run python -m tools.release_check --quick --artifacts-dir .tmp/release-quick
+uv run python -m tools.release_check --offline --artifacts-dir .tmp/release-offline
+uv run python -m tools.release_check --offline --keep-going --artifacts-dir .tmp/release-diagnostics
+```
+
+`--offline` is the default release gate, so omitting it is equivalent. The docs stage is reported as `pending`, without being presented as a pass, until Wave 5 adds `tools.docs` and `docs-site`; it becomes a strict stage automatically once both are present. The individual commands below remain the diagnostic source when one aggregate stage fails. Windows subprocesses receive the uv base-Python directory in `PATH` so Cargo-built PyO3 tests can resolve the matching Python DLL.
+
+The credentialed extension is separately guarded and is never part of ordinary pull-request CI:
+
+```pwsh
+$env:MINIPROTO_RELEASE_LIVE = "1"
+$env:MINIPROTO_INTEGRATION = "1"
+$env:MINIPROTO_REAL_INTEGRATION = "1"
+uv run python -m tools.release_check --live --artifacts-dir .tmp/release-live
+```
+
 ## Benchmark Smoke
 
 ```pwsh
-uv run python tools/bench/benchmark_native_fallback_crypto.py
+uv run python -m tools.bench.benchmark_acceptance --mode smoke --json .tmp/bench/runtime-acceptance.json
+uv run python -m tools.bench.benchmark_native_fallback_crypto --mode smoke --json .tmp/bench/native-fallback.json
 uv run python tools/bench/benchmark_runtime_paths.py
 uv run python tools/bench/benchmark_media_scheduler.py
-uv run python tools/bench/benchmark_transport_framing.py --check
-uv run python tools/bench/benchmark_tl_fast_paths.py --check
+uv run python tools/bench/benchmark_transport_framing.py --check --json .tmp/bench/transport-framing.json
+uv run python tools/bench/benchmark_tl_fast_paths.py --check --json .tmp/bench/tl-fast-paths.json
 ```
 
-These compare native-extension timings with the pure Python fallback for crypto, TL primitive paths, and single-call MTProto encrypted envelope encode/decode, then benchmark async runtime paths such as update dispatch, media transfer, generated TL `upload.getFile` request encoding, generated TL `upload.File` result decoding, synthetic concurrent request scheduling, 100,000 synchronous pending-slot reserve/release pairs against a no-op loop, a 1,000-task held-slot burst against the scheduling baseline, and a 10,000-entry peer cache. `benchmark_media_scheduler.py` is the deterministic simultaneous-transfer workload: its JSON reports aggregate and per-transfer scheduling throughput, byte-cap peaks, queue waits, grant fairness, queued-cancellation cleanup, and DC/direction isolation; `tests/test_media_scheduler_benchmark.py` enforces the accounting invariants. `benchmark_transport_framing.py` compares the production native chunk pump with the previous per-frame `readexactly` path for every TCP mode and records every warmed interleaved sample, the event-loop backend, and maximum synchronous batch duration; `--check` requires at least 2x on the designated 72-byte service/RPC frame workload. `benchmark_tl_fast_paths.py` compares the generated Rust selection with the exact generic Python fallback over a representative upload/service mix, records raw samples and environment, and requires at least 1.5x. The peer case reports cold construction, indexed and canonical-scan medians for kind/id, numeric, username, and phone lookups, per-type and combined speedups, cached-wrapper loads, canonical tuple visits, retained heap with shared-object deduplication, and separate end-to-end durable-update and incremental index-reconciliation times. Its deterministic gates require at least 20x per warm lookup type, incremental index heap below 2.5x canonical peer heap, unchanged warm load/build/visit counters, and no rebuild for one attributable direct peer commit. The pending-slot output reports best/median raw times, normalized per-operation deltas, percentage overhead, and the event-loop backend. Other timings remain observational smoke evidence. Keep Rust implementations and Python fallbacks in parity even when the public wrapper intentionally prefers the Python fallback; `benchmark_native_fallback_crypto.py` is the evidence source for those routing choices.
+The normalized reports use schema `miniproto.benchmark.v1` and record package/native versions, commit/dirty state, OS/CPU/architecture, Python, Rust, event-loop backend, configuration, warmups, raw samples, median/p50/p95/p99 distributions, throughput where meaningful, RSS, loop lag, and failures. `benchmark_acceptance` covers generic TL round trips, a held 1,000-RPC burst, update dispatch distributions, in-memory upload/download, iterator backpressure, shared per-DC fairness, encrypted reconnect/resend/cancel cycles, retained-object/RSS soak, and fixed-cadence loop lag. Its automated failures are correctness/accounting invariants—pending slots, prefetch bounds, scheduler byte caps/fairness/leaks, and reconnect cleanup—not host-dependent absolute timing limits. Use `--mode full` for longer distributions outside routine CI.
+
+The other tools compare native-extension timings with the pure Python fallback for crypto, TL primitive paths, and single-call MTProto encrypted envelope encode/decode, then benchmark additional async runtime paths such as the 10,000-entry peer cache. `benchmark_media_scheduler.py` is the deterministic simultaneous-transfer workload: its JSON reports aggregate and per-transfer scheduling throughput, byte-cap peaks, queue waits, grant fairness, queued-cancellation cleanup, and DC/direction isolation; `tests/test_media_scheduler_benchmark.py` enforces the accounting invariants. `benchmark_transport_framing.py` compares the production native chunk pump with the previous per-frame `readexactly` path for every TCP mode and records every warmed interleaved sample, the event-loop backend, and maximum synchronous batch duration; `--check` requires at least 2x on the designated 72-byte service/RPC frame workload. `benchmark_tl_fast_paths.py` compares the generated Rust selection with the exact generic Python fallback over a representative upload/service mix, records raw samples and environment, and requires at least 1.5x. The peer case reports cold construction, indexed and canonical-scan medians for kind/id, numeric, username, and phone lookups, per-type and combined speedups, cached-wrapper loads, canonical tuple visits, retained heap with shared-object deduplication, and separate end-to-end durable-update and incremental index-reconciliation times. Keep Rust implementations and Python fallbacks in parity even when the public wrapper intentionally prefers the Python fallback; `benchmark_native_fallback_crypto.py` remains the evidence source for those routing choices.
 
 ## Pending RPC Capacity Invariants
 
@@ -154,6 +178,21 @@ The default actor set runs user upload/download and bot upload/download against 
 Progress is printed every 5 seconds by default. Set `MINIPROTO_LIVE_BENCH_PROGRESS_INTERVAL=0` or pass `--progress-interval 0` to keep the command quiet until each transfer finishes. `MINIPROTO_LIVE_BENCH_OPERATION` / `--operation` defaults to `both`; `upload` prints a reusable miniproto `file_id`, and `download` requires `MINIPROTO_LIVE_BENCH_FILE_ID` / `--file-id` or an actor-specific `MINIPROTO_LIVE_BENCH_USER_FILE_ID` / `MINIPROTO_LIVE_BENCH_BOT_FILE_ID`. `MINIPROTO_LIVE_BENCH_REPEAT` / `--repeat` repeats each selected actor/profile and should be used before interpreting noisy Telegram lane A/B results. Upload concurrency uses `MINIPROTO_LIVE_BENCH_UPLOAD_CONCURRENCY` / `--upload-concurrency` and defaults to `8`; the older `MINIPROTO_LIVE_BENCH_CONCURRENCY` / `--concurrency` names remain aliases for existing local scripts. Known-size downloads use `MINIPROTO_LIVE_BENCH_DOWNLOAD_CONCURRENCY` / `--download-concurrency` and default to `6`, with `MINIPROTO_LIVE_BENCH_DOWNLOAD_MEDIA_LANES` / `--download-media-lanes` defaulting to `2`; this matches the P1 rolling-window pipeline, while `--download-media-lanes 0` still runs the legacy main-sender A/B path. Upload media lanes default to `2`; compare repeated explicit/legacy runs before changing it because live DC4 upload samples remain noisy. Upload parts remain 512 KiB and upload part requests default to `45` seconds through `MINIPROTO_LIVE_BENCH_UPLOAD_REQUEST_TIMEOUT` / `--upload-request-timeout`; shorter than the global request timeout keeps stale upload parts from occupying concurrency lanes for two minutes, and tail retries near 100% are still a first-class optimization target. Benchmark download `upload.getFile` chunks default to 512 KiB through `MINIPROTO_LIVE_BENCH_DOWNLOAD_CHUNK_SIZE` / `--download-chunk-size`, with adaptive part sizing allowed to try up to the 1 MiB Telegram ceiling; set `MINIPROTO_LIVE_BENCH_DOWNLOAD_MAX_CHUNK_SIZE=524288` when you explicitly want fixed 512 KiB comparisons. Download chunks keep a shorter default through `MINIPROTO_LIVE_BENCH_DOWNLOAD_REQUEST_TIMEOUT` / `--download-request-timeout`, with `MINIPROTO_LIVE_BENCH_DOWNLOAD_PART_RETRIES` / `--download-part-retries` controlling media-layer `upload.getFile` retries. Short download `FLOOD_WAIT` responses are slept and retried up to `MINIPROTO_LIVE_BENCH_DOWNLOAD_FLOOD_SLEEP_THRESHOLD` / `--download-flood-sleep-threshold`, defaulting to `30` seconds and intentionally not inheriting the broader `MINIPROTO_LIVE_BENCH_FLOOD_SLEEP_THRESHOLD` used for non-chunk requests. Concurrent downloads keep fixed slots on flood waits, never reduce concurrency on generic `FLOOD_WAIT`, reduce by one on disconnect/timeout signals, and after generic floods pace new launches under the recent successful request rate without dropping below 4 launches/s; `FloodPremiumWait` switches the current adaptive download to one active request for the rest of that transfer because live user downloads showed it as the dominant throttle signal. Use `MINIPROTO_LIVE_BENCH_DOWNLOAD_ADAPTIVE_CONCURRENCY=0` or `--no-download-adaptive-concurrency` only for controlled comparison runs. Transfer summaries report both full operation duration and byte-transfer duration, so upload/send-media or download-finalization tail stalls do not hide the raw transfer rate; summaries also include `native_available`, part request counts, retries, flood-wait totals, flood-wait totals by error type, retry sleep, launch-pacing waits/rates, reconnects, primary sender drops, media-lane builds, media-lane failure drops, normal media-lane closes, and requests/sec. Use `MINIPROTO_LIVE_BENCH_LOG_LEVEL=INFO` or `DEBUG`, `MINIPROTO_LIVE_BENCH_LOG_FORMAT=json`, and `MINIPROTO_LIVE_BENCH_TRACE_MEMORY=1` when you want structured redacted logs and tracemalloc-backed memory deltas during a run; when a combined upload+download run reports high RSS but low traced current memory, rerun `--operation upload --trace-memory` before changing memory code.
 
 The manual GitHub Actions workflow `.github/workflows/live-media-bench.yml` runs the same benchmark only through `workflow_dispatch`. Store API credentials, bot token, peers, and optional pre-made sessions as GitHub secrets: `MINIPROTO_API_ID`, `MINIPROTO_API_HASH`, `MINIPROTO_SESSION_KEY`, `MINIPROTO_REAL_PHONE`, `MINIPROTO_REAL_PASSWORD`, `MINIPROTO_BOT_TOKEN`, `MINIPROTO_LIVE_BENCH_USER_PEER`, `MINIPROTO_LIVE_BENCH_BOT_PEER`, `MINIPROTO_LIVE_BENCH_USER_SESSION_B64`, and `MINIPROTO_LIVE_BENCH_BOT_SESSION_B64`. Bot sessions are optional because CI can sign in from `MINIPROTO_BOT_TOKEN`; user benchmarks should normally use `MINIPROTO_LIVE_BENCH_USER_SESSION_B64`, matching the session-string/session-file portability model used by other MTProto libraries. The workflow defaults match the local benchmark defaults (`upload_concurrency=8`, `upload_media_lanes=2`, `download_concurrency=6`, `download_media_lanes=2`, `repeat=1`), and the `repeat` input should be raised for noisy upload-lane comparisons. The workflow runs Python unbuffered and pipes output through `tee`, so benchmark progress should appear in the Actions log while the same output is saved as the `live-media-bench.log` artifact. The encrypted SQLite session files under `.tmp/miniproto-live-bench-{actor}-dc{dc}.sqlite` are portable between Windows and Linux when the same `MINIPROTO_SESSION_KEY` is used; base64 the whole SQLite file for the secret, keep it private, and avoid running the same user session locally and in CI at the same time. PowerShell export example: `[Convert]::ToBase64String([IO.File]::ReadAllBytes(".tmp/miniproto-live-bench-user-dc4.sqlite"))`. Linux export example: `base64 -w0 .tmp/miniproto-live-bench-user-dc4.sqlite`.
+
+The same workflow now offers `smoke`, resumable `matrix`, and `tglib` modes on Linux x86_64, Windows x86_64, or both. The workflow's matrix profile defaults to the bounded four-cell smoke set so a manual dispatch cannot accidentally launch 576 live cells per selected OS; full must be selected deliberately. Matrix full mode spans lanes `1/2/4`, byte windows `4/8/16/32 MiB`, `512 KiB/1 MiB` chunks, launch stagger on/off, warm/cold lanes, file/memory destinations, and three repeats. A task-owned run directory holds immutable per-cell configuration, raw JSON/logs, normalized aggregation, environment details, failures, and a Markdown comparison table; `--resume` skips completed cells, retries failed cells even if they emitted partial JSON, excludes their partial records from completed aggregation, and refuses an unrelated non-empty directory.
+
+```pwsh
+$env:MINIPROTO_LIVE_BENCH = "1"
+uv run python -m tools.bench.benchmark_matrix --mode smoke --output .tmp/live-matrix
+uv run python -m tools.bench.benchmark_matrix --mode full --resume --output .tmp/live-matrix-full
+```
+
+The bot-only compatibility runner requires an explicit existing file ID and peer and refuses to run unless `MINIPROTO_TGLIB_BENCH=1`; it never creates or uploads a 2 GiB fixture implicitly. `results.json` is the exact `[size,[t0,t1,t2,t3]]` payload: `t0` starts download after connection/file-reference decoding, `t1` is fully materialized download, `t2` starts upload, and `t3` is the final uploaded byte accepted by the upload-part pipeline. Final `sendMedia` completion is recorded separately in the rich report and excluded from `t2..t3`.
+
+```pwsh
+$env:MINIPROTO_TGLIB_BENCH = "1"
+uv run python -m tools.bench.benchmark_tglib --file-id "<existing-bot-file-id>" --peer "<bot-destination>" --dc-id 4 --compat-json .tmp/tglib/results.json --json .tmp/tglib/miniproto.json
+```
 
 ## Stress Tests
 
@@ -217,19 +256,10 @@ Only publish the Rust crate when the crates.io package contents intentionally ma
 ## Full Local Verification
 
 ```pwsh
-uv run ruff format --check .
-uv run ruff check .
-uv run ty check
-uv run python -m tools.schema.generate --check
-uv run pytest
-uv run python tools/bench/benchmark_native_fallback_crypto.py
-uv run python tools/bench/benchmark_runtime_paths.py
-uv run python tools/bench/benchmark_media_scheduler.py
-cargo fmt --check
-cargo clippy --all-targets --all-features -- -D warnings
-cargo test --all-features
-uv run maturin build
+uv run python -m tools.release_check --offline --artifacts-dir .tmp/release-offline
 ```
+
+Use the format/lint/type/test/build commands in the preceding sections to diagnose the named failing stage. The aggregate is authoritative because it also inspects fresh wheel/sdist contents, rejects editable `.pth` linkage, installs the wheel into a clean isolated environment, verifies the native import, and emits artifact hashes.
 
 ## Live Telegram Integration Test Environment
 

@@ -118,3 +118,7 @@ This behavior wouldn't be the default but rather an option that users can toggle
 ## 2026-08-13 — GPT-5.6 Sol Ultra — Codex — "Wave 3 implementation"
 
 - The generated Rust TL fast-path table intentionally mixes selected Telegram API constructors with static MTProto service constructors. `decode_message_body()` must restrict native materialization to the static service-ID set; otherwise an API result such as `upload.file` is decoded successfully by Rust and then incorrectly rejected as an unsupported MTProto service before generic result dispatch can construct its generated Python class. Keep generated API hooks and service materialization as separate consumers even though they share one native table.
+
+## 2026-08-13 — GPT-5.6 Sol Ultra — Codex — "Wave 4 implementation"
+
+- A fixed-cadence event-loop lag probe must skip every cadence that elapsed while the loop was stalled and schedule from the first future target. Replaying all overdue callbacks immediately creates a catch-up storm, so one real stall becomes hundreds of artificial high-lag samples and the probe itself prolongs the distortion.

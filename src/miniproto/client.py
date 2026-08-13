@@ -2135,6 +2135,7 @@ _DOWNLOAD_MEDIA_OPTION_DEFAULTS: dict[str, object] = {
     "max_buffer_size": None,
     "concurrency": DEFAULT_DOWNLOAD_CONCURRENCY,
     "adaptive_concurrency": True,
+    "launch_stagger": True,
     "max_in_flight_bytes": None,
     "adaptive_part_size": True,
     "max_part_size": MAX_DOWNLOAD_CHUNK_SIZE,
@@ -2227,6 +2228,7 @@ def _download_media_options(kwargs: dict[str, Any]) -> dict[str, Any]:
         options["flood_sleep_threshold"] = int(options["flood_sleep_threshold"])
     options["concurrency"] = int(options["concurrency"])
     options["adaptive_concurrency"] = bool(options["adaptive_concurrency"])
+    options["launch_stagger"] = bool(options["launch_stagger"])
     options["multi_session"] = bool(options["multi_session"])
     if options["media_lanes"] is not None:
         options["media_lanes"] = int(options["media_lanes"])

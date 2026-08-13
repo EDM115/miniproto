@@ -3,124 +3,76 @@ name: Live Media Benchmark
 on:
   workflow_dispatch:
     inputs:
+      mode:
+        description: Benchmark mode
+        required: true
+        default: smoke
+        type: choice
+        options: [smoke, matrix, tglib]
+      runner:
+        description: Operating system runner
+        required: true
+        default: both
+        type: choice
+        options: [linux, windows, both]
+      matrix_profile:
+        description: Matrix size; smoke is four edge cells and full is 576 cells
+        required: true
+        default: smoke
+        type: choice
+        options: [smoke, full]
       actor:
-        description: "Which authorized account to benchmark"
+        description: Account for smoke mode
         required: true
-        default: "both"
+        default: bot
         type: choice
-        options:
-          - user
-          - bot
-          - both
+        options: [user, bot, both]
       operation:
-        description: "Transfer operation to run"
+        description: Transfer operation for smoke mode
         required: true
-        default: "both"
+        default: download
         type: choice
-        options:
-          - both
-          - upload
-          - download
-      repeat:
-        description: "Repeat each selected actor/profile; use >1 for noisy Telegram lane A/B runs"
-        required: true
-        default: 1
-        type: number
+        options: [download, upload, both]
       file_id:
-        description: "miniproto file id for download-only runs"
+        description: Explicit pre-uploaded file ID; required by matrix/tglib and download-only smoke
         required: false
         default: ""
       size:
-        description: "Payload size: telegram-default, 2000mib, 512mib, 2gb, or bytes"
+        description: Smoke payload size or expected tglib fixture size
         required: true
-        default: "telegram-default"
+        default: telegram-default
       dc_id:
-        description: "Production DC id for the benchmark sessions"
+        description: Production DC for encrypted session storage
         required: true
-        default: 4
-      upload_concurrency:
-        description: "Concurrent upload part requests"
+        default: "4"
+      repeat:
+        description: Measured smoke repeats
         required: true
-        default: 8
-      upload_media_lanes:
-        description: "Upload MTProto sender lanes; 2 was fastest in the July 2026 DC4 VPS run, 0 uses the legacy main sender"
-        required: false
-        default: 2
-      download_concurrency:
-        description: "Maximum concurrent download part requests; default 6 pipelines ~3 requests per lane (TASK-P1-1)"
-        required: true
-        default: 6
-      download_media_lanes:
-        description: "Download MTProto sender lanes; default 2 matches the TASK-P1-1 library default (mtcute 2x3), 0 uses the legacy main sender"
-        required: false
-        default: 2
-      download_adaptive_concurrency:
-        description: "Enable download pacing/throttle: pace launches after flood waits and shrink only on disconnects/timeouts"
-        required: true
-        default: true
-        type: boolean
-      download_chunk_size:
-        description: "upload.getFile chunk size in bytes; 524288 is stable, 1048576 tests the 1 MiB path"
-        required: true
-        default: 524288
-      download_max_in_flight_bytes:
-        description: "Max in-flight download bytes; empty uses the library floor max(8 MiB, part_size * concurrency)"
+        default: "1"
+      peer:
+        description: Optional bot destination override; prefer the secret for routine runs
         required: false
         default: ""
-      download_adaptive_part_size:
-        description: "Try larger download chunks during large transfers and keep the fastest observed size"
-        required: true
-        default: true
-        type: boolean
-      download_max_chunk_size:
-        description: "Largest adaptive upload.getFile chunk size to try"
-        required: true
-        default: 1048576
-      download_read_ahead_bytes:
-        description: "Optional range-cache read-ahead bytes; 0 disables read-ahead"
-        required: true
-        default: 0
-      download_range_cache_bytes:
-        description: "Optional in-memory range cache bytes; 0 disables range caching"
-        required: true
-        default: 0
-      request_timeout:
-        description: "Client transport/request timeout in seconds"
-        required: true
-        default: 120
-      upload_request_timeout:
-        description: "Upload part timeout in seconds"
-        required: false
-        default: 45
-      download_request_timeout:
-        description: "Download part timeout in seconds"
-        required: true
-        default: 30
-      verify_digest:
-        description: "Hash source and download after each transfer"
-        required: true
-        default: false
-        type: boolean
-      trace_memory:
-        description: "Enable tracemalloc-backed memory diagnostics"
-        required: true
-        default: false
-        type: boolean
-      log_level:
-        description: "miniproto benchmark log level"
-        required: true
-        default: "INFO"
+
+permissions:
+  contents: read
 
 concurrency:
   group: miniproto-live-media-bench
   cancel-in-progress: false
 
 jobs:
-  live-media-bench:
-    runs-on: ubuntu-latest
+  live-benchmark:
+    name: ${{ inputs.mode }} on ${{ matrix.runner }}
+    runs-on: ${{ matrix.runner == 'linux' && 'ubuntu-latest' || 'windows-latest' }}
     timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: ${{ fromJSON(inputs.runner == 'both' && '["linux","windows"]' || format('["{0}"]', inputs.runner)) }}
     env:
       MINIPROTO_LIVE_BENCH: "1"
+      MINIPROTO_TGLIB_BENCH: "1"
       MINIPROTO_INTEGRATION: "1"
       MINIPROTO_REAL_INTEGRATION: "1"
       MINIPROTO_API_ID: ${{ secrets.MINIPROTO_API_ID }}
@@ -133,124 +85,95 @@ jobs:
       MINIPROTO_LIVE_BENCH_BOT_PEER: ${{ secrets.MINIPROTO_LIVE_BENCH_BOT_PEER }}
       MINIPROTO_LIVE_BENCH_USER_SESSION_B64: ${{ secrets.MINIPROTO_LIVE_BENCH_USER_SESSION_B64 }}
       MINIPROTO_LIVE_BENCH_BOT_SESSION_B64: ${{ secrets.MINIPROTO_LIVE_BENCH_BOT_SESSION_B64 }}
-      MINIPROTO_LIVE_BENCH_LOG_LEVEL: ${{ inputs.log_level }}
-      MINIPROTO_LIVE_BENCH_LOG_FORMAT: "text"
-      MINIPROTO_LIVE_BENCH_HTTP_CODE_PORT: "8765"
-      MINIPROTO_LIVE_BENCH_HTTP_CODE_TIMEOUT: "900"
-      MINIPROTO_LIVE_BENCH_REQUEST_TIMEOUT: ${{ inputs.request_timeout }}
-      MINIPROTO_LIVE_BENCH_UPLOAD_REQUEST_TIMEOUT: ${{ inputs.upload_request_timeout }}
-      MINIPROTO_LIVE_BENCH_DOWNLOAD_REQUEST_TIMEOUT: ${{ inputs.download_request_timeout }}
-      MINIPROTO_LIVE_BENCH_UPLOAD_CONCURRENCY: ${{ inputs.upload_concurrency }}
-      MINIPROTO_LIVE_BENCH_DOWNLOAD_CONCURRENCY: ${{ inputs.download_concurrency }}
-      MINIPROTO_LIVE_BENCH_UPLOAD_MEDIA_LANES: ${{ inputs.upload_media_lanes }}
-      MINIPROTO_LIVE_BENCH_DOWNLOAD_MEDIA_LANES: ${{ inputs.download_media_lanes }}
-      MINIPROTO_LIVE_BENCH_DOWNLOAD_CHUNK_SIZE: ${{ inputs.download_chunk_size }}
-      MINIPROTO_LIVE_BENCH_DOWNLOAD_MAX_IN_FLIGHT_BYTES: ${{ inputs.download_max_in_flight_bytes }}
-      MINIPROTO_LIVE_BENCH_DOWNLOAD_ADAPTIVE_PART_SIZE: ${{ inputs.download_adaptive_part_size }}
-      MINIPROTO_LIVE_BENCH_DOWNLOAD_MAX_CHUNK_SIZE: ${{ inputs.download_max_chunk_size }}
-      MINIPROTO_LIVE_BENCH_DOWNLOAD_READ_AHEAD_BYTES: ${{ inputs.download_read_ahead_bytes }}
-      MINIPROTO_LIVE_BENCH_DOWNLOAD_RANGE_CACHE_BYTES: ${{ inputs.download_range_cache_bytes }}
-      MINIPROTO_LIVE_BENCH_SIZE: ${{ inputs.size }}
-      MINIPROTO_LIVE_BENCH_DC_ID: ${{ inputs.dc_id }}
+      MINIPROTO_LIVE_BENCH_USER_STRING_SESSION: ${{ secrets.MINIPROTO_LIVE_BENCH_USER_STRING_SESSION }}
+      MINIPROTO_LIVE_BENCH_BOT_STRING_SESSION: ${{ secrets.MINIPROTO_LIVE_BENCH_BOT_STRING_SESSION }}
+      MINIPROTO_LIVE_BENCH_STRING_PASSPHRASE: ${{ secrets.MINIPROTO_LIVE_BENCH_STRING_PASSPHRASE }}
       MINIPROTO_LIVE_BENCH_ACTOR: ${{ inputs.actor }}
       MINIPROTO_LIVE_BENCH_OPERATION: ${{ inputs.operation }}
-      MINIPROTO_LIVE_BENCH_REPEAT: ${{ inputs.repeat }}
       MINIPROTO_LIVE_BENCH_FILE_ID: ${{ inputs.file_id }}
+      MINIPROTO_LIVE_BENCH_USER_FILE_ID: ${{ inputs.file_id }}
+      MINIPROTO_LIVE_BENCH_BOT_FILE_ID: ${{ inputs.file_id }}
+      MINIPROTO_LIVE_BENCH_SIZE: ${{ inputs.size }}
+      MINIPROTO_LIVE_BENCH_DC_ID: ${{ inputs.dc_id }}
+      MINIPROTO_LIVE_BENCH_REPEAT: ${{ inputs.repeat }}
+      MINIPROTO_TGLIB_FILE_ID: ${{ inputs.file_id }}
+      MINIPROTO_TGLIB_PEER: ${{ inputs.peer || secrets.MINIPROTO_LIVE_BENCH_BOT_PEER }}
+      MINIPROTO_TGLIB_DC_ID: ${{ inputs.dc_id }}
+      MINIPROTO_TGLIB_SIZE: ${{ inputs.size == 'telegram-default' && '2097152000' || inputs.size }}
       PYTHONUNBUFFERED: "1"
     steps:
       - uses: actions/checkout@v7
 
       - uses: astral-sh/setup-uv@v10.0.0
+        with:
+          python-version: "3.14"
+          enable-cache: true
+          cache-suffix: live-${{ matrix.runner }}
 
-      - name: Install Python
-        run: uv python install 3.14
-
-      - name: Sync
+      - name: Sync locked environment
+        shell: pwsh
         run: uv sync --extra dev --frozen
 
-      - name: Restore optional benchmark sessions
-        shell: bash
+      - name: Restore optional encrypted sessions
+        shell: pwsh
         run: |
-          set -euo pipefail
-          mkdir -p .tmp
-          restore_session() {
-            local actor="$1"
-            local data="$2"
-            local target=".tmp/miniproto-live-bench-${actor}-dc${{ inputs.dc_id }}.sqlite"
-            if [ -n "${data}" ]; then
-              printf '%s' "${data}" | base64 --decode > "${target}"
-              chmod 600 "${target}"
-              echo "restored ${actor} session to ${target}"
-            fi
+          New-Item -ItemType Directory -Force -Path .tmp | Out-Null
+          function Restore-Session([string]$Actor, [string]$Encoded) {
+            if ([string]::IsNullOrWhiteSpace($Encoded)) { return }
+            $Target = ".tmp/miniproto-live-bench-$Actor-dc${{ inputs.dc_id }}.sqlite"
+            [IO.File]::WriteAllBytes($Target, [Convert]::FromBase64String($Encoded))
+            Write-Output "restored encrypted $Actor session"
           }
-          restore_session "user" "${MINIPROTO_LIVE_BENCH_USER_SESSION_B64:-}"
-          restore_session "bot" "${MINIPROTO_LIVE_BENCH_BOT_SESSION_B64:-}"
+          Restore-Session "user" $env:MINIPROTO_LIVE_BENCH_USER_SESSION_B64
+          Restore-Session "bot" $env:MINIPROTO_LIVE_BENCH_BOT_SESSION_B64
 
-      - name: Check non-interactive session requirements
-        shell: bash
+      - name: Provision optional string sessions
+        shell: pwsh
+        run: uv run python -m tools.bench.provision_session --dc-id "${{ inputs.dc_id }}"
+
+      - name: Validate non-interactive inputs
+        shell: pwsh
         run: |
-          set -euo pipefail
-          if [ "${{ inputs.actor }}" != "bot" ] && [ ! -s ".tmp/miniproto-live-bench-user-dc${{ inputs.dc_id }}.sqlite" ] ]; then
-            echo "::error::User benchmarks on GitHub-hosted runners need MINIPROTO_LIVE_BENCH_USER_SESSION_B64."
-            exit 2
-          fi
+          if ("${{ inputs.mode }}" -in @("matrix", "tglib") -and [string]::IsNullOrWhiteSpace("${{ inputs.file_id }}")) {
+            throw "matrix and tglib modes require an explicit pre-uploaded file_id"
+          }
+          if ("${{ inputs.mode }}" -eq "tglib" -and [string]::IsNullOrWhiteSpace($env:MINIPROTO_TGLIB_PEER)) {
+            throw "tglib mode requires a bot destination peer"
+          }
+          if ("${{ inputs.mode }}" -eq "smoke" -and "${{ inputs.operation }}" -eq "download" -and [string]::IsNullOrWhiteSpace("${{ inputs.file_id }}")) {
+            throw "download-only smoke mode requires an explicit pre-uploaded file_id"
+          }
 
-      - name: Run live media benchmark
-        shell: bash
+      - name: Run selected live benchmark
+        shell: pwsh
         run: |
-          set -euo pipefail
-          mkdir -p .tmp/live-bench-results
-          extra_args=()
-          if [ "${{ inputs.verify_digest }}" = "true" ]; then
-            extra_args+=(--verify-digest)
-          fi
-          if [ "${{ inputs.trace_memory }}" = "true" ]; then
-            extra_args+=(--trace-memory)
-          fi
-          if [ "${{ inputs.download_adaptive_concurrency }}" = "true" ]; then
-            extra_args+=(--download-adaptive-concurrency)
-          else
-            extra_args+=(--no-download-adaptive-concurrency)
-          fi
-          if [ "${{ inputs.download_adaptive_part_size }}" = "true" ]; then
-            extra_args+=(--download-adaptive-part-size)
-          else
-            extra_args+=(--no-download-adaptive-part-size)
-          fi
-          if [ -n "${{ inputs.upload_media_lanes }}" ]; then
-            extra_args+=(--upload-media-lanes "${{ inputs.upload_media_lanes }}")
-          fi
-          if [ -n "${{ inputs.download_media_lanes }}" ]; then
-            extra_args+=(--download-media-lanes "${{ inputs.download_media_lanes }}")
-          fi
-          if [ -n "${{ inputs.file_id }}" ]; then
-            extra_args+=(--file-id "${{ inputs.file_id }}")
-          fi
-          if [ -n "${{ inputs.download_max_in_flight_bytes }}" ]; then
-            extra_args+=(--download-max-in-flight-bytes "${{ inputs.download_max_in_flight_bytes }}")
-          fi
-          uv run python -u tools/bench/benchmark_live_media_limit.py \
-            --actor "${{ inputs.actor }}" \
-            --operation "${{ inputs.operation }}" \
-            --repeat "${{ inputs.repeat }}" \
-            --size "${{ inputs.size }}" \
-            --dc-id "${{ inputs.dc_id }}" \
-            --upload-concurrency "${{ inputs.upload_concurrency }}" \
-            --download-concurrency "${{ inputs.download_concurrency }}" \
-            --download-chunk-size "${{ inputs.download_chunk_size }}" \
-            --download-max-chunk-size "${{ inputs.download_max_chunk_size }}" \
-            --download-read-ahead-bytes "${{ inputs.download_read_ahead_bytes }}" \
-            --download-range-cache-bytes "${{ inputs.download_range_cache_bytes }}" \
-            --request-timeout "${{ inputs.request_timeout }}" \
-            --download-request-timeout "${{ inputs.download_request_timeout }}" \
-            --json .tmp/live-bench-results/summary.json \
-            "${extra_args[@]}" 2>&1 | tee .tmp/live-bench-results/live-media-bench.log
+          $Output = ".tmp/live-bench-results/${{ inputs.mode }}-${{ matrix.runner }}"
+          New-Item -ItemType Directory -Force -Path $Output | Out-Null
+          if ("${{ inputs.mode }}" -eq "smoke") {
+            $Arguments = @(
+              "run", "python", "-u", "tools/bench/benchmark_live_media_limit.py",
+              "--actor", "${{ inputs.actor }}",
+              "--operation", "${{ inputs.operation }}",
+              "--repeat", "${{ inputs.repeat }}",
+              "--size", "${{ inputs.size }}",
+              "--dc-id", "${{ inputs.dc_id }}",
+              "--json", "$Output/summary.json",
+              "--loop-lag"
+            )
+            if (-not [string]::IsNullOrWhiteSpace("${{ inputs.file_id }}")) { $Arguments += @("--file-id", "${{ inputs.file_id }}") }
+            & uv @Arguments 2>&1 | Tee-Object -FilePath "$Output/benchmark.log"
+          } elseif ("${{ inputs.mode }}" -eq "matrix") {
+            & uv run python -u -m tools.bench.benchmark_matrix --mode "${{ inputs.matrix_profile }}" --output "$Output/matrix" 2>&1 | Tee-Object -FilePath "$Output/benchmark.log"
+          } else {
+            & uv run python -u -m tools.bench.benchmark_tglib --file-id "${{ inputs.file_id }}" --peer $env:MINIPROTO_TGLIB_PEER --dc-id "${{ inputs.dc_id }}" --size $env:MINIPROTO_TGLIB_SIZE --compat-json "$Output/results.json" --json "$Output/miniproto.json" --work-dir "$Output/work" 2>&1 | Tee-Object -FilePath "$Output/benchmark.log"
+          }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Upload benchmark summary
+      - name: Upload live benchmark artifacts
         uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: live-media-bench-${{ inputs.actor }}-dc${{ inputs.dc_id }}
-          path: |
-            .tmp/live-bench-results/summary.json
-            .tmp/live-bench-results/live-media-bench.log
+          name: live-${{ inputs.mode }}-${{ matrix.runner }}-dc${{ inputs.dc_id }}
+          path: .tmp/live-bench-results/
+          if-no-files-found: warn
+          retention-days: 30

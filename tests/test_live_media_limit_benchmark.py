@@ -58,6 +58,31 @@ def test_explicit_benchmark_file_name_is_preserved() -> None:
     assert resolved_benchmark_file(env_args, {}) == Path(".tmp/from-env.bin")
 
 
+def test_live_benchmark_loop_lag_and_matrix_controls_prefer_explicit_cli_values() -> None:
+    args = parse_args(
+        [
+            "--loop-lag",
+            "--no-download-launch-stagger",
+            "--download-destination",
+            "memory",
+            "--warmup-repeat",
+            "1",
+            "--operation",
+            "download",
+        ],
+        {
+            "MINIPROTO_LIVE_BENCH_LOOP_LAG": "0",
+            "MINIPROTO_LIVE_BENCH_DOWNLOAD_LAUNCH_STAGGER": "1",
+            "MINIPROTO_LIVE_BENCH_DOWNLOAD_DESTINATION": "file",
+        },
+    )
+
+    assert args.loop_lag is True
+    assert args.download_launch_stagger is False
+    assert args.download_destination == "memory"
+    assert args.warmup_repeat == 1
+
+
 def test_legacy_example_benchmark_file_env_does_not_pin_smaller_size() -> None:
     args = parse_args(
         ["--actor", "user", "--size", "1000mib"], {"MINIPROTO_LIVE_BENCH_FILE": ".tmp/miniproto-live-bench-2000mib.bin"}

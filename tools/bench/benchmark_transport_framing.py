@@ -4,17 +4,31 @@ import argparse
 import asyncio
 import importlib
 import json
-import platform
 import statistics
 import sys
 import time
 from collections import deque
 from collections.abc import Iterable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Protocol
 
 from miniproto import event_loop
 from miniproto.connection.framing import NativeFrameCodec, PayloadFrame, native_transport_available
+
+if __package__:
+    from tools.bench.reporting import (
+        build_benchmark_report,
+        collect_environment,
+        sample_statistics,
+        write_benchmark_report,
+    )
+else:
+    _reporting = importlib.import_module("reporting")
+    build_benchmark_report = _reporting.build_benchmark_report
+    collect_environment = _reporting.collect_environment
+    sample_statistics = _reporting.sample_statistics
+    write_benchmark_report = _reporting.write_benchmark_report
 
 _SOCKET_READ_SIZE = 64 * 1024
 
@@ -49,9 +63,11 @@ def main() -> int:
     parser.add_argument("--frames", type=int, default=4096)
     parser.add_argument("--payload-bytes", type=int, default=72)
     parser.add_argument("--rounds", type=int, default=10)
+    parser.add_argument("--mode", choices=("smoke", "full"), default="full")
     parser.add_argument(
         "--raw-native", action="store_true", help="diagnose the Rust/PyO3 boundary without adapter objects"
     )
+    parser.add_argument("--json", type=Path, help="write the normalized report to this path")
     parser.add_argument("--check", action="store_true", help="fail unless every mode reaches the 2x Wave 3 target")
     args = parser.parse_args()
     if not native_transport_available():
@@ -65,33 +81,45 @@ def main() -> int:
     results, loop_backend = event_loop.run(
         _benchmark_all(payload, frames=args.frames, rounds=args.rounds, raw_native=args.raw_native)
     )
-    report = {
-        "benchmark": "transport_frame_pump",
-        "environment": {
-            "event_loop": loop_backend,
-            "machine": platform.machine(),
-            "platform": platform.platform(),
-            "python": platform.python_version(),
+    environment = collect_environment()
+    environment["benchmark_event_loop"] = loop_backend
+    mode_results = [
+        {
+            "name": result.mode,
+            "legacy_max_batch_ms": max(result.legacy_ms),
+            "native_median_ms": result.native_median_ms,
+            "native_max_batch_ms": max(result.native_ms),
+            "native_ms": list(result.native_ms),
+            "native_statistics_ms": sample_statistics(result.native_ms),
+            "native_frames_per_second": args.frames / max(result.native_median_ms / 1000, 1e-9),
+            "legacy_median_ms": result.legacy_median_ms,
+            "legacy_ms": list(result.legacy_ms),
+            "legacy_statistics_ms": sample_statistics(result.legacy_ms),
+            "legacy_frames_per_second": args.frames / max(result.legacy_median_ms / 1000, 1e-9),
+            "speedup": result.speedup,
+        }
+        for result in results
+    ]
+    report = build_benchmark_report(
+        benchmark="transport_frame_pump",
+        mode=args.mode,
+        warmup=3,
+        samples=tuple(duration for result in results for duration in result.native_ms),
+        unit="ms",
+        configuration={
+            "frames": args.frames,
+            "payload_bytes": args.payload_bytes,
+            "rounds": args.rounds,
+            "raw_native": args.raw_native,
         },
-        "frames": args.frames,
-        "payload_bytes": args.payload_bytes,
-        "rounds": args.rounds,
-        "modes": [
-            {
-                "mode": result.mode,
-                "legacy_max_batch_ms": max(result.legacy_ms),
-                "native_median_ms": result.native_median_ms,
-                "native_max_batch_ms": max(result.native_ms),
-                "native_ms": result.native_ms,
-                "legacy_median_ms": result.legacy_median_ms,
-                "legacy_ms": result.legacy_ms,
-                "speedup": result.speedup,
-            }
-            for result in results
-        ],
-    }
+        environment=environment,
+        throughput={"unit": "frames_per_second"},
+        results=mode_results,
+    )
     json.dump(report, sys.stdout, indent=2)
     print()
+    if args.json is not None:
+        write_benchmark_report(args.json, report)
     if args.check:
         below_target = tuple(result for result in results if result.speedup < 2.0)
         if below_target:

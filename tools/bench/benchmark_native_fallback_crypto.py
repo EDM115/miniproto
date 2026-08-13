@@ -1,16 +1,34 @@
 from __future__ import annotations
 
+import argparse
 import hashlib
 import importlib
+import json
+import os
 import statistics
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from types import ModuleType
+from typing import Any
 
 import miniproto._native_fallback as python_impl
-from miniproto import event_loop
 from miniproto.auth.dh_validation import _validate_safe_prime_and_generator_cached, validate_safe_prime_and_generator
+
+if __package__:
+    from tools.bench.reporting import (
+        build_benchmark_report,
+        collect_environment,
+        sample_statistics,
+        write_benchmark_report,
+    )
+else:
+    _reporting = importlib.import_module("reporting")
+    build_benchmark_report = _reporting.build_benchmark_report
+    collect_environment = _reporting.collect_environment
+    sample_statistics = _reporting.sample_statistics
+    write_benchmark_report = _reporting.write_benchmark_report
 
 _TELEGRAM_DH_PRIME = int(
     "C71CAEB9C6B1C9048E6C522F70F13F73980D40238E3E21C14934D037563D930F48198A0AA7C14058229493D22530F4DBFA336F6E0AC925139543AED44CCE7C3720FD51F69458705AC68CD4FE6B6B13ABDC9746512969328454F18FAF8C595F642477FE96BB2A941D5BCD1D4AC8CC49880708FA9B378E3C4F3A9060BEE67CF9A4A4A695811051907E162753B56B0F6B410DBA74D8A84B2A14B3144E0EF1284754FD17ED950D5965B4B9DD46582DB1178D169C6BC465B0D6FF9CA3928FEF5B9AE4E418FC15E83EBEA0F87FA9FF5EED70050DED2849F47BF959D956850CE929851F0D8115F635B105EE2E4E15D04B2454BF6F4FADF034B10403119CD8E3B92FCC5B",
@@ -29,9 +47,19 @@ _RFC3526_GROUP14_SHA256 = "d66436f79bbd6b2e38c0ffbd079be904d2641415e2e67140e0944
 @dataclass(frozen=True, slots=True)
 class BenchmarkResult:
     name: str
-    runs: int
-    best_ms: float
-    median_ms: float
+    samples_ms: tuple[float, ...]
+
+    @property
+    def runs(self) -> int:
+        return len(self.samples_ms)
+
+    @property
+    def best_ms(self) -> float:
+        return min(self.samples_ms)
+
+    @property
+    def median_ms(self) -> float:
+        return statistics.median(self.samples_ms)
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,7 +69,38 @@ class BenchmarkCase:
     python: Callable[[], object]
 
 
-def main() -> int:
+def parse_args(argv: Sequence[str] | None = None, env: Mapping[str, str] | None = None) -> argparse.Namespace:
+    """Parse the benchmark CLI, with explicit arguments taking precedence over environment defaults."""
+    values = os.environ if env is None else env
+    parser = argparse.ArgumentParser(description="Benchmark native crypto/envelope/TL primitives against fallbacks")
+    parser.add_argument("--mode", choices=("smoke", "full"), default=values.get("MINIPROTO_BENCH_MODE", "smoke"))
+    parser.add_argument(
+        "--runs", type=int, default=int(values["MINIPROTO_BENCH_RUNS"]) if values.get("MINIPROTO_BENCH_RUNS") else None
+    )
+    parser.add_argument(
+        "--json",
+        type=Path,
+        default=Path(values["MINIPROTO_BENCH_JSON"]) if values.get("MINIPROTO_BENCH_JSON") else None,
+    )
+    args = parser.parse_args(argv)
+    if args.runs is None:
+        args.runs = 3 if args.mode == "smoke" else 10
+    if args.runs < 1:
+        parser.error("--runs must be positive")
+    return args
+
+
+def benchmark_result_record(result: BenchmarkResult) -> dict[str, Any]:
+    """Serialize one measured implementation with its full distribution."""
+    return {
+        "runs": result.runs,
+        "samples_ms": list(result.samples_ms),
+        "statistics_ms": sample_statistics(result.samples_ms),
+    }
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = parse_args(argv)
     native_impl = _load_native_module()
     key = bytes(range(32))
     iv_ige = bytes(range(32, 64))
@@ -150,14 +209,13 @@ def main() -> int:
         ),
     )
 
-    print(
-        f"event_loop_backend={event_loop.backend_name()} "
-        f"installed={event_loop.installed()} version={event_loop.backend_version()}"
-    )
-    print(f"native_available={native_impl is not None}")
+    results: list[dict[str, Any]] = []
     _validate_safe_prime_and_generator_cached.cache_clear()
     dh_first = _run(
-        "telegram_dh_group_validation:first", lambda: validate_safe_prime_and_generator(_TELEGRAM_DH_PRIME, 3), runs=1
+        "telegram_dh_group_validation:first",
+        lambda: validate_safe_prime_and_generator(_TELEGRAM_DH_PRIME, 3),
+        runs=1,
+        warmup=0,
     )
     dh_cached = _run(
         "telegram_dh_group_validation:cached",
@@ -172,29 +230,51 @@ def main() -> int:
         "telegram_dh_group_validation:rfc3526_group14_fallback_sync",
         lambda: validate_safe_prime_and_generator(_RFC3526_GROUP14_PRIME, 2),
         runs=1,
+        warmup=0,
     )
     dh_fallback_cached = _run(
         "telegram_dh_group_validation:rfc3526_group14_cached",
         lambda: validate_safe_prime_and_generator(_RFC3526_GROUP14_PRIME, 2),
         runs=1_000,
     )
-    print(
-        f"telegram_dh_group_validation: embedded_first={dh_first.median_ms:.6f}ms "
-        f"embedded_cached_median={dh_cached.median_ms:.6f}ms "
-        f"fallback_sync={dh_fallback.median_ms:.6f}ms "
-        f"fallback_cached_median={dh_fallback_cached.median_ms:.6f}ms "
-        f"cached_runs={dh_cached.runs} fallback_generator=2 "
-        f"fallback_sha256={actual_group14_digest} fallback_source={_RFC3526_GROUP14_SOURCE}"
+    results.append(
+        {
+            "name": "telegram_dh_group_validation",
+            "embedded_first": benchmark_result_record(dh_first),
+            "embedded_cached": benchmark_result_record(dh_cached),
+            "fallback_sync": benchmark_result_record(dh_fallback),
+            "fallback_cached": benchmark_result_record(dh_fallback_cached),
+            "fallback_generator": 2,
+            "fallback_sha256": actual_group14_digest,
+            "fallback_source": _RFC3526_GROUP14_SOURCE,
+        }
     )
     for case in benchmarks:
-        python_result = _run(f"{case.name}:python", case.python)
+        python_result = _run(f"{case.name}:python", case.python, runs=args.runs)
+        record: dict[str, Any] = {"name": case.name, "fallback": benchmark_result_record(python_result)}
         if case.native is None:
-            print(_format_single(case.name, python_result))
+            record["native"] = None
+            results.append(record)
             continue
-        native_result = _run(f"{case.name}:native", case.native)
+        native_result = _run(f"{case.name}:native", case.native, runs=args.runs)
         _assert_same_output(case.name, case.native, case.python)
         ratio = python_result.median_ms / native_result.median_ms if native_result.median_ms else float("inf")
-        print(_format_comparison(case.name, native_result, python_result, ratio))
+        record["native"] = benchmark_result_record(native_result)
+        record["fallback_over_native_median"] = ratio
+        results.append(record)
+    report = build_benchmark_report(
+        benchmark="native_fallback_crypto_envelope_tl",
+        mode=args.mode,
+        warmup=1,
+        samples=(),
+        unit="ms",
+        configuration={"runs": args.runs, "payload_bytes": len(payload), "large_payload_bytes": len(payload_1m)},
+        environment=collect_environment(),
+        results=results,
+    )
+    if args.json is not None:
+        write_benchmark_report(args.json, report)
+    print(json.dumps(report, indent=2, sort_keys=True))
     return 0
 
 
@@ -244,13 +324,15 @@ def _call_tl_long_vector_loop(module: ModuleType | None, values: tuple[int, ...]
     return lambda: _tl_long_vector_loop(module, values)
 
 
-def _run(name: str, func: Callable[[], object], runs: int = 10) -> BenchmarkResult:
+def _run(name: str, func: Callable[[], object], runs: int = 10, *, warmup: int = 1) -> BenchmarkResult:
+    for _ in range(warmup):
+        func()
     durations: list[float] = []
     for _ in range(runs):
         start = time.perf_counter()
         func()
         durations.append((time.perf_counter() - start) * 1000)
-    return BenchmarkResult(name=name, runs=runs, best_ms=min(durations), median_ms=statistics.median(durations))
+    return BenchmarkResult(name=name, samples_ms=tuple(durations))
 
 
 def _assert_same_output(name: str, native: Callable[[], object], python: Callable[[], object]) -> None:

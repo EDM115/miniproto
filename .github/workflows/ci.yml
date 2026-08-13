@@ -2,35 +2,40 @@ name: CI
 
 on:
   push:
-    branches: ["master", "main", "codex/**"]
+    branches: [master, main, "codex/**"]
   pull_request:
-    branches: ["master", "main"]
+    branches: [master, main]
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   python:
+    name: Python ${{ matrix.python-version }} quality and tests
     runs-on: ubuntu-latest
-    continue-on-error: ${{ matrix.experimental }}
     env:
+      MINIPROTO_INTEGRATION: 0
+      MINIPROTO_REAL_INTEGRATION: 0
       MINIPROTO_STRESS: 1
-      UV_PYTHON: ${{ matrix.python-version }}
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - python-version: "3.14"
-            experimental: false
-          # - python-version: "3.16"
-          #   experimental: true
+        python-version: ["3.13", "3.14"]
     steps:
       - uses: actions/checkout@v7
 
       - uses: astral-sh/setup-uv@v10.0.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+          cache-suffix: py${{ matrix.python-version }}
 
-      - name: Install Python
-        run: uv python install ${{ matrix.python-version }}
-
-      - name: Sync
+      - name: Sync locked development environment
         run: uv sync --extra dev --frozen
 
       - name: Ruff format check
@@ -46,8 +51,10 @@ jobs:
         run: uv run python -m tools.schema.generate --check
 
       - name: Tests
-        run: uv run pytest
+        run: uv run pytest --basetemp=.tmp/pytest-ci-${{ matrix.python-version }}
+
   rust:
+    name: Rust 1.97 checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -55,68 +62,188 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           components: clippy, rustfmt
-          toolchain: stable
+          toolchain: 1.97.0
 
       - name: Format check
         run: cargo fmt --check
 
       - name: Clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
- 
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
       - name: Tests
-        run: cargo test --all-features
-  build:
+        run: cargo test --workspace --all-features
+
+  benchmark-smoke:
+    name: Deterministic benchmark smoke
     needs: [python, rust]
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - python-version: "3.14"
-            experimental: false
-          # - python-version: "3.16"
-          #   experimental: true
+    env:
+      MINIPROTO_INTEGRATION: 0
+      MINIPROTO_REAL_INTEGRATION: 0
     steps:
       - uses: actions/checkout@v7
 
       - uses: astral-sh/setup-uv@v10.0.0
-
-      - name: Install Python
-        run: uv python install ${{ matrix.python-version }}
-
-      - name: Sync
-        run: uv sync --extra dev --frozen
+        with:
+          python-version: "3.14"
+          enable-cache: true
+          cache-suffix: benchmark
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          components: clippy, rustfmt
-          toolchain: stable
+          toolchain: 1.97.0
 
-      - name: Build
+      - name: Sync and build native extension
         run: |
-          cargo build --release --all-features
-          uv run maturin build --release --out dist
+          uv sync --extra dev --frozen
+          uv run maturin develop --release
 
-      - name: Upload Python artifacts
+      - name: Run deterministic benchmark gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .tmp/benchmark-smoke
+          uv run python -m tools.bench.benchmark_acceptance --mode smoke --json .tmp/benchmark-smoke/runtime-acceptance.json > .tmp/benchmark-smoke/runtime-acceptance.log
+          uv run python -m tools.bench.benchmark_native_fallback_crypto --mode smoke --json .tmp/benchmark-smoke/native-fallback.json > .tmp/benchmark-smoke/native-fallback.log
+          uv run python tools/bench/benchmark_media_scheduler.py > .tmp/benchmark-smoke/media-scheduler.json
+          uv run python tools/bench/benchmark_transport_framing.py --check --json .tmp/benchmark-smoke/transport-framing.json > .tmp/benchmark-smoke/transport-framing.log
+          uv run python tools/bench/benchmark_tl_fast_paths.py --check --json .tmp/benchmark-smoke/tl-fast-paths.json > .tmp/benchmark-smoke/tl-fast-paths.log
+
+      - name: Upload benchmark artifacts
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: benchmark-smoke-linux-x86_64-py314
+          path: .tmp/benchmark-smoke/
+          if-no-files-found: error
+          retention-days: 30
+
+  wheels:
+    name: Wheel ${{ matrix.arch }} ${{ matrix.python-version }} on ${{ matrix.os }}
+    needs: [python, rust]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+            target: x86_64-unknown-linux-gnu
+            python-version: "3.13"
+            interpreter: python3.13
+            manylinux: "2_17"
+          - os: ubuntu-latest
+            arch: x86_64
+            target: x86_64-unknown-linux-gnu
+            python-version: "3.14"
+            interpreter: python3.14
+            manylinux: "2_17"
+          - os: windows-latest
+            arch: x86_64
+            target: x86_64-pc-windows-msvc
+            python-version: "3.13"
+            interpreter: python
+            manylinux: "off"
+          - os: windows-latest
+            arch: x86_64
+            target: x86_64-pc-windows-msvc
+            python-version: "3.14"
+            interpreter: python
+            manylinux: "off"
+          - os: macos-15-intel
+            arch: x86_64
+            target: x86_64-apple-darwin
+            python-version: "3.13"
+            interpreter: python
+            manylinux: "off"
+          - os: macos-15-intel
+            arch: x86_64
+            target: x86_64-apple-darwin
+            python-version: "3.14"
+            interpreter: python
+            manylinux: "off"
+          - os: macos-15
+            arch: aarch64
+            target: aarch64-apple-darwin
+            python-version: "3.13"
+            interpreter: python
+            manylinux: "off"
+          - os: macos-15
+            arch: aarch64
+            target: aarch64-apple-darwin
+            python-version: "3.14"
+            interpreter: python
+            manylinux: "off"
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - uses: astral-sh/setup-uv@v10.0.0
+        with:
+          enable-cache: true
+          cache-suffix: wheel-${{ matrix.os }}-${{ matrix.arch }}-py${{ matrix.python-version }}
+
+      - name: Build wheel
+        uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380
+        with:
+          command: build
+          maturin-version: v1.14.1
+          target: ${{ matrix.target }}
+          manylinux: ${{ matrix.manylinux }}
+          rust-toolchain: 1.97.0
+          args: --release --locked --compatibility pypi -i ${{ matrix.interpreter }} --out dist
+
+      - name: Install and import wheel in clean runner Python
+        shell: python
+        run: |
+          import glob
+          import subprocess
+          import sys
+          wheels = glob.glob("dist/*.whl")
+          if len(wheels) != 1:
+              raise SystemExit(f"expected one wheel, found {wheels}")
+          subprocess.check_call(["uv", "pip", "install", "--system", wheels[0]])
+          subprocess.check_call([sys.executable, "-I", "-c", "import miniproto, miniproto._native; assert miniproto._native.native_available()"])
+
+      - name: Upload wheel
         uses: actions/upload-artifact@v7
         with:
-          name: python
-          path: dist/
+          name: wheel-${{ matrix.os }}-${{ matrix.arch }}-py${{ matrix.python-version }}
+          path: dist/*.whl
+          if-no-files-found: error
           compression-level: 0
+          retention-days: 30
 
-      - name: Upload Rust artifacts
+  sdist:
+    name: Source distribution
+    needs: [python, rust]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.0.0
+        with:
+          python-version: "3.14"
+          enable-cache: true
+          cache-suffix: sdist
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: 1.97.0
+
+      - name: Build sdist
+        run: |
+          uv sync --extra dev --frozen
+          uv run maturin sdist --out dist
+
+      - name: Upload sdist
         uses: actions/upload-artifact@v7
         with:
-          name: rust
-          path: target/release/*miniproto_native*
+          name: sdist
+          path: dist/*.tar.gz
+          if-no-files-found: error
           compression-level: 0
-
-      - name: Benchmarks
-        run: |
-          uv run python tools/bench/benchmark_imports.py
-          uv run python tools/bench/benchmark_media_scheduler.py
-          uv run python tools/bench/benchmark_native_fallback_crypto.py
-          uv run python tools/bench/benchmark_runtime_paths.py
-          uv run python tools/bench/benchmark_tl_fast_paths.py
-          uv run python tools/bench/benchmark_transport_framing.py
-          uv run python tools/bench/profile_lazy_raw_codec.py
+          retention-days: 30

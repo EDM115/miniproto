@@ -1,14 +1,29 @@
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
-import platform
 import statistics
 import time
 from dataclasses import dataclass
+from pathlib import Path
 
 from miniproto.raw import functions, types
 from miniproto.tl import fast
+
+if __package__:
+    from tools.bench.reporting import (
+        build_benchmark_report,
+        collect_environment,
+        sample_statistics,
+        write_benchmark_report,
+    )
+else:
+    _reporting = importlib.import_module("reporting")
+    build_benchmark_report = _reporting.build_benchmark_report
+    collect_environment = _reporting.collect_environment
+    sample_statistics = _reporting.sample_statistics
+    write_benchmark_report = _reporting.write_benchmark_report
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,6 +49,8 @@ def main() -> int:
     parser.add_argument("--iterations", type=int, default=32)
     parser.add_argument("--payload-bytes", type=int, default=256 * 1024)
     parser.add_argument("--rounds", type=int, default=10)
+    parser.add_argument("--mode", choices=("smoke", "full"), default="full")
+    parser.add_argument("--json", type=Path, help="write the normalized report to this path")
     parser.add_argument("--check", action="store_true", help="fail unless the representative mix reaches 1.5x")
     args = parser.parse_args()
     if not fast.native_fast_paths_available():
@@ -42,23 +59,32 @@ def main() -> int:
         raise ValueError("iterations, payload-bytes, and rounds must be positive")
 
     result = _benchmark(iterations=args.iterations, payload_bytes=args.payload_bytes, rounds=args.rounds)
-    report = {
-        "benchmark": "generated_tl_hot_mix",
-        "environment": {
-            "machine": platform.machine(),
-            "platform": platform.platform(),
-            "python": platform.python_version(),
+    report = build_benchmark_report(
+        benchmark="generated_tl_hot_mix",
+        mode=args.mode,
+        warmup=3,
+        samples=result.native_ms,
+        unit="ms",
+        configuration={"iterations": args.iterations, "payload_bytes": args.payload_bytes, "rounds": args.rounds},
+        environment=collect_environment(),
+        throughput={
+            "native_operations_per_second": args.iterations / max(result.native_median_ms / 1000, 1e-9),
+            "fallback_operations_per_second": args.iterations / max(result.fallback_median_ms / 1000, 1e-9),
         },
-        "iterations": args.iterations,
-        "payload_bytes": args.payload_bytes,
-        "rounds": args.rounds,
-        "native_ms": list(result.native_ms),
-        "fallback_ms": list(result.fallback_ms),
-        "native_median_ms": result.native_median_ms,
-        "fallback_median_ms": result.fallback_median_ms,
-        "speedup": result.speedup,
-    }
+        results=[
+            {
+                "name": "representative_generated_constructor_mix",
+                "native_ms": list(result.native_ms),
+                "native_statistics_ms": sample_statistics(result.native_ms),
+                "fallback_ms": list(result.fallback_ms),
+                "fallback_statistics_ms": sample_statistics(result.fallback_ms),
+                "speedup": result.speedup,
+            }
+        ],
+    )
     print(json.dumps(report, indent=2, sort_keys=True))
+    if args.json is not None:
+        write_benchmark_report(args.json, report)
     if args.check and result.speedup < 1.5:
         raise RuntimeError(f"generated TL hot mix missed the 1.5x target: {result.speedup:.2f}x")
     return 0

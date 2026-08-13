@@ -70,7 +70,7 @@ These candidates were considered but intentionally rejected or routed elsewhere:
 
 ## Historical and active dated reports
 
-- [2026-08-12 v0.1.0 Alpha completion plan](2026-08-12-v0.1.0-alpha-completion-plan.md): active risk-first execution plan; Waves 0 through 3 are complete, including multi-source Layer 228 schema generation, flood/session/fake-server hardening, shared media scheduling/streaming/hash verification, native transport framing, opt-in quick ACK, and generated hot TL constructors. Wave 4 is next.
+- [2026-08-12 v0.1.0 Alpha completion plan](2026-08-12-v0.1.0-alpha-completion-plan.md): active risk-first execution plan; Waves 0 through 4 implementation are complete, including multi-source Layer 228 schema generation, flood/session/fake-server hardening, shared media scheduling/streaming/hash verification, native transport framing, opt-in quick ACK, generated hot TL constructors, normalized benchmark/tglib/matrix tooling, expanded CI, and canonical release automation. TASK-082 remains in progress only for the strict docs CI lane that depends on Wave 5, which is next.
 - [2026-06-25 implementation progress](2026-06-25-implementation-progress.md): first implementation slice, verification status, and remaining work.
 - [2026-06-26 package boundary and ecosystem intent](2026-06-26-package-boundary-and-ecosystem-intent.md): decision separating miniproto protocol SDK responsibilities from mpgram framework responsibilities.
 - [2026-06-29 package boundary progress](2026-06-29-package-boundary-progress.md): applied repository and documentation boundary work.

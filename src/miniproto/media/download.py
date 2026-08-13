@@ -686,6 +686,7 @@ async def iter_download(
     max_buffer_size: int | None = None,
     concurrency: int = DEFAULT_DOWNLOAD_CONCURRENCY,
     adaptive_concurrency: bool = True,
+    launch_stagger: bool = True,
     max_in_flight_bytes: int | None = None,
     adaptive_part_size: bool = True,
     max_part_size: int = MAX_DOWNLOAD_CHUNK_SIZE,
@@ -715,6 +716,8 @@ async def iter_download(
     )
     if not isinstance(verify_plain_hashes, bool):
         raise TypeError("verify_plain_hashes must be a bool")
+    if not isinstance(launch_stagger, bool):
+        raise TypeError("launch_stagger must be a bool")
     if limit is None and total_size is not None:
         limit = max(0, total_size - offset)
     if read_ahead_bytes > 0 and _is_full_file_download(offset, limit, total_size):
@@ -741,6 +744,7 @@ async def iter_download(
         flood_sleep_threshold=flood_sleep_threshold,
         concurrency=concurrency,
         adaptive_concurrency=adaptive_concurrency,
+        launch_stagger=launch_stagger,
         max_in_flight_bytes=effective_max_in_flight_bytes,
         adaptive_part_size=adaptive_part_size,
         max_part_size=max_part_size,
@@ -774,6 +778,7 @@ async def _iter_download_parts(
     flood_sleep_threshold: int | None,
     concurrency: int,
     adaptive_concurrency: bool,
+    launch_stagger: bool,
     max_in_flight_bytes: int | None,
     adaptive_part_size: bool,
     max_part_size: int,
@@ -795,7 +800,11 @@ async def _iter_download_parts(
     charges: dict[int, int] = {}
     ready: dict[int, tuple[bytes, int, bool]] = {}
     reporter = _ProgressReporter(progress, limit if limit is not None else total_size)
-    launch_pacer = _DownloadLaunchPacer(concurrency=effective_concurrency) if effective_concurrency > 1 else None
+    launch_pacer = (
+        _DownloadLaunchPacer(concurrency=effective_concurrency)
+        if launch_stagger and effective_concurrency > 1
+        else None
+    )
     throttle = (
         _AdaptiveDownloadThrottle(effective_concurrency) if adaptive_concurrency and effective_concurrency > 1 else None
     )
@@ -971,6 +980,7 @@ async def download_file(
     max_buffer_size: int | None = None,
     concurrency: int = DEFAULT_DOWNLOAD_CONCURRENCY,
     adaptive_concurrency: bool = True,
+    launch_stagger: bool = True,
     max_in_flight_bytes: int | None = None,
     adaptive_part_size: bool = True,
     max_part_size: int = MAX_DOWNLOAD_CHUNK_SIZE,
@@ -998,6 +1008,8 @@ async def download_file(
     )
     if not isinstance(verify_plain_hashes, bool):
         raise TypeError("verify_plain_hashes must be a bool")
+    if not isinstance(launch_stagger, bool):
+        raise TypeError("launch_stagger must be a bool")
     if read_ahead_bytes > 0 and _is_full_file_download(offset, limit, total_size):
         record_metric("media.download.read_ahead_disabled", 1)
         emit_event(
@@ -1064,6 +1076,7 @@ async def download_file(
             flood_sleep_threshold=flood_sleep_threshold,
             concurrency=concurrency,
             adaptive_concurrency=adaptive_concurrency,
+            launch_stagger=launch_stagger,
             max_in_flight_bytes=effective_max_in_flight_bytes,
             adaptive_part_size=adaptive_part_size,
             max_part_size=max_part_size,

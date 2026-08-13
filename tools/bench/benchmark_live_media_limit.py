@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import hashlib
 import html
+import importlib
 import json
 import math
 import os
@@ -38,6 +39,11 @@ from miniproto.crypto import native_available
 from miniproto.file_id import encode_file_id, media_from_file_id
 from miniproto.invoke import load_session_record
 from miniproto.media import DEFAULT_CHUNK_SIZE, MAX_DOWNLOAD_CHUNK_SIZE
+
+if __package__:
+    from tools.bench.reporting import LoopLagProbe
+else:
+    LoopLagProbe = importlib.import_module("reporting").LoopLagProbe
 
 TELEGRAM_DEFAULT_UPLOAD_PARTS = 4000
 TELEGRAM_DEFAULT_LIMIT_BYTES = TELEGRAM_DEFAULT_UPLOAD_PARTS * DEFAULT_CHUNK_SIZE
@@ -150,6 +156,8 @@ class BenchmarkSummary:
     download_concurrency: int
     download_media_lanes: int | None
     download_adaptive_concurrency: bool
+    download_launch_stagger: bool
+    download_destination: str
     download_max_in_flight_bytes: int | None
     download_adaptive_part_size: bool
     download_max_chunk_size: int
@@ -160,9 +168,11 @@ class BenchmarkSummary:
     download_flood_sleep_threshold: int | None
     event_loop_backend: str
     native_available: bool
+    warmup_count: int
     repeat_count: int
     results: tuple[TransferSummary, ...]
     memory: MemorySummary | None = None
+    loop_lag: dict[str, Any] | None = None
 
 
 @dataclass(slots=True)
@@ -311,6 +321,12 @@ def parse_args(argv: list[str] | None = None, env: Mapping[str, str] | None = No
         help="repeat each selected actor/profile this many times; useful because Telegram media throughput is noisy",
     )
     parser.add_argument(
+        "--warmup-repeat",
+        type=int,
+        default=int(env_value(values, "MINIPROTO_LIVE_BENCH_WARMUP_REPEAT", "0") or "0"),
+        help="unrecorded download-only warmups on the same client before measured repeats",
+    )
+    parser.add_argument(
         "--file-id",
         default=env_value(values, "MINIPROTO_LIVE_BENCH_FILE_ID"),
         help="miniproto benchmark file id printed by an earlier upload run; required for download-only unless an actor-specific file-id env var is set",
@@ -395,6 +411,19 @@ def parse_args(argv: list[str] | None = None, env: Mapping[str, str] | None = No
         dest="download_adaptive_concurrency",
         action="store_false",
         help="disable adaptive download request pacing for comparison runs",
+    )
+    launch_stagger_default = env_bool(values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_LAUNCH_STAGGER", default=True)
+    parser.add_argument(
+        "--download-launch-stagger",
+        action=argparse.BooleanOptionalAction,
+        default=launch_stagger_default,
+        help="stagger concurrent upload.getFile launches; disable only for controlled matrix comparisons",
+    )
+    parser.add_argument(
+        "--download-destination",
+        choices=("file", "memory"),
+        default=env_value(values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_DESTINATION", "file"),
+        help="materialize downloads to a file or memory; memory is intended only for bounded smoke cells",
     )
     parser.add_argument(
         "--request-timeout",
@@ -534,9 +563,19 @@ def parse_args(argv: list[str] | None = None, env: Mapping[str, str] | None = No
         default=env_value(values, "MINIPROTO_LIVE_BENCH_TRACE_MEMORY") == "1",
         help="enable tracemalloc while also reporting RSS and GC-object deltas",
     )
+    parser.add_argument(
+        "--loop-lag",
+        action=argparse.BooleanOptionalAction,
+        default=env_bool(values, "MINIPROTO_LIVE_BENCH_LOOP_LAG", default=False),
+        help="measure fixed-cadence event-loop delay during the benchmark; disabled by default",
+    )
     args = parser.parse_args(argv)
     if args.repeat < 1:
         parser.error("--repeat must be positive")
+    if args.warmup_repeat < 0:
+        parser.error("--warmup-repeat must not be negative")
+    if args.warmup_repeat and args.operation != "download":
+        parser.error("--warmup-repeat is supported only for download-only benchmarks")
     if args.download_max_chunk_size < args.download_chunk_size:
         parser.error("--download-max-chunk-size must be greater than or equal to --download-chunk-size")
     if args.download_max_in_flight_bytes is not None and args.download_max_in_flight_bytes < args.download_chunk_size:
@@ -549,6 +588,17 @@ def parse_args(argv: list[str] | None = None, env: Mapping[str, str] | None = No
 
 
 async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int:
+    probe = LoopLagProbe(interval_s=0.01, stall_threshold_s=0.005) if args.loop_lag else None
+    if probe is not None:
+        await probe.start()
+    try:
+        return await _run_benchmark(args, env, probe)
+    finally:
+        if probe is not None:
+            await probe.stop()
+
+
+async def _run_benchmark(args: argparse.Namespace, env: Mapping[str, str], probe: LoopLagProbe | None) -> int:
     limit_parts = upload_limit_parts_from_env_or_default(env, args.dc_id)
     size = parse_size(args.size, default_bytes=limit_parts * DEFAULT_CHUNK_SIZE)
     payload_file = resolved_benchmark_file(args, env)
@@ -582,6 +632,40 @@ async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int
         client = await authorized_client(actor, args, env)
         peer = benchmark_peer_for_actor(actor, env)
         try:
+            for warmup_index in range(1, args.warmup_repeat + 1):
+                print(f"{actor}: starting unrecorded warmup {warmup_index}/{args.warmup_repeat}")
+                await benchmark_actor(
+                    client,
+                    actor=actor,
+                    operation=args.operation,
+                    repeat_index=0,
+                    peer=peer,
+                    source=payload_file,
+                    benchmark_size=size,
+                    download_dir=args.download_dir,
+                    dc_id=args.dc_id,
+                    file_id=file_id_for_actor(args, env, actor),
+                    upload_concurrency=args.upload_concurrency,
+                    upload_media_lanes=args.upload_media_lanes,
+                    download_concurrency=args.download_concurrency,
+                    download_media_lanes=args.download_media_lanes,
+                    download_adaptive_concurrency=args.download_adaptive_concurrency,
+                    download_launch_stagger=args.download_launch_stagger,
+                    download_destination=args.download_destination,
+                    download_max_in_flight_bytes=args.download_max_in_flight_bytes,
+                    download_adaptive_part_size=args.download_adaptive_part_size,
+                    download_max_chunk_size=args.download_max_chunk_size,
+                    download_read_ahead_bytes=args.download_read_ahead_bytes,
+                    download_range_cache_bytes=args.download_range_cache_bytes,
+                    upload_request_timeout=upload_request_timeout,
+                    upload_part_retries=args.upload_part_retries,
+                    download_request_timeout=download_request_timeout,
+                    download_part_retries=args.download_part_retries,
+                    download_flood_sleep_threshold=args.download_flood_sleep_threshold,
+                    download_chunk_size=args.download_chunk_size,
+                    verify_digest=args.verify_digest,
+                    progress_interval_s=args.progress_interval,
+                )
             for repeat_index in range(1, args.repeat + 1):
                 if args.repeat > 1:
                     print(f"{actor}: starting repeat {repeat_index}/{args.repeat}")
@@ -602,6 +686,8 @@ async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int
                         download_concurrency=args.download_concurrency,
                         download_media_lanes=args.download_media_lanes,
                         download_adaptive_concurrency=args.download_adaptive_concurrency,
+                        download_launch_stagger=args.download_launch_stagger,
+                        download_destination=args.download_destination,
                         download_max_in_flight_bytes=args.download_max_in_flight_bytes,
                         download_adaptive_part_size=args.download_adaptive_part_size,
                         download_max_chunk_size=args.download_max_chunk_size,
@@ -620,6 +706,7 @@ async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int
         finally:
             await client.disconnect()
     memory = memory_summary(memory_monitor.finish())
+    loop_lag = await probe.stop() if probe is not None else {"enabled": False, "samples": 0}
     summary = BenchmarkSummary(
         generated_file=str(payload_file),
         generated_file_bytes=size,
@@ -634,6 +721,8 @@ async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int
         download_concurrency=args.download_concurrency,
         download_media_lanes=args.download_media_lanes,
         download_adaptive_concurrency=args.download_adaptive_concurrency,
+        download_launch_stagger=args.download_launch_stagger,
+        download_destination=args.download_destination,
         download_max_in_flight_bytes=args.download_max_in_flight_bytes,
         download_adaptive_part_size=args.download_adaptive_part_size,
         download_max_chunk_size=args.download_max_chunk_size,
@@ -644,9 +733,11 @@ async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int
         download_flood_sleep_threshold=args.download_flood_sleep_threshold,
         event_loop_backend=event_loop.backend_name(),
         native_available=native_available(),
+        warmup_count=args.warmup_repeat,
         repeat_count=args.repeat,
         results=tuple(results),
         memory=memory,
+        loop_lag=loop_lag,
     )
     print_summary(summary)
     if args.json is not None:
@@ -685,6 +776,8 @@ async def benchmark_actor(
     download_chunk_size: int,
     verify_digest: bool,
     progress_interval_s: float,
+    download_launch_stagger: bool = True,
+    download_destination: str = "file",
 ) -> tuple[TransferSummary, ...]:
     caption = f"miniproto live media limit bench {actor} r{repeat_index} {int(time.time())}"
     results: list[TransferSummary] = []
@@ -765,10 +858,11 @@ async def benchmark_actor(
 
     if media is None:
         raise RuntimeError(f"{actor} download has no media to download")
-    await asyncio.to_thread(download_dir.mkdir, parents=True, exist_ok=True)
     target_name = media.file_name or source.name
-    target = download_dir / f"{actor}-dc{dc_id}-{target_name}"
-    await asyncio.to_thread(target.unlink, missing_ok=True)
+    target = download_dir / f"{actor}-dc{dc_id}-{target_name}" if download_destination == "file" else None
+    if target is not None:
+        await asyncio.to_thread(download_dir.mkdir, parents=True, exist_ok=True)
+        await asyncio.to_thread(target.unlink, missing_ok=True)
     print(
         f"{actor}.download: starting media_dc={media.dc_id} target={target} "
         f"download_concurrency={download_concurrency} download_request_timeout={download_request_timeout:g}s "
@@ -802,6 +896,7 @@ async def benchmark_actor(
             concurrency=download_concurrency,
             media_lanes=download_media_lanes,
             adaptive_concurrency=download_adaptive_concurrency,
+            launch_stagger=download_launch_stagger,
             part_size=download_chunk_size,
             max_in_flight_bytes=download_max_in_flight_bytes,
             adaptive_part_size=download_adaptive_part_size,
@@ -820,7 +915,13 @@ async def benchmark_actor(
     if downloaded.bytes_downloaded != size:
         raise RuntimeError(f"{actor} download size mismatch: expected {size}, got {downloaded.bytes_downloaded}")
     if verify_digest:
-        source_digest, target_digest = await asyncio.gather(file_digest(source), file_digest(target))
+        if target is None:
+            if downloaded.data is None:
+                raise RuntimeError(f"{actor} in-memory download did not retain payload bytes")
+            source_digest = await file_digest(source)
+            target_digest = hashlib.blake2b(downloaded.data).hexdigest()
+        else:
+            source_digest, target_digest = await asyncio.gather(file_digest(source), file_digest(target))
         if source_digest != target_digest:
             raise RuntimeError(f"{actor} download digest mismatch: {source_digest} != {target_digest}")
     download = TransferSummary(
@@ -839,7 +940,7 @@ async def benchmark_actor(
         counters=download_counters,
         peer=peer,
         message_id=message_id,
-        path=str(target),
+        path=str(target) if target is not None else None,
         file_id=active_file_id,
     )
     print_transfer(download)
