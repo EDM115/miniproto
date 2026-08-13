@@ -31,7 +31,7 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Sync
-        run: uv sync --extra dev
+        run: uv sync --extra dev --frozen
 
       - name: Ruff format check
         run: uv run ruff format --check .
@@ -64,7 +64,7 @@ jobs:
         run: cargo fmt --check
 
       - name: Clippy
-        run: cargo clippy --all-targets --all-features -- -D warning
+        run: cargo clippy --all-targets --all-features -- -D warnings
  
       - name: Tests
         run: cargo test --all-features
@@ -88,7 +88,7 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Sync
-        run: uv sync --extra dev
+        run: uv sync --extra dev --frozen
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:

@@ -166,7 +166,7 @@ jobs:
         run: uv python install 3.14
 
       - name: Sync
-        run: uv sync --extra dev
+        run: uv sync --extra dev --frozen
 
       - name: Restore optional benchmark sessions
         shell: bash

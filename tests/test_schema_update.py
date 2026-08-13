@@ -249,7 +249,8 @@ def test_upstream_schema_workflow_is_scheduled_manual_and_uploads_report() -> No
     workflow = (ROOT / ".github/workflows/schema-upstream.yml").read_text(encoding="utf-8")
 
     assert "schedule:" in workflow
+    assert 'cron: "0 0 * * SUN"' in workflow
     assert "workflow_dispatch:" in workflow
     assert "python -m tools.schema.update --check-upstream --report" in workflow
-    assert "actions/upload-artifact@v4" in workflow
+    assert "actions/upload-artifact@v7" in workflow
     assert "if: always()" in workflow
