@@ -27,6 +27,7 @@ from miniproto import (
     UserIdentity,
     encode_file_id,
     event_loop,
+    iter_download,
 )
 from miniproto.errors import (
     BadRequest,
@@ -178,6 +179,26 @@ class RefreshingOffsetInvoker:
 
 
 @dataclass(slots=True)
+class PlainHashInvoker:
+    payload: bytes
+    hashes: tuple[types.FileHash, ...]
+    corrupt_offsets: set[int] = field(default_factory=set)
+    requests: list[Any] = field(default_factory=list)
+
+    async def __call__(self, request: object, **kwargs: object) -> object:
+        del kwargs
+        self.requests.append(request)
+        await asyncio.sleep(0)
+        if isinstance(request, functions.UploadGetFileHashes):
+            return self.hashes
+        assert isinstance(request, functions.UploadGetFile)
+        payload = self.payload[request.offset : request.offset + request.limit]
+        if request.offset in self.corrupt_offsets and payload:
+            payload = bytes([payload[0] ^ 0xFF]) + payload[1:]
+        return upload_file_part(payload)
+
+
+@dataclass(slots=True)
 class FakeSender:
     responses: list[object]
     requests: list[Any] = field(default_factory=list)
@@ -272,6 +293,417 @@ def test_download_file_returns_bytes_for_location() -> None:
         assert invoker.requests[0].location == document_location()
         assert invoker.requests[0].offset == 0
         assert invoker.requests[0].limit == 1024
+
+    run(scenario())
+
+
+def test_iter_download_streams_ordered_chunks_before_transfer_completion() -> None:
+    async def scenario() -> None:
+        invoker = DelayedMapOffsetInvoker(
+            responses={0: b"a" * 1024, 1024: b"b" * 1024, 2048: b"c" * 1024}, delays={0: 0.01, 1024: 1.0, 2048: 1.0}
+        )
+        iterator = media_download.iter_download(
+            invoker,
+            document_location(),
+            limit=3 * 1024,
+            total_size=3 * 1024,
+            part_size=1024,
+            concurrency=3,
+            adaptive_concurrency=False,
+            adaptive_part_size=False,
+        )
+        first = await asyncio.wait_for(anext(iterator), 0.5)
+        assert first == b"a" * 1024
+        assert {request.offset for request in invoker.requests} == {0, 1024, 2048}
+        await iterator.aclose()
+        assert invoker.cancelled_offsets == {1024, 2048}
+
+    run(scenario())
+
+
+def test_iter_download_reorders_concurrent_parts_and_matches_download_file() -> None:
+    async def scenario() -> None:
+        payload = b"a" * 1024 + b"b" * 1024 + b"c" * 1024
+        streaming = DelayedMapOffsetInvoker(
+            responses={0: payload[:1024], 1024: payload[1024:2048], 2048: payload[2048:]},
+            delays={0: 0.03, 1024: 0.0, 2048: 0.01},
+        )
+        chunks = [
+            chunk
+            async for chunk in media_download.iter_download(
+                streaming,
+                document_location(),
+                limit=len(payload),
+                total_size=len(payload),
+                part_size=1024,
+                concurrency=3,
+                adaptive_concurrency=False,
+                adaptive_part_size=False,
+            )
+        ]
+        materialized = await download_file(
+            OffsetInvoker(payload),
+            document_location(),
+            limit=len(payload),
+            total_size=len(payload),
+            part_size=1024,
+            concurrency=3,
+            adaptive_concurrency=False,
+            adaptive_part_size=False,
+        )
+        assert chunks == [payload[:1024], payload[1024:2048], payload[2048:]]
+        assert b"".join(chunks) == materialized.data
+
+    run(scenario())
+
+
+def test_iter_download_consumer_backpressure_bounds_prefetched_bytes() -> None:
+    async def scenario() -> None:
+        invoker = SlowOffsetInvoker(b"z" * (8 * 1024))
+        iterator = media_download.iter_download(
+            invoker,
+            document_location(),
+            limit=8 * 1024,
+            total_size=8 * 1024,
+            part_size=1024,
+            concurrency=8,
+            max_in_flight_bytes=2 * 1024,
+            adaptive_concurrency=False,
+            adaptive_part_size=False,
+        )
+        assert await anext(iterator) == b"z" * 1024
+        await asyncio.sleep(0.05)
+        assert len(invoker.requests) <= 2
+        await iterator.aclose()
+        assert invoker.active == 0
+
+    run(scenario())
+
+
+def test_read_ahead_marks_scheduler_requests_as_background_priority() -> None:
+    async def scenario() -> None:
+        cache = DownloadRangeCache(max_bytes=4096)
+        invoker = FakeInvoker([upload_file_part(b"a" * 1024), upload_file_part(b"b" * 1024)])
+        result = await download_file(
+            invoker,
+            document_location(),
+            offset=0,
+            limit=1024,
+            total_size=4096,
+            part_size=1024,
+            concurrency=1,
+            adaptive_part_size=False,
+            range_cache=cache,
+            range_cache_key="file",
+            read_ahead_bytes=1024,
+        )
+        assert result.data == b"a" * 1024
+        for _ in range(20):
+            if len(invoker.requests) == 2:
+                break
+            await asyncio.sleep(0.01)
+        assert len(invoker.requests) == 2
+        assert "_media_priority" not in invoker.kwargs[0]
+        assert invoker.kwargs[1]["_media_priority"] == "background"
+        await cache.clear()
+
+    run(scenario())
+
+
+def test_plain_integrity_disabled_sends_no_hash_requests() -> None:
+    async def scenario() -> None:
+        payload = b"a" * 1024
+        invoker = PlainHashInvoker(
+            payload=payload, hashes=(types.FileHash(offset=0, limit=1024, hash=hashlib.sha256(payload).digest()),)
+        )
+        result = await download_file(
+            invoker, document_location(), limit=len(payload), part_size=1024, concurrency=1, adaptive_part_size=False
+        )
+        assert result.data == payload
+        assert not any(isinstance(request, functions.UploadGetFileHashes) for request in invoker.requests)
+
+    run(scenario())
+
+
+def test_plain_integrity_verifies_exact_hash_intervals_before_output() -> None:
+    async def scenario() -> None:
+        payload = b"a" * 1024 + b"b" * 1024
+        hashes = tuple(
+            types.FileHash(offset=offset, limit=1024, hash=hashlib.sha256(payload[offset : offset + 1024]).digest())
+            for offset in (0, 1024)
+        )
+        invoker = PlainHashInvoker(payload=payload, hashes=hashes)
+        chunks = [
+            chunk
+            async for chunk in media_download.iter_download(
+                invoker,
+                document_location(),
+                limit=len(payload),
+                total_size=len(payload),
+                part_size=1024,
+                concurrency=2,
+                adaptive_concurrency=False,
+                adaptive_part_size=False,
+                verify_plain_hashes=True,
+            )
+        ]
+        assert chunks == [payload[:1024], payload[1024:]]
+        assert sum(isinstance(request, functions.UploadGetFileHashes) for request in invoker.requests) == 1
+
+    run(scenario())
+
+
+def test_plain_integrity_hashes_a_range_cache_miss_once() -> None:
+    async def scenario() -> None:
+        payload = b"a" * 1024
+        invoker = PlainHashInvoker(
+            payload=payload, hashes=(types.FileHash(offset=0, limit=1024, hash=hashlib.sha256(payload).digest()),)
+        )
+        cache = DownloadRangeCache(max_bytes=4096)
+        metrics = InMemoryMetrics()
+        previous = get_metrics_sink()
+        set_metrics_sink(metrics)
+        try:
+            result = await download_file(
+                invoker,
+                document_location(),
+                limit=len(payload),
+                part_size=1024,
+                concurrency=1,
+                adaptive_part_size=False,
+                range_cache=cache,
+                range_cache_key="doc:10",
+                verify_plain_hashes=True,
+            )
+        finally:
+            set_metrics_sink(previous)
+            await cache.clear()
+        assert result.data == payload
+        verified_bytes = sum(
+            event.value for event in metrics.events if event.name == "media.download.plain_hash_verified_bytes"
+        )
+        assert verified_bytes == len(payload)
+
+    run(scenario())
+
+
+def test_plain_integrity_rejects_interval_completion_after_location_refresh() -> None:
+    async def scenario() -> None:
+        old_payload = b"a" * 2048
+        new_payload = b"b" * 2048
+        old_location = document_location()
+        new_location = types.InputDocumentFileLocation(id=11, access_hash=21, file_reference=b"new-ref", thumb_size="")
+        interval_started = asyncio.Event()
+        release_interval = asyncio.Event()
+
+        @dataclass(slots=True)
+        class RefreshingHashInvoker:
+            async def __call__(self, request: object, **kwargs: object) -> object:
+                del kwargs
+                if isinstance(request, functions.UploadGetFileHashes):
+                    payload = old_payload if request.location.id == old_location.id else new_payload
+                    return (types.FileHash(offset=0, limit=2048, hash=hashlib.sha256(payload).digest()),)
+                assert isinstance(request, functions.UploadGetFile)
+                payload = old_payload if request.location.id == old_location.id else new_payload
+                if request.location.id == old_location.id:
+                    interval_started.set()
+                    await release_interval.wait()
+                return upload_file_part(payload[request.offset : request.offset + request.limit])
+
+        invoker = RefreshingHashInvoker()
+        deduper = media_download._FileReferenceRefreshDeduper()
+        location_state = media_download._DownloadLocationState(old_location)
+        verifier = media_download._PlainFileHashVerifier(
+            invoker,
+            location_state=location_state,
+            precise=False,
+            cdn_supported=False,
+            request_timeout=None,
+            max_retries=0,
+            flood_sleep_threshold=None,
+            reference_deduper=deduper,
+            file_reference_refresher=None,
+            max_cached_bytes=4096,
+        )
+        old_verification = asyncio.create_task(verifier.verify(old_location, offset=1024, payload=old_payload[1024:]))
+        await interval_started.wait()
+        await location_state.refresh(reference_deduper=deduper, refresher=lambda _location: new_location)
+        await verifier.verify(new_location, offset=0, payload=new_payload)
+        release_interval.set()
+        with pytest.raises(media_download.MediaIntegrityError, match="location changed"):
+            await old_verification
+
+    run(scenario())
+
+
+def test_plain_integrity_refreshes_an_expired_hash_request_location() -> None:
+    async def scenario() -> None:
+        payload = b"a" * 1024
+        old_location = document_location()
+        new_location = types.InputDocumentFileLocation(
+            id=old_location.id, access_hash=old_location.access_hash, file_reference=b"new-ref", thumb_size=""
+        )
+        refreshes: list[object] = []
+
+        @dataclass(slots=True)
+        class ExpiringHashInvoker:
+            requests: list[object] = field(default_factory=list)
+
+            async def __call__(self, request: object, **kwargs: object) -> object:
+                del kwargs
+                self.requests.append(request)
+                if isinstance(request, functions.UploadGetFileHashes):
+                    if request.location.file_reference == old_location.file_reference:
+                        raise BadRequest("FILE_REFERENCE_EXPIRED")
+                    return (types.FileHash(offset=0, limit=1024, hash=hashlib.sha256(payload).digest()),)
+                assert isinstance(request, functions.UploadGetFile)
+                return upload_file_part(payload[request.offset : request.offset + request.limit])
+
+        async def refresh(location: object) -> object:
+            refreshes.append(location)
+            return new_location
+
+        invoker = ExpiringHashInvoker()
+        result = await download_file(
+            invoker,
+            old_location,
+            limit=len(payload),
+            part_size=1024,
+            concurrency=1,
+            adaptive_part_size=False,
+            verify_plain_hashes=True,
+            file_reference_refresher=refresh,
+        )
+        assert result.data == payload
+        assert refreshes == [old_location]
+        hash_requests = [request for request in invoker.requests if isinstance(request, functions.UploadGetFileHashes)]
+        assert [request.location.file_reference for request in hash_requests] == [b"ref", b"new-ref"]
+
+    run(scenario())
+
+
+def test_plain_integrity_overfetches_full_cross_part_interval_and_trims_partial_range() -> None:
+    async def scenario() -> None:
+        payload = b"a" * 1024 + b"b" * 1024
+        invoker = PlainHashInvoker(
+            payload=payload,
+            hashes=(types.FileHash(offset=0, limit=len(payload), hash=hashlib.sha256(payload).digest()),),
+        )
+        result = await download_file(
+            invoker,
+            document_location(),
+            offset=1024,
+            limit=1024,
+            total_size=len(payload),
+            part_size=1024,
+            concurrency=1,
+            adaptive_part_size=False,
+            verify_plain_hashes=True,
+        )
+        assert result.data == payload[1024:]
+        data_requests = [request for request in invoker.requests if isinstance(request, functions.UploadGetFile)]
+        assert {(request.offset, request.limit) for request in data_requests} == {(1024, 1024), (0, 2048)}
+
+    run(scenario())
+
+
+def test_plain_integrity_corruption_raises_before_iterator_yields_or_destination_writes(tmp_path) -> None:
+    async def scenario() -> None:
+        payload = b"a" * 1024
+        invoker = PlainHashInvoker(
+            payload=payload,
+            hashes=(types.FileHash(offset=0, limit=1024, hash=hashlib.sha256(payload).digest()),),
+            corrupt_offsets={0},
+        )
+        iterator = media_download.iter_download(
+            invoker,
+            document_location(),
+            limit=1024,
+            part_size=1024,
+            concurrency=1,
+            adaptive_part_size=False,
+            verify_plain_hashes=True,
+        )
+        with pytest.raises(media_download.MediaIntegrityError, match="offset 0"):
+            await anext(iterator)
+        await iterator.aclose()
+
+        target = tmp_path / "corrupt.bin"
+        second = PlainHashInvoker(payload=payload, hashes=invoker.hashes, corrupt_offsets={0})
+        with pytest.raises(media_download.MediaIntegrityError):
+            await download_file(
+                second,
+                document_location(),
+                target,
+                limit=1024,
+                part_size=1024,
+                concurrency=1,
+                adaptive_part_size=False,
+                verify_plain_hashes=True,
+            )
+        assert not target.exists()
+
+    run(scenario())
+
+
+@pytest.mark.parametrize(
+    "hashes",
+    [
+        (types.FileHash(offset=0, limit=0, hash=b"x" * 32),),
+        (types.FileHash(offset=0, limit=1024, hash=b"x" * 32), types.FileHash(offset=512, limit=1024, hash=b"y" * 32)),
+        (types.FileHash(offset=0, limit=1024, hash=b"short"),),
+    ],
+)
+def test_plain_integrity_rejects_invalid_or_contradictory_hash_metadata(hashes: tuple[types.FileHash, ...]) -> None:
+    async def scenario() -> None:
+        invoker = PlainHashInvoker(payload=b"a" * 2048, hashes=hashes)
+        with pytest.raises(media_download.MediaIntegrityError):
+            await download_file(
+                invoker,
+                document_location(),
+                limit=1024,
+                part_size=1024,
+                concurrency=1,
+                adaptive_part_size=False,
+                verify_plain_hashes=True,
+            )
+
+    run(scenario())
+
+
+def test_root_and_client_iter_download_stream_the_same_public_media_shape() -> None:
+    async def scenario() -> None:
+        payload = b"a" * 1024 + b"b" * 1024
+        root_chunks = [
+            chunk
+            async for chunk in iter_download(
+                OffsetInvoker(payload),
+                document_location(),
+                limit=len(payload),
+                total_size=len(payload),
+                part_size=1024,
+                concurrency=2,
+                adaptive_concurrency=False,
+                adaptive_part_size=False,
+            )
+        ]
+        sender = FakeSender([upload_file_part(payload[:1024]), upload_file_part(payload[1024:])])
+        client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage_with_auth()))
+        client._sender = sender
+        await client.connect()
+        client_chunks = [
+            chunk
+            async for chunk in client.iter_download(
+                Media(id=10, size=len(payload), location=document_location()),
+                part_size=1024,
+                concurrency=2,
+                adaptive_concurrency=False,
+                adaptive_part_size=False,
+                media_lanes=0,
+            )
+        ]
+        assert root_chunks == client_chunks == [payload[:1024], payload[1024:]]
+        await client.disconnect()
 
     run(scenario())
 
@@ -896,46 +1328,6 @@ def test_download_file_concurrent_cleans_new_path_when_preallocation_fails(tmp_p
         assert not target.exists()
 
     run(scenario())
-
-
-def test_interval_coverage_accepts_exact_target() -> None:
-    coverage = media_download._IntervalCoverage(1024, 2048)
-    assert coverage.add(1024, 2048) == 1024
-    assert coverage.covered_bytes == 1024
-    assert coverage.complete
-
-
-def test_interval_coverage_merges_out_of_order_adjacency() -> None:
-    coverage = media_download._IntervalCoverage(0, 3072)
-    assert coverage.add(2048, 3072) == 1024
-    assert coverage.add(0, 1024) == 1024
-    assert not coverage.complete
-    assert coverage.add(1024, 2048) == 1024
-    assert coverage.complete
-
-
-def test_interval_coverage_overlap_and_duplicate_do_not_inflate_coverage() -> None:
-    coverage = media_download._IntervalCoverage(0, 3072)
-    assert coverage.add(0, 2048) == 2048
-    assert coverage.add(1024, 3072) == 1024
-    assert coverage.add(0, 3072) == 0
-    assert coverage.covered_bytes == 3072
-    assert coverage.complete
-
-
-def test_interval_coverage_detects_gap() -> None:
-    coverage = media_download._IntervalCoverage(0, 3072)
-    coverage.add(0, 1024)
-    coverage.add(2048, 3072)
-    assert coverage.covered_bytes == 2048
-    assert coverage.contiguous_end == 1024
-    assert not coverage.complete
-
-
-def test_interval_coverage_rejects_overrun() -> None:
-    coverage = media_download._IntervalCoverage(1024, 2048)
-    with pytest.raises(ValueError, match="outside target"):
-        coverage.add(1024, 3072)
 
 
 def test_download_file_concurrent_respects_byte_window(tmp_path) -> None:

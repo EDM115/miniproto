@@ -43,7 +43,7 @@ Current-status note (2026-07-08): the live P0/P1 follow-up in `plans/2026-07-06-
 ### P1 - Media Throughput
 
 - Extend warm media pools to true foreign media DCs with exported/imported authorization and per-media-location DC selection. The current pool key is active session DC/kind/lane-count, which prevents stale active-DC reuse but still relies on Telegram migration handling for media stored elsewhere.
-- Promote the per-transfer byte window into a shared byte-weighted per-DC scheduler. Web K/tweb tracks active download "delta" by bytes (`bytes / 64 KiB`) and schedules queued downloads by DC/queue/priority; `miniproto` now has the per-transfer byte cap, but not yet a shared scheduler across simultaneous transfers.
+- Done 2026-08-13: promoted the per-transfer byte window into a client-owned shared byte-weighted scheduler keyed by target DC and direction. Acquisitions use 64 KiB charges, cancellation-safe deficit fairness, foreground/background priority with bounded anti-starvation, independent per-transfer and per-DC limits, Telegram small/large operation classes, migration rebinding, and idle cleanup; deterministic and fake-server tests prove cap, fairness, cancellation, and DC/direction isolation.
 - Tune adaptive download part sizing against live benchmarks. The current heuristic probes up to 1 MiB and settles on regression; it still needs enough DC/network data to pick better growth thresholds, sample counts, and default byte windows.
 - Benchmark a matrix: upload 512 KiB parts with 1/2/4 media senders and 1/4 in-flight requests per sender; download 512 KiB vs 1 MiB chunks with 1/2/4 media senders; with and without sender prewarm.
 - Extend the matrix with byte-window caps: 4/8/16/32 MiB in-flight for downloads, 512 KiB vs 1 MiB chunks, one request per lane vs multiple requests per lane, warm lanes vs cold lanes, and destination modes (`bytes`, file path, existing file object).
@@ -52,9 +52,7 @@ Current-status note (2026-07-08): the live P0/P1 follow-up in `plans/2026-07-06-
 
 ### P1 - Flood Wait Policy
 
-- Add method-level flood-wait cache and short-circuiting. Telethon and mtcute cache waits per method/request class; `miniproto` should keep the default explicit, but if a method is known to be waiting it can fail or sleep before sending a doomed request.
-- Do not cache `SLOWMODE_WAIT` as a method-wide state. Mtcute specifically treats noisy waits differently; slowmode belongs to a peer/context, not a generic method.
-- Record flood-wait policy decisions with method, wait seconds, threshold, action, slept-so-far, and retry attempt. Grammers’ retry-context shape is the cleanest model for this.
+- Done 2026-08-13: one bounded monotonic method-level cache pre-delays or fails fast before sender acquisition for `FLOOD_WAIT_X` and `FLOOD_PREMIUM_WAIT_X`, keeps the longer active deadline, expires lazily under an LRU cap, and never shares `SLOWMODE_WAIT_X` method-wide. Structured metrics contain only method/policy timing metadata and no request arguments.
 
 ### P1 - Peer Cache
 
@@ -72,14 +70,14 @@ Current-status note (2026-07-08): the live P0/P1 follow-up in `plans/2026-07-06-
 ### P2 - Session And Auth Ergonomics
 
 - Keep encrypted SQLite as the default. All four references are useful structurally, but their common plain SQLite/session-string posture is weaker than `miniproto`’s intended default.
-- If string-session export/import is added, treat it as an explicit secret-export operation with redaction, warnings, and docs.
+- Done 2026-08-13: explicit string-session export/import now supports the native authenticated `mp1:` format plus pinned Telethon v1 and Pyrogram compatibility, with redacted bearer-secret wrappers, strict canonical parsing, optional Scrypt/AES-GCM protection, mismatch controls, and independently generated golden fixtures.
 - Add auth export/import metrics for media DC pools: source DC, target DC, success/failure, and cache reuse.
 
 ### P2 - Observability
 
 - Add connection-level metrics: pending RPCs, queued RPCs, reconnect cause, read timeout, ping timeout, DC recreation, auth export/import, per-pool load, and in-flight bytes.
 - Keep structured redacted logging. Do not copy verbose raw TL/bytes logging behavior from mtcute or Pyroblack.
-- Add benchmark JSON fields for adaptive throttle reductions/increases once the metric sink can expose attribute-grouped counters cleanly. Media-lane build/drop/close counters are already emitted in the live media benchmark summary.
+- Partial 2026-08-13: the deterministic shared-media-scheduler benchmark now emits aggregate/per-transfer scheduling throughput, peak/configured bytes, queue waits, grant fairness, cancellation cleanup, and DC/direction isolation. The broader automated live matrix, loop-lag probe, tglib-compatible mode, and Windows run remain tracked in the v0.1.0 completion plan.
 
 ## Boundary Notes
 

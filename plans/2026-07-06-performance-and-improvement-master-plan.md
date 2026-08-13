@@ -222,7 +222,7 @@ Do these after Section 1; most depend on stable connections. The theory of the f
 - Fix: read-ahead must draw from the SAME byte-window/concurrency budget as the main loop (single scheduler, prefetch = low-priority queue entries), and full-file sequential/concurrent downloads should force-disable prefetch (docs already say range cache is for streaming/repeated ranges — enforce it: if `limit == total_size` and no seeks, ignore `read_ahead_bytes` with a warning metric). Cap `_background` set size; cancel prefetches on transfer completion (they currently outlive the download call).
 - Files: `src/miniproto/media/download.py`.
 - Acceptance: read-ahead run on the live bench is no slower than baseline for full-file downloads; streaming test (random 1 MiB ranges) shows cache hits > misses; RSS delta < 32 MiB.
-- Done 2026-07-07 (quarantine per user decision 6a; feature stays available for streaming): full-file downloads (limit unset or covering EOF) force-disable `read_ahead_bytes` with a WARNING event + `media.download.read_ahead_disabled` metric, so the pathological prefetch-vs-scheduler race cannot happen; background prefetches are capped at 32 concurrent tasks (`range_cache_prefetch_skipped`); prefetch requests now go through the same legal-size computation as the main loop and skip unaligned starts; range reads keep read-ahead working past the current call's end (capped by total_size) since priming the NEXT range is the feature's purpose.
+- Done 2026-07-07 (quarantine per user decision 6a; feature stays available for streaming): full-file downloads (limit unset or covering EOF) force-disable `read_ahead_bytes` with a WARNING event + `media.download.read_ahead_disabled` metric, so the pathological prefetch-vs-scheduler race cannot happen; background prefetches are capped at 32 concurrent tasks (`range_cache_prefetch_skipped`); prefetch requests now go through the same legal-size computation as the main loop and skip unaligned starts; range reads keep read-ahead working past the current call's end (capped by total_size) since priming the NEXT range is the feature's purpose. Done 2026-08-13: read-ahead RPCs additionally use background-priority permits from the client-wide per-DC scheduler, so they share real network byte accounting with every simultaneous foreground transfer while retaining the full-file quarantine.
 
 ### TASK-P1-9: TCP socket options + transport tuning
 
@@ -369,6 +369,8 @@ Done 2026-07-09: implemented the selected P2 protocol-completeness slice. Fresh 
 9. `iter_download()` streaming API (async iterator of chunks) — natural byproduct of the download refactor; Web K notes and mpgram will want it.
 10. `upload.getFileHashes` verification for plain (non-CDN) downloads as an opt-in integrity mode (Telethon parity).
 
+Done 2026-08-13 for items 7 through 10: the bounded method flood cache and native/Telethon/Pyrogram session strings landed in Wave 1; Wave 2 replaced both download algorithms with one ordered bounded iterator consumed by `iter_download()`, `download_file()`, and `download_media()`, and added default-off plain hash verification with full-interval assembly, location-aware caches, typed pre-output failures, and fake-server corruption acceptance.
+
 ---
 
 ## 7. P3 — Benchmark & Tooling Improvements
@@ -378,6 +380,8 @@ Done 2026-07-09: implemented the selected P2 protocol-completeness slice. Fresh 
 3. Matrix runner: script the A/B matrix from the reference notes (lanes 1/2/4 x window 4/8/16 MiB x chunk 512K/1M x stagger on/off, repeat>=3) with a single command emitting a markdown table; current process is manual env-var juggling.
 4. Loop-lag probe option (`MINIPROTO_LIVE_BENCH_LOOP_LAG=1`): sample event-loop scheduling latency during transfers to catch GIL/blocking regressions (validates TASK-RUST-1, TASK-P1-10).
 5. Windows run of the same bench (winloop) to catch Proactor-specific issues (NODELAY, to_thread costs).
+
+Partial 2026-08-13: `tools/bench/benchmark_media_scheduler.py` adds the deterministic simultaneous-transfer slice with versioned JSON for aggregate/per-transfer scheduler throughput, wait time, fairness, peak byte accounting, queued cancellation, and DC/direction isolation. Items 1 through 5 remain open for the broader release benchmark matrix except for that scheduler-specific evidence.
 
 ---
 

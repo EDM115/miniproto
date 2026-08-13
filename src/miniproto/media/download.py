@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import inspect
 import io
 import logging
@@ -8,7 +9,7 @@ import os
 import random
 import time
 from collections import OrderedDict, deque
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
@@ -28,6 +29,14 @@ type Destination = str | os.PathLike[str] | BinaryIO | None
 
 class MediaDownloadError(RuntimeError):
     pass
+
+
+class MediaIntegrityError(MediaDownloadError):
+    def __init__(self, reason: str, *, offset: int, limit: int) -> None:
+        self.offset = offset
+        self.limit = limit
+        self.reason = reason
+        super().__init__(f"media integrity {reason} at offset {offset} for {limit} bytes")
 
 
 type RawInvoker = Callable[..., Awaitable[object]]
@@ -102,62 +111,6 @@ class _WriteRequest:
     acknowledgement: asyncio.Future[None]
 
 
-class _IntervalCoverage:
-    def __init__(self, target_start: int, target_end: int) -> None:
-        if target_start < 0 or target_end < target_start:
-            raise ValueError("invalid coverage target")
-        self.target_start = target_start
-        self.target_end = target_end
-        self._intervals: list[tuple[int, int]] = []
-        self._covered_bytes = 0
-
-    @property
-    def covered_bytes(self) -> int:
-        return self._covered_bytes
-
-    @property
-    def contiguous_end(self) -> int:
-        if not self._intervals or self._intervals[0][0] != self.target_start:
-            return self.target_start
-        return self._intervals[0][1]
-
-    @property
-    def complete(self) -> bool:
-        if self.target_start == self.target_end:
-            return True
-        return self._intervals == [(self.target_start, self.target_end)]
-
-    def add(self, start: int, end: int) -> int:
-        if start < self.target_start or end > self.target_end or end < start:
-            raise ValueError(
-                f"coverage interval [{start}, {end}) is outside target [{self.target_start}, {self.target_end})"
-            )
-        if start == end:
-            return 0
-        previous_covered = self._covered_bytes
-        merged_start = start
-        merged_end = end
-        merged: list[tuple[int, int]] = []
-        inserted = False
-        for interval_start, interval_end in self._intervals:
-            if interval_end < merged_start:
-                merged.append((interval_start, interval_end))
-                continue
-            if merged_end < interval_start:
-                if not inserted:
-                    merged.append((merged_start, merged_end))
-                    inserted = True
-                merged.append((interval_start, interval_end))
-                continue
-            merged_start = min(merged_start, interval_start)
-            merged_end = max(merged_end, interval_end)
-        if not inserted:
-            merged.append((merged_start, merged_end))
-        self._intervals = merged
-        self._covered_bytes = sum(interval_end - interval_start for interval_start, interval_end in merged)
-        return self._covered_bytes - previous_covered
-
-
 def _validate_concurrent_payload(request_offset: int, payload: bytes, *, expect_limit: int, target_end: int) -> bytes:
     if request_offset < 0 or expect_limit < 0 or request_offset + expect_limit > target_end:
         raise ValueError("concurrent download range is outside the target interval")
@@ -170,15 +123,6 @@ def _validate_concurrent_payload(request_offset: int, payload: bytes, *, expect_
             f"{expect_limit} bytes but received {received}"
         )
     return payload
-
-
-def _require_complete_coverage(coverage: _IntervalCoverage, kind: str) -> None:
-    if coverage.complete:
-        return
-    raise MediaDownloadError(
-        f"incomplete {kind} coverage for [{coverage.target_start}, {coverage.target_end}); "
-        f"covered {coverage.covered_bytes} bytes contiguously through {coverage.contiguous_end}"
-    )
 
 
 class DownloadRangeCache:
@@ -272,6 +216,231 @@ class DownloadRangeCache:
             task.cancel()
         if pending or background:
             await asyncio.gather(*pending, *background, return_exceptions=True)
+
+
+class _PlainFileHashVerifier:
+    _MAX_HASH_REQUESTS = 32
+    _MAX_HASH_INTERVAL = MAX_DOWNLOAD_CHUNK_SIZE
+
+    def __init__(
+        self,
+        invoke: RawInvoker,
+        *,
+        location_state: _DownloadLocationState,
+        precise: bool,
+        cdn_supported: bool,
+        request_timeout: float | None,
+        max_retries: int,
+        flood_sleep_threshold: int | None,
+        reference_deduper: _FileReferenceRefreshDeduper,
+        file_reference_refresher: FileReferenceRefresher | None,
+        max_cached_bytes: int,
+    ) -> None:
+        self._invoke = invoke
+        self._location_state = location_state
+        self._precise = precise
+        self._cdn_supported = cdn_supported
+        self._request_timeout = request_timeout
+        self._max_retries = max_retries
+        self._flood_sleep_threshold = flood_sleep_threshold
+        self._reference_deduper = reference_deduper
+        self._file_reference_refresher = file_reference_refresher
+        self._max_cached_bytes = max(MAX_DOWNLOAD_CHUNK_SIZE, max_cached_bytes)
+        self._identity: tuple[object, ...] | None = None
+        self._hashes: dict[tuple[int, int], bytes] = {}
+        self._validated: OrderedDict[tuple[tuple[object, ...], int, int, bytes], bytes] = OrderedDict()
+        self._validated_bytes = 0
+        self._validation_tasks: dict[tuple[tuple[object, ...], int, int, bytes], asyncio.Task[bytes]] = {}
+        self._metadata_lock = asyncio.Lock()
+
+    async def verify(self, location: object, *, offset: int, payload: bytes) -> None:
+        if not payload:
+            return
+        identity = _plain_location_identity(location)
+        await self._ensure_identity(identity)
+        end = offset + len(payload)
+        intervals = await self._ensure_hash_coverage(location, offset, end)
+        self._assert_identity(identity, offset=offset, limit=len(payload))
+        for hash_offset, hash_limit, expected_hash in intervals:
+            hash_end = hash_offset + hash_limit
+            if hash_offset == offset and hash_limit == len(payload):
+                verified = self._verify_digest(payload, expected_hash, offset=hash_offset, limit=hash_limit)
+                self._assert_identity(identity, offset=hash_offset, limit=hash_limit)
+                self._remember_validated((identity, hash_offset, hash_limit, expected_hash), verified)
+            else:
+                verified = await self._validated_interval(identity, hash_offset, hash_limit, expected_hash)
+            self._assert_identity(identity, offset=hash_offset, limit=hash_limit)
+            overlap_start = max(offset, hash_offset)
+            overlap_end = min(end, hash_end)
+            actual_slice = payload[overlap_start - offset : overlap_end - offset]
+            verified_slice = verified[overlap_start - hash_offset : overlap_end - hash_offset]
+            if actual_slice != verified_slice:
+                raise MediaIntegrityError("mismatch", offset=overlap_start, limit=overlap_end - overlap_start)
+
+    async def _ensure_identity(self, identity: tuple[object, ...]) -> None:
+        async with self._metadata_lock:
+            if self._identity == identity:
+                return
+            self._identity = identity
+            self._hashes.clear()
+            self._validated.clear()
+            self._validated_bytes = 0
+            self._validation_tasks.clear()
+            record_metric("media.download.plain_hash_cache_invalidations", 1)
+
+    def _assert_identity(self, identity: tuple[object, ...], *, offset: int, limit: int) -> None:
+        if self._identity != identity or _plain_location_identity(self._location_state.current) != identity:
+            raise MediaIntegrityError("location changed during verification", offset=offset, limit=limit)
+
+    async def _ensure_hash_coverage(self, location: object, start: int, end: int) -> tuple[tuple[int, int, bytes], ...]:
+        async with self._metadata_lock:
+            for _attempt in range(self._MAX_HASH_REQUESTS):
+                covered = self._covering_intervals(start, end)
+                if covered is not None:
+                    return covered
+                cursor = self._first_uncovered_offset(start, end)
+                request = functions.UploadGetFileHashes(location=location, offset=cursor)
+                record_metric("media.download.plain_hash_requests", 1)
+                result = await self._invoke(
+                    request, request_timeout=self._request_timeout, retry=False, flood_sleep_threshold=0
+                )
+                if not isinstance(result, tuple | list) or not result:
+                    raise MediaIntegrityError("hash coverage gap", offset=cursor, limit=end - cursor)
+                before = len(self._hashes)
+                for item in result:
+                    self._remember_hash(item)
+                if len(self._hashes) == before:
+                    raise MediaIntegrityError("hash response loop", offset=cursor, limit=end - cursor)
+            cursor = self._first_uncovered_offset(start, end)
+            raise MediaIntegrityError("hash response limit exceeded", offset=cursor, limit=end - cursor)
+
+    def _remember_hash(self, item: object) -> None:
+        if not isinstance(item, types.FileHash):
+            raise MediaIntegrityError("invalid hash metadata", offset=0, limit=0)
+        offset = int(item.offset)
+        limit = int(item.limit)
+        digest = bytes(item.hash)
+        if offset < 0 or limit <= 0 or limit > self._MAX_HASH_INTERVAL or len(digest) != hashlib.sha256().digest_size:
+            raise MediaIntegrityError("invalid hash metadata", offset=max(0, offset), limit=max(0, limit))
+        key = (offset, limit)
+        existing = self._hashes.get(key)
+        if existing is not None:
+            if existing != digest:
+                raise MediaIntegrityError("contradictory hash metadata", offset=offset, limit=limit)
+            return
+        end = offset + limit
+        for (known_offset, known_limit), _known_hash in self._hashes.items():
+            known_end = known_offset + known_limit
+            if offset < known_end and known_offset < end:
+                raise MediaIntegrityError(
+                    "contradictory overlapping hash metadata",
+                    offset=max(offset, known_offset),
+                    limit=min(end, known_end) - max(offset, known_offset),
+                )
+        self._hashes[key] = digest
+
+    def _covering_intervals(self, start: int, end: int) -> tuple[tuple[int, int, bytes], ...] | None:
+        cursor = start
+        result: list[tuple[int, int, bytes]] = []
+        for (offset, limit), digest in sorted(self._hashes.items()):
+            interval_end = offset + limit
+            if interval_end <= cursor:
+                continue
+            if offset > cursor:
+                return None
+            result.append((offset, limit, digest))
+            cursor = interval_end
+            if cursor >= end:
+                return tuple(result)
+        return None
+
+    def _first_uncovered_offset(self, start: int, end: int) -> int:
+        cursor = start
+        for (offset, limit), _digest in sorted(self._hashes.items()):
+            interval_end = offset + limit
+            if interval_end <= cursor:
+                continue
+            if offset > cursor:
+                break
+            cursor = interval_end
+            if cursor >= end:
+                break
+        return min(cursor, end)
+
+    async def _validated_interval(
+        self, identity: tuple[object, ...], offset: int, limit: int, expected_hash: bytes
+    ) -> bytes:
+        key = (identity, offset, limit, expected_hash)
+        cached = self._validated.get(key)
+        if cached is not None:
+            self._validated.move_to_end(key)
+            return cached
+        task = self._validation_tasks.get(key)
+        if task is None:
+            task = asyncio.create_task(self._fetch_and_verify_interval(identity, offset, limit, expected_hash))
+            self._validation_tasks[key] = task
+        try:
+            payload = await task
+        finally:
+            if self._validation_tasks.get(key) is task:
+                self._validation_tasks.pop(key, None)
+        self._assert_identity(identity, offset=offset, limit=limit)
+        self._remember_validated(key, payload)
+        return payload
+
+    async def _fetch_and_verify_interval(
+        self, identity: tuple[object, ...], offset: int, limit: int, expected_hash: bytes
+    ) -> bytes:
+        cursor = offset
+        remaining = limit
+        chunks: list[bytes] = []
+        while remaining > 0:
+            self._assert_identity(identity, offset=cursor, limit=remaining)
+            target = min(remaining, MAX_DOWNLOAD_CHUNK_SIZE)
+            wire_limit = _legal_request_limit(cursor, target, precise=self._precise)
+            if wire_limit is None:
+                wire_limit = _PRECISE_ALIGNMENT if self._precise else _ALIGNMENT
+            payload = await _download_part_with_reference_refresh(
+                self._invoke,
+                location_state=self._location_state,
+                offset=cursor,
+                limit=wire_limit,
+                precise=self._precise,
+                cdn_supported=self._cdn_supported,
+                request_timeout=self._request_timeout,
+                max_retries=self._max_retries,
+                flood_sleep_threshold=self._flood_sleep_threshold,
+                retry_observer=None,
+                reference_deduper=self._reference_deduper,
+                file_reference_refresher=self._file_reference_refresher,
+                plain_verifier=None,
+            )
+            self._assert_identity(identity, offset=cursor, limit=remaining)
+            if not payload:
+                raise MediaIntegrityError("hash interval coverage gap", offset=cursor, limit=remaining)
+            take = min(remaining, len(payload))
+            chunks.append(payload[:take])
+            cursor += take
+            remaining -= take
+        return self._verify_digest(b"".join(chunks), expected_hash, offset=offset, limit=limit)
+
+    @staticmethod
+    def _verify_digest(payload: bytes, expected_hash: bytes, *, offset: int, limit: int) -> bytes:
+        if hashlib.sha256(payload).digest() != expected_hash:
+            record_metric("media.download.plain_hash_mismatches", 1)
+            raise MediaIntegrityError("hash mismatch", offset=offset, limit=limit)
+        record_metric("media.download.plain_hash_verified_bytes", limit, unit="bytes")
+        return payload
+
+    def _remember_validated(self, key: tuple[tuple[object, ...], int, int, bytes], payload: bytes) -> None:
+        previous = self._validated.pop(key, None)
+        if previous is not None:
+            self._validated_bytes -= len(previous)
+        self._validated[key] = payload
+        self._validated_bytes += len(payload)
+        while self._validated_bytes > self._max_cached_bytes and self._validated:
+            _old_key, old_payload = self._validated.popitem(last=False)
+            self._validated_bytes -= len(old_payload)
 
 
 _DEFAULT_RANGE_CACHE: DownloadRangeCache | None = None
@@ -500,6 +669,289 @@ class _ProgressReporter:
         await _call_progress(self._progress, current, self._total)
 
 
+async def iter_download(
+    invoke: RawInvoker,
+    location: object,
+    *,
+    offset: int = 0,
+    limit: int | None = None,
+    part_size: int = DEFAULT_DOWNLOAD_PART_SIZE,
+    progress: ProgressCallback | None = None,
+    precise: bool = False,
+    cdn_supported: bool = True,
+    total_size: int | None = None,
+    request_timeout: float | None = None,
+    max_retries: int = 2,
+    flood_sleep_threshold: int | None = 30,
+    max_buffer_size: int | None = None,
+    concurrency: int = DEFAULT_DOWNLOAD_CONCURRENCY,
+    adaptive_concurrency: bool = True,
+    max_in_flight_bytes: int | None = None,
+    adaptive_part_size: bool = True,
+    max_part_size: int = MAX_DOWNLOAD_CHUNK_SIZE,
+    range_cache: DownloadRangeCache | bool | None = None,
+    range_cache_key: str | None = None,
+    range_cache_max_bytes: int = DEFAULT_RANGE_CACHE_BYTES,
+    read_ahead_bytes: int = 0,
+    verify_plain_hashes: bool = False,
+    file_reference_refresher: FileReferenceRefresher | None = None,
+) -> AsyncGenerator[bytes]:
+    """Yield an exact download range as ordered, bounded byte chunks."""
+
+    _validate_download_options(
+        offset,
+        limit,
+        part_size,
+        max_retries,
+        flood_sleep_threshold,
+        max_buffer_size,
+        concurrency,
+        max_in_flight_bytes,
+        adaptive_part_size,
+        max_part_size,
+        range_cache_max_bytes,
+        read_ahead_bytes,
+        precise,
+    )
+    if not isinstance(verify_plain_hashes, bool):
+        raise TypeError("verify_plain_hashes must be a bool")
+    if limit is None and total_size is not None:
+        limit = max(0, total_size - offset)
+    if read_ahead_bytes > 0 and _is_full_file_download(offset, limit, total_size):
+        record_metric("media.download.read_ahead_disabled", 1)
+        read_ahead_bytes = 0
+    resolved_range_cache = _resolve_range_cache(
+        range_cache, max_bytes=range_cache_max_bytes, read_ahead_bytes=read_ahead_bytes
+    )
+    effective_max_in_flight_bytes = max_in_flight_bytes if max_in_flight_bytes is not None else max_buffer_size
+    location_state = _DownloadLocationState(location)
+    reference_deduper = _FileReferenceRefreshDeduper()
+    parts = _iter_download_parts(
+        invoke,
+        location_state=location_state,
+        offset=offset,
+        limit=limit,
+        part_size=part_size,
+        progress=progress,
+        precise=precise,
+        cdn_supported=cdn_supported,
+        total_size=total_size,
+        request_timeout=request_timeout,
+        max_retries=max_retries,
+        flood_sleep_threshold=flood_sleep_threshold,
+        concurrency=concurrency,
+        adaptive_concurrency=adaptive_concurrency,
+        max_in_flight_bytes=effective_max_in_flight_bytes,
+        adaptive_part_size=adaptive_part_size,
+        max_part_size=max_part_size,
+        range_cache=resolved_range_cache,
+        range_cache_key=range_cache_key,
+        read_ahead_bytes=read_ahead_bytes,
+        verify_plain_hashes=verify_plain_hashes,
+        reference_deduper=reference_deduper,
+        file_reference_refresher=file_reference_refresher,
+    )
+    try:
+        async for payload in parts:
+            yield payload
+    finally:
+        await parts.aclose()
+
+
+async def _iter_download_parts(
+    invoke: RawInvoker,
+    *,
+    location_state: _DownloadLocationState,
+    offset: int,
+    limit: int | None,
+    part_size: int,
+    progress: ProgressCallback | None,
+    precise: bool,
+    cdn_supported: bool,
+    total_size: int | None,
+    request_timeout: float | None,
+    max_retries: int,
+    flood_sleep_threshold: int | None,
+    concurrency: int,
+    adaptive_concurrency: bool,
+    max_in_flight_bytes: int | None,
+    adaptive_part_size: bool,
+    max_part_size: int,
+    range_cache: DownloadRangeCache | None,
+    range_cache_key: str | None,
+    read_ahead_bytes: int,
+    verify_plain_hashes: bool,
+    reference_deduper: _FileReferenceRefreshDeduper,
+    file_reference_refresher: FileReferenceRefresher | None,
+) -> AsyncGenerator[bytes]:
+    end_offset = None if limit is None else offset + limit
+    next_request_offset = offset
+    next_yield_offset = offset
+    effective_precise = _resolve_precise_mode(offset, precise, part_size)
+    effective_concurrency = concurrency if end_offset is not None else 1
+    byte_window = max_in_flight_bytes or max(DEFAULT_DOWNLOAD_IN_FLIGHT_BYTES, part_size * effective_concurrency)
+    window = _TransferWindow(byte_window)
+    pending: set[asyncio.Task[tuple[int, bytes, int, int, bool]]] = set()
+    charges: dict[int, int] = {}
+    ready: dict[int, tuple[bytes, int, bool]] = {}
+    reporter = _ProgressReporter(progress, limit if limit is not None else total_size)
+    launch_pacer = _DownloadLaunchPacer(concurrency=effective_concurrency) if effective_concurrency > 1 else None
+    throttle = (
+        _AdaptiveDownloadThrottle(effective_concurrency) if adaptive_concurrency and effective_concurrency > 1 else None
+    )
+    part_sizer = _AdaptivePartSizer(
+        initial_size=part_size,
+        max_size=max_part_size,
+        total_bytes=limit if limit is not None else total_size,
+        enabled=adaptive_part_size,
+    )
+    plain_verifier = (
+        _PlainFileHashVerifier(
+            invoke,
+            location_state=location_state,
+            precise=effective_precise,
+            cdn_supported=cdn_supported,
+            request_timeout=request_timeout,
+            max_retries=max_retries,
+            flood_sleep_threshold=flood_sleep_threshold,
+            reference_deduper=reference_deduper,
+            file_reference_refresher=file_reference_refresher,
+            max_cached_bytes=byte_window,
+        )
+        if verify_plain_hashes
+        else None
+    )
+    downloaded = 0
+    exhausted = False
+
+    async def on_part_retry(exc: Exception, attempt: int) -> None:
+        if throttle is not None:
+            await throttle.on_retry(exc, attempt)
+            if launch_pacer is not None and throttle.limit <= 1:
+                launch_pacer.reset()
+        if launch_pacer is not None and isinstance(exc, FloodWait) and (throttle is None or throttle.limit > 1):
+            launch_pacer.on_flood(exc)
+
+    async def fetch(request_offset: int, wire_limit: int, expect_limit: int) -> tuple[int, bytes, int, int, bool]:
+        started = time.perf_counter()
+        payload = await _download_part_cached(
+            invoke,
+            location_state=location_state,
+            offset=request_offset,
+            limit=wire_limit,
+            precise=effective_precise,
+            cdn_supported=cdn_supported,
+            request_timeout=request_timeout,
+            max_retries=max_retries,
+            flood_sleep_threshold=flood_sleep_threshold,
+            retry_observer=on_part_retry,
+            range_cache=range_cache,
+            range_cache_key=range_cache_key,
+            reference_deduper=reference_deduper,
+            file_reference_refresher=file_reference_refresher,
+            plain_verifier=plain_verifier,
+        )
+        received = len(payload)
+        short_read = received < wire_limit
+        if end_offset is not None:
+            if received == 0 and expect_limit > 0 and effective_concurrency <= 1:
+                raise MediaDownloadError(
+                    f"download returned empty payload with {end_offset - request_offset} bytes remaining"
+                )
+            payload = _validate_concurrent_payload(
+                request_offset, payload, expect_limit=expect_limit, target_end=end_offset
+            )
+        elif len(payload) > expect_limit:
+            payload = payload[:expect_limit]
+        if throttle is not None:
+            throttle.on_success()
+        if launch_pacer is not None:
+            launch_pacer.on_success()
+        part_sizer.on_success(
+            requested_size=wire_limit, received_size=received, duration_s=max(time.perf_counter() - started, 1e-9)
+        )
+        return request_offset, payload, expect_limit, wire_limit, short_read
+
+    async def fill_window() -> None:
+        nonlocal next_request_offset
+        while not exhausted and (end_offset is None or next_request_offset < end_offset):
+            allowed = effective_concurrency if throttle is None else min(effective_concurrency, throttle.limit)
+            if window.active >= allowed:
+                return
+            remaining = part_sizer.current_size if end_offset is None else end_offset - next_request_offset
+            target = min(part_sizer.current_size, window.max_bytes, remaining)
+            wire_limit = _legal_request_limit(next_request_offset, target, precise=effective_precise)
+            if wire_limit is None:
+                wire_limit = _PRECISE_ALIGNMENT if effective_precise else _ALIGNMENT
+            expect_limit = wire_limit if end_offset is None else min(wire_limit, end_offset - next_request_offset)
+            if not window.try_acquire(wire_limit):
+                record_metric("media.download.byte_window_waits", 1)
+                return
+            if launch_pacer is not None and allowed > 1:
+                await launch_pacer.wait()
+            request_offset = next_request_offset
+            charges[request_offset] = wire_limit
+            pending.add(asyncio.create_task(fetch(request_offset, wire_limit, expect_limit)))
+            record_metric("media.download.in_flight_bytes", window.in_flight_bytes, unit="bytes")
+            next_request_offset += expect_limit
+
+    try:
+        await fill_window()
+        while pending or ready:
+            current = ready.pop(next_yield_offset, None)
+            if current is not None:
+                payload, _expect_limit, short_read = current
+                charge = charges.pop(next_yield_offset)
+                if not payload:
+                    window.release(charge)
+                    exhausted = True
+                    break
+                try:
+                    yield payload
+                finally:
+                    window.release(charge)
+                downloaded += len(payload)
+                next_yield_offset += len(payload)
+                await reporter.report(downloaded)
+                _prefetch_read_ahead(
+                    invoke,
+                    location_state=location_state,
+                    precise=effective_precise,
+                    cdn_supported=cdn_supported,
+                    request_timeout=request_timeout,
+                    max_retries=max_retries,
+                    flood_sleep_threshold=flood_sleep_threshold,
+                    range_cache=range_cache,
+                    range_cache_key=range_cache_key,
+                    start_offset=next_yield_offset,
+                    part_size=part_sizer.current_size,
+                    read_ahead_bytes=read_ahead_bytes,
+                    hard_end=total_size,
+                    reference_deduper=reference_deduper,
+                    file_reference_refresher=file_reference_refresher,
+                )
+                if short_read:
+                    exhausted = True
+                await fill_window()
+                continue
+            if not pending:
+                break
+            done, _ = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+            for task in done:
+                pending.discard(task)
+                request_offset, payload, expect_limit, _wire_limit, short_read = await task
+                ready[request_offset] = (payload, expect_limit, short_read)
+        if end_offset is not None and next_yield_offset != end_offset:
+            raise MediaDownloadError(
+                f"incomplete streamed download coverage for [{offset}, {end_offset}); stopped at {next_yield_offset}"
+            )
+        await reporter.finish(downloaded)
+    finally:
+        await _cancel_tasks(pending)
+        for charge in charges.values():
+            window.release(charge)
+
+
 async def download_file(
     invoke: RawInvoker,
     location: object,
@@ -526,6 +978,7 @@ async def download_file(
     range_cache_key: str | None = None,
     range_cache_max_bytes: int = DEFAULT_RANGE_CACHE_BYTES,
     read_ahead_bytes: int = 0,
+    verify_plain_hashes: bool = False,
     file_reference_refresher: FileReferenceRefresher | None = None,
 ) -> MediaDownloadResult:
     _validate_download_options(
@@ -543,10 +996,9 @@ async def download_file(
         read_ahead_bytes,
         precise,
     )
-    effective_max_in_flight_bytes = max_in_flight_bytes if max_in_flight_bytes is not None else max_buffer_size
+    if not isinstance(verify_plain_hashes, bool):
+        raise TypeError("verify_plain_hashes must be a bool")
     if read_ahead_bytes > 0 and _is_full_file_download(offset, limit, total_size):
-        # Read-ahead is a streaming/repeated-range feature; racing it against a
-        # full-file transfer's own scheduler was 3x slower on live benches.
         record_metric("media.download.read_ahead_disabled", 1)
         emit_event(
             _LOGGER,
@@ -560,64 +1012,120 @@ async def download_file(
     resolved_range_cache = _resolve_range_cache(
         range_cache, max_bytes=range_cache_max_bytes, read_ahead_bytes=read_ahead_bytes
     )
+    effective_max_in_flight_bytes = max_in_flight_bytes if max_in_flight_bytes is not None else max_buffer_size
     location_state = _DownloadLocationState(location)
     reference_deduper = _FileReferenceRefreshDeduper()
     if limit is None and concurrency > 1 and total_size is not None:
         limit = max(0, total_size - offset)
+    destination_handle = _open_destination(destination, resume=resume)
+    original_existing = destination_handle.existing_bytes
+    verified_existing = original_existing if limit is None else min(original_existing, limit)
+    destination_handle.existing_bytes = verified_existing
+    if destination_handle.path is not None and verified_existing != original_existing:
+        destination_handle.handle.seek(verified_existing)
+    remaining = None if limit is None else max(0, limit - verified_existing)
+    current_offset = offset + verified_existing
+    downloaded = verified_existing
+    reporter = _ProgressReporter(progress, limit if limit is not None else total_size)
+    writer: _ConcurrentDestinationWriter | None = None
+    write_acks: deque[tuple[asyncio.Future[None], int]] = deque()
+
+    async def report_committed(*, drain_all: bool = False) -> None:
+        nonlocal downloaded
+        while write_acks and (drain_all or write_acks[0][0].done()):
+            acknowledgement, payload_size = write_acks.popleft()
+            await acknowledgement
+            downloaded += payload_size
+            if limit is None or downloaded < limit:
+                await reporter.report(downloaded)
+
     started = time.perf_counter()
     try:
-        if concurrency > 1 and limit is not None:
-            result = await _download_file_concurrent(
-                invoke,
-                destination,
-                offset=offset,
-                limit=limit,
-                part_size=part_size,
-                resume=resume,
-                progress=progress,
-                precise=precise,
-                cdn_supported=cdn_supported,
-                total_size=total_size,
-                request_timeout=request_timeout,
-                max_retries=max_retries,
-                flood_sleep_threshold=flood_sleep_threshold,
-                concurrency=concurrency,
-                adaptive_concurrency=adaptive_concurrency,
-                max_in_flight_bytes=effective_max_in_flight_bytes,
-                adaptive_part_size=adaptive_part_size,
-                max_part_size=max_part_size,
-                range_cache=resolved_range_cache,
-                range_cache_key=range_cache_key,
-                read_ahead_bytes=read_ahead_bytes,
-                location_state=location_state,
-                reference_deduper=reference_deduper,
-                file_reference_refresher=file_reference_refresher,
-            )
-        else:
-            result = await _download_file_sequential(
-                invoke,
-                location_state,
-                destination,
-                offset=offset,
-                limit=limit,
-                part_size=part_size,
-                resume=resume,
-                progress=progress,
-                precise=precise,
-                cdn_supported=cdn_supported,
-                total_size=total_size,
-                request_timeout=request_timeout,
-                max_retries=max_retries,
-                flood_sleep_threshold=flood_sleep_threshold,
-                adaptive_part_size=adaptive_part_size,
-                max_part_size=max_part_size,
-                range_cache=resolved_range_cache,
-                range_cache_key=range_cache_key,
-                read_ahead_bytes=read_ahead_bytes,
-                reference_deduper=reference_deduper,
-                file_reference_refresher=file_reference_refresher,
-            )
+        writer = _ConcurrentDestinationWriter(
+            destination_handle,
+            queue_size=max(1, concurrency),
+            preallocate_size=limit
+            if destination_handle.path is not None and limit is not None and concurrency > 1
+            else None,
+            sequential=True,
+        )
+        parts = _iter_download_parts(
+            invoke,
+            location_state=location_state,
+            offset=current_offset,
+            limit=remaining,
+            part_size=part_size,
+            progress=None,
+            precise=precise,
+            cdn_supported=cdn_supported,
+            total_size=total_size,
+            request_timeout=request_timeout,
+            max_retries=max_retries,
+            flood_sleep_threshold=flood_sleep_threshold,
+            concurrency=concurrency,
+            adaptive_concurrency=adaptive_concurrency,
+            max_in_flight_bytes=effective_max_in_flight_bytes,
+            adaptive_part_size=adaptive_part_size,
+            max_part_size=max_part_size,
+            range_cache=resolved_range_cache,
+            range_cache_key=range_cache_key,
+            read_ahead_bytes=read_ahead_bytes,
+            verify_plain_hashes=verify_plain_hashes,
+            reference_deduper=reference_deduper,
+            file_reference_refresher=file_reference_refresher,
+        )
+        try:
+            async for payload in parts:
+                acknowledgement = await writer.submit(
+                    downloaded - verified_existing, payload, wait_for_completion=False
+                )
+                write_acks.append((acknowledgement, len(payload)))
+                await report_committed()
+        finally:
+            await parts.aclose()
+        stats = await writer.close()
+        _record_writer_stats(stats)
+        await report_committed(drain_all=True)
+        if original_existing > verified_existing and limit is not None:
+            await _truncate_destination(destination_handle, limit)
+        await reporter.finish(downloaded)
+        if destination_handle.should_close:
+            destination_handle.handle.close()
+        result = MediaDownloadResult(
+            bytes_downloaded=downloaded,
+            offset=offset,
+            destination=destination_handle.path or destination_handle.handle,
+            data=destination_handle.get_data(),
+            raw_location=location_state.current,
+        )
+    except asyncio.CancelledError:
+        await report_committed()
+        if writer is not None:
+            await writer.abort()
+        if write_acks:
+            await asyncio.gather(*(ack for ack, _size in write_acks), return_exceptions=True)
+        await _cleanup_failed_destination(destination_handle)
+        duration_ms = (time.perf_counter() - started) * 1000
+        record_metric("media.download.errors", 1, attributes={"concurrency": concurrency, "limit": limit})
+        emit_event(
+            _LOGGER,
+            40,
+            "media.download",
+            outcome="error",
+            offset=offset,
+            limit=limit,
+            part_size=part_size,
+            concurrency=concurrency,
+            duration_ms=duration_ms,
+        )
+        raise
     except BaseException:
+        await report_committed()
+        if writer is not None:
+            await writer.abort()
+        if write_acks:
+            await asyncio.gather(*(ack for ack, _size in write_acks), return_exceptions=True)
+        await _cleanup_failed_destination(destination_handle)
         duration_ms = (time.perf_counter() - started) * 1000
         record_metric("media.download.errors", 1, attributes={"concurrency": concurrency, "limit": limit})
         emit_event(
@@ -665,339 +1173,23 @@ async def download_file(
     return result
 
 
-async def _download_file_sequential(
-    invoke: RawInvoker,
-    location_state: _DownloadLocationState,
-    destination: Destination = None,
-    *,
-    offset: int,
-    limit: int | None,
-    part_size: int,
-    resume: bool,
-    progress: ProgressCallback | None,
-    precise: bool,
-    cdn_supported: bool,
-    total_size: int | None,
-    request_timeout: float | None,
-    max_retries: int,
-    flood_sleep_threshold: int | None,
-    adaptive_part_size: bool,
-    max_part_size: int,
-    range_cache: DownloadRangeCache | None,
-    range_cache_key: str | None,
-    read_ahead_bytes: int,
-    reference_deduper: _FileReferenceRefreshDeduper,
-    file_reference_refresher: FileReferenceRefresher | None,
-) -> MediaDownloadResult:
-    destination_handle = _open_destination(destination, resume=resume)
-    current_offset = offset + destination_handle.existing_bytes
-    downloaded = destination_handle.existing_bytes
-    remaining = None if limit is None else max(0, limit - destination_handle.existing_bytes)
-    effective_precise = _resolve_precise_mode(current_offset, precise, part_size)
-    reporter = _ProgressReporter(progress, limit)
-    part_sizer = _AdaptivePartSizer(
-        initial_size=part_size,
-        max_size=max_part_size,
-        total_bytes=limit if limit is not None else total_size,
-        enabled=adaptive_part_size,
-    )
-    # Disk writes ride the same threaded writer pipeline as the concurrent path
-    # (sequential mode: in-order appends, no seeks) so they never block the loop.
-    writer = _ConcurrentDestinationWriter(destination_handle, queue_size=4, preallocate_size=None, sequential=True)
-    try:
-        while remaining is None or remaining > 0:
-            target = part_sizer.current_size if remaining is None else min(part_sizer.current_size, remaining)
-            wire_limit = _legal_request_limit(current_offset, target, precise=effective_precise)
-            if wire_limit is None:
-                # Tail smaller than the smallest legal request: over-request one
-                # minimal chunk and truncate (the server clamps reads at EOF).
-                wire_limit = _PRECISE_ALIGNMENT if effective_precise else _ALIGNMENT
-            started = time.perf_counter()
-            payload = await _download_part_cached(
-                invoke,
-                location_state=location_state,
-                offset=current_offset,
-                limit=wire_limit,
-                precise=effective_precise,
-                cdn_supported=cdn_supported,
-                request_timeout=request_timeout,
-                max_retries=max_retries,
-                flood_sleep_threshold=flood_sleep_threshold,
-                range_cache=range_cache,
-                range_cache_key=range_cache_key,
-                reference_deduper=reference_deduper,
-                file_reference_refresher=file_reference_refresher,
-            )
-            short_read = len(payload) < wire_limit
-            if remaining is not None and len(payload) > remaining:
-                payload = payload[:remaining]
-            if not payload:
-                if remaining is not None and remaining > 0:
-                    raise MediaDownloadError(f"download returned empty payload with {remaining} bytes remaining")
-                break
-            part_sizer.on_success(
-                requested_size=wire_limit,
-                received_size=len(payload),
-                duration_s=max(time.perf_counter() - started, 1e-9),
-            )
-            await writer.submit(downloaded, payload, wait_for_completion=False)
-            downloaded += len(payload)
-            current_offset += len(payload)
-            if remaining is not None:
-                remaining -= len(payload)
-            await reporter.report(downloaded)
-            _prefetch_read_ahead(
-                invoke,
-                location_state=location_state,
-                precise=effective_precise,
-                cdn_supported=cdn_supported,
-                request_timeout=request_timeout,
-                max_retries=max_retries,
-                flood_sleep_threshold=flood_sleep_threshold,
-                range_cache=range_cache,
-                range_cache_key=range_cache_key,
-                start_offset=current_offset,
-                part_size=part_sizer.current_size,
-                read_ahead_bytes=read_ahead_bytes,
-                hard_end=None,
-                reference_deduper=reference_deduper,
-                file_reference_refresher=file_reference_refresher,
-            )
-            if short_read:
-                break
-        stats = await writer.close()
-        _record_writer_stats(stats)
-        await reporter.finish(downloaded)
-        if destination_handle.should_close:
-            destination_handle.handle.close()
-        data = destination_handle.get_data()
-        return MediaDownloadResult(
-            bytes_downloaded=downloaded,
-            offset=offset,
-            destination=destination_handle.path or destination_handle.handle,
-            data=data,
-            raw_location=location_state.current,
+async def iter_download_media(invoke: RawInvoker, media: object, **kwargs: Any) -> AsyncGenerator[bytes]:
+    if "range_cache_key" not in kwargs or kwargs.get("range_cache_key") is None:
+        kwargs["range_cache_key"] = _range_cache_key_from_media(media)
+    location = download_location_from_media(media)
+    total_size = kwargs.pop("total_size", None)
+    if total_size is None:
+        resolved = (
+            media
+            if isinstance(media, Media)
+            else media_from_file_id(media)
+            if is_file_id(media)
+            else media_from_raw(media)
         )
-    except asyncio.CancelledError:
-        await writer.abort()
-        if destination_handle.should_close:
-            destination_handle.handle.close()
-        if destination_handle.remove_on_cancel and destination_handle.path is not None:
-            destination_handle.path.unlink(missing_ok=True)
-        raise
-    except BaseException:
-        await writer.abort()
-        if destination_handle.should_close:
-            destination_handle.handle.close()
-        raise
-
-
-async def _download_file_concurrent(
-    invoke: RawInvoker,
-    destination: Destination = None,
-    *,
-    offset: int,
-    limit: int,
-    part_size: int,
-    resume: bool,
-    progress: ProgressCallback | None,
-    precise: bool,
-    cdn_supported: bool,
-    total_size: int | None,
-    request_timeout: float | None,
-    max_retries: int,
-    flood_sleep_threshold: int | None,
-    concurrency: int,
-    adaptive_concurrency: bool,
-    max_in_flight_bytes: int | None,
-    adaptive_part_size: bool,
-    max_part_size: int,
-    range_cache: DownloadRangeCache | None,
-    range_cache_key: str | None,
-    read_ahead_bytes: int,
-    location_state: _DownloadLocationState,
-    reference_deduper: _FileReferenceRefreshDeduper,
-    file_reference_refresher: FileReferenceRefresher | None,
-) -> MediaDownloadResult:
-    destination_handle = _open_destination(destination, resume=resume)
-    original_existing = destination_handle.existing_bytes
-    verified_existing = min(original_existing, limit)
-    destination_handle.existing_bytes = verified_existing
-    downloaded = verified_existing
-    callback_total = limit if limit is not None else total_size
-    start_offset = offset + verified_existing
-    next_offset = start_offset
-    end_offset = offset + limit
-    fetched_coverage = _IntervalCoverage(start_offset, end_offset)
-    committed_coverage = _IntervalCoverage(start_offset, end_offset)
-    effective_precise = _resolve_precise_mode(start_offset, precise, part_size)
-    pending: set[asyncio.Task[tuple[int, bytes, int, int]]] = set()
-    pending_writes: dict[asyncio.Future[None], tuple[int, int]] = {}
-    byte_window = max_in_flight_bytes or max(DEFAULT_DOWNLOAD_IN_FLIGHT_BYTES, part_size * concurrency)
-    window = _TransferWindow(byte_window)
-    launch_pacer = _DownloadLaunchPacer(concurrency=concurrency) if concurrency > 1 else None
-    reporter = _ProgressReporter(progress, callback_total)
-    throttle = _AdaptiveDownloadThrottle(concurrency) if adaptive_concurrency and concurrency > 1 else None
-    part_sizer = _AdaptivePartSizer(
-        initial_size=part_size, max_size=max_part_size, total_bytes=limit, enabled=adaptive_part_size
-    )
-    writer: _ConcurrentDestinationWriter | None = None
-
-    async def on_part_retry(exc: Exception, attempt: int) -> None:
-        if throttle is not None:
-            await throttle.on_retry(exc, attempt)
-            if launch_pacer is not None and throttle.limit <= 1:
-                launch_pacer.reset()
-        if launch_pacer is not None and isinstance(exc, FloodWait) and (throttle is None or throttle.limit > 1):
-            launch_pacer.on_flood(exc)
-
-    async def fetch(request_offset: int, wire_limit: int, expect_limit: int) -> tuple[int, bytes, int, int]:
-        started = time.perf_counter()
-        try:
-            payload = await _download_part_cached(
-                invoke,
-                location_state=location_state,
-                offset=request_offset,
-                limit=wire_limit,
-                precise=effective_precise,
-                cdn_supported=cdn_supported,
-                request_timeout=request_timeout,
-                max_retries=max_retries,
-                flood_sleep_threshold=flood_sleep_threshold,
-                retry_observer=on_part_retry,
-                range_cache=range_cache,
-                range_cache_key=range_cache_key,
-                reference_deduper=reference_deduper,
-                file_reference_refresher=file_reference_refresher,
-            )
-        finally:
-            window.release(wire_limit)
-        received = len(payload)
-        payload = _validate_concurrent_payload(
-            request_offset, payload, expect_limit=expect_limit, target_end=end_offset
-        )
-        if throttle is not None:
-            throttle.on_success()
-        if launch_pacer is not None:
-            launch_pacer.on_success()
-        part_sizer.on_success(
-            requested_size=wire_limit, received_size=received, duration_s=max(time.perf_counter() - started, 1e-9)
-        )
-        return request_offset, payload, expect_limit, wire_limit
-
-    async def fill_window() -> None:
-        nonlocal next_offset
-        while next_offset < end_offset:
-            allowed = concurrency if throttle is None else min(concurrency, throttle.limit)
-            if window.active >= allowed:
-                break
-            target = min(part_sizer.current_size, window.max_bytes, end_offset - next_offset)
-            wire_limit = _legal_request_limit(next_offset, target, precise=effective_precise)
-            if wire_limit is None:
-                # Tail smaller than the smallest legal request: over-request one
-                # minimal chunk and truncate (the server clamps reads at EOF).
-                wire_limit = _PRECISE_ALIGNMENT if effective_precise else _ALIGNMENT
-            expect_limit = min(wire_limit, end_offset - next_offset)
-            if not window.try_acquire(wire_limit):
-                record_metric("media.download.byte_window_waits", 1)
-                break
-            if launch_pacer is not None and allowed > 1:
-                await launch_pacer.wait()
-            task = asyncio.create_task(fetch(next_offset, wire_limit, expect_limit))
-            pending.add(task)
-            record_metric("media.download.in_flight_bytes", window.in_flight_bytes, unit="bytes")
-            next_offset += expect_limit
-
-    try:
-        preallocate_size = limit if original_existing <= limit else None
-        writer = _ConcurrentDestinationWriter(
-            destination_handle, queue_size=max(1, concurrency), preallocate_size=preallocate_size
-        )
-        await fill_window()
-        while pending or pending_writes:
-            refill_wait = asyncio.ensure_future(window.wait_refill()) if pending else None
-            waitables: set[asyncio.Future[Any]] = set(pending)
-            waitables.update(pending_writes)
-            if refill_wait is not None:
-                waitables.add(refill_wait)
-            try:
-                done, _ = await asyncio.wait(waitables, return_when=asyncio.FIRST_COMPLETED)
-            finally:
-                if refill_wait is not None:
-                    refill_wait.cancel()
-                    with suppress(asyncio.CancelledError):
-                        await refill_wait
-            for task in done:
-                if task is refill_wait:
-                    continue
-                if task in pending_writes:
-                    write_start, write_end = pending_writes.pop(cast(asyncio.Future[None], task))
-                    await task
-                    committed_coverage.add(write_start, write_end)
-                    downloaded = verified_existing + committed_coverage.covered_bytes
-                    if downloaded < limit:
-                        await reporter.report(downloaded)
-                    continue
-                fetch_task = cast(asyncio.Task[tuple[int, bytes, int, int]], task)
-                pending.discard(fetch_task)
-                request_offset, payload, expect_limit, _wire_limit = await fetch_task
-                fetched_coverage.add(request_offset, request_offset + expect_limit)
-                output_offset = request_offset - offset
-                acknowledgement = await writer.submit(output_offset, payload, wait_for_completion=False)
-                pending_writes[acknowledgement] = (request_offset, request_offset + expect_limit)
-                _prefetch_read_ahead(
-                    invoke,
-                    location_state=location_state,
-                    precise=effective_precise,
-                    cdn_supported=cdn_supported,
-                    request_timeout=request_timeout,
-                    max_retries=max_retries,
-                    flood_sleep_threshold=flood_sleep_threshold,
-                    range_cache=range_cache,
-                    range_cache_key=range_cache_key,
-                    start_offset=request_offset + len(payload),
-                    part_size=part_sizer.current_size,
-                    read_ahead_bytes=read_ahead_bytes,
-                    # Read-ahead exists to prime the NEXT range read, so it may
-                    # run past this call's end_offset -- only EOF caps it.
-                    hard_end=total_size if total_size is not None else None,
-                    reference_deduper=reference_deduper,
-                    file_reference_refresher=file_reference_refresher,
-                )
-            await fill_window()
-        _require_complete_coverage(fetched_coverage, "fetched")
-        stats = await writer.close()
-        _record_writer_stats(stats)
-        _require_complete_coverage(committed_coverage, "committed")
-        if original_existing > limit:
-            await _truncate_destination(destination_handle, limit)
-        await reporter.finish(downloaded)
-        if destination_handle.should_close:
-            destination_handle.handle.close()
-        data = destination_handle.get_data()
-        return MediaDownloadResult(
-            bytes_downloaded=downloaded,
-            offset=offset,
-            destination=destination_handle.path or destination_handle.handle,
-            data=data,
-            raw_location=location_state.current,
-        )
-    except asyncio.CancelledError:
-        await _cancel_tasks(pending)
-        if writer is not None:
-            await writer.abort()
-        if pending_writes:
-            await asyncio.gather(*pending_writes, return_exceptions=True)
-        await _cleanup_failed_destination(destination_handle)
-        raise
-    except BaseException:
-        await _cancel_tasks(pending)
-        if writer is not None:
-            await writer.abort()
-        if pending_writes:
-            await asyncio.gather(*pending_writes, return_exceptions=True)
-        await _cleanup_failed_destination(destination_handle)
-        raise
+        if resolved is not None:
+            total_size = resolved.size
+    async for payload in iter_download(invoke, location, total_size=total_size, **kwargs):
+        yield payload
 
 
 async def download_media(
@@ -1124,13 +1316,23 @@ async def _call_file_reference_refresher(refresher: FileReferenceRefresher, loca
 
 
 async def _payload_from_get_file_result(
-    invoke: RawInvoker, result: object, *, offset: int, limit: int, request_timeout: float | None
+    invoke: RawInvoker,
+    result: object,
+    *,
+    location: object,
+    offset: int,
+    limit: int,
+    request_timeout: float | None,
+    plain_verifier: _PlainFileHashVerifier | None,
 ) -> bytes:
     redirect = cdn_redirect_from_raw(result)
     if redirect is not None:
         return await get_cdn_file_part(invoke, redirect, offset=offset, limit=limit, request_timeout=request_timeout)
     if isinstance(result, types.UploadFile):
-        return result.bytes
+        payload = result.bytes
+        if plain_verifier is not None:
+            await plain_verifier.verify(location, offset=offset, payload=payload)
+        return payload
     raise MediaDownloadError(f"unsupported upload.getFile response: {type(result).__name__}")
 
 
@@ -1150,7 +1352,10 @@ async def _download_part_cached(
     reference_deduper: _FileReferenceRefreshDeduper,
     file_reference_refresher: FileReferenceRefresher | None,
     retry_observer: DownloadRetryObserver | None = None,
+    plain_verifier: _PlainFileHashVerifier | None = None,
 ) -> bytes:
+    use_range_cache = range_cache is not None and range_cache_key is not None
+
     async def fetch() -> bytes:
         return await _download_part_with_reference_refresh(
             invoke,
@@ -1165,11 +1370,16 @@ async def _download_part_cached(
             retry_observer=retry_observer,
             reference_deduper=reference_deduper,
             file_reference_refresher=file_reference_refresher,
+            plain_verifier=None if use_range_cache else plain_verifier,
         )
 
-    if range_cache is None or range_cache_key is None:
+    if not use_range_cache:
         return await fetch()
-    return await range_cache.get_or_fetch(range_cache_key, offset, limit, fetch)
+    assert range_cache is not None and range_cache_key is not None
+    payload = await range_cache.get_or_fetch(range_cache_key, offset, limit, fetch)
+    if plain_verifier is not None:
+        await plain_verifier.verify(location_state.current, offset=offset, payload=payload)
+    return payload
 
 
 async def _download_part_with_reference_refresh(
@@ -1186,6 +1396,7 @@ async def _download_part_with_reference_refresh(
     retry_observer: DownloadRetryObserver | None,
     reference_deduper: _FileReferenceRefreshDeduper,
     file_reference_refresher: FileReferenceRefresher | None,
+    plain_verifier: _PlainFileHashVerifier | None = None,
 ) -> bytes:
     for refresh_attempt in range(2):
         try:
@@ -1200,6 +1411,7 @@ async def _download_part_with_reference_refresh(
                 max_retries=max_retries,
                 flood_sleep_threshold=flood_sleep_threshold,
                 retry_observer=retry_observer,
+                plain_verifier=plain_verifier,
             )
         except Exception as exc:
             if file_reference_refresher is None or refresh_attempt > 0 or not _is_file_reference_error(exc):
@@ -1230,6 +1442,7 @@ async def _download_part(
     max_retries: int,
     flood_sleep_threshold: int | None,
     retry_observer: DownloadRetryObserver | None = None,
+    plain_verifier: _PlainFileHashVerifier | None = None,
 ) -> bytes:
     request = functions.UploadGetFile(
         precise=precise, cdn_supported=cdn_supported, location=location, offset=offset, limit=limit
@@ -1241,7 +1454,13 @@ async def _download_part(
             record_metric("media.download.part_requests", 1)
             result = await invoke(request, request_timeout=request_timeout, retry=False, flood_sleep_threshold=0)
             return await _payload_from_get_file_result(
-                invoke, result, offset=offset, limit=limit, request_timeout=request_timeout
+                invoke,
+                result,
+                location=location,
+                offset=offset,
+                limit=limit,
+                request_timeout=request_timeout,
+                plain_verifier=plain_verifier,
             )
         except Exception as exc:
             if not _is_transient_download_error(exc, flood_sleep_threshold=flood_sleep_threshold):
@@ -1418,8 +1637,12 @@ def _prefetch_read_ahead(
         limit_for_task = request_limit
 
         async def fetch(offset: int = offset_for_task, limit: int = limit_for_task) -> bytes:
+            async def background_invoke(request: object, **kwargs: Any) -> object:
+                kwargs["_media_priority"] = "background"
+                return await invoke(request, **kwargs)
+
             return await _download_part_with_reference_refresh(
-                invoke,
+                background_invoke,
                 location_state=location_state,
                 offset=offset,
                 limit=limit,
@@ -1447,6 +1670,19 @@ def _file_reference_bytes(location: object) -> bytes:
     if isinstance(reference, str):
         return reference.encode("utf-8")
     return b""
+
+
+def _plain_location_identity(location: object) -> tuple[object, ...]:
+    return (
+        getattr(type(location), "QUALNAME", type(location).__qualname__),
+        getattr(location, "id", None),
+        getattr(location, "access_hash", None),
+        getattr(location, "volume_id", None),
+        getattr(location, "local_id", None),
+        getattr(location, "secret", None),
+        getattr(location, "thumb_size", None),
+        _file_reference_bytes(location),
+    )
 
 
 def _is_file_reference_error(exc: Exception) -> bool:
@@ -2061,8 +2297,11 @@ __all__ = [
     "DownloadRangeCache",
     "MediaDownloadError",
     "MediaDownloadResult",
+    "MediaIntegrityError",
     "download_file",
     "download_location_from_media",
     "download_media",
+    "iter_download",
+    "iter_download_media",
     "media_from_raw",
 ]

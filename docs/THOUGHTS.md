@@ -110,3 +110,7 @@ This behavior wouldn't be the default but rather an option that users can toggle
 
 - TASK-084 is production-path-gated across several waves: Wave 1 may add only the fake-server journeys backed by the production behavior implemented so far. Do not manufacture quick-ACK, plain-hash-verification, or shared-scheduler tests before their Wave 2/3 implementations, and do not mark TASK-084 complete until those later scenarios also exercise the real sender/transport paths without bypass mocks.
 - Upload cancellation can deadlock when a bounded producer queue is full: the consumer unwinds first, then the producer's `finally` blocks forever trying to enqueue its sentinel. During active cancellation, use a non-blocking sentinel enqueue and let cancellation release the pending part RPC slots; retain the normal awaited sentinel path outside cancellation.
+
+## 2026-08-13 — GPT-5.6 Sol Ultra — Codex — "Wave 2 implementation"
+
+- Closing an outer async-generator wrapper while it is suspended at `yield` does not reliably close a separately owned inner async generator soon enough to cancel that inner generator's pending download-part tasks. Any public streaming wrapper that delegates to an internal iterator must explicitly `await inner.aclose()` in `finally`; merely using `async for` is insufficient for prompt scheduler-capacity and sender cleanup on early consumer exit.

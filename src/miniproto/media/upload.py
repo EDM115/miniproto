@@ -97,6 +97,11 @@ async def upload_file(
         prepared.cleanup()
         raise ValueError("empty file upload is not supported")
     part_size = _part_size_for_part_limit(prepared.size, part_size, max_file_parts)
+    register_transfer = getattr(invoke, "register_transfer", None)
+    if callable(register_transfer):
+        registered = register_transfer(prepared.size)
+        if inspect.isawaitable(registered):
+            await registered
     actual_file_id = secrets.randbits(63) or 1 if file_id is None else int(file_id)
     total_parts = math.ceil(prepared.size / part_size)
     is_big = prepared.size > BIG_FILE_THRESHOLD

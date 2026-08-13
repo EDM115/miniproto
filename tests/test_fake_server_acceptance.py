@@ -18,6 +18,7 @@ from miniproto import (
     FloodWait,
     InMemorySessionStorage,
     Media,
+    MediaIntegrityError,
     NewMessage,
     SessionRecord,
     TransportConfig,
@@ -33,7 +34,7 @@ from miniproto.mtproto.codec import (
 )
 from miniproto.raw import functions, types
 from miniproto.session.models import PeerCacheEntry, UpdateState, session_record_from_mapping
-from miniproto.tl.codec import decode_object
+from miniproto.tl.codec import decode_object, encode_vector
 
 AUTH_KEY = b"a" * 256
 
@@ -565,6 +566,201 @@ def test_plain_download_byte_window_bounds_simultaneous_real_media_lanes() -> No
             result = await asyncio.wait_for(task, timeout=3.0)
             assert result.data == payload
             assert max_active == 2
+            await client.disconnect()
+
+    run(scenario())
+
+
+def test_shared_scheduler_bounds_simultaneous_real_transfers_and_both_make_progress() -> None:
+    async def scenario() -> None:
+        payloads = {10: b"a" * (16 * 1024), 11: b"b" * (16 * 1024)}
+        active = 0
+        max_active = 0
+        requests_by_file = {10: 0, 11: 0}
+
+        async def handle(message: DecodedEncryptedMessage) -> object | None:
+            nonlocal active, max_active
+            if message.seq_no % 2 == 0:
+                return None
+            request = decode_innermost_request(message)
+            assert isinstance(request, functions.UploadGetFile)
+            assert isinstance(request.location, types.InputDocumentFileLocation)
+            file_id = request.location.id
+            requests_by_file[file_id] += 1
+            active += 1
+            max_active = max(max_active, active)
+            try:
+                await asyncio.sleep(0.02)
+                result = types.UploadFile(
+                    type=types.StorageFileUnknown(),
+                    mtime=1_700_000_000,
+                    bytes=payloads[file_id][request.offset : request.offset + request.limit],
+                )
+                return RpcResult(req_msg_id=message.msg_id, result=result)
+            finally:
+                active -= 1
+
+        transport = TransportConfig(mode="tcp_intermediate", read_timeout=3.0)
+        async with FakeMTProtoServer(AUTH_KEY, transport, handle) as server:
+            client = Client(
+                ClientConfig(
+                    api_id=1,
+                    api_hash="hash",
+                    session_storage=fake_server_storage(server),
+                    transport=transport,
+                    media_download_max_in_flight_bytes_per_dc=128 * 1024,
+                ),
+                _updates_enabled=False,
+            )
+            await client.connect()
+
+            async def download(file_id: int) -> bytes:
+                result = await client.download_media(
+                    Media(
+                        id=file_id,
+                        size=len(payloads[file_id]),
+                        location=types.InputDocumentFileLocation(
+                            id=file_id, access_hash=file_id * 2, file_reference=b"shared", thumb_size=""
+                        ),
+                    ),
+                    part_size=4096,
+                    max_part_size=4096,
+                    concurrency=2,
+                    media_lanes=4,
+                    adaptive_concurrency=False,
+                    adaptive_part_size=False,
+                )
+                assert result.data is not None
+                return result.data
+
+            first, second = await asyncio.gather(download(10), download(11))
+            assert first == payloads[10]
+            assert second == payloads[11]
+            assert max_active == 2
+            assert requests_by_file == {10: 4, 11: 4}
+            assert client._media_schedulers.scheduler_count == 0
+            await client.disconnect()
+
+    run(scenario())
+
+
+def test_streaming_early_close_cancels_real_sender_requests_and_scheduler_permits() -> None:
+    async def scenario() -> None:
+        payload = b"s" * (12 * 1024)
+        later_started = asyncio.Event()
+        release = asyncio.Event()
+
+        async def handle(message: DecodedEncryptedMessage) -> object | None:
+            if message.seq_no % 2 == 0:
+                return None
+            request = decode_innermost_request(message)
+            assert isinstance(request, functions.UploadGetFile)
+            if request.offset > 0:
+                later_started.set()
+                await release.wait()
+            result = types.UploadFile(
+                type=types.StorageFileUnknown(),
+                mtime=1_700_000_000,
+                bytes=payload[request.offset : request.offset + request.limit],
+            )
+            return RpcResult(req_msg_id=message.msg_id, result=result)
+
+        transport = TransportConfig(mode="tcp_intermediate", read_timeout=3.0)
+        async with FakeMTProtoServer(AUTH_KEY, transport, handle) as server:
+            client = Client(
+                ClientConfig(
+                    api_id=1,
+                    api_hash="hash",
+                    session_storage=fake_server_storage(server),
+                    transport=transport,
+                    media_download_max_in_flight_bytes_per_dc=128 * 1024,
+                ),
+                _updates_enabled=False,
+            )
+            await client.connect()
+            iterator = client.iter_download(
+                Media(
+                    id=12,
+                    size=len(payload),
+                    location=types.InputDocumentFileLocation(
+                        id=12, access_hash=24, file_reference=b"stream", thumb_size=""
+                    ),
+                ),
+                part_size=4096,
+                max_part_size=4096,
+                concurrency=2,
+                media_lanes=2,
+                adaptive_concurrency=False,
+                adaptive_part_size=False,
+            )
+            assert await asyncio.wait_for(anext(iterator), timeout=2.0) == payload[:4096]
+            await asyncio.wait_for(later_started.wait(), timeout=2.0)
+            await iterator.aclose()
+            await asyncio.sleep(0.05)
+            pool = client._media_pools[("download", 2)]
+            pending = 0
+            for lane in pool._lanes:
+                sender = lane._sender
+                if sender is not None:
+                    pending += cast(Any, sender).sender_state.pending_count
+            assert pending == 0
+            assert client._media_schedulers.scheduler_count == 0
+            release.set()
+            await client.disconnect()
+
+    run(scenario())
+
+
+def test_plain_hash_corruption_is_rejected_before_real_sender_destination_output(tmp_path) -> None:
+    async def scenario() -> None:
+        expected = b"v" * 4096
+        corrupted = b"x" + expected[1:]
+        requests: list[object] = []
+
+        def handle(message: DecodedEncryptedMessage) -> object | None:
+            if message.seq_no % 2 == 0:
+                return None
+            request = decode_innermost_request(message)
+            requests.append(request)
+            if isinstance(request, functions.UploadGetFile):
+                result: object = types.UploadFile(type=types.StorageFileUnknown(), mtime=1_700_000_000, bytes=corrupted)
+            elif isinstance(request, functions.UploadGetFileHashes):
+                result = encode_vector(
+                    (types.FileHash(offset=0, limit=len(expected), hash=hashlib.sha256(expected).digest()),), "FileHash"
+                )
+            else:
+                raise AssertionError(f"unexpected request {request!r}")
+            return RpcResult(req_msg_id=message.msg_id, result=result)
+
+        transport = TransportConfig(mode="tcp_intermediate", read_timeout=3.0)
+        async with FakeMTProtoServer(AUTH_KEY, transport, handle) as server:
+            client = Client(
+                ClientConfig(
+                    api_id=1, api_hash="hash", session_storage=fake_server_storage(server), transport=transport
+                ),
+                _updates_enabled=False,
+            )
+            await client.connect()
+            target = tmp_path / "corrupted.bin"
+            with pytest.raises(MediaIntegrityError, match="offset 0"):
+                await client.download_media(
+                    Media(
+                        id=13,
+                        size=len(expected),
+                        location=types.InputDocumentFileLocation(
+                            id=13, access_hash=26, file_reference=b"hash", thumb_size=""
+                        ),
+                    ),
+                    target,
+                    part_size=4096,
+                    max_part_size=4096,
+                    concurrency=1,
+                    media_lanes=1,
+                    adaptive_part_size=False,
+                    verify_plain_hashes=True,
+                )
+            assert not target.exists()
+            assert any(isinstance(request, functions.UploadGetFileHashes) for request in requests)
             await client.disconnect()
 
     run(scenario())

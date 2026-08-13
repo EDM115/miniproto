@@ -9,9 +9,12 @@ from miniproto.media.download import (
     DownloadRangeCache,
     MediaDownloadError,
     MediaDownloadResult,
+    MediaIntegrityError,
     download_file,
     download_location_from_media,
     download_media,
+    iter_download,
+    iter_download_media,
     media_from_raw,
 )
 from miniproto.media.upload import (
@@ -40,6 +43,7 @@ __all__ = [
     "FileSource",
     "MediaDownloadError",
     "MediaDownloadResult",
+    "MediaIntegrityError",
     "MediaUploadError",
     "MediaUploadResult",
     "ProgressCallback",
@@ -47,6 +51,8 @@ __all__ = [
     "download_file",
     "download_location_from_media",
     "download_media",
+    "iter_download",
+    "iter_download_media",
     "media_from_raw",
     "upload_file",
 ]

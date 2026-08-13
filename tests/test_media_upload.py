@@ -233,7 +233,15 @@ def test_client_reads_upload_limit_parts_from_app_config() -> None:
         config = types.HelpAppConfig(
             hash=123,
             config=types.JsonObject(
-                value=(types.JsonObjectValue(key="upload_max_fileparts", value=types.JsonNumber(value=4096.0)),)
+                value=(
+                    types.JsonObjectValue(key="upload_max_fileparts", value=types.JsonNumber(value=4096.0)),
+                    types.JsonObjectValue(
+                        key="small_queue_max_active_operations_count", value=types.JsonNumber(value=7.0)
+                    ),
+                    types.JsonObjectValue(
+                        key="large_queue_max_active_operations_count", value=types.JsonNumber(value=3.0)
+                    ),
+                )
             ),
         )
         sender = FakeSender([config])
@@ -244,6 +252,8 @@ def test_client_reads_upload_limit_parts_from_app_config() -> None:
         request = inner_request(sender.requests[0])
         assert isinstance(request, functions.HelpGetAppConfig)
         assert request.hash == 0
+        assert client._media_schedulers.download_small_limit == 7
+        assert client._media_schedulers.download_large_limit == 3
 
     run(scenario())
 

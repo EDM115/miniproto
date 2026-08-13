@@ -114,6 +114,7 @@ jobs:
       - name: Benchmarks
         run: |
           uv run python tools/bench/benchmark_imports.py
+          uv run python tools/bench/benchmark_media_scheduler.py
           uv run python tools/bench/benchmark_native_fallback_crypto.py
           uv run python tools/bench/benchmark_runtime_paths.py
           uv run python tools/bench/profile_lazy_raw_codec.py

@@ -42,7 +42,13 @@ from miniproto.file_id import (
     media_from_file_id,
     try_encode_file_id,
 )
-from miniproto.media import CdnIntegrityError, MediaDownloadResult, MediaUploadResult
+from miniproto.media import (
+    CdnIntegrityError,
+    MediaDownloadResult,
+    MediaIntegrityError,
+    MediaUploadResult,
+    iter_download,
+)
 from miniproto.observability import (
     InMemoryMetrics,
     LogFormat,
@@ -99,6 +105,7 @@ __all__ = [
     "LogFormat",
     "Media",
     "MediaDownloadResult",
+    "MediaIntegrityError",
     "MediaUploadResult",
     "MemoryDelta",
     "MemoryMonitor",
@@ -145,6 +152,7 @@ __all__ = [
     "import_session_string",
     "input_media_from_file_id",
     "is_file_id",
+    "iter_download",
     "media_from_file_id",
     "process_rss_bytes",
     "record_metric",

@@ -114,9 +114,10 @@ cargo test --all-features
 ```pwsh
 uv run python tools/bench/benchmark_native_fallback_crypto.py
 uv run python tools/bench/benchmark_runtime_paths.py
+uv run python tools/bench/benchmark_media_scheduler.py
 ```
 
-These compare native-extension timings with the pure Python fallback for crypto, TL primitive paths, and single-call MTProto encrypted envelope encode/decode, then benchmark async runtime paths such as update dispatch, media transfer, generated TL `upload.getFile` request encoding, generated TL `upload.File` result decoding, synthetic concurrent request scheduling, 100,000 synchronous pending-slot reserve/release pairs against a no-op loop, a 1,000-task held-slot burst against the scheduling baseline, and a 10,000-entry peer cache. The peer case reports cold construction, indexed and canonical-scan medians for kind/id, numeric, username, and phone lookups, per-type and combined speedups, cached-wrapper loads, canonical tuple visits, retained heap with shared-object deduplication, and separate end-to-end durable-update and incremental index-reconciliation times. Its deterministic gates require at least 20x per warm lookup type, incremental index heap below 2.5x canonical peer heap, unchanged warm load/build/visit counters, and no rebuild for one attributable direct peer commit. The pending-slot output reports best/median raw times, normalized per-operation deltas, percentage overhead, and the event-loop backend. Other timings remain observational smoke evidence. Keep Rust implementations and Python fallbacks in parity even when the public wrapper intentionally prefers the Python fallback; `benchmark_native_fallback_crypto.py` is the evidence source for those routing choices.
+These compare native-extension timings with the pure Python fallback for crypto, TL primitive paths, and single-call MTProto encrypted envelope encode/decode, then benchmark async runtime paths such as update dispatch, media transfer, generated TL `upload.getFile` request encoding, generated TL `upload.File` result decoding, synthetic concurrent request scheduling, 100,000 synchronous pending-slot reserve/release pairs against a no-op loop, a 1,000-task held-slot burst against the scheduling baseline, and a 10,000-entry peer cache. `benchmark_media_scheduler.py` is the deterministic simultaneous-transfer workload: its JSON reports aggregate and per-transfer scheduling throughput, byte-cap peaks, queue waits, grant fairness, queued-cancellation cleanup, and DC/direction isolation; `tests/test_media_scheduler_benchmark.py` enforces the accounting invariants. The peer case reports cold construction, indexed and canonical-scan medians for kind/id, numeric, username, and phone lookups, per-type and combined speedups, cached-wrapper loads, canonical tuple visits, retained heap with shared-object deduplication, and separate end-to-end durable-update and incremental index-reconciliation times. Its deterministic gates require at least 20x per warm lookup type, incremental index heap below 2.5x canonical peer heap, unchanged warm load/build/visit counters, and no rebuild for one attributable direct peer commit. The pending-slot output reports best/median raw times, normalized per-operation deltas, percentage overhead, and the event-loop backend. Other timings remain observational smoke evidence. Keep Rust implementations and Python fallbacks in parity even when the public wrapper intentionally prefers the Python fallback; `benchmark_native_fallback_crypto.py` is the evidence source for those routing choices.
 
 ## Pending RPC Capacity Invariants
 
@@ -217,6 +218,7 @@ uv run python -m tools.schema.generate --check
 uv run pytest
 uv run python tools/bench/benchmark_native_fallback_crypto.py
 uv run python tools/bench/benchmark_runtime_paths.py
+uv run python tools/bench/benchmark_media_scheduler.py
 cargo fmt --check
 cargo clippy --all-targets --all-features -- -D warnings
 cargo test --all-features

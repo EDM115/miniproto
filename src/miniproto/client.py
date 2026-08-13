@@ -6,7 +6,7 @@ import logging
 import mimetypes
 import tempfile
 import time
-from collections.abc import AsyncIterator, Awaitable, Callable, Iterable, Mapping
+from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Iterable, Mapping
 from contextlib import suppress
 from dataclasses import replace
 from pathlib import Path
@@ -60,7 +60,16 @@ from miniproto.media import (
     upload_file,
 )
 from miniproto.media import download_media as download_media_file
+from miniproto.media import iter_download_media as iter_download_media_file
 from miniproto.media.multi_session import assemble_download_parts, download_session_count, plan_download_ranges
+from miniproto.media.scheduler import (
+    DEFAULT_DOWNLOAD_LARGE_LIMIT,
+    DEFAULT_DOWNLOAD_SMALL_LIMIT,
+    MEDIA_SCHEDULER_UNIT,
+    MediaPriority,
+    MediaSchedulerRegistry,
+    MediaTransfer,
+)
 from miniproto.media.upload import DEFAULT_UPLOAD_CONCURRENCY
 from miniproto.messages import (
     make_random_id,
@@ -227,6 +236,12 @@ class Client:
         self._sender_lock = asyncio.Lock()
         self._media_pools: dict[tuple[str, int], _MediaSenderPool] = {}
         self._media_pools_lock = asyncio.Lock()
+        self._media_schedulers = MediaSchedulerRegistry(
+            download_max_bytes=config.media_download_max_in_flight_bytes_per_dc,
+            upload_max_bytes=config.media_upload_max_in_flight_bytes_per_dc,
+            download_small_limit=config.media_download_small_queue_limit or DEFAULT_DOWNLOAD_SMALL_LIMIT,
+            download_large_limit=config.media_download_large_queue_limit or DEFAULT_DOWNLOAD_LARGE_LIMIT,
+        )
         # Exported-authorization auth keys per media DC (P1-5): key bytes + salt.
         self._dc_auth_cache: dict[int, tuple[bytes, int]] = {}
         self._dc_auth_lock = asyncio.Lock()
@@ -344,6 +359,10 @@ class Client:
                 errors.append(exc)
             try:
                 await self._close_media_pools()
+            except BaseException as exc:
+                errors.append(exc)
+            try:
+                await self._media_schedulers.close()
             except BaseException as exc:
                 errors.append(exc)
             try:
@@ -664,7 +683,10 @@ class Client:
             uploaded = None
             if decoded_file_id is None:
                 async with _MediaInvokeContext(
-                    self, _media_lane_count(file_options["media_lanes"], file_options["concurrency"]), kind="upload"
+                    self,
+                    _media_lane_count(file_options["media_lanes"], file_options["concurrency"]),
+                    kind="upload",
+                    defer_transfer=True,
                 ) as media_invoke:
                     upload_kwargs: dict[str, Any] = {}
                     if upload_flood_threshold_given:
@@ -785,6 +807,29 @@ class Client:
         )
         return result
 
+    async def iter_download(self, media: object, **kwargs: Any) -> AsyncGenerator[bytes]:
+        """Stream ordered media bytes without materializing the complete download."""
+
+        self._apply_media_config_defaults(kwargs)
+        options = _download_media_options(kwargs)
+        if options.pop("multi_session"):
+            raise ValueError("multi_session is not supported by iter_download")
+        if options.pop("resume"):
+            raise ValueError("resume is not supported by iter_download; pass an explicit offset instead")
+        media_lanes = options.pop("media_lanes")
+        total_size = _resolve_download_total_size(media, options.get("total_size"))
+        if options.get("file_reference_refresher") is None:
+            options["file_reference_refresher"] = self._message_file_reference_refresher(media)
+        async with _MediaInvokeContext(
+            self,
+            _media_lane_count(media_lanes, options["concurrency"]),
+            kind="download",
+            dc_id=_resolve_media_dc_id(media),
+            total_size=total_size,
+        ) as media_invoke:
+            async for payload in iter_download_media_file(media_invoke, media, **options):
+                yield payload
+
     async def _download_media_single(
         self, media: object, destination: Destination, options: Mapping[str, Any]
     ) -> MediaDownloadResult:
@@ -797,6 +842,7 @@ class Client:
             _media_lane_count(options["media_lanes"], options["concurrency"]),
             kind="download",
             dc_id=_resolve_media_dc_id(media),
+            total_size=_resolve_download_total_size(media, download_options.get("total_size")),
         ) as media_invoke:
             return await download_media_file(media_invoke, media, destination, **download_options)
 
@@ -1012,6 +1058,11 @@ class Client:
             value = _json_object_int(result.config, "upload_max_fileparts")
             if value is not None:
                 self._upload_limit_parts_cache = value
+            dynamic_small = _json_object_int(result.config, "small_queue_max_active_operations_count")
+            dynamic_large = _json_object_int(result.config, "large_queue_max_active_operations_count")
+            small_limit = self.config.media_download_small_queue_limit or dynamic_small or DEFAULT_DOWNLOAD_SMALL_LIMIT
+            large_limit = self.config.media_download_large_queue_limit or dynamic_large or DEFAULT_DOWNLOAD_LARGE_LIMIT
+            self._media_schedulers.configure_download_limits(small_limit=small_limit, large_limit=large_limit)
             return value
         if isinstance(result, types.HelpAppConfigNotModified):
             return self._upload_limit_parts_cache
@@ -1574,42 +1625,122 @@ class Client:
 
 
 class _MediaInvokeContext:
-    def __init__(self, client: Client, lane_count: int, *, kind: str, dc_id: int | None = None) -> None:
+    def __init__(
+        self,
+        client: Client,
+        lane_count: int,
+        *,
+        kind: Literal["download", "upload"],
+        dc_id: int | None = None,
+        total_size: int | None = None,
+        priority: MediaPriority = "foreground",
+        defer_transfer: bool = False,
+    ) -> None:
         self._client = client
         self._lane_count = lane_count
         self._kind = kind
         self._dc_id = dc_id
+        self._total_size = total_size
+        self._priority = priority
+        self._defer_transfer = defer_transfer
         self._pool: _MediaSenderPool | None = None
+        self._transfer: MediaTransfer | None = None
+        self._target_dc: int | None = None
+        self._closed = False
 
-    async def __aenter__(self) -> Callable[..., Awaitable[object]]:
-        if self._lane_count <= 0:
-            return self._client.invoke
-        self._pool = await self._client._get_media_pool(kind=self._kind, lane_count=self._lane_count, dc_id=self._dc_id)
-        await self._pool.prewarm()
-        return self._invoke
+    async def __aenter__(self) -> _MediaInvokeContext:
+        self._target_dc = self._dc_id if self._dc_id is not None else await self._client._current_dc_id()
+        if self._lane_count > 0:
+            self._pool = await self._client._get_media_pool(
+                kind=self._kind, lane_count=self._lane_count, dc_id=self._target_dc
+            )
+            await self._pool.prewarm()
+        if not self._defer_transfer:
+            await self.register_transfer(self._total_size)
+        return self
 
     async def __aexit__(
         self, exc_type: type[BaseException] | None, exc: BaseException | None, tb: object | None
     ) -> None:
         del exc_type, exc, tb
+        self._closed = True
+        transfer = self._transfer
+        self._transfer = None
+        if transfer is not None:
+            await transfer.close()
 
-    async def _invoke(self, raw_request: object, **kwargs: Any) -> object:
-        pool = self._pool
-        assert pool is not None
-        try:
-            return await pool.invoke(raw_request, **kwargs)
-        except DatacenterMigration as exc:
-            if exc.kind != "FILE":
-                raise
-            # FILE_MIGRATE_X: the file lives on another DC. Re-resolve the pool
-            # to that DC (exported-auth lanes) and retry; the main session's DC
-            # stays untouched. Subsequent parts use the migrated pool directly.
-            record_metric("client.media_file_migrations", 1, attributes={"kind": self._kind, "target_dc_id": exc.dc_id})
-            self._pool = await self._client._get_media_pool(
-                kind=self._kind, lane_count=self._lane_count, dc_id=exc.dc_id
+    async def register_transfer(
+        self, total_size: int | None, *, priority: MediaPriority | None = None
+    ) -> MediaTransfer:
+        if self._closed:
+            raise RuntimeError("media invoke context is closed")
+        if self._transfer is not None:
+            return self._transfer
+        target_dc = self._target_dc
+        if target_dc is None:
+            target_dc = self._dc_id if self._dc_id is not None else await self._client._current_dc_id()
+            self._target_dc = target_dc
+        self._transfer = self._client._media_schedulers.open_transfer(
+            dc_id=target_dc,
+            direction=self._kind,
+            total_size=total_size,
+            priority=self._priority if priority is None else priority,
+        )
+        return self._transfer
+
+    async def __call__(self, raw_request: object, **kwargs: Any) -> object:
+        request_priority = cast(MediaPriority, kwargs.pop("_media_priority", self._priority))
+        if request_priority not in {"foreground", "background"}:
+            raise ValueError("_media_priority must be foreground or background")
+        temporary_transfer = request_priority == "background"
+        transfer = (
+            self._client._media_schedulers.open_transfer(
+                dc_id=self._target_dc or await self._client._current_dc_id(),
+                direction=self._kind,
+                total_size=None,
+                priority="background",
             )
-            await self._pool.prewarm()
-            return await self._pool.invoke(raw_request, **kwargs)
+            if temporary_transfer
+            else self._transfer or await self.register_transfer(self._total_size)
+        )
+        try:
+            while True:
+                permit = await transfer.acquire(_media_request_weight(raw_request))
+                migration: DatacenterMigration | None = None
+                try:
+                    pool = self._pool
+                    if pool is None:
+                        return await self._client.invoke(raw_request, **kwargs)
+                    return await pool.invoke(raw_request, **kwargs)
+                except DatacenterMigration as exc:
+                    if exc.kind != "FILE":
+                        raise
+                    migration = exc
+                finally:
+                    permit.release()
+                assert migration is not None
+                record_metric(
+                    "client.media_file_migrations", 1, attributes={"kind": self._kind, "target_dc_id": migration.dc_id}
+                )
+                self._target_dc = migration.dc_id
+                self._pool = await self._client._get_media_pool(
+                    kind=self._kind, lane_count=max(1, self._lane_count), dc_id=migration.dc_id
+                )
+                await self._pool.prewarm()
+                await transfer.rebind(migration.dc_id)
+        finally:
+            if temporary_transfer:
+                await transfer.close()
+
+
+def _media_request_weight(raw_request: object) -> int:
+    payload = getattr(raw_request, "bytes", None)
+    if isinstance(payload, bytes | bytearray | memoryview) and payload:
+        return len(payload)
+    limit = getattr(raw_request, "limit", None)
+    if isinstance(limit, int) and limit > 0:
+        return limit
+    return MEDIA_SCHEDULER_UNIT
 
 
 class _MediaSenderPool:
@@ -1972,6 +2103,7 @@ _DOWNLOAD_MEDIA_OPTION_DEFAULTS: dict[str, object] = {
     "range_cache_key": None,
     "range_cache_max_bytes": None,
     "read_ahead_bytes": 0,
+    "verify_plain_hashes": False,
     "file_reference_refresher": None,
     "media_lanes": 2,
     "multi_session": False,
@@ -2050,6 +2182,7 @@ def _download_media_options(kwargs: dict[str, Any]) -> dict[str, Any]:
     else:
         options["range_cache_max_bytes"] = int(options["range_cache_max_bytes"])
     options["read_ahead_bytes"] = int(options["read_ahead_bytes"])
+    options["verify_plain_hashes"] = bool(options["verify_plain_hashes"])
     options["max_retries"] = int(options["max_retries"])
     if options["flood_sleep_threshold"] is not None:
         options["flood_sleep_threshold"] = int(options["flood_sleep_threshold"])

@@ -8,6 +8,7 @@ from miniproto.session.storage import SessionStorage
 
 TransportMode = Literal["tcp_abridged", "tcp_intermediate", "tcp_padded_intermediate"]
 UpdateQueueOverflowPolicy = Literal["raise", "drop_oldest", "drop_newest"]
+_MEDIA_SCHEDULER_MIN_BYTES = 64 * 1024
 
 
 @dataclass(slots=True, frozen=True)
@@ -66,6 +67,10 @@ class ClientConfig:
     method_flood_cache_size: int = 512
     media_concurrency: int | None = None
     media_max_buffer_size: int | None = None
+    media_download_max_in_flight_bytes_per_dc: int = 16 * 1024 * 1024
+    media_upload_max_in_flight_bytes_per_dc: int = 8 * 1024 * 1024
+    media_download_small_queue_limit: int | None = None
+    media_download_large_queue_limit: int | None = None
     # Media lanes idle-close after this many seconds without requests (mtcute
     # closes at 60 s); keepalive pings keep them warm until then. None keeps
     # lanes open for the client's whole lifetime.
@@ -101,6 +106,18 @@ class ClientConfig:
             raise ValueError("media_concurrency must be positive when set")
         if self.media_max_buffer_size is not None and self.media_max_buffer_size <= 0:
             raise ValueError("media_max_buffer_size must be positive when set")
+        if self.media_download_max_in_flight_bytes_per_dc < _MEDIA_SCHEDULER_MIN_BYTES:
+            raise ValueError(
+                f"media_download_max_in_flight_bytes_per_dc must be at least {_MEDIA_SCHEDULER_MIN_BYTES} bytes"
+            )
+        if self.media_upload_max_in_flight_bytes_per_dc < _MEDIA_SCHEDULER_MIN_BYTES:
+            raise ValueError(
+                f"media_upload_max_in_flight_bytes_per_dc must be at least {_MEDIA_SCHEDULER_MIN_BYTES} bytes"
+            )
+        if self.media_download_small_queue_limit is not None and self.media_download_small_queue_limit <= 0:
+            raise ValueError("media_download_small_queue_limit must be positive when set")
+        if self.media_download_large_queue_limit is not None and self.media_download_large_queue_limit <= 0:
+            raise ValueError("media_download_large_queue_limit must be positive when set")
         if self.media_idle_close is not None and self.media_idle_close <= 0:
             raise ValueError("media_idle_close must be positive when set")
         if self.bot_token is not None and not self.bot_token:
