@@ -39,7 +39,7 @@ Direct peer ingestion runs under the cache-lock-to-storage-lock order, merges th
 
 ```pwsh
 uv python install 3.14
-uv sync --extra dev
+uv sync --extra dev --frozen
 uv lock
 cargo check
 ```

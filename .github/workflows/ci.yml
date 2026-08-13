@@ -47,9 +47,6 @@ jobs:
 
       - name: Tests
         run: uv run pytest
-
-      - name: Stress tests
-        run: uv run pytest tests/stress
   rust:
     runs-on: ubuntu-latest
     steps:
@@ -111,7 +108,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: rust
-          path: target/release/miniproto_native*
+          path: target/release/*miniproto_native*
           compression-level: 0
 
       - name: Benchmarks
