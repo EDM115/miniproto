@@ -122,6 +122,18 @@ def build_stages(config: ReleaseConfig, *, repo: Path) -> tuple[Stage, ...]:
                     str(artifacts / "benchmarks" / "native-fallback.json"),
                 ),
             ),
+            Stage(
+                "benchmark-session-crypto",
+                (
+                    python,
+                    "-m",
+                    "tools.bench.benchmark_session_crypto_backends",
+                    "--mode",
+                    "smoke",
+                    "--json",
+                    str(artifacts / "benchmarks" / "session-crypto.json"),
+                ),
+            ),
             Stage("benchmark-runtime-paths", (python, "-m", "tools.bench.benchmark_runtime_paths")),
             Stage(
                 "benchmark-frame-pump",

@@ -127,6 +127,36 @@ def test_public_crypto_package_exports_envelope_helpers() -> None:
     public = import_module("miniproto.crypto")
     assert callable(public.mtproto_encode_message)
     assert callable(public.mtproto_decode_message)
+    for name in (
+        "aes_256_gcm_encrypt",
+        "aes_256_gcm_encrypt_native",
+        "aes_256_gcm_encrypt_cryptography",
+        "aes_256_gcm_decrypt",
+        "aes_256_gcm_decrypt_native",
+        "aes_256_gcm_decrypt_cryptography",
+        "scrypt_derive",
+        "scrypt_derive_native",
+        "scrypt_derive_cryptography",
+    ):
+        assert callable(getattr(public, name))
+
+
+def test_explicit_session_crypto_backends_are_cross_compatible() -> None:
+    public = import_module("miniproto.crypto")
+    plaintext = b"session-envelope" * 64
+    key = bytes(range(32))
+    nonce = bytes(range(12))
+    associated_data = b"miniproto-session-header"
+
+    native_ciphertext = public.aes_256_gcm_encrypt_native(plaintext, key, nonce, associated_data)
+    cryptography_ciphertext = public.aes_256_gcm_encrypt_cryptography(plaintext, key, nonce, associated_data)
+
+    assert native_ciphertext == cryptography_ciphertext
+    assert public.aes_256_gcm_decrypt_cryptography(native_ciphertext, key, nonce, associated_data) == plaintext
+    assert public.aes_256_gcm_decrypt_native(cryptography_ciphertext, key, nonce, associated_data) == plaintext
+    assert public.scrypt_derive_native(
+        b"passphrase", b"0123456789abcdef", 2**10, 8, 1, 32
+    ) == public.scrypt_derive_cryptography(b"passphrase", b"0123456789abcdef", 2**10, 8, 1, 32)
 
 
 def test_native_and_fallback_authenticate_msg_key_before_rejecting_auth_key_id() -> None:

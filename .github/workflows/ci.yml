@@ -78,11 +78,10 @@ jobs:
         with:
           toolchain: "1.97"
 
-      - name: Build native extension without GIL-only optional dependencies
+      - name: Sync dependencies and build native extension
         run: |
-          uv venv --python "${{ matrix.python-version }}" .venv
-          uv pip install --python .venv/bin/python "maturin==1.14.1"
-          .venv/bin/maturin develop --release --locked
+          uv sync --python "${{ matrix.python-version }}" --extra dev --frozen
+          uv run maturin develop --release --locked
 
       - name: Exercise the runtime with the GIL disabled
         shell: bash
@@ -98,7 +97,8 @@ jobs:
 
           assert sysconfig.get_config_var("Py_GIL_DISABLED") == 1
           assert not sys._is_gil_enabled()
-          assert importlib.util.find_spec("cryptography") is None
+          assert importlib.util.find_spec("cryptography") is not None
+          assert importlib.util.find_spec("uvloop") is not None
           assert _native.native_available()
           record = miniproto.SessionRecord()
           protected = miniproto.export_session_string(record, passphrase="free-threaded CI")
@@ -165,6 +165,7 @@ jobs:
           uv run miniproto-bench-media-scheduler > .tmp/benchmark-smoke/media-scheduler.json
           uv run miniproto-bench-native-fallback-crypto --mode smoke --json .tmp/benchmark-smoke/native-fallback.json > .tmp/benchmark-smoke/native-fallback.log
           uv run miniproto-bench-runtime-paths > .tmp/benchmark-smoke/runtime-paths.log
+          uv run miniproto-bench-session-crypto --mode smoke --json .tmp/benchmark-smoke/session-crypto.json > .tmp/benchmark-smoke/session-crypto.log
           uv run miniproto-bench-tl-fast-paths --check --mode smoke --json .tmp/benchmark-smoke/tl-fast-paths.json > .tmp/benchmark-smoke/tl-fast-paths.log
           uv run miniproto-bench-transport-framing --check --mode smoke --json .tmp/benchmark-smoke/transport-framing.json > .tmp/benchmark-smoke/transport-framing.log
           uv run miniproto-profile-lazy-raw-codec > .tmp/benchmark-smoke/lazy-raw-codec.json

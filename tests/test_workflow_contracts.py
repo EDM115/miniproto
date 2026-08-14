@@ -42,6 +42,10 @@ def test_ci_workflow_covers_python_rust_benchmarks_and_free_threaded_runtime_wit
     assert "wheels" not in jobs
     assert "sdist" in jobs
 
+    free_threaded_steps = "\n".join(str(step.get("run", "")) for step in jobs["free-threaded"]["steps"])
+    assert 'find_spec("cryptography") is not None' in free_threaded_steps
+    assert 'find_spec("uvloop") is not None' in free_threaded_steps
+
 
 def test_manual_wheel_workflow_is_dispatch_only_and_covers_all_required_abis() -> None:
     workflow = load_workflow("build-wheels.yml")
@@ -97,6 +101,7 @@ def test_ci_runs_every_offline_benchmark_cli() -> None:
         "miniproto-bench-media-scheduler",
         "miniproto-bench-native-fallback-crypto",
         "miniproto-bench-runtime-paths",
+        "miniproto-bench-session-crypto",
         "miniproto-bench-tl-fast-paths",
         "miniproto-bench-transport-framing",
         "miniproto-profile-lazy-raw-codec",
@@ -115,6 +120,13 @@ def test_manual_wheel_jobs_test_native_free_threading_and_every_console_script()
         assert "ThreadPoolExecutor" in serialized_steps
         assert 'metadata.distribution("miniproto").entry_points' in serialized_steps
         assert 'subprocess.check_call([executable, "--help"])' in serialized_steps
+        assert "--no-deps" not in serialized_steps
+        assert 'find_spec("cryptography") is not None' in serialized_steps
+
+    linux_steps = "\n".join(str(step.get("run", "")) for step in workflow["jobs"]["linux-wheels"]["steps"])
+    native_steps = "\n".join(str(step.get("run", "")) for step in workflow["jobs"]["native-wheels"]["steps"])
+    assert 'find_spec("uvloop") is not None' in linux_steps
+    assert 'find_spec("uvloop" if sys.platform == "darwin" else "winloop") is not None' in native_steps
 
 
 def test_pull_request_ci_has_no_telegram_secret_or_live_benchmark_contract() -> None:

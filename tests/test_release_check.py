@@ -45,6 +45,7 @@ def test_offline_stage_order_uses_check_only_commands_and_marks_future_docs_pend
         "benchmark-smoke",
         "benchmark-media-scheduler",
         "benchmark-native-fallback",
+        "benchmark-session-crypto",
         "benchmark-runtime-paths",
         "benchmark-frame-pump",
         "benchmark-hot-tl",

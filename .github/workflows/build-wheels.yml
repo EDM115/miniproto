@@ -102,7 +102,7 @@ jobs:
           TEST_INTERPRETER: /opt/python/${{ matrix.python.abi }}/bin/python
           EXPECT_FREE_THREADED: ${{ matrix.python.free-threaded }}
         run: |
-          docker run --rm --platform "$TEST_PLATFORM" -e EXPECT_FREE_THREADED -e PYTHON_GIL=0 -v "$GITHUB_WORKSPACE:/io" "$TEST_IMAGE" /bin/bash -euxo pipefail -c 'interpreter="$1"; test_code="$2"; "$interpreter" -m pip install --no-deps /io/dist/*.whl; "$interpreter" -I -c "$test_code"' bash "$TEST_INTERPRETER" 'import importlib.metadata as metadata; import importlib.util; import os; import shutil; import subprocess; import sys; import sysconfig; from concurrent.futures import ThreadPoolExecutor; import miniproto; from miniproto import _native; expected_free_threaded = os.environ["EXPECT_FREE_THREADED"].lower() == "true"; assert bool(sysconfig.get_config_var("Py_GIL_DISABLED")) == expected_free_threaded; assert not expected_free_threaded or not sys._is_gil_enabled(); assert importlib.util.find_spec("cryptography") is None; assert _native.native_available(); record = miniproto.SessionRecord(); protected = miniproto.export_session_string(record, passphrase="wheel acceptance"); assert miniproto.import_session_string(protected, passphrase="wheel acceptance") == record; payload = b"miniproto-wheel-thread-safety" * 256; expected = _native.sha256_digest(payload); executor = ThreadPoolExecutor(max_workers=8); results = tuple(executor.map(_native.sha256_digest, (payload,) * 256)); executor.shutdown(); assert all(result == expected for result in results); entry_points = sorted((entry_point for entry_point in metadata.distribution("miniproto").entry_points if entry_point.group == "console_scripts"), key=lambda entry_point: entry_point.name); assert entry_points; executables = [shutil.which(entry_point.name) for entry_point in entry_points]; assert all(executables); [subprocess.check_call([executable, "--help"]) for executable in executables]'
+          docker run --rm --platform "$TEST_PLATFORM" -e EXPECT_FREE_THREADED -e PYTHON_GIL=0 -v "$GITHUB_WORKSPACE:/io" "$TEST_IMAGE" /bin/bash -euxo pipefail -c 'interpreter="$1"; test_code="$2"; "$interpreter" -m pip install /io/dist/*.whl; "$interpreter" -I -c "$test_code"' bash "$TEST_INTERPRETER" 'import importlib.metadata as metadata; import importlib.util; import os; import shutil; import subprocess; import sys; import sysconfig; from concurrent.futures import ThreadPoolExecutor; import miniproto; from miniproto import _native; expected_free_threaded = os.environ["EXPECT_FREE_THREADED"].lower() == "true"; assert bool(sysconfig.get_config_var("Py_GIL_DISABLED")) == expected_free_threaded; assert not expected_free_threaded or not sys._is_gil_enabled(); assert importlib.util.find_spec("cryptography") is not None; assert importlib.util.find_spec("uvloop") is not None; assert _native.native_available(); record = miniproto.SessionRecord(); protected = miniproto.export_session_string(record, passphrase="wheel acceptance"); assert miniproto.import_session_string(protected, passphrase="wheel acceptance") == record; payload = b"miniproto-wheel-thread-safety" * 256; expected = _native.sha256_digest(payload); executor = ThreadPoolExecutor(max_workers=8); results = tuple(executor.map(_native.sha256_digest, (payload,) * 256)); executor.shutdown(); assert all(result == expected for result in results); entry_points = sorted((entry_point for entry_point in metadata.distribution("miniproto").entry_points if entry_point.group == "console_scripts"), key=lambda entry_point: entry_point.name); assert entry_points; executables = [shutil.which(entry_point.name) for entry_point in entry_points]; assert all(executables); [subprocess.check_call([executable, "--help"]) for executable in executables]'
 
       - name: Upload wheel
         uses: actions/upload-artifact@v7
@@ -189,14 +189,15 @@ jobs:
           wheels = glob.glob("dist/*.whl")
           if len(wheels) != 1:
               raise SystemExit(f"expected one wheel, found {wheels}")
-          subprocess.check_call(["uv", "pip", "install", "--system", "--no-deps", wheels[0]])
+          subprocess.check_call(["uv", "pip", "install", "--system", wheels[0]])
           import miniproto
           from miniproto import _native
 
           expected_free_threaded = os.environ["EXPECT_FREE_THREADED"].lower() == "true"
           assert bool(sysconfig.get_config_var("Py_GIL_DISABLED")) == expected_free_threaded
           assert not expected_free_threaded or not sys._is_gil_enabled()
-          assert importlib.util.find_spec("cryptography") is None
+          assert importlib.util.find_spec("cryptography") is not None
+          assert importlib.util.find_spec("uvloop" if sys.platform == "darwin" else "winloop") is not None
           assert _native.native_available()
           record = miniproto.SessionRecord()
           protected = miniproto.export_session_string(record, passphrase="wheel acceptance")

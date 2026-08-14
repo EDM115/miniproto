@@ -21,23 +21,19 @@ classifiers = [
   "Programming Language :: Rust",
   "Typing :: Typed",
 ]
-dependencies = []
-
-[project.optional-dependencies]
-crypto-fallback = ["cryptography==50.0.0"]
-event-loop = [
+dependencies = [
+  "cryptography==50.0.0",
   "uvloop==0.22.1; sys_platform == 'linux' or sys_platform == 'darwin'",
   "winloop==0.6.3; sys_platform == 'win32' or sys_platform == 'cygwin' or sys_platform == 'cli'",
 ]
+
+[project.optional-dependencies]
 dev = [
-  "cryptography==50.0.0",
   "maturin==1.14.1,<2.0",
   "pytest==9.1.1",
   "PyYAML==6.0.3",
   "ruff==0.16.2",
   "ty==0.0.70",
-  "uvloop==0.22.1; sys_platform == 'linux' or sys_platform == 'darwin'",
-  "winloop==0.6.3; sys_platform == 'win32' or sys_platform == 'cygwin' or sys_platform == 'cli'",
 ]
 
 [project.urls]
@@ -54,6 +50,7 @@ miniproto-bench-media-scheduler = "miniproto._cli:bench_media_scheduler"
 miniproto-bench-multi-session-download = "miniproto._cli:bench_multi_session_download"
 miniproto-bench-native-fallback-crypto = "miniproto._cli:bench_native_fallback_crypto"
 miniproto-bench-runtime-paths = "miniproto._cli:bench_runtime_paths"
+miniproto-bench-session-crypto = "miniproto._cli:bench_session_crypto"
 miniproto-bench-tl-fast-paths = "miniproto._cli:bench_tl_fast_paths"
 miniproto-bench-tglib = "miniproto._cli:bench_tglib"
 miniproto-bench-transport-framing = "miniproto._cli:bench_transport_framing"

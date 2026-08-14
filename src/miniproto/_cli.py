@@ -21,6 +21,7 @@ CLI_ENTRY_POINTS = {
         "tools.bench.benchmark_native_fallback_crypto",
     ),
     "miniproto-bench-runtime-paths": ("bench_runtime_paths", "tools.bench.benchmark_runtime_paths"),
+    "miniproto-bench-session-crypto": ("bench_session_crypto", "tools.bench.benchmark_session_crypto_backends"),
     "miniproto-bench-tl-fast-paths": ("bench_tl_fast_paths", "tools.bench.benchmark_tl_fast_paths"),
     "miniproto-bench-tglib": ("bench_tglib", "tools.bench.benchmark_tglib"),
     "miniproto-bench-transport-framing": ("bench_transport_framing", "tools.bench.benchmark_transport_framing"),
@@ -70,6 +71,10 @@ def bench_native_fallback_crypto() -> int:
 
 def bench_runtime_paths() -> int:
     return _run("tools.bench.benchmark_runtime_paths")
+
+
+def bench_session_crypto() -> int:
+    return _run("tools.bench.benchmark_session_crypto_backends")
 
 
 def bench_tl_fast_paths() -> int:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from importlib import import_module
 from importlib.util import find_spec
 from typing import Protocol, cast
@@ -94,9 +94,6 @@ _REQUIRED_NATIVE_NAMES = (
     "aes_256_ctr_crypt",
     "aes_256_cbc_encrypt",
     "aes_256_cbc_decrypt",
-    "aes_256_gcm_encrypt",
-    "aes_256_gcm_decrypt",
-    "scrypt_derive",
     "pq_factorize",
     "tl_encode_int",
     "tl_decode_int",
@@ -273,15 +270,76 @@ def aes_256_cbc_decrypt(ciphertext: BytesLike, key: bytes, iv: bytes) -> bytes:
 
 
 def aes_256_gcm_encrypt(plaintext: bytes, key: bytes, nonce: bytes, associated_data: bytes) -> bytes:
-    return bytes(_native_impl.aes_256_gcm_encrypt(plaintext, key, nonce, associated_data))
+    """Encrypt a protected-session payload through native Rust when available, otherwise cryptography."""
+    implementation = _native_session_crypto_function("aes_256_gcm_encrypt")
+    if implementation is None:
+        return aes_256_gcm_encrypt_cryptography(plaintext, key, nonce, associated_data)
+    return bytes(implementation(plaintext, key, nonce, associated_data))
 
 
 def aes_256_gcm_decrypt(ciphertext_and_tag: bytes, key: bytes, nonce: bytes, associated_data: bytes) -> bytes:
-    return bytes(_native_impl.aes_256_gcm_decrypt(ciphertext_and_tag, key, nonce, associated_data))
+    """Authenticate and decrypt a protected-session payload through the selected backend."""
+    implementation = _native_session_crypto_function("aes_256_gcm_decrypt")
+    if implementation is None:
+        return aes_256_gcm_decrypt_cryptography(ciphertext_and_tag, key, nonce, associated_data)
+    return bytes(implementation(ciphertext_and_tag, key, nonce, associated_data))
 
 
 def scrypt_derive(password: bytes, salt: bytes, n: int, r: int, p: int, length: int) -> bytes:
-    return bytes(_native_impl.scrypt_derive(password, salt, n, r, p, length))
+    """Derive a Scrypt key through native Rust when available, otherwise cryptography."""
+    implementation = _native_session_crypto_function("scrypt_derive")
+    if implementation is None:
+        return scrypt_derive_cryptography(password, salt, n, r, p, length)
+    return bytes(implementation(password, salt, n, r, p, length))
+
+
+def aes_256_gcm_encrypt_native(plaintext: bytes, key: bytes, nonce: bytes, associated_data: bytes) -> bytes:
+    """Encrypt with the explicit compiled Rust AES-256-GCM capability or raise when unavailable."""
+    implementation = _require_native_session_crypto_function("aes_256_gcm_encrypt")
+    return bytes(implementation(plaintext, key, nonce, associated_data))
+
+
+def aes_256_gcm_decrypt_native(ciphertext_and_tag: bytes, key: bytes, nonce: bytes, associated_data: bytes) -> bytes:
+    """Authenticate and decrypt with the explicit compiled Rust AES-256-GCM capability."""
+    implementation = _require_native_session_crypto_function("aes_256_gcm_decrypt")
+    return bytes(implementation(ciphertext_and_tag, key, nonce, associated_data))
+
+
+def scrypt_derive_native(password: bytes, salt: bytes, n: int, r: int, p: int, length: int) -> bytes:
+    """Derive a key with the explicit compiled Rust Scrypt capability or raise when unavailable."""
+    implementation = _require_native_session_crypto_function("scrypt_derive")
+    return bytes(implementation(password, salt, n, r, p, length))
+
+
+def aes_256_gcm_encrypt_cryptography(plaintext: bytes, key: bytes, nonce: bytes, associated_data: bytes) -> bytes:
+    """Encrypt with the explicit cryptography AES-256-GCM implementation."""
+    return bytes(_fallback_impl.aes_256_gcm_encrypt(plaintext, key, nonce, associated_data))
+
+
+def aes_256_gcm_decrypt_cryptography(
+    ciphertext_and_tag: bytes, key: bytes, nonce: bytes, associated_data: bytes
+) -> bytes:
+    """Authenticate and decrypt with the explicit cryptography AES-256-GCM implementation."""
+    return bytes(_fallback_impl.aes_256_gcm_decrypt(ciphertext_and_tag, key, nonce, associated_data))
+
+
+def scrypt_derive_cryptography(password: bytes, salt: bytes, n: int, r: int, p: int, length: int) -> bytes:
+    """Derive a key with the explicit cryptography Scrypt implementation."""
+    return bytes(_fallback_impl.scrypt_derive(password, salt, n, r, p, length))
+
+
+def _native_session_crypto_function(name: str) -> Callable[..., bytes] | None:
+    if not _native_impl.native_available():
+        return None
+    implementation = getattr(_native_impl, name, None)
+    return implementation if callable(implementation) else None
+
+
+def _require_native_session_crypto_function(name: str) -> Callable[..., bytes]:
+    implementation = _native_session_crypto_function(name)
+    if implementation is None:
+        raise RuntimeError(f"native session crypto capability is unavailable: {name}")
+    return implementation
 
 
 def pq_factorize(pq: int) -> tuple[int, int]:

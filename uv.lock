@@ -168,41 +168,33 @@ wheels = [
 name = "miniproto"
 version = "0.0.1"
 source = { editable = "." }
+dependencies = [
+    { name = "cryptography" },
+    { name = "uvloop", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
+    { name = "winloop", marker = "sys_platform == 'cli' or sys_platform == 'cygwin' or sys_platform == 'win32'" },
+]
 
 [package.optional-dependencies]
-crypto-fallback = [
-    { name = "cryptography" },
-]
 dev = [
-    { name = "cryptography" },
     { name = "maturin" },
     { name = "pytest" },
     { name = "pyyaml" },
     { name = "ruff" },
     { name = "ty" },
-    { name = "uvloop", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
-    { name = "winloop", marker = "sys_platform == 'cli' or sys_platform == 'cygwin' or sys_platform == 'win32'" },
-]
-event-loop = [
-    { name = "uvloop", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
-    { name = "winloop", marker = "sys_platform == 'cli' or sys_platform == 'cygwin' or sys_platform == 'win32'" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "cryptography", marker = "extra == 'crypto-fallback'", specifier = "==50.0.0" },
-    { name = "cryptography", marker = "extra == 'dev'", specifier = "==50.0.0" },
+    { name = "cryptography", specifier = "==50.0.0" },
     { name = "maturin", marker = "extra == 'dev'", specifier = "==1.14.1,<2.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = "==9.1.1" },
     { name = "pyyaml", marker = "extra == 'dev'", specifier = "==6.0.3" },
     { name = "ruff", marker = "extra == 'dev'", specifier = "==0.16.2" },
     { name = "ty", marker = "extra == 'dev'", specifier = "==0.0.70" },
-    { name = "uvloop", marker = "(sys_platform == 'darwin' and extra == 'dev') or (sys_platform == 'linux' and extra == 'dev')", specifier = "==0.22.1" },
-    { name = "uvloop", marker = "(sys_platform == 'darwin' and extra == 'event-loop') or (sys_platform == 'linux' and extra == 'event-loop')", specifier = "==0.22.1" },
-    { name = "winloop", marker = "(sys_platform == 'cli' and extra == 'dev') or (sys_platform == 'cygwin' and extra == 'dev') or (sys_platform == 'win32' and extra == 'dev')", specifier = "==0.6.3" },
-    { name = "winloop", marker = "(sys_platform == 'cli' and extra == 'event-loop') or (sys_platform == 'cygwin' and extra == 'event-loop') or (sys_platform == 'win32' and extra == 'event-loop')", specifier = "==0.6.3" },
+    { name = "uvloop", marker = "sys_platform == 'darwin' or sys_platform == 'linux'", specifier = "==0.22.1" },
+    { name = "winloop", marker = "sys_platform == 'cli' or sys_platform == 'cygwin' or sys_platform == 'win32'", specifier = "==0.6.3" },
 ]
-provides-extras = ["crypto-fallback", "event-loop", "dev"]
+provides-extras = ["dev"]
 
 [[package]]
 name = "packaging"

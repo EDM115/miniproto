@@ -97,6 +97,32 @@ def test_native_loader_falls_back_when_extension_is_incomplete(monkeypatch: pyte
     assert "sha1_digest" in error
 
 
+def test_native_loader_keeps_extension_when_only_session_crypto_symbols_are_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    compiled = importlib.import_module("miniproto._native")
+
+    class CompiledWithoutSessionCrypto:
+        def __getattr__(self, name: str):
+            if name in {"aes_256_gcm_encrypt", "aes_256_gcm_decrypt", "scrypt_derive"}:
+                raise AttributeError(name)
+            return getattr(compiled, name)
+
+    partial = CompiledWithoutSessionCrypto()
+
+    def fake_import(name: str):
+        if name == "miniproto._native":
+            return partial
+        return importlib.import_module(name)
+
+    monkeypatch.setattr(native_module, "import_module", fake_import)
+
+    impl, error = native_module._load_native_impl()
+
+    assert impl is partial
+    assert error is None
+
+
 def test_native_fallback_error_is_logged(caplog: pytest.LogCaptureFixture) -> None:
     with caplog.at_level(logging.ERROR, logger="miniproto.crypto.native"):
         native_module._emit_native_fallback_error("missing native symbols: x")
@@ -197,3 +223,97 @@ def test_mtproto_encode_message_prefers_native_impl(monkeypatch: pytest.MonkeyPa
         == b"native"
     )
     assert calls == [(b"payload", False, b"\0" * 12)]
+
+
+def test_selected_session_crypto_falls_back_per_missing_native_capability(monkeypatch: pytest.MonkeyPatch) -> None:
+    class PartialNative:
+        @staticmethod
+        def native_available() -> bool:
+            return True
+
+    class CryptographyImpl:
+        @staticmethod
+        def aes_256_gcm_encrypt(plaintext: bytes, key: bytes, nonce: bytes, associated_data: bytes) -> bytes:
+            del key, nonce, associated_data
+            return b"cryptography:" + plaintext
+
+        @staticmethod
+        def scrypt_derive(password: bytes, salt: bytes, n: int, r: int, p: int, length: int) -> bytes:
+            del password, salt, n, r, p
+            return b"c" * length
+
+    monkeypatch.setattr(native_module, "_native_impl", PartialNative())
+    monkeypatch.setattr(native_module, "_fallback_impl", CryptographyImpl())
+
+    assert native_module.aes_256_gcm_encrypt(b"payload", b"k" * 32, b"n" * 12, b"header") == b"cryptography:payload"
+    assert native_module.scrypt_derive(b"password", b"salt", 2, 1, 1, 8) == b"c" * 8
+
+
+def test_selected_session_crypto_prefers_available_native_capabilities(monkeypatch: pytest.MonkeyPatch) -> None:
+    class NativeImpl:
+        @staticmethod
+        def native_available() -> bool:
+            return True
+
+        @staticmethod
+        def aes_256_gcm_encrypt(plaintext: bytes, key: bytes, nonce: bytes, associated_data: bytes) -> bytes:
+            del key, nonce, associated_data
+            return b"native:" + plaintext
+
+        @staticmethod
+        def scrypt_derive(password: bytes, salt: bytes, n: int, r: int, p: int, length: int) -> bytes:
+            del password, salt, n, r, p
+            return b"n" * length
+
+    class CryptographyImpl:
+        @staticmethod
+        def aes_256_gcm_encrypt(plaintext: bytes, key: bytes, nonce: bytes, associated_data: bytes) -> bytes:
+            del plaintext, key, nonce, associated_data
+            raise AssertionError("cryptography should not run when the native capability is available")
+
+        @staticmethod
+        def scrypt_derive(password: bytes, salt: bytes, n: int, r: int, p: int, length: int) -> bytes:
+            del password, salt, n, r, p, length
+            raise AssertionError("cryptography should not run when the native capability is available")
+
+    monkeypatch.setattr(native_module, "_native_impl", NativeImpl())
+    monkeypatch.setattr(native_module, "_fallback_impl", CryptographyImpl())
+
+    assert native_module.aes_256_gcm_encrypt(b"payload", b"k" * 32, b"n" * 12, b"header") == b"native:payload"
+    assert native_module.scrypt_derive(b"password", b"salt", 2, 1, 1, 8) == b"n" * 8
+
+
+def test_selected_session_crypto_does_not_retry_native_operation_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    class NativeImpl:
+        @staticmethod
+        def native_available() -> bool:
+            return True
+
+        @staticmethod
+        def aes_256_gcm_decrypt(ciphertext_and_tag: bytes, key: bytes, nonce: bytes, associated_data: bytes) -> bytes:
+            del ciphertext_and_tag, key, nonce, associated_data
+            raise ValueError("AES-GCM authentication failed")
+
+    class CryptographyImpl:
+        @staticmethod
+        def aes_256_gcm_decrypt(ciphertext_and_tag: bytes, key: bytes, nonce: bytes, associated_data: bytes) -> bytes:
+            del ciphertext_and_tag, key, nonce, associated_data
+            raise AssertionError("cryptography must not retry a native authentication failure")
+
+    monkeypatch.setattr(native_module, "_native_impl", NativeImpl())
+    monkeypatch.setattr(native_module, "_fallback_impl", CryptographyImpl())
+
+    with pytest.raises(ValueError, match="authentication failed"):
+        native_module.aes_256_gcm_decrypt(b"ciphertext-and-tag", b"k" * 32, b"n" * 12, b"header")
+
+
+def test_explicit_native_session_crypto_rejects_an_unavailable_capability(monkeypatch: pytest.MonkeyPatch) -> None:
+    class UnavailableNative:
+        @staticmethod
+        def native_available() -> bool:
+            return False
+
+    monkeypatch.setattr(native_module, "_native_impl", UnavailableNative())
+
+    with pytest.raises(RuntimeError, match="native session crypto capability is unavailable"):
+        native_module.aes_256_gcm_encrypt_native(b"payload", b"k" * 32, b"n" * 12, b"header")
