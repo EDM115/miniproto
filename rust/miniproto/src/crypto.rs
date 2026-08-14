@@ -1,10 +1,14 @@
 use aes::Aes256;
-use cipher::{BlockCipherDecrypt, BlockCipherEncrypt, KeyInit};
+use aes_gcm::aead::consts::U12;
+use aes_gcm::aead::{Aead, KeyInit, Payload};
+use aes_gcm::{Aes256Gcm, Nonce};
+use cipher::{BlockCipherDecrypt, BlockCipherEncrypt};
 use pyo3::exceptions::PyValueError;
 use pyo3::marker::Ungil;
 use pyo3::prelude::*;
 use pyo3::types::PyModule;
 use pyo3::wrap_pyfunction;
+use scrypt::{Params as ScryptParams, scrypt};
 use sha1::Sha1;
 use sha2::{Digest, Sha256};
 
@@ -40,6 +44,9 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(aes_256_ctr_crypt, m)?)?;
     m.add_function(wrap_pyfunction!(aes_256_cbc_encrypt, m)?)?;
     m.add_function(wrap_pyfunction!(aes_256_cbc_decrypt, m)?)?;
+    m.add_function(wrap_pyfunction!(aes_256_gcm_encrypt, m)?)?;
+    m.add_function(wrap_pyfunction!(aes_256_gcm_decrypt, m)?)?;
+    m.add_function(wrap_pyfunction!(scrypt_derive, m)?)?;
     m.add_function(wrap_pyfunction!(pq_factorize, m)?)?;
     Ok(())
 }
@@ -195,6 +202,52 @@ fn aes_256_ctr_crypt(
     let work_bytes = data.len();
     detach_if_large(py, work_bytes, move || {
         aes_256_ctr_crypt_raw(&data, &key, &iv)
+    })
+}
+
+#[pyfunction]
+fn aes_256_gcm_encrypt(
+    py: Python<'_>,
+    plaintext: Vec<u8>,
+    key: Vec<u8>,
+    nonce: Vec<u8>,
+    associated_data: Vec<u8>,
+) -> PyResult<Vec<u8>> {
+    let work_bytes = plaintext.len() + associated_data.len();
+    detach_if_large(py, work_bytes, move || {
+        aes_256_gcm_encrypt_raw(&plaintext, &key, &nonce, &associated_data)
+    })
+}
+
+#[pyfunction]
+fn aes_256_gcm_decrypt(
+    py: Python<'_>,
+    ciphertext_and_tag: Vec<u8>,
+    key: Vec<u8>,
+    nonce: Vec<u8>,
+    associated_data: Vec<u8>,
+) -> PyResult<Vec<u8>> {
+    let work_bytes = ciphertext_and_tag.len() + associated_data.len();
+    detach_if_large(py, work_bytes, move || {
+        aes_256_gcm_decrypt_raw(&ciphertext_and_tag, &key, &nonce, &associated_data)
+    })
+}
+
+#[pyfunction]
+fn scrypt_derive(
+    py: Python<'_>,
+    password: Vec<u8>,
+    salt: Vec<u8>,
+    n: u32,
+    r: u32,
+    p: u32,
+    length: usize,
+) -> PyResult<Vec<u8>> {
+    let work_bytes = usize::try_from(n)
+        .unwrap_or(usize::MAX)
+        .saturating_mul(r as usize);
+    detach_if_large(py, work_bytes, move || {
+        scrypt_derive_raw(&password, &salt, n, r, p, length)
     })
 }
 
@@ -419,6 +472,80 @@ pub(crate) fn aes_256_ctr_crypt_raw(data: &[u8], key: &[u8], iv: &[u8]) -> PyRes
     Ok(output)
 }
 
+pub(crate) fn aes_256_gcm_encrypt_raw(
+    plaintext: &[u8],
+    key: &[u8],
+    nonce: &[u8],
+    associated_data: &[u8],
+) -> PyResult<Vec<u8>> {
+    validate_aes_key(key)?;
+    validate_gcm_nonce(nonce)?;
+    let cipher = Aes256Gcm::new_from_slice(key)
+        .map_err(|_| PyValueError::new_err("AES-256 key must be 32 bytes"))?;
+    let nonce = Nonce::<U12>::try_from(nonce)
+        .map_err(|_| PyValueError::new_err("AES-GCM nonce must be 12 bytes"))?;
+    cipher
+        .encrypt(
+            &nonce,
+            Payload {
+                msg: plaintext,
+                aad: associated_data,
+            },
+        )
+        .map_err(|_| PyValueError::new_err("AES-GCM encryption failed"))
+}
+
+pub(crate) fn aes_256_gcm_decrypt_raw(
+    ciphertext_and_tag: &[u8],
+    key: &[u8],
+    nonce: &[u8],
+    associated_data: &[u8],
+) -> PyResult<Vec<u8>> {
+    validate_aes_key(key)?;
+    validate_gcm_nonce(nonce)?;
+    let cipher = Aes256Gcm::new_from_slice(key)
+        .map_err(|_| PyValueError::new_err("AES-256 key must be 32 bytes"))?;
+    let nonce = Nonce::<U12>::try_from(nonce)
+        .map_err(|_| PyValueError::new_err("AES-GCM nonce must be 12 bytes"))?;
+    cipher
+        .decrypt(
+            &nonce,
+            Payload {
+                msg: ciphertext_and_tag,
+                aad: associated_data,
+            },
+        )
+        .map_err(|_| PyValueError::new_err("AES-GCM authentication failed"))
+}
+
+pub(crate) fn scrypt_derive_raw(
+    password: &[u8],
+    salt: &[u8],
+    n: u32,
+    r: u32,
+    p: u32,
+    length: usize,
+) -> PyResult<Vec<u8>> {
+    if n < 2 || !n.is_power_of_two() {
+        return Err(PyValueError::new_err(
+            "scrypt n must be a power of two greater than one",
+        ));
+    }
+    if length == 0 || length > 1024 {
+        return Err(PyValueError::new_err(
+            "scrypt output length must be between 1 and 1024 bytes",
+        ));
+    }
+    let log_n = u8::try_from(n.trailing_zeros())
+        .map_err(|_| PyValueError::new_err("scrypt n is too large"))?;
+    let params = ScryptParams::new(log_n, r, p)
+        .map_err(|_| PyValueError::new_err("invalid scrypt parameters"))?;
+    let mut output = vec![0_u8; length];
+    scrypt(password, salt, &params, &mut output)
+        .map_err(|_| PyValueError::new_err("scrypt derivation failed"))?;
+    Ok(output)
+}
+
 fn pq_factorize_raw(pq: u64) -> PyResult<(u64, u64)> {
     if pq < 4 {
         return Err(PyValueError::new_err("pq must be a composite integer >= 4"));
@@ -475,6 +602,13 @@ fn validate_ige_iv(iv: &[u8]) -> PyResult<()> {
 fn validate_cbc_ctr_iv(iv: &[u8]) -> PyResult<()> {
     if iv.len() != AES_BLOCK_SIZE {
         return Err(PyValueError::new_err("AES IV must be 16 bytes"));
+    }
+    Ok(())
+}
+
+fn validate_gcm_nonce(nonce: &[u8]) -> PyResult<()> {
+    if nonce.len() != 12 {
+        return Err(PyValueError::new_err("AES-GCM nonce must be 12 bytes"));
     }
     Ok(())
 }
@@ -651,6 +785,22 @@ mod tests {
     }
 
     #[test]
+    fn aes_gcm_and_scrypt_match_stable_vectors() {
+        let key = scrypt_derive_raw(b"password", b"NaCl", 16_384, 8, 1, 32).unwrap();
+        assert_eq!(
+            hex(&key),
+            "a8430d7e581f9ca03c952df506ac66c757899d67a21d71c0f1900bd778ac1d14"
+        );
+        let nonce = [7_u8; 12];
+        let encrypted = aes_256_gcm_encrypt_raw(b"payload", &key, &nonce, b"header").unwrap();
+        assert_eq!(
+            aes_256_gcm_decrypt_raw(&encrypted, &key, &nonce, b"header").unwrap(),
+            b"payload"
+        );
+        assert!(aes_256_gcm_decrypt_raw(&encrypted, &key, &nonce, b"wrong").is_err());
+    }
+
+    #[test]
     fn mtproto_payload_encrypt_decrypt_roundtrips() {
         let auth_key = auth_key();
         let plaintext = vec![0x58; 64];
@@ -683,5 +833,9 @@ mod tests {
         (0..len)
             .map(|index| (index as u8).wrapping_mul(multiplier))
             .collect()
+    }
+
+    fn hex(value: &[u8]) -> String {
+        value.iter().map(|byte| format!("{byte:02x}")).collect()
     }
 }

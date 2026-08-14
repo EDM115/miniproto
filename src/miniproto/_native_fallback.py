@@ -8,8 +8,6 @@ import os
 import struct
 from hmac import compare_digest
 
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-
 _AES_BLOCK_SIZE = 16
 _MT_PROTO_AUTH_KEY_SIZE = 256
 _MT_PROTO_MSG_KEY_SIZE = 16
@@ -194,6 +192,8 @@ def aes_256_ige_decrypt(ciphertext: bytes, key: bytes, iv: bytes) -> bytes:
 def aes_256_ctr_crypt(data: bytes, key: bytes, iv: bytes) -> bytes:
     _validate_aes_key(key)
     _validate_cbc_ctr_iv(iv)
+    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
     encryptor = Cipher(algorithms.AES(key), modes.CTR(iv)).encryptor()
     return encryptor.update(data) + encryptor.finalize()
 
@@ -202,6 +202,8 @@ def aes_256_cbc_encrypt(plaintext: bytes, key: bytes, iv: bytes) -> bytes:
     _validate_aes_key(key)
     _validate_cbc_ctr_iv(iv)
     _validate_block_multiple(plaintext)
+    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
     encryptor = Cipher(algorithms.AES(key), modes.CBC(iv)).encryptor()
     return encryptor.update(plaintext) + encryptor.finalize()
 
@@ -210,8 +212,32 @@ def aes_256_cbc_decrypt(ciphertext: bytes, key: bytes, iv: bytes) -> bytes:
     _validate_aes_key(key)
     _validate_cbc_ctr_iv(iv)
     _validate_block_multiple(ciphertext)
+    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
     decryptor = Cipher(algorithms.AES(key), modes.CBC(iv)).decryptor()
     return decryptor.update(ciphertext) + decryptor.finalize()
+
+
+def aes_256_gcm_encrypt(plaintext: bytes, key: bytes, nonce: bytes, associated_data: bytes) -> bytes:
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+    return AESGCM(key).encrypt(nonce, plaintext, associated_data)
+
+
+def aes_256_gcm_decrypt(ciphertext_and_tag: bytes, key: bytes, nonce: bytes, associated_data: bytes) -> bytes:
+    from cryptography.exceptions import InvalidTag
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+    try:
+        return AESGCM(key).decrypt(nonce, ciphertext_and_tag, associated_data)
+    except InvalidTag as exc:
+        raise ValueError("AES-GCM authentication failed") from exc
+
+
+def scrypt_derive(password: bytes, salt: bytes, n: int, r: int, p: int, length: int) -> bytes:
+    from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
+
+    return Scrypt(salt=salt, length=length, n=n, r=r, p=p).derive(password)
 
 
 def pq_factorize(pq: int) -> tuple[int, int]:
@@ -417,7 +443,9 @@ def _validate_block_multiple(data: bytes) -> None:
         raise ValueError("AES block mode input length must be a multiple of 16 bytes")
 
 
-def _aes_ecb_block_cipher(key: bytes) -> Cipher:
+def _aes_ecb_block_cipher(key: bytes):
+    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
     return Cipher(algorithms.AES(key), modes.ECB())  # noqa: S305 - AES-IGE requires the AES block primitive.
 
 

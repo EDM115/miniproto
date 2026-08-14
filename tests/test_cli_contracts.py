@@ -13,6 +13,18 @@ from miniproto._cli import CLI_ENTRY_POINTS
 ROOT = Path(__file__).parents[1]
 
 
+def test_default_wheel_dependencies_are_free_threaded_safe_and_gil_only_accelerators_are_optional() -> None:
+    pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    project = pyproject["project"]
+
+    assert project["dependencies"] == []
+    assert project["optional-dependencies"]["crypto-fallback"] == ["cryptography==50.0.0"]
+    assert set(project["optional-dependencies"]["event-loop"]) == {
+        "uvloop==0.22.1; sys_platform == 'linux' or sys_platform == 'darwin'",
+        "winloop==0.6.3; sys_platform == 'win32' or sys_platform == 'cygwin' or sys_platform == 'cli'",
+    }
+
+
 def cli_modules() -> tuple[str, ...]:
     modules = []
     for path in sorted((ROOT / "tools").rglob("*.py")):

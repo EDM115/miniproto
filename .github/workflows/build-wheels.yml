@@ -1,0 +1,227 @@
+name: Build wheels
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-wheels-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  linux-wheels:
+    name: Wheel Linux ${{ matrix.platform.libc }} ${{ matrix.platform.arch }} ${{ matrix.python.python-version }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python:
+          - python-version: "3.13"
+            interpreter: python3.13
+            abi: cp313-cp313
+            free-threaded: false
+          - python-version: "3.14"
+            interpreter: python3.14
+            abi: cp314-cp314
+            free-threaded: false
+          - python-version: "3.14t"
+            interpreter: python3.14t
+            abi: cp314-cp314t
+            free-threaded: true
+        platform:
+          - libc: glibc
+            arch: x86_64
+            target: x86_64-unknown-linux-gnu
+            compatibility: "2_17"
+            container: quay.io/pypa/manylinux2014_x86_64@sha256:0a42cb7e5f4ba6bbfb8d0a86d1aab0c8876ba9c3be16bd99360ae42bf010ec77
+            docker-platform: linux/amd64
+            qemu: ""
+          - libc: glibc
+            arch: aarch64
+            target: aarch64-unknown-linux-gnu
+            compatibility: "2_17"
+            container: quay.io/pypa/manylinux2014_aarch64@sha256:63bfa74be47f0277e998cb7c1b571b27664ac848bb356b0f4588438f930285dd
+            docker-platform: linux/arm64
+            qemu: arm64
+          - libc: glibc
+            arch: armv7l
+            target: armv7-unknown-linux-gnueabihf
+            compatibility: "2_31"
+            container: quay.io/pypa/manylinux_2_31_armv7l@sha256:582d754e6dc3facde4d75228fe758c4b5fb24e9ad02c5d9020b3b071a3b0aee2
+            docker-platform: linux/arm/v7
+            qemu: arm
+          - libc: musl
+            arch: x86_64
+            target: x86_64-unknown-linux-musl
+            compatibility: musllinux_1_2
+            container: quay.io/pypa/musllinux_1_2_x86_64@sha256:b06e331e36f400fa1529b4dd2ee37016f2828422b2e5d054a66257fcf4535697
+            docker-platform: linux/amd64
+            qemu: ""
+          - libc: musl
+            arch: aarch64
+            target: aarch64-unknown-linux-musl
+            compatibility: musllinux_1_2
+            container: quay.io/pypa/musllinux_1_2_aarch64@sha256:23371d5e69a9c90f17d8b36571204c7164c8fac0685725d05696aa8fd607f43b
+            docker-platform: linux/arm64
+            qemu: arm64
+          - libc: musl
+            arch: armv7l
+            target: armv7-unknown-linux-musleabihf
+            compatibility: musllinux_1_2
+            container: quay.io/pypa/musllinux_1_2_armv7l@sha256:47553fbd6c1f658dc05ef6692146c0da1ad677f3fab6804560ef74a63468ecfa
+            docker-platform: linux/arm/v7
+            qemu: arm
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up QEMU for cross-architecture build and test
+        if: matrix.platform.qemu != ''
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: ${{ matrix.platform.qemu }}
+
+      - name: Build wheel
+        uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          maturin-version: v1.14.1
+          target: ${{ matrix.platform.target }}
+          manylinux: ${{ matrix.platform.compatibility }}
+          container: ${{ matrix.platform.container }}
+          rust-toolchain: "1.97"
+          sccache: true
+          args: --release --locked --compatibility pypi -i ${{ matrix.python.interpreter }} --out dist
+
+      - name: Install and exercise wheel in its target Linux container
+        shell: bash
+        env:
+          TEST_IMAGE: ${{ matrix.platform.container }}
+          TEST_PLATFORM: ${{ matrix.platform.docker-platform }}
+          TEST_INTERPRETER: /opt/python/${{ matrix.python.abi }}/bin/python
+          EXPECT_FREE_THREADED: ${{ matrix.python.free-threaded }}
+        run: |
+          docker run --rm --platform "$TEST_PLATFORM" -e EXPECT_FREE_THREADED -e PYTHON_GIL=0 -v "$GITHUB_WORKSPACE:/io" "$TEST_IMAGE" /bin/bash -euxo pipefail -c 'interpreter="$1"; test_code="$2"; "$interpreter" -m pip install --no-deps /io/dist/*.whl; "$interpreter" -I -c "$test_code"' bash "$TEST_INTERPRETER" 'import importlib.metadata as metadata; import importlib.util; import os; import shutil; import subprocess; import sys; import sysconfig; from concurrent.futures import ThreadPoolExecutor; import miniproto; from miniproto import _native; expected_free_threaded = os.environ["EXPECT_FREE_THREADED"].lower() == "true"; assert bool(sysconfig.get_config_var("Py_GIL_DISABLED")) == expected_free_threaded; assert not expected_free_threaded or not sys._is_gil_enabled(); assert importlib.util.find_spec("cryptography") is None; assert _native.native_available(); record = miniproto.SessionRecord(); protected = miniproto.export_session_string(record, passphrase="wheel acceptance"); assert miniproto.import_session_string(protected, passphrase="wheel acceptance") == record; payload = b"miniproto-wheel-thread-safety" * 256; expected = _native.sha256_digest(payload); executor = ThreadPoolExecutor(max_workers=8); results = tuple(executor.map(_native.sha256_digest, (payload,) * 256)); executor.shutdown(); assert all(result == expected for result in results); entry_points = sorted((entry_point for entry_point in metadata.distribution("miniproto").entry_points if entry_point.group == "console_scripts"), key=lambda entry_point: entry_point.name); assert entry_points; executables = [shutil.which(entry_point.name) for entry_point in entry_points]; assert all(executables); [subprocess.check_call([executable, "--help"]) for executable in executables]'
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v7
+        with:
+          archive: false
+          path: dist/*.whl
+          if-no-files-found: error
+          retention-days: 30
+
+  native-wheels:
+    name: Wheel ${{ matrix.platform.platform }} ${{ matrix.platform.arch }} ${{ matrix.python.python-version }}
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python:
+          - python-version: "3.13"
+            free-threaded: false
+          - python-version: "3.14"
+            free-threaded: false
+          - python-version: "3.14t"
+            free-threaded: true
+        platform:
+          - platform: windows
+            arch: x86_64
+            runner: windows-latest
+            python-architecture: x64
+            target: x86_64-pc-windows-msvc
+          - platform: windows
+            arch: aarch64
+            runner: windows-11-arm
+            python-architecture: arm64
+            target: aarch64-pc-windows-msvc
+          - platform: macos
+            arch: x86_64
+            runner: macos-15-intel
+            python-architecture: x64
+            target: x86_64-apple-darwin
+          - platform: macos
+            arch: aarch64
+            runner: macos-15
+            python-architecture: arm64
+            target: aarch64-apple-darwin
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python.python-version }}
+          architecture: ${{ matrix.platform.python-architecture }}
+
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+          cache-suffix: wheel-${{ matrix.platform.platform }}-${{ matrix.platform.arch }}-py${{ matrix.python.python-version }}
+
+      - name: Build wheel
+        uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          maturin-version: v1.14.1
+          target: ${{ matrix.platform.target }}
+          manylinux: "off"
+          rust-toolchain: "1.97"
+          sccache: true
+          args: --release --locked --compatibility pypi -i python --out dist
+
+      - name: Install and exercise wheel in clean runner Python
+        shell: python
+        env:
+          EXPECT_FREE_THREADED: ${{ matrix.python.free-threaded }}
+          PYTHON_GIL: "0"
+        run: |
+          import glob
+          import importlib.metadata as metadata
+          import importlib.util
+          import os
+          import shutil
+          import subprocess
+          import sys
+          import sysconfig
+          from concurrent.futures import ThreadPoolExecutor
+
+          wheels = glob.glob("dist/*.whl")
+          if len(wheels) != 1:
+              raise SystemExit(f"expected one wheel, found {wheels}")
+          subprocess.check_call(["uv", "pip", "install", "--system", "--no-deps", wheels[0]])
+          import miniproto
+          from miniproto import _native
+
+          expected_free_threaded = os.environ["EXPECT_FREE_THREADED"].lower() == "true"
+          assert bool(sysconfig.get_config_var("Py_GIL_DISABLED")) == expected_free_threaded
+          assert not expected_free_threaded or not sys._is_gil_enabled()
+          assert importlib.util.find_spec("cryptography") is None
+          assert _native.native_available()
+          record = miniproto.SessionRecord()
+          protected = miniproto.export_session_string(record, passphrase="wheel acceptance")
+          assert miniproto.import_session_string(protected, passphrase="wheel acceptance") == record
+          payload = b"miniproto-wheel-thread-safety" * 256
+          expected = _native.sha256_digest(payload)
+          with ThreadPoolExecutor(max_workers=8) as executor:
+              results = tuple(executor.map(_native.sha256_digest, (payload,) * 256))
+          assert all(result == expected for result in results)
+          entry_points = sorted(
+              (entry_point for entry_point in metadata.distribution("miniproto").entry_points if entry_point.group == "console_scripts"),
+              key=lambda entry_point: entry_point.name,
+          )
+          if not entry_points:
+              raise SystemExit("wheel installed no miniproto console scripts")
+          for entry_point in entry_points:
+              executable = shutil.which(entry_point.name)
+              if executable is None:
+                  raise SystemExit(f"console script is not on PATH: {entry_point.name}")
+              subprocess.check_call([executable, "--help"])
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v7
+        with:
+          archive: false
+          path: dist/*.whl
+          if-no-files-found: error
+          retention-days: 30

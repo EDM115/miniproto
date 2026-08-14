@@ -244,6 +244,28 @@ uv run maturin build --release
 
 `maturin build` is the authoritative Python wheel build path. The Rust crate currently exists mainly as the Python extension source, even though the crates.io package name `miniproto` is reserved for this project.
 
+Ordinary `.github/workflows/ci.yml` deliberately does not build wheels. It runs Python 3.13/3.14 quality and tests, real 3.14t GIL-disabled source/native acceptance, Rust gates, benchmarks, schema checks, and the sdist job. Wheel production is isolated in `.github/workflows/build-wheels.yml` and starts only through `workflow_dispatch`, for example from the GitHub Actions UI or with:
+
+```pwsh
+gh workflow run build-wheels.yml
+```
+
+The manual workflow builds 30 wheel lanes: normal CPython 3.13/3.14 and free-threaded CPython 3.14t across Linux glibc and musl on x86_64, aarch64/ARMv8, and armv7l/ARMv7, plus native Windows and macOS on x86_64 and aarch64. Linux ARM lanes build and run under QEMU in pinned official PyPA images. Each wheel is installed with `--no-deps` in its target environment, then acceptance verifies the ABI, actual GIL-disabled state where applicable, protected string-session round trips, concurrent native calls, and `--help` for every installed console script. CPython 3.13t is intentionally excluded because keeping the current PyO3 dependency is a higher priority than supporting that retired compatibility path.
+
+The bundled native extension is the default runtime and the project has no hard Python dependency. Install `miniproto[event-loop]` for the supported `uvloop`/`winloop` acceleration path or `miniproto[crypto-fallback]` for the CFFI-backed `cryptography` fallback. The `dev` extra includes both for parity and benchmark coverage; free-threaded clean-wheel gates intentionally install neither.
+
+For a focused local free-threaded check, build against an explicit `t` interpreter and start it with the GIL disabled:
+
+```pwsh
+uv venv .tmp/ft314 --python 3.14t
+uv run --python .tmp/ft314/Scripts/python.exe --with maturin==1.14.1 maturin build --release --locked -i .tmp/ft314/Scripts/python.exe --out .tmp/ft314-wheel
+$wheel = Get-ChildItem .tmp/ft314-wheel/*.whl | Select-Object -Single
+uv pip install --python .tmp/ft314/Scripts/python.exe --no-deps $wheel.FullName
+.tmp/ft314/Scripts/python.exe -X gil=0 -c "import sys, sysconfig; import miniproto; from miniproto import _native; assert sysconfig.get_config_var('Py_GIL_DISABLED') == 1; assert not sys._is_gil_enabled(); assert _native.native_available()"
+```
+
+Use the matching POSIX `bin/python` path on Linux/macOS. A successful local native-host build is useful evidence, but it does not replace the full manual platform workflow.
+
 ## Local Editable Build
 
 ```pwsh
@@ -268,6 +290,8 @@ uv publish dist/*
 ```
 
 Use the configured PyPI token or trusted publishing flow. The PyPI `miniproto` name is already reserved with dummy low-version content.
+
+The dispatch-only wheel workflow produces retained build artifacts but does not publish them. Publishing remains a separate user-owned action after artifact review and release approval.
 
 ## Publish To crates.io
 

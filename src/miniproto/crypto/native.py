@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Iterable
 from importlib import import_module
+from importlib.util import find_spec
 from typing import Protocol, cast
 
 from miniproto.observability import emit_event, get_logger
@@ -48,6 +49,11 @@ class _NativeModule(Protocol):
     def aes_256_ctr_crypt(self, data: BytesLike, key: bytes, iv: bytes) -> bytes: ...
     def aes_256_cbc_encrypt(self, plaintext: bytes, key: bytes, iv: bytes) -> bytes: ...
     def aes_256_cbc_decrypt(self, ciphertext: BytesLike, key: bytes, iv: bytes) -> bytes: ...
+    def aes_256_gcm_encrypt(self, plaintext: bytes, key: bytes, nonce: bytes, associated_data: bytes) -> bytes: ...
+    def aes_256_gcm_decrypt(
+        self, ciphertext_and_tag: bytes, key: bytes, nonce: bytes, associated_data: bytes
+    ) -> bytes: ...
+    def scrypt_derive(self, password: bytes, salt: bytes, n: int, r: int, p: int, length: int) -> bytes: ...
     def pq_factorize(self, pq: int) -> tuple[int, int]: ...
     def tl_encode_int(self, value: int) -> bytes: ...
     def tl_decode_int(self, data: BytesLike, offset: int) -> tuple[int, int]: ...
@@ -88,6 +94,9 @@ _REQUIRED_NATIVE_NAMES = (
     "aes_256_ctr_crypt",
     "aes_256_cbc_encrypt",
     "aes_256_cbc_decrypt",
+    "aes_256_gcm_encrypt",
+    "aes_256_gcm_decrypt",
+    "scrypt_derive",
     "pq_factorize",
     "tl_encode_int",
     "tl_decode_int",
@@ -143,6 +152,10 @@ def _emit_native_loaded(available: bool) -> None:
 
 _native_impl, _NATIVE_LOAD_ERROR = _load_native_impl()
 _fallback_impl = cast(_NativeModule, import_module("miniproto._native_fallback"))
+try:
+    _CRYPTOGRAPHY_AVAILABLE = find_spec("cryptography") is not None
+except ModuleNotFoundError:
+    _CRYPTOGRAPHY_AVAILABLE = False
 if _NATIVE_LOAD_ERROR is not None:
     _emit_native_fallback_error(_NATIVE_LOAD_ERROR)
 _emit_native_loaded(bool(_native_impl.native_available()))
@@ -245,15 +258,30 @@ def aes_256_ige_decrypt(ciphertext: bytes, key: bytes, iv: bytes) -> bytes:
 def aes_256_ctr_crypt(data: BytesLike, key: bytes, iv: bytes) -> bytes:
     # ``cryptography``'s C-backed fallback wins the media CTR/CBC benchmark cases
     # in ``tools/bench/benchmark_native_fallback_crypto.py``.
-    return bytes(_fallback_impl.aes_256_ctr_crypt(data, key, iv))
+    implementation = _fallback_impl if _CRYPTOGRAPHY_AVAILABLE else _native_impl
+    return bytes(implementation.aes_256_ctr_crypt(data, key, iv))
 
 
 def aes_256_cbc_encrypt(plaintext: bytes, key: bytes, iv: bytes) -> bytes:
-    return bytes(_fallback_impl.aes_256_cbc_encrypt(plaintext, key, iv))
+    implementation = _fallback_impl if _CRYPTOGRAPHY_AVAILABLE else _native_impl
+    return bytes(implementation.aes_256_cbc_encrypt(plaintext, key, iv))
 
 
 def aes_256_cbc_decrypt(ciphertext: BytesLike, key: bytes, iv: bytes) -> bytes:
-    return bytes(_fallback_impl.aes_256_cbc_decrypt(ciphertext, key, iv))
+    implementation = _fallback_impl if _CRYPTOGRAPHY_AVAILABLE else _native_impl
+    return bytes(implementation.aes_256_cbc_decrypt(ciphertext, key, iv))
+
+
+def aes_256_gcm_encrypt(plaintext: bytes, key: bytes, nonce: bytes, associated_data: bytes) -> bytes:
+    return bytes(_native_impl.aes_256_gcm_encrypt(plaintext, key, nonce, associated_data))
+
+
+def aes_256_gcm_decrypt(ciphertext_and_tag: bytes, key: bytes, nonce: bytes, associated_data: bytes) -> bytes:
+    return bytes(_native_impl.aes_256_gcm_decrypt(ciphertext_and_tag, key, nonce, associated_data))
+
+
+def scrypt_derive(password: bytes, salt: bytes, n: int, r: int, p: int, length: int) -> bytes:
+    return bytes(_native_impl.scrypt_derive(password, salt, n, r, p, length))
 
 
 def pq_factorize(pq: int) -> tuple[int, int]:

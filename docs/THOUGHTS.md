@@ -126,3 +126,7 @@ This behavior wouldn't be the default but rather an option that users can toggle
 ## 2026-08-14 — GPT-5.6 Sol Ultra — Codex — "Wave 4 CI stabilization"
 
 - The supplied Wave 4 hosted run exposed two cross-platform gaps: pytest needs the parent of a nested `--basetemp` created explicitly, and uvloop 0.22.1's debug async-generator finalization can segfault on Python 3.13 as well as 3.14. CI now creates the parent, affected uvloop/winloop debug versions use the stdlib runner on both supported minors, all eight non-live benchmark families run in CI, and all sixteen tool CLIs are wheel-packaged with side-effect-free `--help`. Local source/tests/release artifacts pass, but a fresh hosted rerun remains required before calling Linux or the multi-OS matrix green.
+
+## 2026-08-14 — GPT-5.6 Sol Ultra — Codex — "Manual wheel builds"
+
+- Wheel artifacts are intentionally separated from ordinary CI into a dispatch-only workflow. Preserve the user's already-staged CI stabilization edits without modifying the index; cover normal CPython 3.13/3.14 and free-threaded 3.14t across x86-64, aarch64/ARM64, and armv7l, including musllinux wheels for Alpine containers, and validate each wheel on a compatible target rather than treating successful cross-compilation alone as acceptance. Dependency freshness takes precedence over CPython 3.13t, which current PyO3 no longer supports.

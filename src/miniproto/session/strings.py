@@ -12,10 +12,7 @@ import struct
 from collections.abc import Mapping
 from typing import Any, Literal, cast
 
-from cryptography.exceptions import InvalidTag
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
-
+from miniproto.crypto.native import aes_256_gcm_decrypt, aes_256_gcm_encrypt, scrypt_derive
 from miniproto.errors import SessionEnvelopeError
 from miniproto.session.models import AuthKey, DCOption, SessionRecord, UserIdentity, session_record_from_mapping
 from miniproto.session.storage import deserialize_session_data, serialize_session_data
@@ -141,7 +138,7 @@ def _export_native(record: SessionRecord, *, passphrase: str | bytes | None) -> 
             encrypted_size,
         )
         key = _derive_protected_key(secret, salt)
-        encrypted = AESGCM(key).encrypt(nonce, payload, header)
+        encrypted = aes_256_gcm_encrypt(payload, key, nonce, header)
         body = header + salt + nonce + encrypted
     return SessionString(NATIVE_SESSION_PREFIX + _encode_unpadded(body))
 
@@ -208,8 +205,8 @@ def _import_native(value: str, *, passphrase: str | bytes | None) -> SessionReco
         cursor += nonce_size
         encrypted = body[cursor:]
         try:
-            payload = AESGCM(_derive_protected_key(secret, salt)).decrypt(nonce, encrypted, header)
-        except InvalidTag as exc:
+            payload = aes_256_gcm_decrypt(encrypted, _derive_protected_key(secret, salt), nonce, header)
+        except ValueError as exc:
             raise SessionEnvelopeError("session string authentication failed") from exc
         if len(payload) > MAX_SESSION_PAYLOAD_BYTES:
             raise SessionEnvelopeError("session payload is too large")
@@ -390,7 +387,7 @@ def _passphrase_bytes(passphrase: str | bytes) -> bytes:
 
 def _derive_protected_key(passphrase: bytes, salt: bytes) -> bytes:
     try:
-        return Scrypt(salt=salt, length=32, n=_SCRYPT_N, r=_SCRYPT_R, p=_SCRYPT_P).derive(passphrase)
+        return scrypt_derive(passphrase, salt, _SCRYPT_N, _SCRYPT_R, _SCRYPT_P, 32)
     except (MemoryError, TypeError, ValueError) as exc:
         raise SessionEnvelopeError("session string key derivation failed") from exc
 

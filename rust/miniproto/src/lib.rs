@@ -7,7 +7,7 @@ mod mtproto;
 mod tl;
 mod transport;
 
-#[pymodule]
+#[pymodule(gil_used = false)]
 fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     crypto::register(m)?;
     mtproto::register(m)?;

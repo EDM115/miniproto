@@ -17,34 +17,60 @@ for resolvers in GitHubWorkflowLoader.yaml_implicit_resolvers.values():
 
 
 def load_workflow(name: str) -> dict[str, Any]:
+    path = ROOT / ".github" / "workflows" / name
+    assert path.is_file(), f"missing workflow: {path}"
     value = yaml.load(
-        (ROOT / ".github" / "workflows" / name).read_text(encoding="utf-8"),
+        path.read_text(encoding="utf-8"),
         Loader=GitHubWorkflowLoader,  # noqa: S506 - SafeLoader subclass; only YAML boolean resolution changes.
     )
     assert isinstance(value, dict)
     return value
 
 
-def test_ci_workflow_covers_minimum_python_rust_benchmarks_and_wheel_platforms() -> None:
+def test_ci_workflow_covers_python_rust_benchmarks_and_free_threaded_runtime_without_building_wheels() -> None:
     workflow = load_workflow("ci.yml")
     jobs = workflow["jobs"]
 
     assert set(jobs["python"]["strategy"]["matrix"]["python-version"]) == {"3.13", "3.14"}
-    assert jobs["rust"]["steps"][1]["with"]["toolchain"] == "1.97.0"
+    assert set(jobs["free-threaded"]["strategy"]["matrix"]["python-version"]) == {"3.14t"}
+    assert jobs["rust"]["steps"][1]["with"]["toolchain"] == "1.97"
     benchmark_steps = jobs["benchmark-smoke"]["steps"]
     assert any(
         step.get("uses", "").startswith("actions/upload-artifact@") and step.get("if") == "always()"
         for step in benchmark_steps
     )
-    wheel_matrix = jobs["wheels"]["strategy"]["matrix"]["include"]
-    assert {(item["os"], item["arch"]) for item in wheel_matrix} == {
-        ("ubuntu-latest", "x86_64"),
-        ("windows-latest", "x86_64"),
-        ("macos-15-intel", "x86_64"),
-        ("macos-15", "aarch64"),
-    }
-    assert {item["python-version"] for item in wheel_matrix} == {"3.13", "3.14"}
+    assert "wheels" not in jobs
     assert "sdist" in jobs
+
+
+def test_manual_wheel_workflow_is_dispatch_only_and_covers_all_required_abis() -> None:
+    workflow = load_workflow("build-wheels.yml")
+
+    assert set(workflow["on"]) == {"workflow_dispatch"}
+    jobs = workflow["jobs"]
+    assert set(jobs) == {"linux-wheels", "native-wheels"}
+
+    linux_matrix = jobs["linux-wheels"]["strategy"]["matrix"]
+    assert {item["python-version"] for item in linux_matrix["python"]} == {"3.13", "3.14", "3.14t"}
+    assert {(item["libc"], item["arch"], item["target"]) for item in linux_matrix["platform"]} == {
+        ("glibc", "x86_64", "x86_64-unknown-linux-gnu"),
+        ("glibc", "aarch64", "aarch64-unknown-linux-gnu"),
+        ("glibc", "armv7l", "armv7-unknown-linux-gnueabihf"),
+        ("musl", "x86_64", "x86_64-unknown-linux-musl"),
+        ("musl", "aarch64", "aarch64-unknown-linux-musl"),
+        ("musl", "armv7l", "armv7-unknown-linux-musleabihf"),
+    }
+    assert len(linux_matrix["python"]) * len(linux_matrix["platform"]) == 18
+
+    native_matrix = jobs["native-wheels"]["strategy"]["matrix"]
+    assert {item["python-version"] for item in native_matrix["python"]} == {"3.13", "3.14", "3.14t"}
+    assert {(item["platform"], item["arch"], item["target"]) for item in native_matrix["platform"]} == {
+        ("windows", "x86_64", "x86_64-pc-windows-msvc"),
+        ("windows", "aarch64", "aarch64-pc-windows-msvc"),
+        ("macos", "x86_64", "x86_64-apple-darwin"),
+        ("macos", "aarch64", "aarch64-apple-darwin"),
+    }
+    assert len(native_matrix["python"]) * len(native_matrix["platform"]) == 12
 
 
 def test_ci_creates_the_pytest_basetemp_parent_before_running_tests() -> None:
@@ -79,16 +105,16 @@ def test_ci_runs_every_offline_benchmark_cli() -> None:
     assert {script for script in expected_scripts if f"uv run {script}" in command} == expected_scripts
 
 
-def test_wheel_job_runs_help_for_every_installed_console_script() -> None:
-    workflow = load_workflow("ci.yml")
-    install_step = next(
-        step
-        for step in workflow["jobs"]["wheels"]["steps"]
-        if step.get("name") == "Install and import wheel in clean runner Python"
-    )
+def test_manual_wheel_jobs_test_native_free_threading_and_every_console_script() -> None:
+    workflow = load_workflow("build-wheels.yml")
 
-    assert 'metadata.distribution("miniproto").entry_points' in install_step["run"]
-    assert 'subprocess.check_call([executable, "--help"])' in install_step["run"]
+    for job_name in ("linux-wheels", "native-wheels"):
+        serialized_steps = "\n".join(str(step.get("run", "")) for step in workflow["jobs"][job_name]["steps"])
+        assert "Py_GIL_DISABLED" in serialized_steps
+        assert "_is_gil_enabled" in serialized_steps
+        assert "ThreadPoolExecutor" in serialized_steps
+        assert 'metadata.distribution("miniproto").entry_points' in serialized_steps
+        assert 'subprocess.check_call([executable, "--help"])' in serialized_steps
 
 
 def test_pull_request_ci_has_no_telegram_secret_or_live_benchmark_contract() -> None:
