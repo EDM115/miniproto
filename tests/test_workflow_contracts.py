@@ -56,15 +56,29 @@ def test_benchmark_smoke_runs_on_every_native_platform_with_regular_and_free_thr
 
     assert job["runs-on"] == "${{ matrix.platform.runner }}"
     assert {item["python-version"] for item in matrix["python"]} == {"3.14", "3.14t"}
-    assert {(item["platform"], item["arch"], item["runner"]) for item in matrix["platform"]} == {
-        ("linux", "x86_64", "ubuntu-24.04"),
-        ("linux", "aarch64", "ubuntu-24.04-arm"),
-        ("windows", "x86_64", "windows-latest"),
-        ("windows", "aarch64", "windows-11-arm"),
-        ("macos", "x86_64", "macos-15-intel"),
-        ("macos", "aarch64", "macos-15"),
+    assert {
+        (item["platform"], item["arch"], item["runner"], item["python-architecture"]) for item in matrix["platform"]
+    } == {
+        ("linux", "x86_64", "ubuntu-24.04", "x64"),
+        ("linux", "aarch64", "ubuntu-24.04-arm", "arm64"),
+        ("windows", "x86_64", "windows-latest", "x64"),
+        ("windows", "aarch64", "windows-11-arm", "arm64"),
+        ("macos", "x86_64", "macos-15-intel", "x64"),
+        ("macos", "aarch64", "macos-15", "arm64"),
     }
     assert len(matrix["python"]) * len(matrix["platform"]) == 12
+
+    setup_python = next(step for step in job["steps"] if step.get("uses", "").startswith("actions/setup-python@"))
+    assert setup_python["with"] == {
+        "python-version": "${{ matrix.python.python-version }}",
+        "architecture": "${{ matrix.platform.python-architecture }}",
+    }
+    setup_uv = next(step for step in job["steps"] if step.get("uses", "").startswith("astral-sh/setup-uv@"))
+    assert "python-version" not in setup_uv["with"]
+    build_step = next(step for step in job["steps"] if step.get("name") == "Sync and build native extension")
+    build_commands = [line.strip() for line in build_step["run"].splitlines() if line.strip()]
+    assert "uv sync --python python --extra dev --frozen --no-install-project" in build_commands
+    assert "uv run --no-sync maturin develop --release --locked" in build_commands
 
     serialized_steps = "\n".join(str(step) for step in job["steps"])
     assert "Py_GIL_DISABLED" in serialized_steps
@@ -72,7 +86,7 @@ def test_benchmark_smoke_runs_on_every_native_platform_with_regular_and_free_thr
     assert "native_available" in serialized_steps
     assert "environment.json" in serialized_steps
     assert "PYTHON_GIL" not in serialized_steps
-    assert "uv run maturin develop --release --locked" in serialized_steps
+    assert "uv run --no-sync maturin develop --release --locked" in serialized_steps
     assert (
         "benchmark-smoke-${{ matrix.platform.platform }}-${{ matrix.platform.arch }}-${{ matrix.python.artifact }}"
         in serialized_steps
@@ -176,7 +190,24 @@ def test_ci_runs_every_offline_benchmark_cli() -> None:
         "miniproto-profile-lazy-raw-codec",
     }
 
-    assert {script for script in expected_scripts if f"uv run {script}" in command} == expected_scripts
+    assert {script for script in expected_scripts if f"uv run --no-sync {script}" in command} == expected_scripts
+    uv_commands = [line.strip() for line in command.splitlines() if line.strip().startswith("uv run")]
+    assert uv_commands
+    assert all(line.startswith("uv run --no-sync ") for line in uv_commands)
+
+
+def test_cross_platform_benchmark_matrix_records_speed_without_enforcing_host_specific_targets() -> None:
+    workflow = load_workflow("ci.yml")
+    benchmark_step = next(
+        step
+        for step in workflow["jobs"]["benchmark-smoke"]["steps"]
+        if step.get("name") == "Run deterministic benchmark gates"
+    )
+    command = benchmark_step["run"]
+
+    assert "miniproto-bench-tl-fast-paths --mode smoke" in command
+    assert "miniproto-bench-transport-framing --mode smoke" in command
+    assert "--check" not in command
 
 
 def test_manual_wheel_jobs_test_native_free_threading_and_every_console_script() -> None:

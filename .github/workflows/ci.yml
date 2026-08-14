@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [master, main, "codex/**"]
+    branches: [master]
   pull_request:
-    branches: [master, main]
+    branches: [master]
   workflow_dispatch:
 
 permissions:
@@ -151,39 +151,49 @@ jobs:
           - platform: linux
             arch: x86_64
             runner: ubuntu-24.04
+            python-architecture: x64
             machine-family: x86_64
             expect-cryptography: "true"
           - platform: linux
             arch: aarch64
             runner: ubuntu-24.04-arm
+            python-architecture: arm64
             machine-family: aarch64
             expect-cryptography: "true"
           - platform: windows
             arch: x86_64
             runner: windows-latest
+            python-architecture: x64
             machine-family: x86_64
             expect-cryptography: "true"
           - platform: windows
             arch: aarch64
             runner: windows-11-arm
+            python-architecture: arm64
             machine-family: aarch64
             expect-cryptography: "false"
           - platform: macos
             arch: x86_64
             runner: macos-15-intel
+            python-architecture: x64
             machine-family: x86_64
             expect-cryptography: "true"
           - platform: macos
             arch: aarch64
             runner: macos-15
+            python-architecture: arm64
             machine-family: aarch64
             expect-cryptography: "true"
     steps:
       - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v10.0.1
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python.python-version }}
+          architecture: ${{ matrix.platform.python-architecture }}
+
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
           enable-cache: true
           cache-suffix: benchmark-${{ matrix.platform.platform }}-${{ matrix.platform.arch }}-${{ matrix.python.artifact }}
 
@@ -193,8 +203,8 @@ jobs:
 
       - name: Sync and build native extension
         run: |
-          uv sync --python "${{ matrix.python.python-version }}" --extra dev --frozen
-          uv run maturin develop --release --locked
+          uv sync --python python --extra dev --frozen --no-install-project
+          uv run --no-sync maturin develop --release --locked
 
       - name: Validate and record benchmark environment
         shell: bash
@@ -208,7 +218,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p .tmp/benchmark-smoke
-          uv run python - <<'PY'
+          uv run --no-sync python - <<'PY'
           import importlib.util
           import json
           import os
@@ -275,15 +285,15 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p .tmp/benchmark-smoke
-          uv run miniproto-bench-acceptance --mode smoke --json .tmp/benchmark-smoke/runtime-acceptance.json > .tmp/benchmark-smoke/runtime-acceptance.log
-          uv run miniproto-bench-imports --runs 3 > .tmp/benchmark-smoke/imports.json
-          uv run miniproto-bench-media-scheduler > .tmp/benchmark-smoke/media-scheduler.json
-          uv run miniproto-bench-native-fallback-crypto --mode smoke --json .tmp/benchmark-smoke/native-fallback.json > .tmp/benchmark-smoke/native-fallback.log
-          uv run miniproto-bench-runtime-paths > .tmp/benchmark-smoke/runtime-paths.log
-          uv run miniproto-bench-session-crypto --mode smoke --json .tmp/benchmark-smoke/session-crypto.json > .tmp/benchmark-smoke/session-crypto.log
-          uv run miniproto-bench-tl-fast-paths --check --mode smoke --json .tmp/benchmark-smoke/tl-fast-paths.json > .tmp/benchmark-smoke/tl-fast-paths.log
-          uv run miniproto-bench-transport-framing --check --mode smoke --json .tmp/benchmark-smoke/transport-framing.json > .tmp/benchmark-smoke/transport-framing.log
-          uv run miniproto-profile-lazy-raw-codec > .tmp/benchmark-smoke/lazy-raw-codec.json
+          uv run --no-sync miniproto-bench-acceptance --mode smoke --json .tmp/benchmark-smoke/runtime-acceptance.json > .tmp/benchmark-smoke/runtime-acceptance.log
+          uv run --no-sync miniproto-bench-imports --runs 3 > .tmp/benchmark-smoke/imports.json
+          uv run --no-sync miniproto-bench-media-scheduler > .tmp/benchmark-smoke/media-scheduler.json
+          uv run --no-sync miniproto-bench-native-fallback-crypto --mode smoke --json .tmp/benchmark-smoke/native-fallback.json > .tmp/benchmark-smoke/native-fallback.log
+          uv run --no-sync miniproto-bench-runtime-paths > .tmp/benchmark-smoke/runtime-paths.log
+          uv run --no-sync miniproto-bench-session-crypto --mode smoke --json .tmp/benchmark-smoke/session-crypto.json > .tmp/benchmark-smoke/session-crypto.log
+          uv run --no-sync miniproto-bench-tl-fast-paths --mode smoke --json .tmp/benchmark-smoke/tl-fast-paths.json > .tmp/benchmark-smoke/tl-fast-paths.log
+          uv run --no-sync miniproto-bench-transport-framing --mode smoke --json .tmp/benchmark-smoke/transport-framing.json > .tmp/benchmark-smoke/transport-framing.log
+          uv run --no-sync miniproto-profile-lazy-raw-codec > .tmp/benchmark-smoke/lazy-raw-codec.json
 
       - name: Upload benchmark artifacts
         uses: actions/upload-artifact@v7
