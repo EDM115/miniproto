@@ -116,21 +116,25 @@ jobs:
             runner: windows-latest
             python-architecture: x64
             target: x86_64-pc-windows-msvc
+            expect-cryptography: "true"
           - platform: windows
             arch: aarch64
             runner: windows-11-arm
             python-architecture: arm64
             target: aarch64-pc-windows-msvc
+            expect-cryptography: "false"
           - platform: macos
             arch: x86_64
             runner: macos-15-intel
             python-architecture: x64
             target: x86_64-apple-darwin
+            expect-cryptography: "true"
           - platform: macos
             arch: aarch64
             runner: macos-15
             python-architecture: arm64
             target: aarch64-apple-darwin
+            expect-cryptography: "true"
     steps:
       - uses: actions/checkout@v7
 
@@ -158,6 +162,7 @@ jobs:
         shell: python
         env:
           EXPECT_FREE_THREADED: ${{ matrix.python.free-threaded }}
+          EXPECT_CRYPTOGRAPHY: ${{ matrix.platform.expect-cryptography }}
         run: |
           import glob
           import importlib.metadata as metadata
@@ -177,9 +182,10 @@ jobs:
           from miniproto import _native
 
           expected_free_threaded = os.environ["EXPECT_FREE_THREADED"].lower() == "true"
+          expected_cryptography = os.environ["EXPECT_CRYPTOGRAPHY"].lower() == "true"
           assert bool(sysconfig.get_config_var("Py_GIL_DISABLED")) == expected_free_threaded
           assert not expected_free_threaded or not sys._is_gil_enabled()
-          assert importlib.util.find_spec("cryptography") is not None
+          assert (importlib.util.find_spec("cryptography") is not None) == expected_cryptography
           assert importlib.util.find_spec("uvloop" if sys.platform == "darwin" else "winloop") is not None
           assert _native.native_available()
           record = miniproto.SessionRecord()

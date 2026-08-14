@@ -9,6 +9,7 @@ import statistics
 import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
+from importlib.util import find_spec
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -42,6 +43,10 @@ _RFC3526_GROUP14_PRIME_BYTES = bytes.fromhex(
 )
 _RFC3526_GROUP14_PRIME = int.from_bytes(_RFC3526_GROUP14_PRIME_BYTES, "big")
 _RFC3526_GROUP14_SHA256 = "d66436f79bbd6b2e38c0ffbd079be904d2641415e2e67140e09448be9a60890e"
+try:
+    _CRYPTOGRAPHY_AVAILABLE = find_spec("cryptography") is not None
+except ModuleNotFoundError:
+    _CRYPTOGRAPHY_AVAILABLE = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,7 +71,7 @@ class BenchmarkResult:
 class BenchmarkCase:
     name: str
     native: Callable[[], object] | None
-    python: Callable[[], object]
+    python: Callable[[], object] | None
 
 
 def parse_args(argv: Sequence[str] | None = None, env: Mapping[str, str] | None = None) -> argparse.Namespace:
@@ -111,9 +116,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     padded_payload = payload + (b"p" * 16)
     padded_payload_1m = payload_1m + (b"p" * 16)
     envelope_padding = b"p" * 16
-    envelope_packet = python_impl.mtproto_encode_message(
-        auth_key, 0x0102030405060708, 0x1112131415161718, 0x2122232425262728, 3, payload, True, envelope_padding
-    )
+    envelope_packet: bytes | None
+    if _CRYPTOGRAPHY_AVAILABLE:
+        envelope_packet = python_impl.mtproto_encode_message(
+            auth_key, 0x0102030405060708, 0x1112131415161718, 0x2122232425262728, 3, payload, True, envelope_padding
+        )
+    elif native_impl is not None:
+        envelope_packet = bytes(
+            native_impl.mtproto_encode_message(
+                auth_key, 0x0102030405060708, 0x1112131415161718, 0x2122232425262728, 3, payload, True, envelope_padding
+            )
+        )
+    else:
+        envelope_packet = None
     int_values = tuple(range(10_000))
     long_values = tuple(index * 10_000_000_000 for index in range(2_000))
 
@@ -129,17 +144,21 @@ def main(argv: Sequence[str] | None = None) -> int:
         BenchmarkCase(
             "aes_ige_roundtrip_16k",
             _call_aes_ige_roundtrip(native_impl, payload, key, iv_ige),
-            lambda: python_impl.aes_256_ige_decrypt(python_impl.aes_256_ige_encrypt(payload, key, iv_ige), key, iv_ige),
+            _cryptography_fallback(
+                lambda: python_impl.aes_256_ige_decrypt(
+                    python_impl.aes_256_ige_encrypt(payload, key, iv_ige), key, iv_ige
+                )
+            ),
         ),
         BenchmarkCase(
             "aes_ctr_16k",
             _call(native_impl, "aes_256_ctr_crypt", payload, key, iv_ctr),
-            lambda: python_impl.aes_256_ctr_crypt(payload, key, iv_ctr),
+            _cryptography_fallback(lambda: python_impl.aes_256_ctr_crypt(payload, key, iv_ctr)),
         ),
         BenchmarkCase(
             "aes_ctr_1m",
             _call(native_impl, "aes_256_ctr_crypt", payload_1m, key, iv_ctr),
-            lambda: python_impl.aes_256_ctr_crypt(payload_1m, key, iv_ctr),
+            _cryptography_fallback(lambda: python_impl.aes_256_ctr_crypt(payload_1m, key, iv_ctr)),
         ),
         BenchmarkCase(
             "mtproto_message_key_16k",
@@ -162,7 +181,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         BenchmarkCase(
             "mtproto_encrypt_payload_16k",
             _call(native_impl, "mtproto_encrypt_payload", auth_key, padded_payload, True),
-            lambda: python_impl.mtproto_encrypt_payload(auth_key, padded_payload, True),
+            _cryptography_fallback(lambda: python_impl.mtproto_encrypt_payload(auth_key, padded_payload, True)),
         ),
         BenchmarkCase(
             "mtproto_encode_message_16k",
@@ -178,19 +197,32 @@ def main(argv: Sequence[str] | None = None) -> int:
                 True,
                 envelope_padding,
             ),
-            lambda: python_impl.mtproto_encode_message(
-                auth_key, 0x0102030405060708, 0x1112131415161718, 0x2122232425262728, 3, payload, True, envelope_padding
+            _cryptography_fallback(
+                lambda: python_impl.mtproto_encode_message(
+                    auth_key,
+                    0x0102030405060708,
+                    0x1112131415161718,
+                    0x2122232425262728,
+                    3,
+                    payload,
+                    True,
+                    envelope_padding,
+                )
             ),
         ),
         BenchmarkCase(
             "mtproto_decode_message_16k",
-            _call(native_impl, "mtproto_decode_message", auth_key, envelope_packet, True),
-            lambda: python_impl.mtproto_decode_message(auth_key, envelope_packet, True),
+            _call(native_impl, "mtproto_decode_message", auth_key, envelope_packet, True)
+            if envelope_packet is not None
+            else None,
+            _cryptography_fallback(lambda: python_impl.mtproto_decode_message(auth_key, envelope_packet, True))
+            if envelope_packet is not None
+            else None,
         ),
         BenchmarkCase(
             "mtproto_encrypt_payload_1m",
             _call(native_impl, "mtproto_encrypt_payload", auth_key, padded_payload_1m, True),
-            lambda: python_impl.mtproto_encrypt_payload(auth_key, padded_payload_1m, True),
+            _cryptography_fallback(lambda: python_impl.mtproto_encrypt_payload(auth_key, padded_payload_1m, True)),
         ),
         BenchmarkCase(
             "tl_encode_decode_int_10k",
@@ -250,25 +282,19 @@ def main(argv: Sequence[str] | None = None) -> int:
         }
     )
     for case in benchmarks:
-        python_result = _run(f"{case.name}:python", case.python, runs=args.runs)
-        record: dict[str, Any] = {"name": case.name, "fallback": benchmark_result_record(python_result)}
-        if case.native is None:
-            record["native"] = None
-            results.append(record)
-            continue
-        native_result = _run(f"{case.name}:native", case.native, runs=args.runs)
-        _assert_same_output(case.name, case.native, case.python)
-        ratio = python_result.median_ms / native_result.median_ms if native_result.median_ms else float("inf")
-        record["native"] = benchmark_result_record(native_result)
-        record["fallback_over_native_median"] = ratio
-        results.append(record)
+        results.append(_measure_case(case, runs=args.runs))
     report = build_benchmark_report(
         benchmark="native_fallback_crypto_envelope_tl",
         mode=args.mode,
         warmup=1,
         samples=(),
         unit="ms",
-        configuration={"runs": args.runs, "payload_bytes": len(payload), "large_payload_bytes": len(payload_1m)},
+        configuration={
+            "runs": args.runs,
+            "payload_bytes": len(payload),
+            "large_payload_bytes": len(payload_1m),
+            "cryptography_available": _CRYPTOGRAPHY_AVAILABLE,
+        },
         environment=collect_environment(),
         results=results,
     )
@@ -290,6 +316,10 @@ def _call(module: ModuleType | None, name: str, *args: object) -> Callable[[], o
         return None
     func = getattr(module, name)
     return lambda: func(*args)
+
+
+def _cryptography_fallback(function: Callable[[], object]) -> Callable[[], object] | None:
+    return function if _CRYPTOGRAPHY_AVAILABLE else None
 
 
 def _call_aes_ige_roundtrip(
@@ -333,6 +363,30 @@ def _run(name: str, func: Callable[[], object], runs: int = 10, *, warmup: int =
         func()
         durations.append((time.perf_counter() - start) * 1000)
     return BenchmarkResult(name=name, samples_ms=tuple(durations))
+
+
+def _measure_case(case: BenchmarkCase, *, runs: int) -> dict[str, Any]:
+    fallback_result = _run(f"{case.name}:python", case.python, runs=runs) if case.python is not None else None
+    native_result = _run(f"{case.name}:native", case.native, runs=runs) if case.native is not None else None
+    record: dict[str, Any] = {
+        "name": case.name,
+        "fallback": benchmark_result_record(fallback_result) if fallback_result is not None else None,
+        "native": benchmark_result_record(native_result) if native_result is not None else None,
+        "fallback_over_native_median": None,
+    }
+    if fallback_result is None:
+        record["fallback_unavailable_reason"] = "cryptography is not installed on this platform"
+    if (
+        fallback_result is not None
+        and native_result is not None
+        and case.python is not None
+        and case.native is not None
+    ):
+        _assert_same_output(case.name, case.native, case.python)
+        record["fallback_over_native_median"] = (
+            fallback_result.median_ms / native_result.median_ms if native_result.median_ms else float("inf")
+        )
+    return record
 
 
 def _assert_same_output(name: str, native: Callable[[], object], python: Callable[[], object]) -> None:

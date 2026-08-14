@@ -7,24 +7,31 @@ import tomllib
 from pathlib import Path
 
 import pytest
+from packaging.requirements import Requirement
 
 from miniproto._cli import CLI_ENTRY_POINTS
 
 ROOT = Path(__file__).parents[1]
 
 
-def test_default_wheel_installs_crypto_and_platform_event_loop_backends() -> None:
+def test_default_wheel_installs_supported_crypto_and_platform_event_loop_backends() -> None:
     pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     project = pyproject["project"]
+    dependencies = project["dependencies"]
+    cryptography = Requirement(next(item for item in dependencies if item.startswith("cryptography")))
 
-    assert set(project["dependencies"]) == {
-        "cryptography==50.0.0",
+    assert cryptography.specifier == Requirement("cryptography==50.0.0").specifier
+    assert cryptography.marker is not None
+    assert cryptography.marker.evaluate({"sys_platform": "linux", "platform_machine": "aarch64"})
+    assert cryptography.marker.evaluate({"sys_platform": "win32", "platform_machine": "AMD64"})
+    assert not cryptography.marker.evaluate({"sys_platform": "win32", "platform_machine": "ARM64"})
+    assert {item for item in dependencies if not item.startswith("cryptography")} == {
         "uvloop==0.22.1; sys_platform == 'linux' or sys_platform == 'darwin'",
         "winloop==0.6.3; sys_platform == 'win32' or sys_platform == 'cygwin' or sys_platform == 'cli'",
     }
     assert "crypto-fallback" not in project["optional-dependencies"]
     assert "event-loop" not in project["optional-dependencies"]
-    assert "cryptography==50.0.0" not in project["optional-dependencies"]["dev"]
+    assert not any(dependency.startswith("cryptography") for dependency in project["optional-dependencies"]["dev"])
     assert not any(
         dependency.startswith(("uvloop==", "winloop==")) for dependency in project["optional-dependencies"]["dev"]
     )

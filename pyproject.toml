@@ -22,7 +22,8 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
-  "cryptography==50.0.0",
+  # Remove the Windows ARM64 exclusion after https://github.com/pyca/cryptography/pull/15350 ships in a release with regular and free-threaded wheels on PyPI
+  "cryptography==50.0.0; sys_platform != 'win32' or (platform_machine != 'ARM64' and platform_machine != 'arm64' and platform_machine != 'aarch64')",
   "uvloop==0.22.1; sys_platform == 'linux' or sys_platform == 'darwin'",
   "winloop==0.6.3; sys_platform == 'win32' or sys_platform == 'cygwin' or sys_platform == 'cli'",
 ]

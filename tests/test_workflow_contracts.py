@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import tomllib
 from pathlib import Path
 from typing import Any
 
 import yaml
+from packaging.requirements import Requirement
 
 ROOT = Path(__file__).parents[1]
 
@@ -47,6 +49,36 @@ def test_ci_workflow_covers_python_rust_benchmarks_and_free_threaded_runtime_wit
     assert 'find_spec("uvloop") is not None' in free_threaded_steps
 
 
+def test_benchmark_smoke_runs_on_every_native_platform_with_regular_and_free_threaded_python() -> None:
+    workflow = load_workflow("ci.yml")
+    job = workflow["jobs"]["benchmark-smoke"]
+    matrix = job["strategy"]["matrix"]
+
+    assert job["runs-on"] == "${{ matrix.platform.runner }}"
+    assert {item["python-version"] for item in matrix["python"]} == {"3.14", "3.14t"}
+    assert {(item["platform"], item["arch"], item["runner"]) for item in matrix["platform"]} == {
+        ("linux", "x86_64", "ubuntu-24.04"),
+        ("linux", "aarch64", "ubuntu-24.04-arm"),
+        ("windows", "x86_64", "windows-latest"),
+        ("windows", "aarch64", "windows-11-arm"),
+        ("macos", "x86_64", "macos-15-intel"),
+        ("macos", "aarch64", "macos-15"),
+    }
+    assert len(matrix["python"]) * len(matrix["platform"]) == 12
+
+    serialized_steps = "\n".join(str(step) for step in job["steps"])
+    assert "Py_GIL_DISABLED" in serialized_steps
+    assert "_is_gil_enabled" in serialized_steps
+    assert "native_available" in serialized_steps
+    assert "environment.json" in serialized_steps
+    assert "PYTHON_GIL" not in serialized_steps
+    assert "uv run maturin develop --release --locked" in serialized_steps
+    assert (
+        "benchmark-smoke-${{ matrix.platform.platform }}-${{ matrix.platform.arch }}-${{ matrix.python.artifact }}"
+        in serialized_steps
+    )
+
+
 def test_manual_wheel_workflow_is_dispatch_only_and_covers_all_required_abis() -> None:
     workflow = load_workflow("build-wheels.yml")
 
@@ -80,6 +112,38 @@ def test_manual_wheel_workflow_is_dispatch_only_and_covers_all_required_abis() -
         )
         == 24
     )
+
+
+def test_windows_arm64_omits_unsupported_cryptography_dependency_and_requires_the_bundled_native_backend() -> None:
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    cryptography = Requirement(
+        next(item for item in project["project"]["dependencies"] if item.startswith("cryptography"))
+    )
+    assert cryptography.specifier == Requirement("cryptography==50.0.0").specifier
+    assert cryptography.marker is not None
+
+    windows_arm64 = {"sys_platform": "win32", "platform_machine": "ARM64"}
+    windows_x86_64 = {"sys_platform": "win32", "platform_machine": "AMD64"}
+    linux_arm64 = {"sys_platform": "linux", "platform_machine": "aarch64"}
+    assert not cryptography.marker.evaluate(windows_arm64)
+    assert cryptography.marker.evaluate(windows_x86_64)
+    assert cryptography.marker.evaluate(linux_arm64)
+
+    workflow = load_workflow("build-wheels.yml")
+    native_job = workflow["jobs"]["native-wheels"]
+    platforms = {(item["platform"], item["arch"]): item for item in native_job["strategy"]["matrix"]["platform"]}
+    assert platforms[("windows", "aarch64")]["expect-cryptography"] == "false"
+    assert all(
+        platform["expect-cryptography"] == "true"
+        for key, platform in platforms.items()
+        if key != ("windows", "aarch64")
+    )
+    acceptance = next(
+        step for step in native_job["steps"] if step.get("name") == "Install and exercise wheel in clean runner Python"
+    )
+    assert acceptance["env"]["EXPECT_CRYPTOGRAPHY"] == "${{ matrix.platform.expect-cryptography }}"
+    assert 'assert (importlib.util.find_spec("cryptography") is not None) == expected_cryptography' in acceptance["run"]
+    assert "assert _native.native_available()" in acceptance["run"]
 
 
 def test_ci_creates_the_pytest_basetemp_parent_before_running_tests() -> None:
@@ -128,10 +192,11 @@ def test_manual_wheel_jobs_test_native_free_threading_and_every_console_script()
         assert 'path=sysconfig.get_path("scripts")' in serialized_steps
         assert "--no-deps" not in serialized_steps
         assert "PYTHON_GIL" not in serialized_steps
-        assert 'find_spec("cryptography") is not None' in serialized_steps
 
     linux_steps = "\n".join(str(step.get("run", "")) for step in workflow["jobs"]["linux-wheels"]["steps"])
     native_steps = "\n".join(str(step.get("run", "")) for step in workflow["jobs"]["native-wheels"]["steps"])
+    assert 'find_spec("cryptography") is not None' in linux_steps
+    assert 'find_spec("cryptography") is not None) == expected_cryptography' in native_steps
     assert 'find_spec("uvloop") is not None' in linux_steps
     assert 'find_spec("uvloop" if sys.platform == "darwin" else "winloop") is not None' in native_steps
 

@@ -32,6 +32,28 @@ def test_session_crypto_result_record_uses_per_operation_distribution_statistics
     assert record["statistics_ms"]["p95"] == 2.9
 
 
+def test_session_crypto_case_reports_native_results_when_cryptography_is_unavailable() -> None:
+    case = benchmark.BenchmarkCase(
+        name="native_only",
+        native=lambda: b"result",
+        cryptography=None,
+        selected=lambda: b"result",
+        selected_backend="native",
+        smoke_iterations=1,
+        full_iterations=1,
+    )
+
+    record = benchmark._measure_case(case, mode="smoke", runs=1, warmup=0)
+
+    assert record["native"]["runs"] == 1
+    assert record["cryptography"] is None
+    assert record["cryptography_unavailable_reason"] == "cryptography is not installed on this platform"
+    assert record["selected"]["runs"] == 1
+    assert record["selected_backend"] == "native"
+    assert record["winner"] == "native"
+    assert record["cryptography_over_native_median"] is None
+
+
 def test_session_crypto_smoke_report_measures_explicit_and_selected_backends(tmp_path: Path) -> None:
     report_path = tmp_path / "session-crypto.json"
 

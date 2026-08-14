@@ -30,7 +30,7 @@ class BenchmarkResult:
 class BenchmarkCase:
     name: str
     native: BenchmarkCallable | None
-    cryptography: BenchmarkCallable
+    cryptography: BenchmarkCallable | None
     selected: BenchmarkCallable
     selected_backend: str
     smoke_iterations: int
@@ -100,10 +100,15 @@ def _build_cases() -> tuple[BenchmarkCase, ...]:
     passphrase = b"miniproto benchmark passphrase"
     salt = b"session-salt-v1!"
     payloads = {size: bytes((index * 31 + size) % 256 for index in range(size)) for size in (1024, 65536, 1048576)}
-    ciphertexts = {
-        size: session_crypto.aes_256_gcm_encrypt_cryptography(payload, key, nonce, associated_data)
-        for size, payload in payloads.items()
-    }
+    cryptography_available = session_crypto._CRYPTOGRAPHY_AVAILABLE
+    native_encrypt_available = _native_capability_available("aes_256_gcm_encrypt")
+    if cryptography_available:
+        encrypt_fixture = session_crypto.aes_256_gcm_encrypt_cryptography
+    elif native_encrypt_available:
+        encrypt_fixture = session_crypto.aes_256_gcm_encrypt_native
+    else:
+        raise RuntimeError("session crypto benchmark requires either cryptography or the native AES-GCM backend")
+    ciphertexts = {size: encrypt_fixture(payload, key, nonce, associated_data) for size, payload in payloads.items()}
     cases: list[BenchmarkCase] = []
     for size, payload in payloads.items():
         encrypt_native = (
@@ -116,9 +121,13 @@ def _build_cases() -> tuple[BenchmarkCase, ...]:
             BenchmarkCase(
                 name=f"aes_gcm_encrypt_{size}",
                 native=encrypt_native,
-                cryptography=lambda payload=payload: session_crypto.aes_256_gcm_encrypt_cryptography(
-                    payload, key, nonce, associated_data
-                ),
+                cryptography=(
+                    lambda payload=payload: session_crypto.aes_256_gcm_encrypt_cryptography(
+                        payload, key, nonce, associated_data
+                    )
+                )
+                if cryptography_available
+                else None,
                 selected=lambda payload=payload: session_crypto.aes_256_gcm_encrypt(
                     payload, key, nonce, associated_data
                 ),
@@ -138,9 +147,13 @@ def _build_cases() -> tuple[BenchmarkCase, ...]:
             BenchmarkCase(
                 name=f"aes_gcm_decrypt_{size}",
                 native=decrypt_native,
-                cryptography=lambda ciphertext=ciphertext: session_crypto.aes_256_gcm_decrypt_cryptography(
-                    ciphertext, key, nonce, associated_data
-                ),
+                cryptography=(
+                    lambda ciphertext=ciphertext: session_crypto.aes_256_gcm_decrypt_cryptography(
+                        ciphertext, key, nonce, associated_data
+                    )
+                )
+                if cryptography_available
+                else None,
                 selected=lambda ciphertext=ciphertext: session_crypto.aes_256_gcm_decrypt(
                     ciphertext, key, nonce, associated_data
                 ),
@@ -163,9 +176,13 @@ def _build_cases() -> tuple[BenchmarkCase, ...]:
         BenchmarkCase(
             name="scrypt_session_parameters",
             native=scrypt_native,
-            cryptography=lambda: session_crypto.scrypt_derive_cryptography(
-                passphrase, salt, _SCRYPT_N, _SCRYPT_R, _SCRYPT_P, _SCRYPT_LENGTH
-            ),
+            cryptography=(
+                lambda: session_crypto.scrypt_derive_cryptography(
+                    passphrase, salt, _SCRYPT_N, _SCRYPT_R, _SCRYPT_P, _SCRYPT_LENGTH
+                )
+            )
+            if cryptography_available
+            else None,
             selected=lambda: session_crypto.scrypt_derive(
                 passphrase, salt, _SCRYPT_N, _SCRYPT_R, _SCRYPT_P, _SCRYPT_LENGTH
             ),
@@ -202,16 +219,20 @@ def _build_cases() -> tuple[BenchmarkCase, ...]:
         BenchmarkCase(
             name="protected_session_crypto_roundtrip",
             native=roundtrip_native,
-            cryptography=lambda: _protected_session_roundtrip(
-                scrypt=session_crypto.scrypt_derive_cryptography,
-                encrypt=session_crypto.aes_256_gcm_encrypt_cryptography,
-                decrypt=session_crypto.aes_256_gcm_decrypt_cryptography,
-                passphrase=passphrase,
-                salt=salt,
-                nonce=nonce,
-                associated_data=associated_data,
-                payload=session_payload,
-            ),
+            cryptography=(
+                lambda: _protected_session_roundtrip(
+                    scrypt=session_crypto.scrypt_derive_cryptography,
+                    encrypt=session_crypto.aes_256_gcm_encrypt_cryptography,
+                    decrypt=session_crypto.aes_256_gcm_decrypt_cryptography,
+                    passphrase=passphrase,
+                    salt=salt,
+                    nonce=nonce,
+                    associated_data=associated_data,
+                    payload=session_payload,
+                )
+            )
+            if cryptography_available
+            else None,
             selected=lambda: _protected_session_roundtrip(
                 scrypt=session_crypto.scrypt_derive,
                 encrypt=session_crypto.aes_256_gcm_encrypt,
@@ -232,7 +253,9 @@ def _build_cases() -> tuple[BenchmarkCase, ...]:
 
 def _measure_case(case: BenchmarkCase, *, mode: str, runs: int, warmup: int) -> dict[str, Any]:
     iterations = case.smoke_iterations if mode == "smoke" else case.full_iterations
-    implementations: dict[str, BenchmarkCallable] = {"cryptography": case.cryptography, "selected": case.selected}
+    implementations: dict[str, BenchmarkCallable] = {"selected": case.selected}
+    if case.cryptography is not None:
+        implementations["cryptography"] = case.cryptography
     if case.native is not None:
         implementations["native"] = case.native
     _assert_same_output(case.name, implementations)
@@ -250,21 +273,35 @@ def _measure_case(case: BenchmarkCase, *, mode: str, runs: int, warmup: int) -> 
             samples[name].append((time.perf_counter_ns() - started) / 1_000_000 / iterations)
 
     measured = {name: BenchmarkResult(tuple(values)) for name, values in samples.items()}
-    cryptography_median = _median(measured["cryptography"])
+    cryptography_result = measured.get("cryptography")
+    cryptography_median = _median(cryptography_result) if cryptography_result is not None else None
     native_result = measured.get("native")
     native_median = _median(native_result) if native_result is not None else None
-    return {
+    if native_median is not None and cryptography_median is not None:
+        winner = "native" if native_median <= cryptography_median else "cryptography"
+    elif native_median is not None:
+        winner = "native"
+    elif cryptography_median is not None:
+        winner = "cryptography"
+    else:
+        winner = case.selected_backend
+    record = {
         "name": case.name,
         "iterations_per_run": iterations,
         "native": benchmark_result_record(native_result) if native_result is not None else None,
-        "cryptography": benchmark_result_record(measured["cryptography"]),
+        "cryptography": benchmark_result_record(cryptography_result) if cryptography_result is not None else None,
         "selected": benchmark_result_record(measured["selected"]),
         "selected_backend": case.selected_backend,
-        "winner": "native" if native_median is not None and native_median <= cryptography_median else "cryptography",
+        "winner": winner,
         "cryptography_over_native_median": (
-            cryptography_median / native_median if native_median is not None and native_median else None
+            cryptography_median / native_median
+            if cryptography_median is not None and native_median is not None and native_median
+            else None
         ),
     }
+    if cryptography_result is None:
+        record["cryptography_unavailable_reason"] = "cryptography is not installed on this platform"
+    return record
 
 
 def _protected_session_roundtrip(
