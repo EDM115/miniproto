@@ -31,7 +31,7 @@ def test_ci_workflow_covers_python_rust_benchmarks_and_free_threaded_runtime_wit
     workflow = load_workflow("ci.yml")
     jobs = workflow["jobs"]
 
-    assert set(jobs["python"]["strategy"]["matrix"]["python-version"]) == {"3.13", "3.14"}
+    assert set(jobs["python"]["strategy"]["matrix"]["python-version"]) == {"3.13", "3.14", "3.14t"}
     assert set(jobs["free-threaded"]["strategy"]["matrix"]["python-version"]) == {"3.14t"}
     assert jobs["rust"]["steps"][1]["with"]["toolchain"] == "1.97"
     benchmark_steps = jobs["benchmark-smoke"]["steps"]

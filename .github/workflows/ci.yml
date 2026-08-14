@@ -22,6 +22,7 @@ jobs:
       MINIPROTO_INTEGRATION: 0
       MINIPROTO_REAL_INTEGRATION: 0
       MINIPROTO_STRESS: 1
+      PYTHON_GIL: "${{ matrix.python-version == '3.14t' && '0' || '1' }}"
     strategy:
       fail-fast: false
       matrix:
