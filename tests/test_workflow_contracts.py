@@ -210,6 +210,17 @@ def test_cross_platform_benchmark_matrix_records_speed_without_enforcing_host_sp
     assert "--check" not in command
 
 
+def test_benchmark_rust_cache_isolated_between_regular_and_free_threaded_abis() -> None:
+    workflow = load_workflow("ci.yml")
+    job = workflow["jobs"]["benchmark-smoke"]
+    rust_setup = next(
+        step for step in job["steps"] if step.get("uses", "").startswith("actions-rust-lang/setup-rust-toolchain@")
+    )
+
+    assert {item["artifact"] for item in job["strategy"]["matrix"]["python"]} == {"py314", "py314t"}
+    assert rust_setup["with"]["cache-key"] == "${{ matrix.python.artifact }}"
+
+
 def test_manual_wheel_jobs_test_native_free_threading_and_every_console_script() -> None:
     workflow = load_workflow("build-wheels.yml")
 
