@@ -41,11 +41,36 @@ Homepage = "https://github.com/EDM115/miniproto"
 Issues = "https://github.com/EDM115/miniproto/issues"
 Funding = "https://github.com/EDM115#support-me-"
 
+[project.scripts]
+miniproto-bench-acceptance = "miniproto._cli:bench_acceptance"
+miniproto-bench-imports = "miniproto._cli:bench_imports"
+miniproto-bench-live-media = "miniproto._cli:bench_live_media"
+miniproto-bench-matrix = "miniproto._cli:bench_matrix"
+miniproto-bench-media-scheduler = "miniproto._cli:bench_media_scheduler"
+miniproto-bench-multi-session-download = "miniproto._cli:bench_multi_session_download"
+miniproto-bench-native-fallback-crypto = "miniproto._cli:bench_native_fallback_crypto"
+miniproto-bench-runtime-paths = "miniproto._cli:bench_runtime_paths"
+miniproto-bench-tl-fast-paths = "miniproto._cli:bench_tl_fast_paths"
+miniproto-bench-tglib = "miniproto._cli:bench_tglib"
+miniproto-bench-transport-framing = "miniproto._cli:bench_transport_framing"
+miniproto-profile-lazy-raw-codec = "miniproto._cli:profile_lazy_raw_codec"
+miniproto-provision-benchmark-session = "miniproto._cli:provision_benchmark_session"
+miniproto-release-check = "miniproto._cli:release_check"
+miniproto-schema-generate = "miniproto._cli:schema_generate"
+miniproto-schema-update = "miniproto._cli:schema_update"
+
 [tool.maturin]
 module-name = "miniproto._native"
 python-source = "src"
 manifest-path = "rust/miniproto/Cargo.toml"
 features = ["pyo3/extension-module"]
+include = [
+  { path = "tools/*.py", format = ["sdist", "wheel"] },
+  { path = "tools/**/*.py", format = ["sdist", "wheel"] },
+  { path = "tools/**/*.json", format = ["sdist", "wheel"] },
+  { path = "tools/**/*.tl", format = ["sdist", "wheel"] },
+  { path = "tools/**/*.md", format = ["sdist", "wheel"] },
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

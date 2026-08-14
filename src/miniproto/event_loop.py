@@ -112,7 +112,7 @@ def run[T](main: Coroutine[Any, Any, T], *, debug: bool | None = None) -> T:
 
 
 def _requires_stdlib_debug_runner(debug: bool | None) -> bool:
-    if not debug or sys.version_info < (3, 14):
+    if not debug:
         return False
     fallback_through = _STDLIB_DEBUG_FALLBACK_THROUGH.get(_BACKEND_NAME)
     if fallback_through is None:

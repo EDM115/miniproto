@@ -26,7 +26,7 @@ TDLib intentionally contains four prefix/canonical function pairs that share con
 ## Check Upstream Without Updating Pins
 
 ```pwsh
-uv run python -m tools.schema.update --check-upstream --report .tmp/schema-upstream-report.json
+uv run miniproto-schema-update --check-upstream --report .tmp/schema-upstream-report.json
 ```
 
 This network-dependent command fetches and validates every upstream source, writes a machine-readable comparison artifact outside the pinned input directory, reports each stale pin, and exits non-zero without modifying pinned schema files. `.github/workflows/schema-upstream.yml` runs it on a schedule and through manual dispatch. Pull-request CI deliberately remains offline.
@@ -34,9 +34,9 @@ This network-dependent command fetches and validates every upstream source, writ
 ## Update And Review Sequence
 
 ```pwsh
-uv run python -m tools.schema.update --report .tmp/schema-upstream-report.json
-uv run python -m tools.schema.generate
-uv run python -m tools.schema.generate --check
+uv run miniproto-schema-update --report .tmp/schema-upstream-report.json
+uv run miniproto-schema-generate
+uv run miniproto-schema-generate --check
 uv run pytest tests/test_schema_parser.py tests/test_schema_update.py tests/test_schema_generation.py tests/test_tl_codec.py tests/test_invoke.py
 ```
 
@@ -45,7 +45,7 @@ Review `tools/schema/schema-source-diff.json`, `tools/schema/schema-metadata.jso
 ## Generate
 
 ```pwsh
-uv run python -m tools.schema.generate
+uv run miniproto-schema-generate
 ```
 
 This rewrites `src/miniproto/raw/base.py`, lazy type/function facades and stubs, registry and implementation shards, RPC error mappings, `docs/raw-api.md`, and generator-owned metadata from the pinned inputs. It also removes stale generator-owned shards.
@@ -53,7 +53,7 @@ This rewrites `src/miniproto/raw/base.py`, lazy type/function facades and stubs,
 ## Deterministic Offline Stale Check
 
 ```pwsh
-uv run python -m tools.schema.generate --check
+uv run miniproto-schema-generate --check
 ```
 
 The command performs no network access and exits non-zero when generated files, owned shard membership, or metadata do not match the pinned inputs and generator. Normal CI uses this command so pull requests remain reproducible even when Telegram or GitHub is unavailable.

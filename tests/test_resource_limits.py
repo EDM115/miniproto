@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 
 import pytest
-from tests.support.fake_mtproto import FakeMTProtoServer
+from tools.bench.fake_mtproto import FakeMTProtoServer
 
 from miniproto import (
     AuthKey,

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import argparse
 import asyncio
 import statistics
 import sys
 import time
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass, field, fields, is_dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -100,7 +101,9 @@ class CountingCachedPeerStorage(_CachedSessionStorage):
         return await super().load()
 
 
-def main() -> int:
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Benchmark representative miniproto runtime paths")
+    parser.parse_args(argv)
     print(
         f"event_loop_backend={event_loop.backend_name()} "
         f"installed={event_loop.installed()} version={event_loop.backend_version()}"

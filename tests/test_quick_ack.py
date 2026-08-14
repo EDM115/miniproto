@@ -4,7 +4,7 @@ import asyncio
 from importlib import import_module
 
 import pytest
-from tests.support.fake_mtproto import FakeMTProtoServer
+from tools.bench.fake_mtproto import FakeMTProtoServer
 
 from miniproto import event_loop
 from miniproto.config import TransportConfig, TransportMode

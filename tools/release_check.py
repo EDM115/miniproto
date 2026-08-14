@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import configparser
 import hashlib
 import json
 import os
@@ -95,6 +96,7 @@ def build_stages(config: ReleaseConfig, *, repo: Path) -> tuple[Stage, ...]:
                 ("cargo", "clippy", "--workspace", "--all-targets", "--all-features", "--", "-D", "warnings"),
             ),
             Stage("cargo-test", ("cargo", "test", "--workspace", "--all-features")),
+            Stage("benchmark-imports", (python, "-m", "tools.bench.benchmark_imports", "--runs", "3")),
             Stage(
                 "benchmark-smoke",
                 (
@@ -107,6 +109,7 @@ def build_stages(config: ReleaseConfig, *, repo: Path) -> tuple[Stage, ...]:
                     str(artifacts / "benchmarks" / "runtime-acceptance.json"),
                 ),
             ),
+            Stage("benchmark-media-scheduler", (python, "-m", "tools.bench.benchmark_media_scheduler")),
             Stage(
                 "benchmark-native-fallback",
                 (
@@ -119,6 +122,7 @@ def build_stages(config: ReleaseConfig, *, repo: Path) -> tuple[Stage, ...]:
                     str(artifacts / "benchmarks" / "native-fallback.json"),
                 ),
             ),
+            Stage("benchmark-runtime-paths", (python, "-m", "tools.bench.benchmark_runtime_paths")),
             Stage(
                 "benchmark-frame-pump",
                 (
@@ -155,6 +159,7 @@ def build_stages(config: ReleaseConfig, *, repo: Path) -> tuple[Stage, ...]:
                     str(artifacts / "benchmarks" / "tl-fast-paths.json"),
                 ),
             ),
+            Stage("profile-lazy-raw-codec", (python, "-m", "tools.bench.profile_lazy_raw_codec")),
             Stage(
                 "wheel-sdist",
                 (python, "-m", "maturin", "build", "--release", "--sdist", "--out", str(artifacts / "distributions")),
@@ -236,11 +241,21 @@ def inspect_wheel(path: Path) -> dict[str, Any]:
     """Reject editable/path-only wheel artifacts and require bundled Python plus native code."""
     with zipfile.ZipFile(path) as archive:
         names = sorted(archive.namelist())
+        entry_point_files = [name for name in names if name.endswith(".dist-info/entry_points.txt")]
+        console_scripts: dict[str, str] = {}
+        for entry_point_file in entry_point_files:
+            parser = configparser.ConfigParser(interpolation=None)
+            parser.read_string(archive.read(entry_point_file).decode("utf-8"))
+            if parser.has_section("console_scripts"):
+                console_scripts.update(parser.items("console_scripts"))
     python_sources = any(name.startswith("miniproto/") and name.endswith(".py") for name in names)
     native_extension = any(
         name.startswith("miniproto/_native") and name.casefold().endswith((".pyd", ".so", ".dylib")) for name in names
     )
     pth_files = [name for name in names if name.casefold().endswith(".pth")]
+    cache_files = [
+        name for name in names if "__pycache__/" in name.casefold() or name.casefold().endswith((".pyc", ".pyo"))
+    ]
     failures: list[str] = []
     if not python_sources:
         failures.append("Python sources are missing")
@@ -248,6 +263,15 @@ def inspect_wheel(path: Path) -> dict[str, Any]:
         failures.append("native extension is missing")
     if pth_files:
         failures.append("pth files are forbidden")
+    if cache_files:
+        failures.append("cache files are forbidden")
+    if not console_scripts:
+        failures.append("console scripts are missing")
+    for script, target in sorted(console_scripts.items()):
+        module = target.split(":", 1)[0].strip()
+        module_path = module.replace(".", "/")
+        if f"{module_path}.py" not in names and f"{module_path}/__init__.py" not in names:
+            failures.append(f"console script target {script} -> {module} is missing")
     if failures:
         raise ValueError(f"invalid wheel {path.name}: {'; '.join(failures)}")
     return {
@@ -257,6 +281,8 @@ def inspect_wheel(path: Path) -> dict[str, Any]:
         "python_sources": python_sources,
         "native_extension": native_extension,
         "pth_files": pth_files,
+        "cache_files": cache_files,
+        "console_scripts": sorted(console_scripts),
     }
 
 

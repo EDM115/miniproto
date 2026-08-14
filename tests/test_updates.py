@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 import pytest
-from tests.support.fake_mtproto import FakeMTProtoServer
+from tools.bench.fake_mtproto import FakeMTProtoServer
 
 from miniproto import (
     AuthKey,

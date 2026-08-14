@@ -8,7 +8,7 @@ from collections.abc import Mapping
 from typing import Any, cast
 
 import pytest
-from tests.support.fake_mtproto import FakeMTProtoServer
+from tools.bench.fake_mtproto import FakeMTProtoServer
 
 import miniproto.connection.sender as sender_module
 import miniproto.connection.transport as transport_module

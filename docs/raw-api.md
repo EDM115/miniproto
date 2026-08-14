@@ -37,7 +37,7 @@ request = functions.help.GetConfig()
 
 ## Lazy Loading and Typing
 
-Facade imports stay lightweight: they load generated facades and the registry, not implementation shards. Requested symbols load and cache their generated shard on first attribute, namespace, constructor-ID, or name-map lookup. Mapping and sequence iteration may realize classes as needed. The `.pyi` facades retain static type declarations. Update generated artifacts only through `python -m tools.schema.generate`.
+Facade imports stay lightweight: they load generated facades and the registry, not implementation shards. Requested symbols load and cache their generated shard on first attribute, namespace, constructor-ID, or name-map lookup. Mapping and sequence iteration may realize classes as needed. The `.pyi` facades retain static type declarations. Update generated artifacts only through `uv run miniproto-schema-generate`.
 
 ## Current Runtime Scope
 

@@ -1,3 +1,5 @@
+"""Deterministic local MTProto server used by acceptance benchmarks and tests."""
+
 from __future__ import annotations
 
 import asyncio

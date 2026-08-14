@@ -76,13 +76,11 @@ def test_event_loop_run_uses_runner_cleanup_and_debug() -> None:
     assert generator_closed
 
 
+@pytest.mark.parametrize("python_version", [(3, 13), (3, 14)])
 @pytest.mark.parametrize(("backend_name", "backend_version"), [("uvloop", "0.22.1"), ("winloop", "0.6.3")])
 def test_event_loop_run_uses_stdlib_debug_runner_for_unsafe_backends(
-    monkeypatch: pytest.MonkeyPatch, backend_name: str, backend_version: str
+    monkeypatch: pytest.MonkeyPatch, python_version: tuple[int, int], backend_name: str, backend_version: str
 ) -> None:
-    if sys.version_info < (3, 14):
-        pytest.skip("the optimized debug-runner crash starts on Python 3.14")
-
     optimized_factory_called = False
 
     def installed_version(package_name: str) -> str:
@@ -100,6 +98,7 @@ def test_event_loop_run_uses_stdlib_debug_runner_for_unsafe_backends(
     monkeypatch.setattr(event_loop, "_BACKEND_NAME", backend_name)
     monkeypatch.setattr(event_loop.metadata, "version", installed_version)
     monkeypatch.setattr(event_loop, "new_event_loop", optimized_factory)
+    monkeypatch.setattr(event_loop.sys, "version_info", python_version)
 
     assert event_loop.run(compute(), debug=True)
     assert not optimized_factory_called

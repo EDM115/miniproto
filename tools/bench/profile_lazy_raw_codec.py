@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import argparse
 import gc
 import json
 import statistics
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import Any
 
 from miniproto.media import DEFAULT_CHUNK_SIZE
@@ -35,7 +36,9 @@ def _interleaved(cases: dict[str, Callable[[], Any]], *, rounds: int = 10) -> di
     }
 
 
-def main() -> int:
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Profile the lazy generated raw API codec paths")
+    parser.parse_args(argv)
     request_type = functions.UploadGetFile
     location_type = types.InputDocumentFileLocation
     upload_file_type = types.UploadFile

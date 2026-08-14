@@ -46,10 +46,33 @@ cargo check
 
 Use `uv sync --extra dev` for normal development. Use `uv lock` after dependency metadata changes. Use `cargo check` after Rust crate metadata changes to refresh `Cargo.lock` and validate the workspace.
 
+## Tool CLI Contract
+
+Every executable Python tool is registered under `[project.scripts]`, works from an editable install and a built wheel, and exposes argparse's `--help` without starting its operation or contacting Telegram. `uv sync --extra dev` installs these launchers:
+
+```pwsh
+uv run miniproto-schema-generate --help
+uv run miniproto-schema-update --help
+uv run miniproto-release-check --help
+uv run miniproto-bench-acceptance --help
+uv run miniproto-bench-imports --help
+uv run miniproto-bench-media-scheduler --help
+uv run miniproto-bench-native-fallback-crypto --help
+uv run miniproto-bench-runtime-paths --help
+uv run miniproto-bench-tl-fast-paths --help
+uv run miniproto-bench-transport-framing --help
+uv run miniproto-profile-lazy-raw-codec --help
+uv run miniproto-bench-live-media --help
+uv run miniproto-bench-matrix --help
+uv run miniproto-bench-multi-session-download --help
+uv run miniproto-bench-tglib --help
+uv run miniproto-provision-benchmark-session --help
+```
+
 ## Generate Schema Outputs
 
 ```pwsh
-uv run python -m tools.schema.generate
+uv run miniproto-schema-generate
 ```
 
 Run this after changing any pinned input under `tools/schema/`, `tools/schema/generate.py`, or `tools/schema/parser.py`. It rewrites the Layer 228 lazy facades, stubs, registries, shards, errors, generated metadata, and `docs/raw-api.md` from the normalized TDLib canonical model.
@@ -57,15 +80,15 @@ Run this after changing any pinned input under `tools/schema/`, `tools/schema/ge
 ## Update Pinned Schema Inputs
 
 ```pwsh
-uv run python -m tools.schema.update
+uv run miniproto-schema-update
 ```
 
-This fetches the TDLib and Telegram Desktop TL schemas plus the core JSON, schema page, layer changelog, and RPC error sources. It validates every source in memory before atomically staging the independent pins: verbatim TDLib `schema.tl`, normalized canonical `schema.json`, verbatim `schema-tdesktop.tl`, core mirrors, RPC errors, source diff, and metadata. TDLib owns structure; Layer 228 comes only from Telegram Desktop's strict end-of-file marker after all shared declarations match; documentation falls back from TDLib to Telegram Desktop to core JSON. Run `uv run python -m tools.schema.generate` afterwards to refresh generated raw modules and docs.
+This fetches the TDLib and Telegram Desktop TL schemas plus the core JSON, schema page, layer changelog, and RPC error sources. It validates every source in memory before atomically staging the independent pins: verbatim TDLib `schema.tl`, normalized canonical `schema.json`, verbatim `schema-tdesktop.tl`, core mirrors, RPC errors, source diff, and metadata. TDLib owns structure; Layer 228 comes only from Telegram Desktop's strict end-of-file marker after all shared declarations match; documentation falls back from TDLib to Telegram Desktop to core JSON. Run `uv run miniproto-schema-generate` afterwards to refresh generated raw modules and docs.
 
 ## Schema Freshness Check
 
 ```pwsh
-uv run python -m tools.schema.generate --check
+uv run miniproto-schema-generate --check
 ```
 
 This fails when committed raw API files or schema metadata drift from the pinned schema inputs.
@@ -73,7 +96,7 @@ This fails when committed raw API files or schema metadata drift from the pinned
 ## Upstream Schema Freshness Check
 
 ```pwsh
-uv run python -m tools.schema.update --check-upstream --report .tmp/schema-upstream-report.json
+uv run miniproto-schema-update --check-upstream --report .tmp/schema-upstream-report.json
 ```
 
 This network-dependent check fails when any independently pinned upstream input differs, prints the stale pin paths, and writes source hashes plus the declaration comparison to the requested JSON report without updating pins. The scheduled/manual `.github/workflows/schema-upstream.yml` job always uploads that report. Routine pull-request CI keeps using the offline generation check above so external availability cannot make deterministic CI flaky.
@@ -111,12 +134,12 @@ cargo test --all-features
 
 ## Canonical Release Check
 
-`tools.release_check` is the canonical non-mutating aggregate. It streams each command, stops at the first failure by default, preserves the failing exit code, and writes `release-check.json`, environment details, benchmark reports, distribution hashes, and clean-import evidence under a task-owned artifact directory. `--keep-going` records every later failure for diagnosis. No mode formats, fixes, publishes, tags, or stores secret-bearing CLI arguments.
+`miniproto-release-check` is the canonical non-mutating aggregate. It streams each command, stops at the first failure by default, preserves the failing exit code, and writes `release-check.json`, environment details, benchmark reports, distribution hashes, and clean-import evidence under a task-owned artifact directory. `--keep-going` records every later failure for diagnosis. No mode formats, fixes, publishes, tags, or stores secret-bearing CLI arguments.
 
 ```pwsh
-uv run python -m tools.release_check --quick --artifacts-dir .tmp/release-quick
-uv run python -m tools.release_check --offline --artifacts-dir .tmp/release-offline
-uv run python -m tools.release_check --offline --keep-going --artifacts-dir .tmp/release-diagnostics
+uv run miniproto-release-check --quick --artifacts-dir .tmp/release-quick
+uv run miniproto-release-check --offline --artifacts-dir .tmp/release-offline
+uv run miniproto-release-check --offline --keep-going --artifacts-dir .tmp/release-diagnostics
 ```
 
 `--offline` is the default release gate, so omitting it is equivalent. The docs stage is reported as `pending`, without being presented as a pass, until Wave 5 adds `tools.docs` and `docs-site`; it becomes a strict stage automatically once both are present. The individual commands below remain the diagnostic source when one aggregate stage fails. Windows subprocesses receive the uv base-Python directory in `PATH` so Cargo-built PyO3 tests can resolve the matching Python DLL.
@@ -127,21 +150,23 @@ The credentialed extension is separately guarded and is never part of ordinary p
 $env:MINIPROTO_RELEASE_LIVE = "1"
 $env:MINIPROTO_INTEGRATION = "1"
 $env:MINIPROTO_REAL_INTEGRATION = "1"
-uv run python -m tools.release_check --live --artifacts-dir .tmp/release-live
+uv run miniproto-release-check --live --artifacts-dir .tmp/release-live
 ```
 
 ## Benchmark Smoke
 
 ```pwsh
-uv run python -m tools.bench.benchmark_acceptance --mode smoke --json .tmp/bench/runtime-acceptance.json
-uv run python -m tools.bench.benchmark_native_fallback_crypto --mode smoke --json .tmp/bench/native-fallback.json
-uv run python tools/bench/benchmark_runtime_paths.py
-uv run python tools/bench/benchmark_media_scheduler.py
-uv run python tools/bench/benchmark_transport_framing.py --check --json .tmp/bench/transport-framing.json
-uv run python tools/bench/benchmark_tl_fast_paths.py --check --json .tmp/bench/tl-fast-paths.json
+uv run miniproto-bench-acceptance --mode smoke --json .tmp/bench/runtime-acceptance.json
+uv run miniproto-bench-imports --runs 3
+uv run miniproto-bench-media-scheduler
+uv run miniproto-bench-native-fallback-crypto --mode smoke --json .tmp/bench/native-fallback.json
+uv run miniproto-bench-runtime-paths
+uv run miniproto-bench-tl-fast-paths --check --mode smoke --json .tmp/bench/tl-fast-paths.json
+uv run miniproto-bench-transport-framing --check --mode smoke --json .tmp/bench/transport-framing.json
+uv run miniproto-profile-lazy-raw-codec
 ```
 
-The normalized reports use schema `miniproto.benchmark.v1` and record package/native versions, commit/dirty state, OS/CPU/architecture, Python, Rust, event-loop backend, configuration, warmups, raw samples, median/p50/p95/p99 distributions, throughput where meaningful, RSS, loop lag, and failures. `benchmark_acceptance` covers generic TL round trips, a held 1,000-RPC burst, update dispatch distributions, in-memory upload/download, iterator backpressure, shared per-DC fairness, encrypted reconnect/resend/cancel cycles, retained-object/RSS soak, and fixed-cadence loop lag. Its automated failures are correctness/accounting invariants—pending slots, prefetch bounds, scheduler byte caps/fairness/leaks, and reconnect cleanup—not host-dependent absolute timing limits. Use `--mode full` for longer distributions outside routine CI.
+Routine CI runs all eight non-live commands above in its deterministic benchmark-smoke job after a release native build, saves every JSON/log output, and uploads the complete directory even when a gate fails. The normalized reports use schema `miniproto.benchmark.v1` and record package/native versions, commit/dirty state, OS/CPU/architecture, Python, Rust, event-loop backend, configuration, warmups, raw samples, median/p50/p95/p99 distributions, throughput where meaningful, RSS, loop lag, and failures. `benchmark_acceptance` covers generic TL round trips, a held 1,000-RPC burst, update dispatch distributions, in-memory upload/download, iterator backpressure, shared per-DC fairness, encrypted reconnect/resend/cancel cycles, retained-object/RSS soak, and fixed-cadence loop lag. Its automated failures are correctness/accounting invariants—pending slots, prefetch bounds, scheduler byte caps/fairness/leaks, and reconnect cleanup—not host-dependent absolute timing limits. Use `--mode full` for longer distributions outside routine CI.
 
 The other tools compare native-extension timings with the pure Python fallback for crypto, TL primitive paths, and single-call MTProto encrypted envelope encode/decode, then benchmark additional async runtime paths such as the 10,000-entry peer cache. `benchmark_media_scheduler.py` is the deterministic simultaneous-transfer workload: its JSON reports aggregate and per-transfer scheduling throughput, byte-cap peaks, queue waits, grant fairness, queued-cancellation cleanup, and DC/direction isolation; `tests/test_media_scheduler_benchmark.py` enforces the accounting invariants. `benchmark_transport_framing.py` compares the production native chunk pump with the previous per-frame `readexactly` path for every TCP mode and records every warmed interleaved sample, the event-loop backend, and maximum synchronous batch duration; `--check` requires at least 2x on the designated 72-byte service/RPC frame workload. `benchmark_tl_fast_paths.py` compares the generated Rust selection with the exact generic Python fallback over a representative upload/service mix, records raw samples and environment, and requires at least 1.5x. The peer case reports cold construction, indexed and canonical-scan medians for kind/id, numeric, username, and phone lookups, per-type and combined speedups, cached-wrapper loads, canonical tuple visits, retained heap with shared-object deduplication, and separate end-to-end durable-update and incremental index-reconciliation times. Keep Rust implementations and Python fallbacks in parity even when the public wrapper intentionally prefers the Python fallback; `benchmark_native_fallback_crypto.py` remains the evidence source for those routing choices.
 
@@ -171,7 +196,7 @@ $env:MINIPROTO_INTEGRATION = "1"
 $env:MINIPROTO_REAL_INTEGRATION = "1"
 $env:MINIPROTO_LIVE_BENCH = "1"
 $env:MINIPROTO_LIVE_BENCH_DC_ID = "4"
-uv run python tools/bench/benchmark_live_media_limit.py --actor both
+uv run miniproto-bench-live-media --actor both
 ```
 
 The default actor set runs user upload/download and bot upload/download against DC 4. User upload defaults to Saved Messages via `MINIPROTO_LIVE_BENCH_USER_PEER=self`. Bot upload requires `MINIPROTO_LIVE_BENCH_BOT_PEER` to name a username, numeric peer, chat, or channel where the bot is allowed to send messages; bots cannot upload to Saved Messages or `self`, and the script fails before uploading when that peer is missing. Numeric bot peers can be written without a prefix, for example `854158484`; miniproto will seed the peer cache from recent dialogs when the ID is not cached yet, but a username is still more reliable when available. Network conditions, Telegram throttling, account type, and file DC placement can materially change these results, so treat each run as an observational sample, not a deterministic regression gate.
@@ -183,15 +208,15 @@ The same workflow now offers `smoke`, resumable `matrix`, and `tglib` modes on L
 
 ```pwsh
 $env:MINIPROTO_LIVE_BENCH = "1"
-uv run python -m tools.bench.benchmark_matrix --mode smoke --output .tmp/live-matrix
-uv run python -m tools.bench.benchmark_matrix --mode full --resume --output .tmp/live-matrix-full
+uv run miniproto-bench-matrix --mode smoke --output .tmp/live-matrix
+uv run miniproto-bench-matrix --mode full --resume --output .tmp/live-matrix-full
 ```
 
 The bot-only compatibility runner requires an explicit existing file ID and peer and refuses to run unless `MINIPROTO_TGLIB_BENCH=1`; it never creates or uploads a 2 GiB fixture implicitly. `results.json` is the exact `[size,[t0,t1,t2,t3]]` payload: `t0` starts download after connection/file-reference decoding, `t1` is fully materialized download, `t2` starts upload, and `t3` is the final uploaded byte accepted by the upload-part pipeline. Final `sendMedia` completion is recorded separately in the rich report and excluded from `t2..t3`.
 
 ```pwsh
 $env:MINIPROTO_TGLIB_BENCH = "1"
-uv run python -m tools.bench.benchmark_tglib --file-id "<existing-bot-file-id>" --peer "<bot-destination>" --dc-id 4 --compat-json .tmp/tglib/results.json --json .tmp/tglib/miniproto.json
+uv run miniproto-bench-tglib --file-id "<existing-bot-file-id>" --peer "<bot-destination>" --dc-id 4 --compat-json .tmp/tglib/results.json --json .tmp/tglib/miniproto.json
 ```
 
 ## Stress Tests
@@ -256,7 +281,7 @@ Only publish the Rust crate when the crates.io package contents intentionally ma
 ## Full Local Verification
 
 ```pwsh
-uv run python -m tools.release_check --offline --artifacts-dir .tmp/release-offline
+uv run miniproto-release-check --offline --artifacts-dir .tmp/release-offline
 ```
 
 Use the format/lint/type/test/build commands in the preceding sections to diagnose the named failing stage. The aggregate is authoritative because it also inspects fresh wheel/sdist contents, rejects editable `.pth` linkage, installs the wheel into a clean isolated environment, verifies the native import, and emits artifact hashes.

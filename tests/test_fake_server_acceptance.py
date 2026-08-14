@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from typing import Any, cast
 
 import pytest
-from tests.support.fake_mtproto import FakeAuthMTProtoServer, FakeMTProtoServer
+from tools.bench.fake_mtproto import FakeAuthMTProtoServer, FakeMTProtoServer
 
 import miniproto.auth.bootstrap as auth_bootstrap
 from miniproto import (

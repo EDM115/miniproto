@@ -41,10 +41,14 @@ def test_offline_stage_order_uses_check_only_commands_and_marks_future_docs_pend
         "cargo-fmt",
         "cargo-clippy",
         "cargo-test",
+        "benchmark-imports",
         "benchmark-smoke",
+        "benchmark-media-scheduler",
         "benchmark-native-fallback",
+        "benchmark-runtime-paths",
         "benchmark-frame-pump",
         "benchmark-hot-tl",
+        "profile-lazy-raw-codec",
         "wheel-sdist",
         "artifact-inspection",
         "clean-import",
@@ -133,12 +137,18 @@ def test_wheel_inspection_requires_python_sources_and_native_extension_without_p
         archive.writestr("miniproto/__init__.py", "")
         archive.writestr("miniproto/_native.cp314-win_amd64.pyd", b"native")
         archive.writestr("miniproto-0.1.0.dist-info/METADATA", "Name: miniproto\n")
+        archive.writestr(
+            "miniproto-0.1.0.dist-info/entry_points.txt",
+            "[console_scripts]\nminiproto-release-check = tools.release_check:main\n",
+        )
+        archive.writestr("tools/release_check.py", "def main(): return 0\n")
 
     result = inspect_wheel(good)
 
     assert result["python_sources"] is True
     assert result["native_extension"] is True
     assert result["pth_files"] == []
+    assert result["console_scripts"] == ["miniproto-release-check"]
 
     bad = tmp_path / "bad.whl"
     with zipfile.ZipFile(bad, "w") as archive:
@@ -146,6 +156,31 @@ def test_wheel_inspection_requires_python_sources_and_native_extension_without_p
         archive.writestr("miniproto-0.1.0.dist-info/METADATA", "Name: miniproto\n")
     with pytest.raises(ValueError, match=r"Python sources|native extension|pth"):
         inspect_wheel(bad)
+
+    missing_cli = tmp_path / "missing-cli.whl"
+    with zipfile.ZipFile(missing_cli, "w") as archive:
+        archive.writestr("miniproto/__init__.py", "")
+        archive.writestr("miniproto/_native.cp314-win_amd64.pyd", b"native")
+        archive.writestr(
+            "miniproto-0.1.0.dist-info/entry_points.txt",
+            "[console_scripts]\nminiproto-release-check = tools.release_check:main\n",
+        )
+    with pytest.raises(ValueError, match="console script target"):
+        inspect_wheel(missing_cli)
+
+    cached = tmp_path / "cached.whl"
+    with zipfile.ZipFile(cached, "w") as archive:
+        archive.writestr("miniproto/__init__.py", "")
+        archive.writestr("miniproto/_native.cp314-win_amd64.pyd", b"native")
+        archive.writestr("miniproto-0.1.0.dist-info/METADATA", "Name: miniproto\n")
+        archive.writestr(
+            "miniproto-0.1.0.dist-info/entry_points.txt",
+            "[console_scripts]\nminiproto-release-check = tools.release_check:main\n",
+        )
+        archive.writestr("tools/release_check.py", "def main(): return 0\n")
+        archive.writestr("tools/__pycache__/release_check.cpython-314.pyc", b"cached")
+    with pytest.raises(ValueError, match="cache files"):
+        inspect_wheel(cached)
 
 
 def test_release_summary_is_machine_readable(tmp_path: Path) -> None:

@@ -129,7 +129,7 @@ jobs:
 
       - name: Provision optional string sessions
         shell: pwsh
-        run: uv run python -m tools.bench.provision_session --dc-id "${{ inputs.dc_id }}"
+        run: uv run miniproto-provision-benchmark-session --dc-id "${{ inputs.dc_id }}"
 
       - name: Validate non-interactive inputs
         shell: pwsh
@@ -151,7 +151,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path $Output | Out-Null
           if ("${{ inputs.mode }}" -eq "smoke") {
             $Arguments = @(
-              "run", "python", "-u", "tools/bench/benchmark_live_media_limit.py",
+              "run", "miniproto-bench-live-media",
               "--actor", "${{ inputs.actor }}",
               "--operation", "${{ inputs.operation }}",
               "--repeat", "${{ inputs.repeat }}",
@@ -163,9 +163,9 @@ jobs:
             if (-not [string]::IsNullOrWhiteSpace("${{ inputs.file_id }}")) { $Arguments += @("--file-id", "${{ inputs.file_id }}") }
             & uv @Arguments 2>&1 | Tee-Object -FilePath "$Output/benchmark.log"
           } elseif ("${{ inputs.mode }}" -eq "matrix") {
-            & uv run python -u -m tools.bench.benchmark_matrix --mode "${{ inputs.matrix_profile }}" --output "$Output/matrix" 2>&1 | Tee-Object -FilePath "$Output/benchmark.log"
+            & uv run miniproto-bench-matrix --mode "${{ inputs.matrix_profile }}" --output "$Output/matrix" 2>&1 | Tee-Object -FilePath "$Output/benchmark.log"
           } else {
-            & uv run python -u -m tools.bench.benchmark_tglib --file-id "${{ inputs.file_id }}" --peer $env:MINIPROTO_TGLIB_PEER --dc-id "${{ inputs.dc_id }}" --size $env:MINIPROTO_TGLIB_SIZE --compat-json "$Output/results.json" --json "$Output/miniproto.json" --work-dir "$Output/work" 2>&1 | Tee-Object -FilePath "$Output/benchmark.log"
+            & uv run miniproto-bench-tglib --file-id "${{ inputs.file_id }}" --peer $env:MINIPROTO_TGLIB_PEER --dc-id "${{ inputs.dc_id }}" --size $env:MINIPROTO_TGLIB_SIZE --compat-json "$Output/results.json" --json "$Output/miniproto.json" --work-dir "$Output/work" 2>&1 | Tee-Object -FilePath "$Output/benchmark.log"
           }
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 

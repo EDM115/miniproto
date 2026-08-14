@@ -47,6 +47,50 @@ def test_ci_workflow_covers_minimum_python_rust_benchmarks_and_wheel_platforms()
     assert "sdist" in jobs
 
 
+def test_ci_creates_the_pytest_basetemp_parent_before_running_tests() -> None:
+    workflow = load_workflow("ci.yml")
+    test_step = next(step for step in workflow["jobs"]["python"]["steps"] if step.get("name") == "Tests")
+    commands = [line.strip() for line in test_step["run"].splitlines() if line.strip()]
+
+    assert commands.index("mkdir -p .tmp") < next(
+        index for index, command in enumerate(commands) if command.startswith("uv run pytest ")
+    )
+
+
+def test_ci_runs_every_offline_benchmark_cli() -> None:
+    workflow = load_workflow("ci.yml")
+    benchmark_step = next(
+        step
+        for step in workflow["jobs"]["benchmark-smoke"]["steps"]
+        if step.get("name") == "Run deterministic benchmark gates"
+    )
+    command = benchmark_step["run"]
+    expected_scripts = {
+        "miniproto-bench-acceptance",
+        "miniproto-bench-imports",
+        "miniproto-bench-media-scheduler",
+        "miniproto-bench-native-fallback-crypto",
+        "miniproto-bench-runtime-paths",
+        "miniproto-bench-tl-fast-paths",
+        "miniproto-bench-transport-framing",
+        "miniproto-profile-lazy-raw-codec",
+    }
+
+    assert {script for script in expected_scripts if f"uv run {script}" in command} == expected_scripts
+
+
+def test_wheel_job_runs_help_for_every_installed_console_script() -> None:
+    workflow = load_workflow("ci.yml")
+    install_step = next(
+        step
+        for step in workflow["jobs"]["wheels"]["steps"]
+        if step.get("name") == "Install and import wheel in clean runner Python"
+    )
+
+    assert 'metadata.distribution("miniproto").entry_points' in install_step["run"]
+    assert 'subprocess.check_call([executable, "--help"])' in install_step["run"]
+
+
 def test_pull_request_ci_has_no_telegram_secret_or_live_benchmark_contract() -> None:
     workflow = load_workflow("ci.yml")
     assert "pull_request" in workflow["on"]

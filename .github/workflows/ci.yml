@@ -48,10 +48,12 @@ jobs:
         run: uv run ty check
 
       - name: Schema freshness
-        run: uv run python -m tools.schema.generate --check
+        run: uv run miniproto-schema-generate --check
 
       - name: Tests
-        run: uv run pytest --basetemp=.tmp/pytest-ci-${{ matrix.python-version }}
+        run: |
+          mkdir -p .tmp
+          uv run pytest --basetemp=.tmp/pytest-ci-${{ matrix.python-version }}
 
   rust:
     name: Rust 1.97 checks
@@ -103,11 +105,14 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p .tmp/benchmark-smoke
-          uv run python -m tools.bench.benchmark_acceptance --mode smoke --json .tmp/benchmark-smoke/runtime-acceptance.json > .tmp/benchmark-smoke/runtime-acceptance.log
-          uv run python -m tools.bench.benchmark_native_fallback_crypto --mode smoke --json .tmp/benchmark-smoke/native-fallback.json > .tmp/benchmark-smoke/native-fallback.log
-          uv run python tools/bench/benchmark_media_scheduler.py > .tmp/benchmark-smoke/media-scheduler.json
-          uv run python tools/bench/benchmark_transport_framing.py --check --json .tmp/benchmark-smoke/transport-framing.json > .tmp/benchmark-smoke/transport-framing.log
-          uv run python tools/bench/benchmark_tl_fast_paths.py --check --json .tmp/benchmark-smoke/tl-fast-paths.json > .tmp/benchmark-smoke/tl-fast-paths.log
+          uv run miniproto-bench-acceptance --mode smoke --json .tmp/benchmark-smoke/runtime-acceptance.json > .tmp/benchmark-smoke/runtime-acceptance.log
+          uv run miniproto-bench-imports --runs 3 > .tmp/benchmark-smoke/imports.json
+          uv run miniproto-bench-media-scheduler > .tmp/benchmark-smoke/media-scheduler.json
+          uv run miniproto-bench-native-fallback-crypto --mode smoke --json .tmp/benchmark-smoke/native-fallback.json > .tmp/benchmark-smoke/native-fallback.log
+          uv run miniproto-bench-runtime-paths > .tmp/benchmark-smoke/runtime-paths.log
+          uv run miniproto-bench-tl-fast-paths --check --mode smoke --json .tmp/benchmark-smoke/tl-fast-paths.json > .tmp/benchmark-smoke/tl-fast-paths.log
+          uv run miniproto-bench-transport-framing --check --mode smoke --json .tmp/benchmark-smoke/transport-framing.json > .tmp/benchmark-smoke/transport-framing.log
+          uv run miniproto-profile-lazy-raw-codec > .tmp/benchmark-smoke/lazy-raw-codec.json
 
       - name: Upload benchmark artifacts
         uses: actions/upload-artifact@v7
@@ -200,6 +205,8 @@ jobs:
         shell: python
         run: |
           import glob
+          import importlib.metadata as metadata
+          import shutil
           import subprocess
           import sys
           wheels = glob.glob("dist/*.whl")
@@ -207,6 +214,17 @@ jobs:
               raise SystemExit(f"expected one wheel, found {wheels}")
           subprocess.check_call(["uv", "pip", "install", "--system", wheels[0]])
           subprocess.check_call([sys.executable, "-I", "-c", "import miniproto, miniproto._native; assert miniproto._native.native_available()"])
+          entry_points = sorted(
+              (entry_point for entry_point in metadata.distribution("miniproto").entry_points if entry_point.group == "console_scripts"),
+              key=lambda entry_point: entry_point.name,
+          )
+          if not entry_points:
+              raise SystemExit("wheel installed no miniproto console scripts")
+          for entry_point in entry_points:
+              executable = shutil.which(entry_point.name)
+              if executable is None:
+                  raise SystemExit(f"console script is not on PATH: {entry_point.name}")
+              subprocess.check_call([executable, "--help"])
 
       - name: Upload wheel
         uses: actions/upload-artifact@v7

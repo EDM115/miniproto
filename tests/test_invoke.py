@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from typing import Any, cast
 
 import pytest
-from tests.support.fake_mtproto import FakeMTProtoServer
+from tools.bench.fake_mtproto import FakeMTProtoServer
 
 import miniproto.client as client_module
 import miniproto.invoke as invoke_module

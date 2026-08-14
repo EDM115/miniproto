@@ -23,7 +23,7 @@ jobs:
         run: uv sync --extra dev --frozen
 
       - name: Compare all upstream schema sources with the pinned snapshot
-        run: uv run python -m tools.schema.update --check-upstream --report .tmp/schema-upstream/schema-upstream-report.json
+        run: uv run miniproto-schema-update --check-upstream --report .tmp/schema-upstream/schema-upstream-report.json
 
       - name: Upload source comparison report
         if: always()

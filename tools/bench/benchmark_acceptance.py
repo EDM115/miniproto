@@ -10,8 +10,6 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
-from tests.support.fake_mtproto import FakeMTProtoServer
-
 from miniproto import (
     AuthKey,
     Client,
@@ -35,6 +33,7 @@ from tools.bench.benchmark_runtime_paths import (
     _bench_upload,
     _benchmark_sender,
 )
+from tools.bench.fake_mtproto import FakeMTProtoServer
 from tools.bench.reporting import (
     LoopLagProbe,
     build_benchmark_report,
