@@ -59,12 +59,10 @@ def test_manual_wheel_workflow_is_dispatch_only_and_covers_all_required_abis() -
     assert {(item["libc"], item["arch"], item["target"]) for item in linux_matrix["platform"]} == {
         ("glibc", "x86_64", "x86_64-unknown-linux-gnu"),
         ("glibc", "aarch64", "aarch64-unknown-linux-gnu"),
-        ("glibc", "armv7l", "armv7-unknown-linux-gnueabihf"),
         ("musl", "x86_64", "x86_64-unknown-linux-musl"),
         ("musl", "aarch64", "aarch64-unknown-linux-musl"),
-        ("musl", "armv7l", "armv7-unknown-linux-musleabihf"),
     }
-    assert len(linux_matrix["python"]) * len(linux_matrix["platform"]) == 18
+    assert len(linux_matrix["python"]) * len(linux_matrix["platform"]) == 12
 
     native_matrix = jobs["native-wheels"]["strategy"]["matrix"]
     assert {item["python-version"] for item in native_matrix["python"]} == {"3.13", "3.14", "3.14t"}
@@ -75,6 +73,13 @@ def test_manual_wheel_workflow_is_dispatch_only_and_covers_all_required_abis() -
         ("macos", "aarch64", "aarch64-apple-darwin"),
     }
     assert len(native_matrix["python"]) * len(native_matrix["platform"]) == 12
+    assert (
+        sum(
+            len(job["strategy"]["matrix"]["python"]) * len(job["strategy"]["matrix"]["platform"])
+            for job in jobs.values()
+        )
+        == 24
+    )
 
 
 def test_ci_creates_the_pytest_basetemp_parent_before_running_tests() -> None:
@@ -120,7 +125,9 @@ def test_manual_wheel_jobs_test_native_free_threading_and_every_console_script()
         assert "ThreadPoolExecutor" in serialized_steps
         assert 'metadata.distribution("miniproto").entry_points' in serialized_steps
         assert 'subprocess.check_call([executable, "--help"])' in serialized_steps
+        assert 'path=sysconfig.get_path("scripts")' in serialized_steps
         assert "--no-deps" not in serialized_steps
+        assert "PYTHON_GIL" not in serialized_steps
         assert 'find_spec("cryptography") is not None' in serialized_steps
 
     linux_steps = "\n".join(str(step.get("run", "")) for step in workflow["jobs"]["linux-wheels"]["steps"])
