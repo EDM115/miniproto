@@ -1,3 +1,11 @@
+"""Non-mutating release-check orchestration and distribution evidence collection.
+
+Stages execute local validation, packaging, and controlled subprocess checks in
+order. A passing stage is evidence only for that stage's stated boundary: it
+does not establish live Telegram acceptance, credential correctness, or release
+approval. ``live`` mode additionally requires explicit environment opt-in.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -22,6 +30,14 @@ StageRunner = Callable[["Stage", dict[str, str]], int]
 
 @dataclass(frozen=True, slots=True)
 class ReleaseConfig:
+    """Requested release-check mode, failure policy, and task-owned artifact location.
+
+    Attributes:
+        mode: ``quick``, ``offline``, or explicitly guarded ``live`` stage selection.
+        keep_going: Continue after failures while retaining the first non-zero exit code.
+        artifacts_dir: Directory used for reports, distributions, and temporary clean environments.
+    """
+
     mode: str
     keep_going: bool
     artifacts_dir: Path
@@ -29,29 +45,86 @@ class ReleaseConfig:
 
 @dataclass(frozen=True, slots=True)
 class Stage:
+    """One ordered release-check stage and its fixed subprocess or internal action.
+
+    Attributes:
+        name: Stable report label for the stage.
+        command: Fixed command tuple, or ``None`` when the stage is pending/unavailable.
+        pending_reason: Human-readable explanation retained for an unavailable stage.
+    """
+
     name: str
     command: tuple[str, ...] | None
     pending_reason: str | None = None
 
 
 def parse_args(argv: Sequence[str] | None = None, env: Mapping[str, str] | None = None) -> argparse.Namespace:
-    """Parse release-check modes without accepting credentials on the command line."""
+    """Parse release-check modes without accepting credentials on the command line.
+
+    Args:
+        argv: Optional mode, continuation, and artifact-directory arguments.
+        env: Environment mapping used only for the default artifact directory.
+
+    Returns:
+        CLI namespace selecting ``quick``, ``offline`` (default), or ``live`` mode.
+
+    Raises:
+        SystemExit: Mutually exclusive mode arguments or their values are invalid.
+    """
     values = os.environ if env is None else env
     parser = argparse.ArgumentParser(description="Run the canonical non-mutating miniproto release checks")
     modes = parser.add_mutually_exclusive_group()
-    modes.add_argument("--quick", dest="mode", action="store_const", const="quick")
-    modes.add_argument("--offline", dest="mode", action="store_const", const="offline")
-    modes.add_argument("--live", dest="mode", action="store_const", const="live")
+    modes.add_argument(
+        "--quick",
+        dest="mode",
+        action="store_const",
+        const="quick",
+        help="run the short deterministic formatting, lint, type, schema, and focused-test gate",
+    )
+    modes.add_argument(
+        "--offline",
+        dest="mode",
+        action="store_const",
+        const="offline",
+        help="run the complete non-credentialed release gate; this is the default",
+    )
+    modes.add_argument(
+        "--live",
+        dest="mode",
+        action="store_const",
+        const="live",
+        help="include explicitly guarded credentialed Telegram acceptance stages after offline checks",
+    )
     parser.set_defaults(mode="offline")
-    parser.add_argument("--keep-going", action="store_true")
     parser.add_argument(
-        "--artifacts-dir", type=Path, default=Path(values.get("MINIPROTO_RELEASE_ARTIFACTS", ".tmp/release-check"))
+        "--keep-going",
+        action="store_true",
+        help="continue independent stages after a failure and report every observed result",
+    )
+    parser.add_argument(
+        "--artifacts-dir",
+        type=Path,
+        default=Path(values.get("MINIPROTO_RELEASE_ARTIFACTS", ".tmp/release-check")),
+        help="directory to create or update with release reports; defaults to MINIPROTO_RELEASE_ARTIFACTS or .tmp/release-check",
     )
     return parser.parse_args(argv)
 
 
 def build_stages(config: ReleaseConfig, *, repo: Path) -> tuple[Stage, ...]:
-    """Construct the ordered check-only stage list for the requested mode."""
+    """Construct the ordered check-only stage list for the requested mode.
+
+    Args:
+        config: Mode, continuation policy, and artifact destination.
+        repo: Repository root used to discover optional documentation tooling.
+
+    Returns:
+        Fixed subprocess/internal stages in execution order. Missing documentation
+        tooling becomes a ``pending`` stage rather than a silent success.
+
+    Evidence Limits:
+        The list describes intended checks, not their execution result, and live
+        stages still require the main function's opt-in guard and real credentials.
+    """
     python = sys.executable
     artifacts = config.artifacts_dir
     docs_present = (repo / "tools" / "docs" / "__main__.py").is_file() and (repo / "docs-site").is_dir()
@@ -208,7 +281,21 @@ def build_release_environment(
     platform_name: str = os.name,
     python_base_prefix: Path = Path(sys.base_prefix),
 ) -> dict[str, str]:
-    """Build the hermetic stage environment, including the Windows Python DLL search path."""
+    """Build the stage environment, including Windows Python DLL search-path support.
+
+    Args:
+        mode: Selected release-check mode.
+        base_environment: Parent environment copied before integration flags are set.
+        platform_name: Injectable platform indicator for deterministic tests.
+        python_base_prefix: Python base directory prepended to Windows ``PATH``.
+
+    Returns:
+        A copied environment with integration flags bound to ``mode``.
+
+    Secret Handling:
+        Existing credential values are preserved for live subprocesses but are not
+        accepted by CLI parsing or emitted by this helper.
+    """
     environment = dict(base_environment)
     environment["MINIPROTO_INTEGRATION"] = "1" if mode == "live" else "0"
     environment["MINIPROTO_REAL_INTEGRATION"] = "1" if mode == "live" else "0"
@@ -221,7 +308,20 @@ def build_release_environment(
 
 
 def run_stages(stages: Sequence[Stage], config: ReleaseConfig, *, runner: StageRunner) -> dict[str, Any]:
-    """Execute ordered stages, fail fast by default, and preserve the first failing exit code."""
+    """Execute stages in order, report durations in seconds, and preserve first failure.
+
+    Args:
+        stages: Ordered fixed checks to execute or mark pending.
+        config: Mode and whether later stages continue after a failure.
+        runner: Injectable subprocess/internal runner returning each stage's exit code.
+
+    Returns:
+        Schema-v1 status report with each stage's result and the first non-zero exit code.
+
+    Evidence Limits:
+        A passed stage confirms only its runner exit status. Pending stages execute
+        nothing; continued stages do not repair or negate earlier failures.
+    """
     environment = build_release_environment(config.mode, os.environ)
     results: list[dict[str, Any]] = []
     first_failure = 0
@@ -250,7 +350,23 @@ def run_stages(stages: Sequence[Stage], config: ReleaseConfig, *, runner: StageR
 
 
 def inspect_wheel(path: Path) -> dict[str, Any]:
-    """Reject editable/path-only wheel artifacts and require bundled Python plus native code."""
+    """Inspect one wheel for expected bundled Python, native extension, and console scripts.
+
+    Args:
+        path: Built wheel archive to inspect without installing it.
+
+    Returns:
+        Stable artifact metadata including SHA-256, byte size, and discovered contents.
+
+    Raises:
+        zipfile.BadZipFile: ``path`` is not a readable wheel archive.
+        ValueError: Required contents are missing or forbidden path/cache files are present.
+
+    Evidence Limits:
+        Archive inspection does not prove installation, importability, ABI support,
+        console-script execution, or runtime behavior; the separate clean-import
+        stage covers a narrow installation/import smoke boundary.
+    """
     with zipfile.ZipFile(path) as archive:
         names = sorted(archive.namelist())
         entry_point_files = [name for name in names if name.endswith(".dist-info/entry_points.txt")]
@@ -299,7 +415,18 @@ def inspect_wheel(path: Path) -> dict[str, Any]:
 
 
 def inspect_artifacts(directory: Path) -> dict[str, Any]:
-    """Inspect every built wheel and sdist and record stable hashes."""
+    """Inspect every wheel and sdist in a build directory and record stable hashes.
+
+    Args:
+        directory: Maturin output directory expected to contain wheels and source distributions.
+
+    Returns:
+        Per-wheel inspection records and path/hash/size records for sdists.
+
+    Raises:
+        ValueError: No wheel or no source distribution is present.
+        OSError: An artifact cannot be opened or statted.
+    """
     wheels = sorted(directory.glob("*.whl"))
     sdists = sorted(directory.glob("*.tar.gz"))
     if not wheels:
@@ -313,9 +440,28 @@ def inspect_artifacts(directory: Path) -> dict[str, Any]:
 
 
 def default_runner(config: ReleaseConfig, *, repo: Path) -> StageRunner:
-    """Create the streaming subprocess/internal-stage runner for one release-check invocation."""
+    """Create the fixed-command subprocess/internal runner for one release-check invocation.
+
+    Args:
+        config: Artifact location available to internal environment, inspection, and clean-import stages.
+        repo: Working directory for fixed external stage commands.
+
+    Returns:
+        A runner that returns process exit codes and converts expected internal
+        filesystem/package failures to ``1``.
+
+    Subprocess Boundary:
+        External commands receive the release environment and run from ``repo``.
+        Only commands preconstructed by :func:`build_stages` are executed.
+    """
 
     def run(stage: Stage, env: dict[str, str]) -> int:
+        """Execute one fixed stage command or its named internal release-check action.
+
+        Args:
+            stage: Fixed release-check stage whose external or internal action is invoked.
+            env: Prepared release environment passed to the stage action.
+        """
         assert stage.command is not None
         if stage.command[0] != "__internal__":
             return subprocess.run(  # noqa: S603 - stages come from the fixed release-check registry
@@ -340,6 +486,19 @@ def default_runner(config: ReleaseConfig, *, repo: Path) -> StageRunner:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Run selected release checks, persist their report, and return the first failure code.
+
+    Args:
+        argv: Optional non-secret release-check arguments.
+
+    Returns:
+        The first failing stage's exit code, ``0`` for no failures, or ``2`` when
+        live mode lacks explicit ``MINIPROTO_RELEASE_LIVE=1`` authorization.
+
+    Evidence Limits:
+        The report records local stage outputs and environment context; it is not
+        a release approval and does not certify skipped, pending, or unrun checks.
+    """
     args = parse_args(argv)
     config = ReleaseConfig(args.mode, args.keep_going, args.artifacts_dir.resolve())
     if config.mode == "live" and os.environ.get("MINIPROTO_RELEASE_LIVE") != "1":
@@ -357,6 +516,11 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def _write_environment(artifacts_dir: Path) -> None:
+    """Persist non-secret tool and runtime version evidence for the release report.
+
+    Args:
+        artifacts_dir: Release artifact directory that receives ``environment.json``.
+    """
     artifacts_dir.mkdir(parents=True, exist_ok=True)
     tools = collect_environment()
     tools["uv"] = _version(("uv", "--version"))
@@ -368,6 +532,17 @@ def _write_environment(artifacts_dir: Path) -> None:
 
 
 def _clean_import(artifacts_dir: Path, *, repo: Path, env: Mapping[str, str]) -> None:
+    """Install the first built wheel in a clean environment and run a narrow isolated import smoke test.
+
+    Args:
+        artifacts_dir: Task-owned artifact root containing built distributions and the clean environment.
+        repo: Repository root used as the working directory for the provisioning subprocesses.
+        env: Prepared release environment passed to every provisioning subprocess.
+
+    Raises:
+        ValueError: No built wheel exists or the ``uv`` executable needed for the isolated environment is unavailable.
+        subprocess.CalledProcessError: Environment creation, wheel installation, or the isolated import smoke test fails.
+    """
     distributions = artifacts_dir / "distributions"
     wheels = sorted(distributions.glob("*.whl"))
     if not wheels:
@@ -392,6 +567,11 @@ def _clean_import(artifacts_dir: Path, *, repo: Path, env: Mapping[str, str]) ->
 
 
 def _version(command: tuple[str, ...]) -> str | None:
+    """Run one fixed version subprocess for at most ten seconds and return its text output.
+
+    Args:
+        command: Fixed version command run with a ten-second timeout.
+    """
     try:
         completed = subprocess.run(  # noqa: S603 - callers pass fixed tool-version commands only
             command, check=False, capture_output=True, text=True, timeout=10
@@ -403,6 +583,11 @@ def _version(command: tuple[str, ...]) -> str | None:
 
 
 def _sha256(path: Path) -> str:
+    """Return the SHA-256 hex digest of a file read incrementally in one MiB blocks.
+
+    Args:
+        path: Artifact file read incrementally in one-MiB blocks.
+    """
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):

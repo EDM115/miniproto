@@ -1,0 +1,22 @@
+---
+title: "Telegram result family: SmsJob"
+description: "Layer 228 result-family index for 1 canonical constructors returning SmsJob from tdlib."
+generated: true
+editUrl: false
+language: "telegram"
+kind: "index"
+qualified_name: "telegram.types.result.SmsJob"
+source_path: "tools/schema/schema.json"
+source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
+namespace: "results"
+layer: 228
+schema_source: "tdlib"
+---
+
+## Layer 228 result family `SmsJob`
+
+Selected canonical constructors in this family: 1.
+
+## Constructors
+
+- [`smsJob`](/reference/telegram/types/base/sms-job/): `SmsJob`

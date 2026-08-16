@@ -1,3 +1,8 @@
+"""Run an explicitly guarded live Telegram benchmark splitting one file across independent sessions.
+
+This is not a fake benchmark: it can authenticate accounts, read encrypted SQLite sessions, issue live media requests, write/replace selected part and output files, and optionally compare a local source digest. It refuses to run unless both live-benchmark guard environment variables are set. Results distinguish transfer-only throughput from total throughput including local assembly and optional digest work.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -54,6 +59,14 @@ Actor = Literal["user", "bot"]
 
 @dataclass(frozen=True, slots=True)
 class DownloadRange:
+    """One contiguous byte range assigned to an active session worker.
+
+    Attributes:
+        index: Zero-based worker/session index.
+        offset: Starting byte offset.
+        limit: Exact number of bytes this worker must download.
+    """
+
     index: int
     offset: int
     limit: int
@@ -61,6 +74,19 @@ class DownloadRange:
 
 @dataclass(frozen=True, slots=True)
 class SessionSummary:
+    """Redacted benchmark identity for one selected encrypted session file.
+
+    The summary exposes an auth-key identifier for duplicate detection, never the key material itself.
+
+    Attributes:
+        index: Zero-based selected session index.
+        session_path: Local encrypted-session database path, not its decrypted contents.
+        auth_key_id_hex: Redacted derived key identifier for duplicate detection, or ``None``.
+        user_id: Authorized Telegram user identifier when available.
+        is_bot: Whether the authorized identity is a bot, when known.
+        duplicate_auth_key: Whether another selected session shares this derived identifier.
+    """
+
     index: int
     session_path: str
     auth_key_id_hex: str | None
@@ -71,6 +97,21 @@ class SessionSummary:
 
 @dataclass(frozen=True, slots=True)
 class WorkerSummary:
+    """Completed per-range transfer measurements for one active worker.
+
+    ``mib_s`` is range bytes divided by the worker's own request duration, excluding later assembly.
+
+    Attributes:
+        index: Zero-based active worker/session index.
+        session_path: Local encrypted-session database path assigned to the worker.
+        part_path: Local output file containing the worker's contiguous byte range.
+        offset: Inclusive file byte offset assigned to the worker.
+        limit: Exact assigned range size in bytes.
+        bytes: Bytes reported by the completed range download.
+        duration_s: Worker request duration in seconds, excluding assembly/digest finalization.
+        mib_s: Worker range bytes divided by ``duration_s`` in binary MiB/s.
+    """
+
     index: int
     session_path: str
     part_path: str
@@ -83,6 +124,44 @@ class WorkerSummary:
 
 @dataclass(frozen=True, slots=True)
 class MultiSessionDownloadSummary:
+    """Serializable result of one live multi-session download benchmark.
+
+    ``transfer_mib_s`` excludes assembly and digest verification, while ``overall_mib_s`` uses total duration. ``counters`` are metric-sink observations from this run; they are not server-side accounting.
+
+    Attributes:
+        actor: Requested live account role.
+        file_id: Remote media identifier used for the live range requests.
+        dc_id: Configured production data-center identifier.
+        media_dc_id: Data center encoded by the remote media when available.
+        bytes: Sum of worker-reported range bytes.
+        clients_requested: Number of session paths requested before range-size capping.
+        clients_active: Number of non-empty ranges and connected workers actually used.
+        per_session_concurrency: Concurrent part requests allowed within each worker.
+        per_session_media_lanes: Optional dedicated sender lanes per worker.
+        download_chunk_size: Initial file-part size in bytes.
+        download_max_chunk_size: Adaptive file-part size ceiling in bytes.
+        download_max_in_flight_bytes: Optional per-worker request byte-window bound.
+        download_adaptive_concurrency: Whether each worker adapts active request slots.
+        download_adaptive_part_size: Whether each worker probes larger legal chunks.
+        download_request_timeout: Per-request timeout in seconds.
+        download_part_retries: Non-flood transient retry budget per worker part.
+        download_flood_sleep_threshold: Maximum automatic flood-wait sleep in seconds.
+        allow_duplicate_auth_keys: Whether duplicate authorized sessions were explicitly permitted.
+        duplicate_auth_key_groups: Derived key IDs mapped to their repeated session indexes.
+        event_loop_backend: Active local event-loop backend label.
+        native_available: Whether miniproto's local native extension was available.
+        duration_s: End-to-end duration in seconds, including enabled finalization.
+        finalize_duration_s: Assembly/digest time included after all network workers finish.
+        overall_mib_s: Full-file bytes divided by ``duration_s`` in binary MiB/s.
+        transfer_mib_s: Full-file bytes divided by request-only duration in binary MiB/s.
+        counters: Local metric-sink observations, not Telegram server accounting.
+        sessions: Redacted selected-session identities.
+        workers: Per-range observed request measurements.
+        output_path: Assembled output path, or ``None`` when assembly is disabled.
+        part_paths: Retained part paths after finalization policy is applied.
+        digest_verified: Whether an optional local source/output digest comparison matched.
+    """
+
     actor: Actor
     file_id: str
     dc_id: int
@@ -117,6 +196,14 @@ class MultiSessionDownloadSummary:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Parse arguments and run the live benchmark only after both explicit safety guards.
+
+    Returns:
+        ``2`` when either guard is missing, otherwise the asynchronous benchmark status.
+
+    Args:
+        argv: Optional non-secret CLI arguments excluding the executable name.
+    """
     env = load_dotenv()
     args = parse_args(argv, env)
     configure_standard_streams_line_buffering()
@@ -133,6 +220,22 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def parse_args(argv: list[str] | None = None, env: Mapping[str, str] | None = None) -> argparse.Namespace:
+    """Parse and validate live benchmark options plus their environment defaults.
+
+    Args:
+        argv: Optional command-line arguments.
+        env: Optional environment mapping, primarily for deterministic callers and tests.
+
+    Returns:
+        Validated namespace including file/session/output, transfer, and reporting options.
+
+    Raises:
+        ValueError: A numeric ``MINIPROTO_MULTI_SESSION_DOWNLOAD_*`` or inherited live-benchmark default cannot be parsed before argparse validation.
+        SystemExit: If argparse validation fails, an option violates its resource bound, or no file ID is configured.
+
+    Safety:
+        Parsing does not authenticate or perform network I/O. Guard variables are checked by ``main`` and common live credentials by ``run_benchmark``.
+    """
     values = {} if env is None else env
     json_path = env_value(values, "MINIPROTO_MULTI_SESSION_DOWNLOAD_JSON") or env_value(
         values, "MINIPROTO_LIVE_BENCH_JSON"
@@ -381,6 +484,25 @@ def parse_args(argv: list[str] | None = None, env: Mapping[str, str] | None = No
 
 
 async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int:
+    """Authorize independent live clients, reject duplicate keys by default, and run a guarded split download.
+
+    Session clients are always disconnected in ``finally``. Sessions may be authorized or updated by normal client operations; ``run_download_split`` may create, replace, or remove files under the selected part and output paths.
+
+    Args:
+        args: Validated non-secret benchmark options including file, session, and output paths.
+        env: Environment-only live credentials, session key, and explicit opt-in flags.
+
+    Returns:
+        Zero after a completed live benchmark and any selected report write.
+
+    Live Boundary:
+        This function opens encrypted sessions and issues real Telegram requests;
+        callers must have passed both CLI guard checks before invoking it.
+
+    Raises:
+        SystemExit: If live credentials are absent or duplicate auth keys are disallowed.
+        Exception: Propagates file-ID, session, authentication, transfer, and output failures.
+    """
     require_common_live_env(env)
     file_id = file_id_for_args(args, env)
     assert file_id is not None
@@ -457,6 +579,27 @@ async def run_download_split(
     clients_requested: int,
     duplicate_groups: dict[str, tuple[int, ...]],
 ) -> MultiSessionDownloadSummary:
+    """Download contiguous ranges concurrently, optionally assemble them, and return measured results.
+
+    Existing selected part paths and the selected assembled output path are unlinked before transfer. Worker failures cancel and await every sibling task. Assembly concatenates parts in range order and verifies total size; optional digest verification compares a local source file only after assembly. Parts are removed after successful assembly unless ``keep_parts`` is set, but remain for ``no_assemble`` runs.
+
+    Returns:
+        Transfer and finalization timings, local metric counters, worker/session summaries, and retained artifact paths.
+
+    Resource semantics:
+        Each worker receives the configured per-session concurrency, lane count, chunk sizing, in-flight-byte window, retry, and flood-wait settings. Aggregate throughput therefore includes concurrent independent sessions and is not normalized to a single auth key.
+
+    Args:
+        args: Validated live transfer, path-ownership, assembly, and comparison settings.
+        file_id: Remote media identifier supplied to the result and live requests.
+        media: Parsed remote media metadata used for all worker range requests.
+        size: Exact file size in bytes partitioned across ``ranges``.
+        clients: Already-connected authorized clients, disconnected by the caller.
+        sessions: Redacted summaries aligned by worker index with ``clients``.
+        ranges: Ordered contiguous non-empty byte ranges to download concurrently.
+        clients_requested: Selected session count before short-file range capping.
+        duplicate_groups: Repeated derived auth-key IDs retained as comparison context.
+    """
     await asyncio.to_thread(args.download_dir.mkdir, parents=True, exist_ok=True)
     run_id = int(time.time())
     target_name = safe_file_name(media.file_name or f"telegram-file-{size}.bin")
@@ -481,6 +624,13 @@ async def run_download_split(
     progress_lock = asyncio.Lock()
 
     async def progress_for(worker_index: int, current: int, total: int | None) -> None:
+        """Aggregate worker byte progress under a lock before updating the shared recorder.
+
+        Args:
+            worker_index: Range/worker position whose latest callback value is replaced.
+            current: Worker-reported transferred bytes within its own range.
+            total: Ignored worker range total retained for progress-callback compatibility.
+        """
         del total
         async with progress_lock:
             progress_by_worker[worker_index] = current
@@ -580,6 +730,22 @@ async def download_worker(
     args: argparse.Namespace,
     progress,
 ) -> WorkerSummary:
+    """Download one exact range through one already-authorized session client.
+
+    Raises:
+        RuntimeError: If the media helper reports a byte count different from this worker's range.
+        Exception: Propagates live request, retry, flood-wait, and destination-write failures.
+
+    Args:
+        client: Connected authorized client assigned to this one range.
+        media: Remote media metadata converted by the client to a file location.
+        shard: Contiguous byte range owned solely by this worker.
+        session_path: Redacted path reported for the already-authorized session.
+        part_path: New/replaced local part destination owned by the caller workflow.
+        total_size: Complete remote file size used for range download planning.
+        args: Per-session request, retry, flood, and resource-bound configuration.
+        progress: Async aggregate callback receiving worker index, current, and total bytes.
+    """
     started = time.perf_counter()
     result = await client.download_media(
         media,
@@ -617,6 +783,21 @@ async def download_worker(
 async def authorized_client_for_session(
     *, actor: Actor, session_path: Path, session_index: int, args: argparse.Namespace, env: Mapping[str, str]
 ) -> tuple[Client, SessionSummary]:
+    """Open one encrypted session, ensure its requested actor identity, and return a connected client.
+
+    The storage key, API hash, bot token, password/code data, and auth-key bytes are consumed from environment-backed helpers and are never included in the returned summary. A missing or wrong identity is authorized through the appropriate live sign-in flow before final validation.
+
+    Raises:
+        RuntimeError: If the final session identity does not match ``actor``.
+        Exception: Propagates storage decryption, connection, authentication, and session failures.
+
+    Args:
+        actor: Required user or bot identity for this live client.
+        session_path: Encrypted local SQLite session path opened with the environment key.
+        session_index: Stable index preserved in the returned redacted summary.
+        args: Validated DC and request-timeout configuration.
+        env: Environment-only API, storage, phone/token, and prompt credentials.
+    """
     storage = EncryptedSQLiteSessionStorage(session_path, key=required_env(env, "MINIPROTO_SESSION_KEY"))
     client = Client(
         ClientConfig(
@@ -654,6 +835,12 @@ async def authorized_client_for_session(
 
 
 def file_id_for_args(args: argparse.Namespace, env: Mapping[str, str]) -> str | None:
+    """Select actor-specific, legacy live-benchmark, or command-line file ID in priority order.
+
+    Args:
+        args: Parsed actor and optional CLI media identifier.
+        env: Environment mapping holding actor-specific compatibility defaults.
+    """
     return (
         env_value(env, f"MINIPROTO_MULTI_SESSION_DOWNLOAD_{str(args.actor).upper()}_FILE_ID")
         or env_value(env, f"MINIPROTO_LIVE_BENCH_{str(args.actor).upper()}_FILE_ID")
@@ -662,6 +849,15 @@ def file_id_for_args(args: argparse.Namespace, env: Mapping[str, str]) -> str | 
 
 
 def download_size(args: argparse.Namespace, media: Media) -> int:
+    """Return explicit parsed size or the size embedded in ``media``.
+
+    Raises:
+        SystemExit: If neither source provides size metadata.
+
+    Args:
+        args: Parsed optional explicit size selection.
+        media: Parsed remote metadata whose embedded size is the fallback.
+    """
     if args.size:
         return parse_size(str(args.size))
     if media.size is None:
@@ -670,6 +866,14 @@ def download_size(args: argparse.Namespace, media: Media) -> int:
 
 
 def resolve_session_paths(args: argparse.Namespace, env: Mapping[str, str]) -> tuple[Path, ...]:
+    """Choose explicit, environment-configured, or generated per-client session paths.
+
+    Generated paths are only candidates; a live run may create or update their encrypted session databases during authorization.
+
+    Args:
+        args: Parsed explicit session paths, actor, client count, and DC.
+        env: Environment mapping containing optional delimited session-path defaults.
+    """
     if args.session:
         return tuple(Path(path) for path in args.session)
     configured = env_value(env, "MINIPROTO_MULTI_SESSION_DOWNLOAD_SESSIONS")
@@ -684,6 +888,11 @@ def resolve_session_paths(args: argparse.Namespace, env: Mapping[str, str]) -> t
 
 
 def split_session_paths(raw: str) -> tuple[str, ...]:
+    """Split comma- or semicolon-delimited session paths, omitting blank components.
+
+    Args:
+        raw: Environment-provided delimited path string.
+    """
     items: list[str] = []
     for chunk in raw.replace(",", ";").split(";"):
         item = chunk.strip()
@@ -695,6 +904,18 @@ def split_session_paths(raw: str) -> tuple[str, ...]:
 def plan_contiguous_ranges(
     total_size: int, *, requested_workers: int, alignment: int = MIB
 ) -> tuple[DownloadRange, ...]:
+    """Partition positive size into contiguous aligned ranges without zero-length workers.
+
+    The final active worker receives the non-aligned tail. Files smaller than one alignment unit use one complete range regardless of requested workers.
+
+    Raises:
+        ValueError: If total size, requested worker count, or alignment is not positive.
+
+    Args:
+        total_size: Positive complete remote file size in bytes.
+        requested_workers: Requested session count before empty ranges are eliminated.
+        alignment: Positive byte alignment for every non-tail worker range.
+    """
     if total_size <= 0:
         raise ValueError("total_size must be positive")
     if requested_workers <= 0:
@@ -719,6 +940,11 @@ def plan_contiguous_ranges(
 
 
 def duplicate_auth_key_groups(auth_key_ids: Sequence[str | None]) -> dict[str, tuple[int, ...]]:
+    """Return non-null auth-key identifiers assigned to more than one session index.
+
+    Args:
+        auth_key_ids: Derived redacted key identifiers aligned by session index.
+    """
     grouped: dict[str, list[int]] = {}
     for index, auth_key in enumerate(auth_key_ids):
         if auth_key is None:
@@ -728,6 +954,11 @@ def duplicate_auth_key_groups(auth_key_ids: Sequence[str | None]) -> dict[str, t
 
 
 def session_auth_key_id_hex(record) -> str | None:
+    """Return a non-secret little-endian auth-key identifier, or ``None`` without a key.
+
+    Args:
+        record: Decrypted session record inspected only to derive an identifier, never key bytes for output.
+    """
     if record.auth_key is None:
         return None
     if record.auth_key.key_id is not None:
@@ -736,6 +967,14 @@ def session_auth_key_id_hex(record) -> str | None:
 
 
 def require_common_live_env(env: Mapping[str, str]) -> None:
+    """Require opt-in and essential live Telegram environment values.
+
+    Raises:
+        SystemExit: If either live guard or API/session-key configuration is missing.
+
+    Args:
+        env: Environment-only opt-in, API, and encrypted-session-key configuration.
+    """
     if env_value(env, "MINIPROTO_INTEGRATION") != "1":
         raise SystemExit("set MINIPROTO_INTEGRATION=1 for live Telegram benchmarks")
     if env_value(env, "MINIPROTO_REAL_INTEGRATION") != "1":
@@ -748,6 +987,18 @@ def require_common_live_env(env: Mapping[str, str]) -> None:
 
 
 def assemble_parts(part_paths: Sequence[Path], output_path: Path, *, expected_size: int) -> None:
+    """Concatenate part files in order using 4 MiB reads and verify the final byte count.
+
+    The output path is opened for writing and therefore overwritten if it exists.
+
+    Raises:
+        RuntimeError: If concatenated bytes differ from ``expected_size``.
+
+    Args:
+        part_paths: Completed worker output paths consumed in contiguous range order.
+        output_path: Caller-selected assembled destination, whose parent is created and file overwritten.
+        expected_size: Required assembled byte count before the result is accepted.
+    """
     output_path.parent.mkdir(parents=True, exist_ok=True)
     written = 0
     with output_path.open("wb") as output:
@@ -761,6 +1012,11 @@ def assemble_parts(part_paths: Sequence[Path], output_path: Path, *, expected_si
 
 
 def file_digest(path: Path) -> str:
+    """Return the SHA-256 hexadecimal digest of one local file using 4 MiB reads.
+
+    Args:
+        path: Local file read for optional post-transfer comparison only.
+    """
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         while chunk := handle.read(4 * MIB):
@@ -769,11 +1025,21 @@ def file_digest(path: Path) -> str:
 
 
 def safe_file_name(value: str) -> str:
+    """Replace unsafe filename characters with underscores, retaining a nonempty fallback.
+
+    Args:
+        value: Remote-provided or fallback filename component to make path-safe.
+    """
     cleaned = "".join(ch if ch.isalnum() or ch in {"-", "_", "."} else "_" for ch in value)
     return cleaned or "telegram-file.bin"
 
 
 def print_summary(summary: MultiSessionDownloadSummary) -> None:
+    """Print human-readable aggregate counters and one line per completed worker.
+
+    Args:
+        summary: Redacted observed live benchmark result; values are comparison evidence, not a guarantee.
+    """
     print(
         f"multi-session.download: bytes={summary.bytes} clients_active={summary.clients_active}/{summary.clients_requested} "
         f"duration={summary.duration_s:.3f}s transfer={summary.transfer_mib_s:.3f}MiB/s overall={summary.overall_mib_s:.3f}MiB/s "

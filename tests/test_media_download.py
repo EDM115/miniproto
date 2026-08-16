@@ -1416,6 +1416,37 @@ def test_download_media_range_cache_reuses_miniproto_file_id() -> None:
     run(scenario())
 
 
+def test_range_cache_waiter_cancellation_does_not_cancel_shared_fetch() -> None:
+    async def scenario() -> None:
+        cache = DownloadRangeCache(max_bytes=4096)
+        started = asyncio.Event()
+        release = asyncio.Event()
+        fetch_calls = 0
+
+        async def fetch() -> bytes:
+            nonlocal fetch_calls
+            fetch_calls += 1
+            started.set()
+            await release.wait()
+            return b"shared"
+
+        cancelled_waiter = asyncio.create_task(cache.get_or_fetch("file", 0, 6, fetch))
+        surviving_waiter = asyncio.create_task(cache.get_or_fetch("file", 0, 6, fetch))
+        await started.wait()
+        await asyncio.sleep(0)
+        cancelled_waiter.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await cancelled_waiter
+
+        release.set()
+        assert await surviving_waiter == b"shared"
+        assert await cache.get("file", 0, 6) == b"shared"
+        assert fetch_calls == 1
+        await cache.clear()
+
+    run(scenario())
+
+
 def test_download_file_read_ahead_prefetches_into_range_cache() -> None:
     async def scenario() -> None:
         cache = DownloadRangeCache(max_bytes=8192)

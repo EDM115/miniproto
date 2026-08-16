@@ -1,3 +1,5 @@
+"""Public session models, storage backends, and portable string codecs."""
+
 from miniproto.session.models import (
     AuthKey,
     DCOption,

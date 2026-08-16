@@ -1,3 +1,8 @@
+"""Run deterministic, in-process benchmarks for representative miniproto runtime paths.
+
+This script deliberately uses synthetic payloads, in-memory storage, fake invokers, and a loopback-only sender state. It exercises no live Telegram session, network transport, credential, or filesystem transfer path. Timings use ``perf_counter`` and report the best and median of ten complete runs; they are comparative local measurements, not service-level performance claims.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -35,6 +40,15 @@ from miniproto.updates.manager import UpdateManager
 
 @dataclass(frozen=True, slots=True)
 class BenchmarkResult:
+    """Aggregate wall-clock timing for one benchmark case.
+
+    Attributes:
+        name: Stable benchmark output label.
+        runs: Number of complete measured invocations.
+        best_ms: Minimum wall-clock duration in milliseconds.
+        median_ms: Median wall-clock duration in milliseconds.
+    """
+
     name: str
     runs: int
     best_ms: float
@@ -43,25 +57,60 @@ class BenchmarkResult:
 
 @dataclass(frozen=True, slots=True)
 class AsyncBenchmarkCase:
+    """Named asynchronous benchmark workload invoked once per measured run.
+
+    Attributes:
+        name: Stable output label for the synthetic comparison case.
+        func: Zero-argument awaitable synthetic workload; it has no live transport boundary.
+    """
+
     name: str
     func: Callable[[], Awaitable[object]]
 
 
 @dataclass(slots=True)
 class UploadInvoker:
+    """Fake upload RPC invoker that records requests and always returns ``BoolTrue``.
+
+    Attributes:
+        requests: Raw synthetic upload requests observed in benchmark memory.
+    """
+
     requests: list[object] = field(default_factory=list)
 
     async def __call__(self, request: object, **kwargs: object) -> object:
+        """Record ``request`` without network I/O and return a successful synthetic response.
+
+        Args:
+            request: Synthetic raw upload request to retain for workload validation.
+            kwargs: Ignored forwarded ``**kwargs`` accepted for invoker compatibility.
+        """
         self.requests.append(request)
         return types.BoolTrue()
 
 
 @dataclass(slots=True)
 class DownloadInvoker:
+    """Fake ``upload.getFile`` invoker serving slices from an in-memory benchmark payload.
+
+    Attributes:
+        payload: Immutable synthetic source bytes sliced by requested offsets and limits.
+        requests: Raw file requests observed without any network I/O.
+    """
+
     payload: bytes
     requests: list[object] = field(default_factory=list)
 
     async def __call__(self, request: object, **kwargs: object) -> object:
+        """Record and validate a file request, then return its requested payload slice.
+
+        Raises:
+            TypeError: If the workload sends a request other than ``upload.getFile``.
+
+        Args:
+            request: Synthetic file request whose offset and limit select payload bytes.
+            kwargs: Ignored forwarded ``**kwargs`` accepted for invoker compatibility.
+        """
         self.requests.append(request)
         if not isinstance(request, functions.UploadGetFile):
             raise TypeError(f"unexpected download request: {type(request).__name__}")
@@ -73,35 +122,70 @@ class DownloadInvoker:
 
 @dataclass(slots=True)
 class ConcurrentInvoker:
+    """Synthetic awaitable invoker that yields once to measure pending-task scheduling.
+
+    Attributes:
+        count: Number of benchmark invocations that reached the cooperative yield.
+    """
+
     count: int = 0
 
     async def __call__(self, request: object) -> object:
+        """Count one invocation, cooperatively yield, and return a synthetic success value.
+
+        Args:
+            request: Ignored synthetic request accepted to match an RPC invoker protocol.
+        """
         self.count += 1
         await asyncio.sleep(0)
         return types.BoolTrue()
 
 
 class CountingPeerBackendStorage(InMemorySessionStorage):
+    """In-memory session backend instrumented to count underlying ``load`` calls."""
+
     def __init__(self, initial: SessionRecord) -> None:
+        """Initialize the inherited record and reset the backend load counter.
+
+        Args:
+            initial: Synthetic session record returned by each in-memory backend load.
+        """
         super().__init__(initial)
         self.load_count = 0
 
     async def load(self):
+        """Count and delegate an in-memory session load."""
         self.load_count += 1
         return await super().load()
 
 
 class CountingCachedPeerStorage(_CachedSessionStorage):
+    """Cached storage wrapper instrumented to count wrapper-level loads."""
+
     def __init__(self, storage: CountingPeerBackendStorage) -> None:
+        """Wrap the counting backend and reset the wrapper load counter.
+
+        Args:
+            storage: Instrumented in-memory backend delegated to by the cache wrapper.
+        """
         super().__init__(storage)
         self.load_count = 0
 
     async def load(self):
+        """Count and delegate a cached session load."""
         self.load_count += 1
         return await super().load()
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Parse command-line arguments, print event-loop metadata, and run all synthetic cases.
+
+    Args:
+        argv: Optional argument sequence; only standard argparse help is accepted.
+
+    Returns:
+        Zero after every benchmark and speed gate completes.
+    """
     parser = argparse.ArgumentParser(description="Benchmark representative miniproto runtime paths")
     parser.parse_args(argv)
     print(
@@ -112,6 +196,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 async def _main() -> int:
+    """Run fixed-size synthetic workloads and print their measured units and gates."""
     payload = bytes((index * 17) % 256 for index in range(8 * 1024 * 1024))
     cases = (
         AsyncBenchmarkCase("update_dispatch_10k", lambda: _bench_update_dispatch(10_000)),
@@ -154,6 +239,16 @@ async def _main() -> int:
 
 
 async def _run(name: str, func: Callable[[], Awaitable[object]], runs: int = 10) -> BenchmarkResult:
+    """Measure ``runs`` complete awaits of one workload without a separate warm-up pass.
+
+    Returns:
+        Best and median wall-clock milliseconds measured with ``perf_counter``.
+
+    Args:
+        name: Stable result label for the measured workload.
+        func: Zero-argument awaitable benchmark workload.
+        runs: Number of complete in-process invocations; defaults to ten.
+    """
     durations: list[float] = []
     for _ in range(runs):
         start = time.perf_counter()
@@ -163,12 +258,18 @@ async def _run(name: str, func: Callable[[], Awaitable[object]], runs: int = 10)
 
 
 async def _bench_update_dispatch(count: int) -> int:
+    """Measure public update queue/iterator dispatch for ``count`` synthetic updates.
+
+    Args:
+        count: Number of synthetic updates emitted and consumed without an RPC path.
+    """
     manager = UpdateManager(
         ClientConfig(api_id=1, api_hash="hash", update_queue_size=count + 1), InMemorySessionStorage(), _noop_invoke
     )
     consumed = 0
 
     async def consume() -> None:
+        """Drain exactly the benchmark's emitted updates before returning."""
         nonlocal consumed
         async for _update in manager.iter_updates():
             consumed += 1
@@ -183,6 +284,11 @@ async def _bench_update_dispatch(count: int) -> int:
 
 
 async def _bench_upload(payload: bytes) -> int:
+    """Measure 8-way synthetic media upload chunking against an in-memory success invoker.
+
+    Args:
+        payload: Synthetic immutable source bytes; no file, session, or live request is used.
+    """
     invoker = UploadInvoker()
     result = await upload_file(
         invoker, payload, file_name="bench.bin", part_size=DEFAULT_CHUNK_SIZE, concurrency=8, file_id=123
@@ -191,6 +297,11 @@ async def _bench_upload(payload: bytes) -> int:
 
 
 async def _bench_download(payload: bytes) -> int:
+    """Measure synthetic file download assembly from an in-memory payload provider.
+
+    Args:
+        payload: Synthetic immutable bytes returned by the loopback file invoker.
+    """
     invoker = DownloadInvoker(payload)
     location = types.InputDocumentFileLocation(id=1, access_hash=2, file_reference=b"ref", thumb_size="")
     result = await download_file(
@@ -200,6 +311,11 @@ async def _bench_download(payload: bytes) -> int:
 
 
 async def _bench_tl_upload_get_file_encode(count: int) -> int:
+    """Serialize one fixed ``upload.getFile`` request ``count`` times and return encoded bytes.
+
+    Args:
+        count: Fixed number of request serializations included in the local timing.
+    """
     request = functions.UploadGetFile(
         precise=True,
         cdn_supported=True,
@@ -214,6 +330,11 @@ async def _bench_tl_upload_get_file_encode(count: int) -> int:
 
 
 async def _bench_tl_upload_file_decode(count: int) -> int:
+    """Decode one fixed ``upload.File`` payload ``count`` times and validate each result.
+
+    Args:
+        count: Fixed number of local object decodes included in the timing.
+    """
     encoded = types.UploadFile(
         type=types.StorageFileUnknown(), mtime=1_700_000_000, bytes=b"x" * DEFAULT_CHUNK_SIZE
     ).serialize()
@@ -227,12 +348,22 @@ async def _bench_tl_upload_file_decode(count: int) -> int:
 
 
 async def _bench_pending_requests(count: int) -> int:
+    """Measure cooperative scheduling of ``count`` synthetic pending invocations.
+
+    Args:
+        count: Number of in-process synthetic tasks created and awaited.
+    """
     invoker = ConcurrentInvoker()
     await asyncio.gather(*(invoker(types.BoolTrue()) for _ in range(count)))
     return invoker.count
 
 
 async def _bench_pending_slot_noop(count: int) -> int:
+    """Measure the loop-only baseline used to isolate pending-slot pair overhead.
+
+    Args:
+        count: Number of local loop increments forming the comparison baseline.
+    """
     completed = 0
     for _ in range(count):
         completed += 1
@@ -240,6 +371,12 @@ async def _bench_pending_slot_noop(count: int) -> int:
 
 
 async def _bench_pending_slot_pairs(sender: MTProtoSender, count: int) -> int:
+    """Measure ``count`` reserve/release pairs and assert no pending-slot occupancy leaks.
+
+    Args:
+        sender: Never-connected loopback sender whose local pending-slot state is exercised.
+        count: Number of reserve/release pairs included in the timing.
+    """
     for _ in range(count):
         sender._reserve_pending_slot()
         sender._release_pending_slot()
@@ -249,9 +386,16 @@ async def _bench_pending_slot_pairs(sender: MTProtoSender, count: int) -> int:
 
 
 async def _bench_pending_slot_held_burst(sender: MTProtoSender, count: int) -> int:
+    """Measure a burst that holds every pending slot until one shared gate opens.
+
+    Args:
+        sender: Never-connected loopback sender providing local pending-slot state.
+        count: Number of synthetic tasks/slots held until the shared gate opens.
+    """
     gate = asyncio.Event()
 
     async def hold_slot() -> None:
+        """Reserve one slot until the gate opens, always releasing it on cancellation."""
         sender._reserve_pending_slot()
         try:
             await gate.wait()
@@ -270,6 +414,10 @@ async def _bench_pending_slot_held_burst(sender: MTProtoSender, count: int) -> i
 
 
 async def _bench_peer_cache_10k() -> None:
+    """Benchmark a 10,000-entry peer cache against canonical scans and enforce local gates.
+
+    Reports cold construction, warm lookup medians in nanoseconds, estimated incremental index heap, and a one-entity incremental reconciliation. It asserts fixed local speed/memory/load-count thresholds; these gates intentionally depend on the executing environment.
+    """
     entries = _peer_entries_10k()
     record = SessionRecord(user=UserIdentity(id=50_000, access_hash=500_000, phone="+12025559999"), peers=entries)
     backend = CountingPeerBackendStorage(record)
@@ -359,6 +507,7 @@ async def _bench_peer_cache_10k() -> None:
 
 
 def _peer_entries_10k() -> tuple[PeerCacheEntry, ...]:
+    """Create a deterministic 10,000-entry mixture of synthetic users, chats, and channels."""
     entries: list[PeerCacheEntry] = []
     now = datetime.now(UTC)
     for index in range(10_000):
@@ -395,6 +544,14 @@ def _peer_entries_10k() -> tuple[PeerCacheEntry, ...]:
 async def _median_lookup_ns(
     lookup: Callable[[Any], Awaitable[object]], queries: tuple[Any, ...], *, runs: int = 7, repeats: int = 40
 ) -> float:
+    """Return the median nanoseconds per awaited lookup across fixed runs and repeats.
+
+    Args:
+        lookup: Awaitable lookup implementation under comparison.
+        queries: Fixed queries issued in order during each repeated run.
+        runs: Number of independent timing runs; defaults to seven.
+        repeats: Whole query-sequence repetitions per run; defaults to forty.
+    """
     durations: list[float] = []
     count = len(queries) * repeats
     for _ in range(runs):
@@ -407,11 +564,23 @@ async def _median_lookup_ns(
 
 
 async def _legacy_kind_lookup(record: SessionRecord, query: Peer) -> Peer:
+    """Perform the canonical linear kind-and-ID scan used as the peer-cache baseline.
+
+    Args:
+        record: Synthetic record whose canonical peer tuple is scanned.
+        query: Kind-and-ID peer key selected from the generated entries.
+    """
     entry = next(entry for entry in record.peers if entry.kind == query.kind and entry.id == query.id)
     return Peer(id=entry.id, kind=entry.kind, access_hash=entry.access_hash)
 
 
 async def _legacy_numeric_lookup(record: SessionRecord, query: int) -> Peer:
+    """Perform the legacy numeric peer lookup and fail when its known query is absent.
+
+    Args:
+        record: Synthetic record used by the legacy lookup helper.
+        query: Numeric peer identifier known to be present in the generated data.
+    """
     resolved = _resolve_numeric_peer_from_record(record, query)
     if resolved is None:
         raise AssertionError("legacy numeric benchmark query missed")
@@ -419,6 +588,12 @@ async def _legacy_numeric_lookup(record: SessionRecord, query: int) -> Peer:
 
 
 async def _legacy_username_lookup(record: SessionRecord, query: str) -> Peer | None:
+    """Perform the legacy TTL-filtered username scan used as the benchmark baseline.
+
+    Args:
+        record: Synthetic record whose peer tuple is scanned.
+        query: Username query normalized before comparison.
+    """
     normalized = _normalize_username(query)
     if normalized is None:
         return None
@@ -432,12 +607,24 @@ async def _legacy_username_lookup(record: SessionRecord, query: str) -> Peer | N
 
 
 async def _legacy_phone_lookup(record: SessionRecord, query: str) -> Peer:
+    """Perform the legacy normalized-phone linear scan used as the benchmark baseline.
+
+    Args:
+        record: Synthetic record whose peer tuple is scanned.
+        query: Phone query normalized before comparison.
+    """
     normalized = _normalize_phone(query)
     entry = next(entry for entry in record.peers if _normalize_phone(entry.phone) == normalized)
     return Peer(id=entry.id, kind=entry.kind, access_hash=entry.access_hash)
 
 
 def _deep_size(value: object, seen: set[int]) -> int:
+    """Estimate recursively reachable heap size while charging each object identity once.
+
+    Args:
+        value: Root object/subgraph whose Python heap footprint is estimated.
+        seen: Mutable identity set shared across recursive visits to avoid double charging.
+    """
     object_id = id(value)
     if object_id in seen:
         return 0
@@ -456,10 +643,22 @@ def _deep_size(value: object, seen: set[int]) -> int:
 
 
 async def _noop_peer_invoke(request: object) -> object:
+    """Fail if a synthetic peer-cache workload unexpectedly attempts an RPC.
+
+    Args:
+        request: Unexpected raw request proving the no-network benchmark boundary was crossed.
+    """
     raise AssertionError(f"unexpected peer benchmark request: {type(request).__name__}")
 
 
 def _benchmark_sender(*, max_pending_rpcs: int) -> MTProtoSender:
+    """Create a loopback-only sender with deterministic in-memory MTProto state.
+
+    The sender is never connected; its synthetic auth key is benchmark data, not a usable credential.
+
+    Args:
+        max_pending_rpcs: Local pending-slot capacity used by synthetic scheduler cases.
+    """
     return MTProtoSender(
         ConnectionEndpoint("127.0.0.1", 443),
         TransportConfig(),
@@ -469,6 +668,11 @@ def _benchmark_sender(*, max_pending_rpcs: int) -> MTProtoSender:
 
 
 async def _noop_invoke(request: object) -> object:
+    """Fail if the synthetic update-dispatch workload unexpectedly attempts recovery RPCs.
+
+    Args:
+        request: Unexpected raw recovery request proving the synthetic boundary was crossed.
+    """
     raise AssertionError(f"unexpected update recovery request: {type(request).__name__}")
 
 

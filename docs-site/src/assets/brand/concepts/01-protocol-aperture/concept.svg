@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1200 720" role="img" aria-labelledby="title description">
+  <title id="title">Protocol Aperture logo concept for miniproto</title>
+  <desc id="description">A vector presentation showing three nested protocol frames around a data pulse, with light, dark, monochrome, and small-size treatments.</desc>
+  <defs>
+    <g id="wordmark" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 60V28c0-9 6-15 14-15s14 6 14 15v32M32 28c0-9 6-15 14-15s14 6 14 15v32M80 22v38M80 5h.01M100 60V28c0-9 6-15 16-15s16 6 16 15v32M152 22v38M152 5h.01M172 78V13m0 17c0-10 7-17 16-17 11 0 18 9 18 23s-7 24-18 24c-9 0-16-7-16-17M226 60V30c0-10 7-17 17-17m-17 15c4-9 11-15 20-15M280 13c-13 0-22 10-22 23s9 24 22 24 22-11 22-24-9-23-22-23ZM330 2v44c0 10 5 15 14 15M318 18h27M382 13c-13 0-22 10-22 23s9 24 22 24 22-11 22-24-9-23-22-23Z"/>
+    </g>
+    <g id="mark" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M64 8 118 62c2 2 2 4 0 6l-54 54L10 68c-2-2-2-4 0-6Z" stroke="#8B5CF6" stroke-width="9"/>
+      <path d="M64 29 97 62c2 2 2 4 0 6L64 101 31 68c-2-2-2-4 0-6Z" stroke="#2563FF" stroke-width="9"/>
+      <path d="M64 49 77 62c2 2 2 4 0 6L64 81 51 68c-2-2-2-4 0-6Z" stroke="#00D9E6" stroke-width="9"/>
+      <circle cx="64" cy="65" r="6" fill="#00D9E6" stroke="none"/>
+    </g>
+    <g id="mark-mono" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M64 8 118 62c2 2 2 4 0 6l-54 54L10 68c-2-2-2-4 0-6Z"/>
+      <path d="M64 29 97 62c2 2 2 4 0 6L64 101 31 68c-2-2-2-4 0-6Z"/>
+      <path d="M64 49 77 62c2 2 2 4 0 6L64 81 51 68c-2-2-2-4 0-6Z"/>
+      <circle cx="64" cy="65" r="6" fill="currentColor" stroke="none"/>
+    </g>
+  </defs>
+  <rect width="1200" height="720" rx="30" fill="#E9EEF8"/>
+  <rect x="24" y="24" width="564" height="300" rx="22" fill="#F8FAFD" stroke="#CDD6E8"/>
+  <rect x="612" y="24" width="564" height="300" rx="22" fill="#0B1020"/>
+  <rect x="24" y="348" width="564" height="348" rx="22" fill="#FFFFFF" stroke="#CDD6E8"/>
+  <rect x="612" y="348" width="564" height="348" rx="22" fill="#12182A"/>
+  <use href="#mark" xlink:href="#mark" transform="translate(70 90) scale(1.18)"/>
+  <use href="#wordmark" xlink:href="#wordmark" transform="translate(244 128) scale(.73)" style="color:#0B1020"/>
+  <use href="#mark" xlink:href="#mark" transform="translate(658 90) scale(1.18)"/>
+  <use href="#wordmark" xlink:href="#wordmark" transform="translate(832 128) scale(.73)" style="color:#F8FAFD"/>
+  <use href="#mark" xlink:href="#mark" transform="translate(80 405) scale(1.55)"/>
+  <use href="#wordmark" xlink:href="#wordmark" transform="translate(286 448) scale(.62)" style="color:#0B1020"/>
+  <use href="#mark-mono" xlink:href="#mark-mono" transform="translate(92 585) scale(.72)" style="color:#151B2C"/>
+  <use href="#mark-mono" xlink:href="#mark-mono" transform="translate(660 402) scale(1.15)" style="color:#FFFFFF"/>
+  <use href="#wordmark" xlink:href="#wordmark" transform="translate(824 438) scale(.66)" style="color:#FFFFFF"/>
+  <g transform="translate(690 585)">
+    <rect width="82" height="82" rx="18" fill="#F8FAFD"/>
+    <use href="#mark" xlink:href="#mark" transform="translate(9 9) scale(.5)"/>
+  </g>
+  <g transform="translate(814 598)">
+    <rect width="58" height="58" rx="14" fill="#F8FAFD"/>
+    <use href="#mark" xlink:href="#mark" transform="translate(9 9) scale(.31)"/>
+  </g>
+  <g transform="translate(914 611)">
+    <rect width="36" height="36" rx="9" fill="#F8FAFD"/>
+    <use href="#mark" xlink:href="#mark" transform="translate(10 10) scale(.125)"/>
+  </g>
+</svg>

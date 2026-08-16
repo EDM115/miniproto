@@ -1,3 +1,11 @@
+"""Build, execute, resume, and aggregate opt-in live media benchmark matrices.
+
+Each cell fixes lanes, a MiB byte window, byte-sized chunks, launch timing,
+destination, cache warmth, and repeat label. The module writes durable raw/log
+artifacts so interrupted runs can resume completed cells, but actual live
+execution remains explicitly gated by ``MINIPROTO_LIVE_BENCH=1``.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -20,6 +28,29 @@ MatrixExecutor = Callable[["MatrixCell", Path, Path], int]
 
 @dataclass(frozen=True, slots=True)
 class MatrixCell:
+    """One immutable live-media benchmark configuration.
+
+    Args:
+        lanes: Download media lanes to configure.
+        byte_window: In-flight download byte window in mebibytes (MiB), not raw
+            bytes; command construction converts it using ``1024 * 1024``.
+        chunk_size: Download chunk size in bytes.
+        launch_stagger: Whether benchmark launches are staggered instead of a
+            burst.
+        destination: ``file`` or ``memory`` download sink.
+        warm: Whether to perform one warmup repeat before measuring.
+        repeat: Matrix repeat label retained in artifact identity and aggregates.
+
+    Attributes:
+        lanes: Concurrent download-media lane count.
+        byte_window: Per-process download byte window in MiB before command conversion.
+        chunk_size: Download chunk size in bytes.
+        launch_stagger: Whether client launches are staggered instead of burst-started.
+        destination: File-backed or in-memory download destination.
+        warm: Whether the downstream cell performs its warmup repeat.
+        repeat: Stable repeat ordinal included in artifact names and aggregation.
+    """
+
     lanes: int
     byte_window: int
     chunk_size: int
@@ -38,7 +69,18 @@ class MatrixCell:
 
 
 def build_matrix(mode: str) -> tuple[MatrixCell, ...]:
-    """Build the bounded smoke subset or complete requested live matrix."""
+    """Build the bounded smoke subset or complete requested live matrix.
+
+    Args:
+        mode: ``smoke`` for four representative cells or ``full`` for the full
+            Cartesian product, including repeat labels one through three.
+
+    Returns:
+        Deterministically ordered immutable configuration cells.
+
+    Raises:
+        ValueError: If ``mode`` is neither ``smoke`` nor ``full``.
+    """
     if mode == "smoke":
         return (
             MatrixCell(1, 4, 512 * 1024, True, "file", False, 1),
@@ -63,7 +105,21 @@ def build_matrix(mode: str) -> tuple[MatrixCell, ...]:
 
 
 def prepare_run_directory(path: Path, *, mode: str, resume: bool) -> None:
-    """Create or validate a task-owned matrix directory without overwriting unrelated history."""
+    """Create or validate a task-owned matrix directory without overwriting history.
+
+    A new run writes its configuration/environment manifest and empty ``raw`` /
+    ``logs`` directories. Resume accepts only a non-empty directory whose stored
+    schema and mode match this request.
+
+    Raises:
+        FileExistsError: If a non-empty directory is reused without ``resume``.
+        ValueError: If a resume manifest has a mismatched schema or mode.
+
+    Args:
+        path: Task-owned artifact directory to create or validate.
+        mode: Requested ``smoke`` or ``full`` matrix shape.
+        resume: Whether matching prior matrix artifacts may be reused.
+    """
     manifest_path = path / "configuration.json"
     if path.exists() and any(path.iterdir()):
         if not resume or not manifest_path.exists():
@@ -85,7 +141,21 @@ def prepare_run_directory(path: Path, *, mode: str, resume: bool) -> None:
 
 
 def run_matrix(cells: Sequence[MatrixCell], output: Path, *, execute: MatrixExecutor, resume: bool) -> dict[str, Any]:
-    """Run/resume cells, preserving completed artifacts and retrying failed or missing cells."""
+    """Run/resume cells, preserving completed artifacts and retrying missing ones.
+
+    A complete raw JSON report skips only when resuming and its cell was not
+    listed as previously failed. Failed or missing cells invoke ``execute``;
+    status, aggregate JSON, and Markdown comparison are regenerated afterward.
+
+    Returns:
+        Matrix-schema status containing completed cell IDs and failure records.
+
+    Args:
+        cells: Selected immutable matrix cells to execute or resume.
+        output: Prepared root containing ``raw`` and ``logs`` artifact directories.
+        execute: Cell executor that writes its raw report and combined log.
+        resume: Whether completed non-failed raw reports can be skipped.
+    """
     completed: list[str] = []
     failures: list[dict[str, Any]] = []
     previously_failed = _previous_failed_cells(output) if resume else set()
@@ -109,7 +179,17 @@ def run_matrix(cells: Sequence[MatrixCell], output: Path, *, execute: MatrixExec
 def aggregate_run(
     cells: Sequence[MatrixCell], output: Path, *, failures: Sequence[Mapping[str, Any]]
 ) -> dict[str, Any]:
-    """Aggregate completed raw cells deterministically and render the comparison table."""
+    """Aggregate completed raw cells deterministically and render comparison outputs.
+
+    Throughput is reported in MiB/s, using a direct report field when present or
+    the median download transfer rate otherwise. RSS remains bytes; loop lag is
+    milliseconds. The function writes ``aggregate.json`` and ``comparison.md``.
+
+    Args:
+        cells: Matrix cells whose artifacts are considered in stable ID order.
+        output: Prepared run directory containing raw reports and output targets.
+        failures: Failure records whose cell IDs must not be treated as complete.
+    """
     rows: list[dict[str, Any]] = []
     failed_cells = {str(failure["cell"]) for failure in failures if isinstance(failure.get("cell"), str)}
     for cell in sorted(cells, key=lambda item: item.id):
@@ -146,7 +226,16 @@ def aggregate_run(
 
 
 def build_live_command(cell: MatrixCell, raw_path: Path) -> list[str]:
-    """Build the secret-free live benchmark command for one matrix cell."""
+    """Build the secret-free live benchmark command for one matrix cell.
+
+    ``byte_window`` is converted from MiB to bytes; ``chunk_size`` stays bytes.
+    The command delegates credentials and live authorization to the downstream
+    benchmark process rather than embedding any secret in matrix artifacts.
+
+    Args:
+        cell: Validated matrix configuration to translate into CLI flags.
+        raw_path: JSON report destination passed to the child process.
+    """
     command = [
         sys.executable,
         "-u",
@@ -180,7 +269,18 @@ def build_live_command(cell: MatrixCell, raw_path: Path) -> list[str]:
 
 
 def subprocess_executor(cell: MatrixCell, raw_path: Path, log_path: Path) -> int:
-    """Execute one live cell and preserve combined output even on failure."""
+    """Execute one live cell and preserve combined output even on failure.
+
+    Returns:
+        The child process exit code after writing combined stdout/stderr to
+        ``log_path``. This executor is called only after :func:`main` verifies
+        the explicit live-run environment gate.
+
+    Args:
+        cell: Selected matrix configuration for this child process.
+        raw_path: Child JSON report destination.
+        log_path: Combined stdout/stderr artifact destination.
+    """
     command = build_live_command(cell, raw_path)
     with log_path.open("w", encoding="utf-8", newline="\n") as log:
         completed = subprocess.run(  # noqa: S603 - command is built only from validated MatrixCell fields
@@ -190,14 +290,38 @@ def subprocess_executor(cell: MatrixCell, raw_path: Path, log_path: Path) -> int
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
+    """Parse live-matrix mode, artifact directory, and opt-in resume arguments.
+
+    Args:
+        argv: Optional argument vector; ``None`` uses process command-line arguments.
+    """
     parser = argparse.ArgumentParser(description="Run or resume the miniproto live media benchmark matrix")
-    parser.add_argument("--mode", choices=("smoke", "full"), default="smoke")
-    parser.add_argument("--output", type=Path)
-    parser.add_argument("--resume", action="store_true")
+    parser.add_argument(
+        "--mode", choices=("smoke", "full"), default="smoke", help="live benchmark matrix size; defaults to smoke"
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        help="artifact directory to create or update; defaults to the matrix runner's timestamped path",
+    )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="resume eligible cases from compatible records already present under --output",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Run the explicitly authorized live matrix and return its CI-style status.
+
+    Returns:
+        ``2`` unless ``MINIPROTO_LIVE_BENCH=1`` is set, ``1`` when any cell
+        fails, and ``0`` only when every selected cell completes successfully.
+
+    Args:
+        argv: Optional argument vector; ``None`` uses process command-line arguments.
+    """
     args = parse_args(argv)
     if os.environ.get("MINIPROTO_LIVE_BENCH") != "1":
         print("Refusing to run a live matrix without MINIPROTO_LIVE_BENCH=1", file=sys.stderr)
@@ -210,6 +334,11 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def _complete_raw_report(path: Path) -> bool:
+    """Return whether a raw path contains a minimally recognized completed report.
+
+    Args:
+        path: Candidate raw JSON artifact to inspect without raising parse errors.
+    """
     if not path.is_file():
         return False
     try:
@@ -220,6 +349,11 @@ def _complete_raw_report(path: Path) -> bool:
 
 
 def _previous_failed_cells(output: Path) -> set[str]:
+    """Read prior status defensively and return its explicitly failed cell IDs.
+
+    Args:
+        output: Matrix run root containing an optional ``status.json`` artifact.
+    """
     status_path = output / "status.json"
     if not status_path.is_file():
         return set()
@@ -232,6 +366,12 @@ def _previous_failed_cells(output: Path) -> set[str]:
 
 
 def _throughput_mib(report: Mapping[str, Any], throughput: Mapping[str, Any]) -> float | None:
+    """Read direct MiB/s or calculate the median per-download MiB/s fallback.
+
+    Args:
+        report: Completed raw benchmark report containing optional result records.
+        throughput: Report throughput mapping that may include a direct MiB/s value.
+    """
     direct = throughput.get("download_mib_per_second")
     if isinstance(direct, int | float):
         return float(direct)
@@ -250,6 +390,11 @@ def _throughput_mib(report: Mapping[str, Any], throughput: Mapping[str, Any]) ->
 
 
 def _markdown_table(rows: Sequence[Mapping[str, Any]]) -> str:
+    """Render aggregate rows with their documented MiB, byte, and millisecond units.
+
+    Args:
+        rows: Aggregate rows with throughput, RSS, and loop-lag measurements.
+    """
     lines = [
         "# Benchmark matrix comparison",
         "",
@@ -264,6 +409,11 @@ def _markdown_table(rows: Sequence[Mapping[str, Any]]) -> str:
 
 
 def _display(value: Any) -> str:
+    """Render a missing value as an em dash and floats to three decimal places.
+
+    Args:
+        value: Optional aggregate value to render for Markdown output.
+    """
     if value is None:
         return "—"
     return f"{value:.3f}" if isinstance(value, float) else str(value)

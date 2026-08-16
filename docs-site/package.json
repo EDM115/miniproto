@@ -1,0 +1,24 @@
+{
+  "name": "miniproto-docs-site",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@11.21.0",
+  "engines": {
+    "node": "24.19.0",
+    "pnpm": "11.21.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "check": "astro check",
+    "preview": "astro preview"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.10",
+    "@astrojs/starlight": "0.41.7",
+    "astro": "7.2.2",
+    "pagefind": "1.5.2",
+    "sharp": "0.35.3",
+    "typescript": "6.0.3"
+  }
+}

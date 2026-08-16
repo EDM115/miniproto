@@ -1,4 +1,9 @@
-# miniproto Documentation
+---
+title: miniproto Documentation
+description: Reference documentation for miniproto, an async-first MTProto client core for Python.
+slug: /
+generated: false
+---
 
 Status: pre-alpha implementation documentation. The core SDK is implemented and tested with unit and fake-server coverage; live Telegram validation, minimum-Python CI, documentation build, and release-artifact gates remain incomplete.
 

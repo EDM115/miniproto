@@ -1,5 +1,8 @@
+"""Verify deterministic schema generation, ownership, and freshness behavior."""
+
 from __future__ import annotations
 
+import json
 import tomllib
 from pathlib import Path
 from typing import TypeGuard
@@ -12,10 +15,12 @@ ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = ROOT / "tools" / "schema" / "schema.tl"
 ERRORS = ROOT / "tools" / "schema" / "rpc-errors.json"
 METADATA = ROOT / "tools" / "schema" / "schema-metadata.json"
+BINDINGS = ROOT / "tools" / "schema" / "telegram-bindings.json"
 FIXTURE = ROOT / "tests" / "fixtures" / "schema" / "layer223-slice.tl"
 
 
 def test_generated_facade_stub_ruff_ignores_are_narrow() -> None:
+    """Keep generated-stub Ruff exceptions limited to schema-required naming cases."""
     config = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     per_file_ignores = config["tool"]["ruff"]["lint"]["per-file-ignores"]
 
@@ -24,6 +29,11 @@ def test_generated_facade_stub_ruff_ignores_are_narrow() -> None:
 
 
 def _is_registry_specs(value: object) -> TypeGuard[dict[str, tuple[str, str]]]:
+    """Recognize the generated registry specification mapping shape.
+
+    Args:
+        value: Namespace value produced by executing generated registry source.
+    """
     return isinstance(value, dict) and all(
         isinstance(name, str)
         and isinstance(spec, tuple)
@@ -34,21 +44,30 @@ def _is_registry_specs(value: object) -> TypeGuard[dict[str, tuple[str, str]]]:
 
 
 def _is_constructor_registry(value: object) -> TypeGuard[dict[int, str]]:
+    """Recognize the generated constructor-ID registry mapping shape.
+
+    Args:
+        value: Namespace value produced by executing generated registry source.
+    """
     return isinstance(value, dict) and all(
         isinstance(constructor_id, int) and isinstance(name, str) for constructor_id, name in value.items()
     )
 
 
 def test_constructor_bucket_assignment_depends_only_on_id() -> None:
+    """Pin deterministic power-of-two shard selection for representative IDs."""
     assert generate._bucket_for_constructor_id(0x997275B5, 64) == 0x35
     assert generate._bucket_for_constructor_id(0x997275B5, 32) == 0x15
     assert generate._bucket_for_constructor_id(0xFFFFFFFF, 64) == 0x3F
 
 
 def test_generation_emits_stable_constructor_id_shards(tmp_path: Path) -> None:
-    outputs = render_outputs(
-        FIXTURE, tmp_path / "schema-metadata.json", ERRORS, tmp_path / "raw", tmp_path / "raw-api.md"
-    )
+    """Place fixture constructors in shards derived solely from their IDs.
+
+    Args:
+        tmp_path: Isolated filesystem root supplied by pytest.
+    """
+    outputs = render_outputs(FIXTURE, tmp_path / "schema-metadata.json", ERRORS, tmp_path / "raw")
 
     assert tmp_path / "raw" / "_types_shards" / "bucket_53.py" in outputs.files
     assert tmp_path / "raw" / "_function_shards" / "bucket_13.py" in outputs.files
@@ -57,9 +76,12 @@ def test_generation_emits_stable_constructor_id_shards(tmp_path: Path) -> None:
 
 
 def test_generation_emits_compact_registry_and_valid_python_shards(tmp_path: Path) -> None:
-    outputs = render_outputs(
-        FIXTURE, tmp_path / "schema-metadata.json", ERRORS, tmp_path / "raw", tmp_path / "raw-api.md"
-    )
+    """Produce executable lazy registry metadata and syntactically valid shards.
+
+    Args:
+        tmp_path: Isolated filesystem root supplied by pytest.
+    """
+    outputs = render_outputs(FIXTURE, tmp_path / "schema-metadata.json", ERRORS, tmp_path / "raw")
 
     registry = outputs.files[tmp_path / "raw" / "_registry.py"]
     namespace: dict[str, object] = {}
@@ -80,10 +102,49 @@ def test_generation_emits_compact_registry_and_valid_python_shards(tmp_path: Pat
             compile(content, str(path), "exec")
 
 
-def test_generation_emits_compact_lazy_facades(tmp_path: Path) -> None:
-    outputs = render_outputs(
-        FIXTURE, tmp_path / "schema-metadata.json", ERRORS, tmp_path / "raw", tmp_path / "raw-api.md"
+def test_generation_emits_sorted_source_owned_telegram_binding_manifest(tmp_path: Path) -> None:
+    """Emit exact public Python bindings beside the generated raw surface.
+
+    Args:
+        tmp_path: Isolated filesystem root supplied by pytest.
+    """
+    bindings_path = tmp_path / "telegram-bindings.json"
+    outputs = render_outputs(FIXTURE, tmp_path / "schema-metadata.json", ERRORS, tmp_path / "raw")
+
+    assert bindings_path in outputs.files
+    manifest = json.loads(outputs.files[bindings_path])
+    assert manifest["schema_version"] == 1
+    assert manifest["layer"] == 214
+    assert manifest["declarations"] == sorted(
+        manifest["declarations"],
+        key=lambda record: (record["kind"], record["qualified_name"], record["constructor_id"]),
     )
+    assert {
+        "kind": "function",
+        "qualified_name": "help.getConfig",
+        "constructor_id": "0xc4f9186b",
+        "python_module": "miniproto.raw.functions",
+        "python_name": "HelpGetConfig",
+        "python_import": "from miniproto.raw.functions import HelpGetConfig",
+        "public_access": "miniproto.raw.functions.HelpGetConfig",
+    } in manifest["declarations"]
+    assert {
+        "code": 420,
+        "name": "FLOOD_WAIT_%d",
+        "python_module": "miniproto.errors",
+        "python_name": "FloodWait",
+        "python_import": "from miniproto.errors import FloodWait",
+        "public_access": "miniproto.errors.FloodWait",
+    } in manifest["errors"]
+
+
+def test_generation_emits_compact_lazy_facades(tmp_path: Path) -> None:
+    """Keep facades lazy while exposing the compact public registry surfaces.
+
+    Args:
+        tmp_path: Isolated filesystem root supplied by pytest.
+    """
+    outputs = render_outputs(FIXTURE, tmp_path / "schema-metadata.json", ERRORS, tmp_path / "raw")
 
     generated_types = outputs.files[tmp_path / "raw" / "types.py"]
     generated_functions = outputs.files[tmp_path / "raw" / "functions.py"]
@@ -95,22 +156,40 @@ def test_generation_emits_compact_lazy_facades(tmp_path: Path) -> None:
     assert "CONSTRUCTOR_ID_MAP = LazyConstructorMap" in generated_functions
 
 
-def test_generated_raw_api_docs_describe_current_runtime_and_lazy_loading(tmp_path: Path) -> None:
-    docs_path = tmp_path / "raw-api.md"
-    outputs = render_outputs(FIXTURE, tmp_path / "schema-metadata.json", ERRORS, tmp_path / "raw", docs_path)
+def test_generation_does_not_own_handwritten_raw_api_docs(tmp_path: Path) -> None:
+    """Exclude handwritten raw API Markdown from generated outputs.
 
-    docs = outputs.files[docs_path]
-    assert "message containers, transport framing, quick-ACK correlation, and RPC response correlation" in docs
-    assert "Facade imports stay lightweight" in docs
-    assert "Requested symbols load and cache their generated shard" in docs
-    assert "Mapping and sequence iteration may realize classes as needed" in docs
-    assert "later runtime phases" not in docs
+    Args:
+        tmp_path: Isolated filesystem root supplied by pytest.
+    """
+    outputs = render_outputs(FIXTURE, tmp_path / "schema-metadata.json", ERRORS, tmp_path / "raw")
+
+    assert all(path.name != "raw-api.md" for path in outputs.files)
+
+
+def test_stale_generation_ignores_legacy_handwritten_docs_manifest_entry(tmp_path: Path) -> None:
+    """Treat only the retired handwritten-doc manifest entry as migration-compatible.
+
+    Args:
+        tmp_path: Isolated filesystem root supplied by pytest.
+    """
+    metadata_path = tmp_path / "schema-metadata.json"
+    outputs = render_outputs(FIXTURE, metadata_path, ERRORS, tmp_path / "raw")
+    write_outputs(outputs)
+    metadata = __import__("json").loads(metadata_path.read_text(encoding="utf-8"))
+    metadata["generated_file_manifest"].append("docs/raw-api.md")
+    metadata_path.write_text(__import__("json").dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    assert metadata_path not in stale_outputs(render_outputs(FIXTURE, metadata_path, ERRORS, tmp_path / "raw"))
 
 
 def test_generation_emits_public_type_stubs_and_manifest_entries(tmp_path: Path) -> None:
-    outputs = render_outputs(
-        FIXTURE, tmp_path / "schema-metadata.json", ERRORS, tmp_path / "raw", tmp_path / "raw-api.md"
-    )
+    """Emit public type stubs and retain their generated manifest entries.
+
+    Args:
+        tmp_path: Isolated filesystem root supplied by pytest.
+    """
+    outputs = render_outputs(FIXTURE, tmp_path / "schema-metadata.json", ERRORS, tmp_path / "raw")
 
     generated_types = outputs.files[tmp_path / "raw" / "types.pyi"]
     generated_functions = outputs.files[tmp_path / "raw" / "functions.pyi"]
@@ -128,9 +207,12 @@ def test_generation_emits_public_type_stubs_and_manifest_entries(tmp_path: Path)
 
 
 def test_generation_reports_and_removes_only_owned_stale_shards(tmp_path: Path) -> None:
-    outputs = render_outputs(
-        FIXTURE, tmp_path / "schema-metadata.json", ERRORS, tmp_path / "raw", tmp_path / "raw-api.md"
-    )
+    """Remove header-marked obsolete shards while preserving handwritten neighbors.
+
+    Args:
+        tmp_path: Isolated filesystem root supplied by pytest.
+    """
+    outputs = render_outputs(FIXTURE, tmp_path / "schema-metadata.json", ERRORS, tmp_path / "raw")
     write_outputs(outputs)
     stale_shard = tmp_path / "raw" / "_types_shards" / "bucket_00.py"
     stale_shard.write_text("# Generated by tools/schema/generate.py; do not edit by hand.\n", encoding="utf-8")
@@ -145,12 +227,13 @@ def test_generation_reports_and_removes_only_owned_stale_shards(tmp_path: Path) 
 
 
 def test_generation_is_deterministic_for_real_schema_slice(tmp_path) -> None:
-    first = render_outputs(
-        FIXTURE, tmp_path / "schema-metadata.json", ERRORS, tmp_path / "raw", tmp_path / "raw-api.md"
-    )
-    second = render_outputs(
-        FIXTURE, tmp_path / "schema-metadata.json", ERRORS, tmp_path / "raw", tmp_path / "raw-api.md"
-    )
+    """Render an identical lazy raw surface for repeated fixture generations.
+
+    Args:
+        tmp_path: Isolated filesystem root supplied by pytest.
+    """
+    first = render_outputs(FIXTURE, tmp_path / "schema-metadata.json", ERRORS, tmp_path / "raw")
+    second = render_outputs(FIXTURE, tmp_path / "schema-metadata.json", ERRORS, tmp_path / "raw")
     assert first.files == second.files
     generated_types = first.files[tmp_path / "raw" / "types.py"]
     generated_functions = first.files[tmp_path / "raw" / "functions.py"]
@@ -175,6 +258,7 @@ def test_generation_is_deterministic_for_real_schema_slice(tmp_path) -> None:
 
 
 def test_generated_committed_raw_modules_match_full_schema_metadata() -> None:
+    """Keep committed generated raw, Rust, and fast-path outputs fresh."""
     schema = parse_schema_file(SCHEMA)
     metadata = __import__("json").loads(METADATA.read_text(encoding="utf-8"))
     assert metadata["schema_layer"] == 228
@@ -185,17 +269,26 @@ def test_generated_committed_raw_modules_match_full_schema_metadata() -> None:
         METADATA,
         ERRORS,
         ROOT / "src" / "miniproto" / "raw",
-        ROOT / "docs" / "raw-api.md",
         ROOT / "tools" / "schema" / "rust-fast-paths.json",
         ROOT / "rust" / "miniproto" / "src" / "generated_tl.rs",
         ROOT / "src" / "miniproto" / "tl" / "fast_metadata.py",
     )
+    generated_fast_metadata = outputs.files[ROOT / "src" / "miniproto" / "tl" / "fast_metadata.py"]
+    assert generated_fast_metadata.startswith(
+        '"""Generated metadata describing the TL constructors with native fast paths."""\n\n'
+    )
     assert not stale_outputs(outputs)
     assert len(schema.constructors) == 1649
     assert len(schema.functions) == 811
+    assert BINDINGS.exists()
+    bindings = json.loads(BINDINGS.read_text(encoding="utf-8"))
+    assert bindings["layer"] == 228
+    assert len(bindings["declarations"]) == 2460
+    assert len(bindings["errors"]) == 818
 
 
 def test_committed_layer_228_raw_surface_exposes_tdlib_additions_and_changed_methods() -> None:
+    """Expose selected canonical Layer 228 additions and omit absent declarations."""
     from miniproto.raw import functions, types
 
     assert types.InputPeerPhotoFileLocationLegacy.CONSTRUCTOR_ID == 0x27D69997
@@ -207,12 +300,16 @@ def test_committed_layer_228_raw_surface_exposes_tdlib_additions_and_changed_met
 
 
 def test_generation_preserves_tdlib_prefix_aliases_and_decodes_to_canonical_function(tmp_path: Path) -> None:
+    """Preserve TDLib prefix aliases while decoding by canonical constructor ID.
+
+    Args:
+        tmp_path: Isolated filesystem root supplied by pytest.
+    """
     outputs = render_outputs(
         ROOT / "tests" / "fixtures" / "schema" / "tdlib-layer228-slice.tl",
         tmp_path / "schema-metadata.json",
         ERRORS,
         tmp_path / "raw",
-        tmp_path / "raw-api.md",
     )
     namespace: dict[str, object] = {}
     exec(  # noqa: S102 - validates generated registry source in an isolated namespace.
@@ -230,10 +327,57 @@ def test_generation_preserves_tdlib_prefix_aliases_and_decodes_to_canonical_func
     assert function_constructors[0xADBB0F94] == "InvokeWithReCaptcha"
 
 
-def test_stale_generation_detection_reports_modified_output(tmp_path) -> None:
+def test_binding_manifest_retains_shared_tdlib_constructor_id_aliases(tmp_path: Path) -> None:
+    """Retain each TDLib prefix wrapper when several functions share one ID.
+
+    Args:
+        tmp_path: Isolated filesystem root supplied by pytest.
+    """
+    bindings_path = tmp_path / "telegram-bindings.json"
     outputs = render_outputs(
-        FIXTURE, tmp_path / "schema-metadata.json", ERRORS, tmp_path / "raw", tmp_path / "raw-api.md"
+        ROOT / "tests" / "fixtures" / "schema" / "tdlib-layer228-slice.tl",
+        tmp_path / "schema-metadata.json",
+        ERRORS,
+        tmp_path / "raw",
     )
+
+    assert bindings_path in outputs.files
+    declarations = json.loads(outputs.files[bindings_path])["declarations"]
+    aliases = [
+        item
+        for item in declarations
+        if item["constructor_id"] == "0xadbb0f94"
+        and item["qualified_name"] in {"invokeWithReCaptchaPrefix", "invokeWithReCaptcha"}
+    ]
+    assert aliases == [
+        {
+            "kind": "function",
+            "qualified_name": "invokeWithReCaptcha",
+            "constructor_id": "0xadbb0f94",
+            "python_module": "miniproto.raw.functions",
+            "python_name": "InvokeWithReCaptcha",
+            "python_import": "from miniproto.raw.functions import InvokeWithReCaptcha",
+            "public_access": "miniproto.raw.functions.InvokeWithReCaptcha",
+        },
+        {
+            "kind": "function",
+            "qualified_name": "invokeWithReCaptchaPrefix",
+            "constructor_id": "0xadbb0f94",
+            "python_module": "miniproto.raw.functions",
+            "python_name": "InvokeWithReCaptchaPrefix",
+            "python_import": "from miniproto.raw.functions import InvokeWithReCaptchaPrefix",
+            "public_access": "miniproto.raw.functions.InvokeWithReCaptchaPrefix",
+        },
+    ]
+
+
+def test_stale_generation_detection_reports_modified_output(tmp_path) -> None:
+    """Report a manually modified generated output as stale.
+
+    Args:
+        tmp_path: Isolated filesystem root supplied by pytest.
+    """
+    outputs = render_outputs(FIXTURE, tmp_path / "schema-metadata.json", ERRORS, tmp_path / "raw")
     write_outputs(outputs)
     types_path = tmp_path / "raw" / "types.py"
     types_path.write_text(types_path.read_text(encoding="utf-8") + "\n# stale\n", encoding="utf-8")
@@ -241,6 +385,11 @@ def test_stale_generation_detection_reports_modified_output(tmp_path) -> None:
 
 
 def test_generation_accepts_json_schema_and_preserves_upstream_layer_metadata(tmp_path: Path) -> None:
+    """Preserve pinned provenance when rendering an equivalent JSON schema.
+
+    Args:
+        tmp_path: Isolated filesystem root supplied by pytest.
+    """
     schema_path = tmp_path / "schema.json"
     schema_path.write_text(
         """{
@@ -298,7 +447,7 @@ def test_generation_accepts_json_schema_and_preserves_upstream_layer_metadata(tm
         encoding="utf-8",
     )
 
-    outputs = render_outputs(schema_path, metadata_path, errors_path, tmp_path / "raw", tmp_path / "raw-api.md")
+    outputs = render_outputs(schema_path, metadata_path, errors_path, tmp_path / "raw")
     metadata = __import__("json").loads(outputs.files[metadata_path])
 
     assert metadata["layer"] == 223
@@ -315,15 +464,10 @@ def test_generation_accepts_json_schema_and_preserves_upstream_layer_metadata(tm
     assert metadata["schema_tl_source_kind"] == "tdlib_verbatim"
     assert metadata["source_comparison_summary"]["tdlib_vs_tdesktop"]["tdesktop_only"] == ["null"]
     assert "RAW_API_LAYER = 223" in outputs.files[tmp_path / "raw" / "base.py"]
-    assert "Telegram Schema Layer 223" in outputs.files[tmp_path / "raw-api.md"]
-    assert "TDLib canonical TL schema" in outputs.files[tmp_path / "raw-api.md"]
-    assert "Telegram Desktop" in outputs.files[tmp_path / "raw-api.md"]
-    assert "generated `Null` class is intentionally absent" in outputs.files[tmp_path / "raw-api.md"]
-    assert "`tools/schema/schema-source-diff.json`" in outputs.files[tmp_path / "raw-api.md"]
-    assert "RPC errors layer: 227" in outputs.files[tmp_path / "raw-api.md"]
 
 
 def test_import_benchmark_covers_required_fresh_process_cases() -> None:
+    """Keep import benchmarking focused on required fresh-process scenarios."""
     from tools.bench.benchmark_imports import CASES, summarize
 
     assert tuple(CASES) == ("import_miniproto", "import_client", "first_raw_attribute", "first_decode")

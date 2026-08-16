@@ -1,3 +1,5 @@
+"""Validate Telegram Diffie-Hellman and SRP public parameters."""
+
 from __future__ import annotations
 
 import hmac
@@ -17,6 +19,15 @@ _SMALL_PRIMES = (2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47)
 
 
 def validate_safe_prime_and_generator(p: int, g: int) -> None:
+    """Reject a DH modulus or generator that violates Telegram's security rules.
+
+    Args:
+        p: Candidate 2048-bit safe prime.
+        g: Candidate Telegram DH generator.
+
+    Raises:
+        ValueError: If the modulus is not an allowed safe prime or the generator is incompatible.
+    """
     error = _validate_safe_prime_and_generator_cached(p, g)
     if error is not None:
         raise ValueError(error)
@@ -24,6 +35,12 @@ def validate_safe_prime_and_generator(p: int, g: int) -> None:
 
 @lru_cache(maxsize=32)
 def _validate_safe_prime_and_generator_cached(p: int, g: int) -> str | None:
+    """Return the validation error for a prime/generator pair, caching expensive checks.
+
+    Args:
+        p: Candidate 2048-bit DH modulus.
+        g: Candidate Telegram DH generator.
+    """
     if p.bit_length() != 2048:
         return "Telegram DH prime must be exactly 2048-bit"
     if g not in {2, 3, 4, 5, 6, 7}:
@@ -41,11 +58,30 @@ def _validate_safe_prime_and_generator_cached(p: int, g: int) -> str | None:
 
 
 def validate_public_value(value: int, p: int, name: str) -> None:
+    """Ensure a DH public value is inside Telegram's strong safe interval.
+
+    Raises:
+        ValueError: If ``value`` is too close to either modulus boundary.
+
+    Args:
+        value: Numeric DH public value to validate.
+        p: Validated DH modulus defining the allowed interval.
+        name: Protocol field name included in validation errors.
+    """
     if not (1 < value < p - 1 and _PUBLIC_VALUE_BOUNDARY <= value <= p - _PUBLIC_VALUE_BOUNDARY):
         raise ValueError(f"{name} is outside Telegram's strong DH public-value interval")
 
 
 def validate_srp_b(value: bytes, p: int) -> int:
+    """Validate and decode Telegram's big-endian SRP ``B`` parameter.
+
+    Raises:
+        ValueError: If the encoded value has an invalid length or lies outside the modulus.
+
+    Args:
+        value: Big-endian encoded Telegram SRP ``B`` value.
+        p: SRP modulus that bounds the decoded value.
+    """
     if not 248 <= len(value) <= 256:
         raise ValueError("SRP B encoding must be between 248 and 256 bytes")
     numeric_value = int.from_bytes(value, "big", signed=False)
@@ -55,11 +91,25 @@ def validate_srp_b(value: bytes, p: int) -> int:
 
 
 def validate_dh_parameters(p: int, g: int, public_value: int, name: str) -> None:
+    """Validate both the Telegram DH group and one public value in that group.
+
+    Args:
+        p: Candidate Telegram safe-prime modulus.
+        g: Candidate generator for ``p``.
+        public_value: DH public value to validate against the strong interval.
+        name: Protocol field name used in public-value error messages.
+    """
     validate_safe_prime_and_generator(p, g)
     validate_public_value(public_value, p, name)
 
 
 def _generator_is_compatible(p: int, g: int) -> bool:
+    """Return whether Telegram permits ``g`` for the residue class of ``p``.
+
+    Args:
+        p: Candidate DH modulus whose residue class is checked.
+        g: Allowed Telegram generator candidate.
+    """
     if g == 2:
         return p % 8 == 7
     if g == 3:
@@ -74,6 +124,12 @@ def _generator_is_compatible(p: int, g: int) -> bool:
 
 
 def _is_probable_prime(value: int, *, witnesses: Iterable[int] | None = None) -> bool:
+    """Test primality with trial division and Miller-Rabin witnesses.
+
+    Args:
+        value: Positive integer candidate to test.
+        witnesses: Optional deterministic Miller-Rabin bases; random bases are used when omitted.
+    """
     if value < 2:
         return False
     for prime in _SMALL_PRIMES:

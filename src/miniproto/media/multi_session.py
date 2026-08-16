@@ -1,3 +1,10 @@
+"""Deterministic multi-session range planning and ordered download-part assembly.
+
+Assembly consumes local completed part paths in caller-supplied order. It does
+not schedule sessions, delete parts, roll back partial destination writes, or
+zeroize in-memory assembled bytes.
+"""
+
 from __future__ import annotations
 
 import io
@@ -14,12 +21,31 @@ _SINGLE_SESSION_MAX_SIZE = 50 * MIB
 
 @dataclass(frozen=True, slots=True)
 class DownloadRange:
+    """A contiguous byte interval assigned to one parallel download session.
+
+    Attributes:
+        index: Zero-based session/range number.
+        offset: Inclusive starting byte offset.
+        limit: Number of bytes in the range.
+    """
+
     index: int
     offset: int
     limit: int
 
 
 def download_session_count(total_size: int) -> int:
+    """Choose the supported session count for a positive whole-file size.
+
+    Args:
+        total_size: Total media size in bytes.
+
+    Returns:
+        One, two, or four sessions according to Telegram-friendly thresholds.
+
+    Raises:
+        ValueError: ``total_size`` is not positive.
+    """
     if total_size <= 0:
         raise ValueError("total_size must be positive")
     if total_size <= _SINGLE_SESSION_MAX_SIZE:
@@ -30,6 +56,19 @@ def download_session_count(total_size: int) -> int:
 
 
 def plan_download_ranges(total_size: int, *, session_count: int, alignment: int = MIB) -> tuple[DownloadRange, ...]:
+    """Partition a file into contiguous, aligned ranges for multiple sessions.
+
+    Args:
+        total_size: Positive total file size in bytes.
+        session_count: Requested number of parallel sessions; excess sessions are omitted.
+        alignment: Positive byte alignment for every non-tail range; defaults to one MiB.
+
+    Returns:
+        Ordered, gap-free ranges whose limits sum exactly to ``total_size``.
+
+    Raises:
+        ValueError: Any size, session count, or alignment is non-positive.
+    """
     if total_size <= 0:
         raise ValueError("total_size must be positive")
     if session_count <= 0:
@@ -56,6 +95,29 @@ def plan_download_ranges(total_size: int, *, session_count: int, alignment: int 
 def assemble_download_parts(
     part_paths: Sequence[Path], destination: str | os.PathLike[str] | BinaryIO | None, *, expected_size: int
 ) -> tuple[Path | BinaryIO | None, bytes | None]:
+    """Concatenate completed range files into a destination in their supplied order.
+
+    Args:
+        part_paths: Ordered filesystem paths of completed session outputs.
+        destination: Output path, binary stream, or ``None`` to return in-memory bytes.
+        expected_size: Exact aggregate byte count required for successful assembly.
+
+    Returns:
+        The resolved output destination and bytes only when ``destination`` is ``None``.
+
+    Destination Effects:
+        A path destination has parents created and is opened with ``wb`` (truncating
+        any existing file) then closed before return. A caller binary stream stays
+        open at its post-write position. ``None`` creates an internal ``BytesIO``
+        whose immutable returned bytes are not zeroized. If source read or output
+        write fails, this helper does not restore or remove a partially written
+        destination.
+
+    Raises:
+        OSError: A part or path destination cannot be read, created, or written.
+        RuntimeError: Concatenated data does not contain exactly ``expected_size`` bytes;
+            a destination may already contain partial or complete assembled bytes.
+    """
     data_buffer: io.BytesIO | None = None
     should_close = False
     if destination is None:

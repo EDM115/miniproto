@@ -1,3 +1,10 @@
+"""Validated frozen session records and their durable mapping conversion.
+
+The dataclasses prevent attribute reassignment and copy collection containers, but
+their mappings are shallow copies: nested values such as ``metadata`` or peer
+``raw`` dictionaries can still be mutable.
+"""
+
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -11,10 +18,17 @@ SESSION_RECORD_VERSION = 1
 
 
 def _utc_now() -> datetime:
+    """Return the current timezone-aware UTC timestamp for model defaults."""
     return datetime.now(UTC)
 
 
 def _coerce_datetime(value: datetime | str | None, *, default: datetime | None = None) -> datetime | None:
+    """Preserve aware timestamps and assume UTC only for naive values.
+
+    Args:
+        value: Datetime or ISO-8601 string to coerce, or ``None``.
+        default: Value returned unchanged when ``value`` is ``None``.
+    """
     if value is None:
         return default
     if isinstance(value, datetime):
@@ -25,6 +39,19 @@ def _coerce_datetime(value: datetime | str | None, *, default: datetime | None =
 
 @dataclass(slots=True, frozen=True)
 class AuthKey:
+    """Validated non-empty MTProto authorization key bound to a positive DC.
+
+    Attributes:
+        dc_id: Positive data-centre identifier that owns the key.
+        key: Secret authorization-key bytes, hidden from ``repr``.
+        key_id: Optional server-derived authorization-key fingerprint.
+        created_at: Creation timestamp; aware input retains its original timezone and naive input assumes UTC.
+        expires_at: Optional expiry timestamp with the same aware/naive handling.
+
+    Raises:
+        ValueError: If ``dc_id`` is not positive or ``key`` is empty.
+    """
+
     dc_id: int
     key: bytes = field(repr=False)
     key_id: int | None = None
@@ -32,6 +59,7 @@ class AuthKey:
     expires_at: datetime | None = None
 
     def __post_init__(self) -> None:
+        """Validate identifiers and defensively copy secret bytes and timestamps."""
         if self.dc_id <= 0:
             raise ValueError("auth key dc_id must be positive")
         if not self.key:
@@ -43,6 +71,22 @@ class AuthKey:
 
 @dataclass(slots=True, frozen=True)
 class DCOption:
+    """One validated Telegram data-centre endpoint and optional transport secret.
+
+    Attributes:
+        id: Positive data-centre identifier.
+        ip_address: Non-empty endpoint address.
+        port: Endpoint TCP port from 1 through 65535.
+        ipv6: Whether the address is IPv6.
+        media_only: Whether this endpoint serves only media requests.
+        tcpo_only: Whether this endpoint is TCP-obfuscated-only.
+        static: Whether Telegram marks this option static.
+        secret: Optional copied transport secret, hidden from ``repr``.
+
+    Raises:
+        ValueError: If the ID, address, or port is invalid.
+    """
+
     id: int
     ip_address: str
     port: int
@@ -53,6 +97,7 @@ class DCOption:
     secret: bytes | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
+        """Validate endpoint ranges and defensively copy an optional secret."""
         if self.id <= 0:
             raise ValueError("dc option id must be positive")
         if not self.ip_address:
@@ -65,6 +110,24 @@ class DCOption:
 
 @dataclass(slots=True, frozen=True)
 class UserIdentity:
+    """Durable Telegram user identity with optional private contact metadata.
+
+    ``phone`` is intentionally hidden from ``repr``. ``access_hash`` is absent
+    when Telegram did not provide one.
+
+    Attributes:
+        id: Positive Telegram user identifier.
+        access_hash: Optional access hash needed to address the user.
+        is_bot: Whether Telegram identifies this user as a bot.
+        username: Optional public username.
+        phone: Optional private phone number, hidden from ``repr``.
+        first_name: Optional profile first name.
+        last_name: Optional profile last name.
+
+    Raises:
+        ValueError: If the user ID is not positive.
+    """
+
     id: int
     access_hash: int | None = None
     is_bot: bool = False
@@ -74,18 +137,34 @@ class UserIdentity:
     last_name: str | None = None
 
     def __post_init__(self) -> None:
+        """Require a positive Telegram user identifier."""
         if self.id <= 0:
             raise ValueError("user identity id must be positive")
 
 
 @dataclass(slots=True, frozen=True)
 class UpdateState:
+    """Monotonic Telegram update cursors and their latest server timestamp.
+
+    All counters default to zero, and ``date`` defaults to current UTC time.
+
+    Attributes:
+        pts: Global persistent timestamp cursor.
+        qts: Secret-chat timestamp cursor.
+        seq: Global update sequence cursor.
+        date: Latest server timestamp; aware input retains its timezone and naive input assumes UTC.
+
+    Raises:
+        ValueError: If any counter is negative.
+    """
+
     pts: int = 0
     qts: int = 0
     seq: int = 0
     date: datetime = field(default_factory=_utc_now)
 
     def __post_init__(self) -> None:
+        """Reject negative counters and preserve aware timestamps while assuming UTC for naive input."""
         if self.pts < 0 or self.qts < 0 or self.seq < 0:
             raise ValueError("update state counters must not be negative")
         object.__setattr__(self, "date", _coerce_datetime(self.date, default=_utc_now()))
@@ -93,6 +172,25 @@ class UpdateState:
 
 @dataclass(slots=True, frozen=True)
 class PeerCacheEntry:
+    """Durable peer lookup metadata with a shallow-copied optional raw-field mapping.
+
+    ``raw`` is copied at its outer mapping level, so nested raw values remain
+    mutable. ``phone`` is hidden from ``repr`` and optional access hashes remain
+    absent for minimal Telegram peers.
+
+    Attributes:
+        id: Positive Telegram peer identifier.
+        kind: Peer category used to construct input peers.
+        access_hash: Optional access hash required for some peer operations.
+        username: Optional public username.
+        phone: Optional private phone number, hidden from ``repr``.
+        updated_at: Last-known peer metadata timestamp; aware input retains its timezone.
+        raw: Optional shallow-copied extra raw fields; nested values remain mutable.
+
+    Raises:
+        ValueError: If the peer ID is not positive.
+    """
+
     id: int
     kind: PeerKind
     access_hash: int | None = None
@@ -102,6 +200,7 @@ class PeerCacheEntry:
     raw: Mapping[str, Any] | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
+        """Require a positive ID and shallow-copy raw data from callers."""
         if self.id <= 0:
             raise ValueError("peer cache entry id must be positive")
         object.__setattr__(self, "updated_at", _coerce_datetime(self.updated_at, default=_utc_now()))
@@ -111,6 +210,25 @@ class PeerCacheEntry:
 
 @dataclass(slots=True, frozen=True)
 class SessionRecord:
+    """Complete versioned session state with frozen, shallow collection snapshots.
+
+    Attributes:
+        version: Storage schema version; only the current version is accepted.
+        dc_id: Optional active data-centre identifier.
+        auth_key: Optional active authorization key.
+        dc_options: Immutable configured endpoint sequence.
+        user: Optional authenticated account identity.
+        update_state: Update cursors, defaulting to an empty state.
+        peers: Immutable cached peer sequence.
+        metadata: Shallow-copied extension mapping, hidden from ``repr``; nested values remain mutable.
+
+    Default update state is empty, while every other optional domain remains
+    absent or empty until the client obtains it.
+
+    Raises:
+        ValueError: If the version is unsupported or configured DC is invalid.
+    """
+
     version: int = SESSION_RECORD_VERSION
     dc_id: int | None = None
     auth_key: AuthKey | None = None
@@ -121,6 +239,7 @@ class SessionRecord:
     metadata: Mapping[str, Any] = field(default_factory=dict, repr=False)
 
     def __post_init__(self) -> None:
+        """Enforce the record version and shallow-copy collection-backed session domains."""
         if self.version != SESSION_RECORD_VERSION:
             raise ValueError(f"unsupported session record version: {self.version}")
         if self.dc_id is not None and self.dc_id <= 0:
@@ -131,6 +250,14 @@ class SessionRecord:
 
 
 def session_record_to_mapping(record: SessionRecord) -> dict[str, Any]:
+    """Serialize a typed record to the canonical storage-compatible mapping.
+
+    Args:
+        record: Validated immutable session state.
+
+    Returns:
+        A new mapping retaining bytes and datetimes for storage encoding.
+    """
     return {
         "version": record.version,
         "dc_id": record.dc_id,
@@ -144,6 +271,16 @@ def session_record_to_mapping(record: SessionRecord) -> dict[str, Any]:
 
 
 def session_record_from_mapping(data: Mapping[str, Any]) -> SessionRecord:
+    """Construct a validated record from a decoded canonical mapping.
+
+    Args:
+        data: Canonical session mapping decoded from storage.
+
+    Raises:
+        KeyError: If required nested fields are missing.
+        TypeError: If nested mappings or byte fields have invalid shapes.
+        ValueError: If model validation or peer-kind conversion fails.
+    """
     return SessionRecord(
         version=int(data.get("version", SESSION_RECORD_VERSION)),
         dc_id=_optional_int(data.get("dc_id")),
@@ -157,6 +294,11 @@ def session_record_from_mapping(data: Mapping[str, Any]) -> SessionRecord:
 
 
 def _auth_key_to_mapping(auth_key: AuthKey) -> dict[str, Any]:
+    """Project an auth key into its storage mapping.
+
+    Args:
+        auth_key: Validated authorization key to serialize.
+    """
     return {
         "dc_id": auth_key.dc_id,
         "key": auth_key.key,
@@ -167,6 +309,11 @@ def _auth_key_to_mapping(auth_key: AuthKey) -> dict[str, Any]:
 
 
 def _dc_option_to_mapping(option: DCOption) -> dict[str, Any]:
+    """Project a DC endpoint into its storage mapping.
+
+    Args:
+        option: Validated Telegram data-center endpoint to serialize.
+    """
     return {
         "id": option.id,
         "ip_address": option.ip_address,
@@ -180,6 +327,11 @@ def _dc_option_to_mapping(option: DCOption) -> dict[str, Any]:
 
 
 def _user_identity_to_mapping(user: UserIdentity) -> dict[str, Any]:
+    """Project durable user identity fields into storage form.
+
+    Args:
+        user: User identity to serialize.
+    """
     return {
         "id": user.id,
         "access_hash": user.access_hash,
@@ -192,10 +344,20 @@ def _user_identity_to_mapping(user: UserIdentity) -> dict[str, Any]:
 
 
 def _update_state_to_mapping(state: UpdateState) -> dict[str, Any]:
+    """Project update cursors and date into storage form.
+
+    Args:
+        state: Update cursor state to serialize.
+    """
     return {"pts": state.pts, "qts": state.qts, "seq": state.seq, "date": state.date}
 
 
 def _peer_cache_entry_to_mapping(peer: PeerCacheEntry) -> dict[str, Any]:
+    """Project one peer entry while copying its optional raw mapping.
+
+    Args:
+        peer: Cached peer entry to serialize.
+    """
     return {
         "id": peer.id,
         "kind": peer.kind,
@@ -208,6 +370,11 @@ def _peer_cache_entry_to_mapping(peer: PeerCacheEntry) -> dict[str, Any]:
 
 
 def _auth_key_from_mapping(data: object) -> AuthKey | None:
+    """Build an optional validated authorization key from decoded storage data.
+
+    Args:
+        data: Decoded authorization-key mapping or ``None``.
+    """
     if data is None:
         return None
     mapping = _require_mapping(data, "auth_key")
@@ -221,6 +388,11 @@ def _auth_key_from_mapping(data: object) -> AuthKey | None:
 
 
 def _dc_option_from_mapping(data: object) -> DCOption:
+    """Build one validated DC endpoint from decoded storage data.
+
+    Args:
+        data: Decoded data-center option mapping.
+    """
     mapping = _require_mapping(data, "dc_option")
     return DCOption(
         id=int(mapping["id"]),
@@ -235,6 +407,11 @@ def _dc_option_from_mapping(data: object) -> DCOption:
 
 
 def _user_identity_from_mapping(data: object) -> UserIdentity | None:
+    """Build optional user identity from decoded storage data.
+
+    Args:
+        data: Decoded user mapping or ``None``.
+    """
     if data is None:
         return None
     mapping = _require_mapping(data, "user")
@@ -250,6 +427,11 @@ def _user_identity_from_mapping(data: object) -> UserIdentity | None:
 
 
 def _update_state_from_mapping(data: object) -> UpdateState:
+    """Build update state or its empty default from decoded storage data.
+
+    Args:
+        data: Decoded update-state mapping or ``None`` for a default state.
+    """
     if data is None:
         return UpdateState()
     mapping = _require_mapping(data, "update_state")
@@ -262,6 +444,11 @@ def _update_state_from_mapping(data: object) -> UpdateState:
 
 
 def _peer_kind(value: object) -> PeerKind:
+    """Validate a serialized peer-kind spelling against public peer kinds.
+
+    Args:
+        value: Decoded peer-kind value to validate and normalize.
+    """
     match str(value):
         case "user":
             return "user"
@@ -276,6 +463,11 @@ def _peer_kind(value: object) -> PeerKind:
 
 
 def _peer_cache_entry_from_mapping(data: object) -> PeerCacheEntry:
+    """Build one validated cached peer from decoded storage data.
+
+    Args:
+        data: Decoded cached-peer mapping.
+    """
     mapping = _require_mapping(data, "peer")
     return PeerCacheEntry(
         id=int(mapping["id"]),
@@ -289,18 +481,35 @@ def _peer_cache_entry_from_mapping(data: object) -> PeerCacheEntry:
 
 
 def _mapping_or_empty(value: object) -> dict[str, Any]:
+    """Copy optional metadata mappings, using an empty mapping for ``None``.
+
+    Args:
+        value: Optional decoded metadata mapping.
+    """
     if value is None:
         return {}
     return dict(_require_mapping(value, "metadata"))
 
 
 def _require_mapping(value: object, name: str) -> Mapping[str, Any]:
+    """Require a mapping at a named serialized field.
+
+    Args:
+        value: Decoded field value to validate.
+        name: Field path included in a type-validation error.
+    """
     if not isinstance(value, Mapping):
         raise TypeError(f"{name} must be a mapping")
     return cast("Mapping[str, Any]", value)
 
 
 def _require_bytes(value: object, name: str) -> bytes:
+    """Accept and copy supported mutable or immutable byte-like values.
+
+    Args:
+        value: Decoded byte-like field value.
+        name: Field path included in a type-validation error.
+    """
     if isinstance(value, bytes):
         return value
     if isinstance(value, bytearray | memoryview):
@@ -309,6 +518,11 @@ def _require_bytes(value: object, name: str) -> bytes:
 
 
 def _optional_int(value: object) -> int | None:
+    """Convert an optional serialized integer using Python's integer coercion.
+
+    Args:
+        value: Optional decoded scalar to convert.
+    """
     if value is None:
         return None
     if isinstance(value, int):
@@ -319,4 +533,9 @@ def _optional_int(value: object) -> int | None:
 
 
 def _optional_str(value: object) -> str | None:
+    """Convert a present optional serialized value to string.
+
+    Args:
+        value: Optional decoded value to convert.
+    """
     return None if value is None else str(value)

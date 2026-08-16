@@ -1,3 +1,11 @@
+"""Deterministic runtime acceptance benchmarks and host-independent invariants.
+
+The workload uses local fakes and controlled in-process components to catch
+protocol, resource-accounting, cancellation, and fairness regressions. It is
+not a substitute for credentialed live acceptance: it cannot prove Telegram
+network behavior, account permissions, datacenter routing, or production load.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -47,6 +55,23 @@ _AUTH_KEY = b"a" * 256
 
 @dataclass(frozen=True, slots=True)
 class BenchmarkProfile:
+    """Resolved deterministic workload dimensions for one benchmark mode.
+
+    Args:
+        mode: ``smoke`` for bounded checks or ``full`` for broader sampling.
+        warmup: Untimed operation runs before measured samples.
+        samples: Timed repetitions for each sampled operation.
+        update_count: Update-dispatch workload size.
+        pending_count: Concurrent pending-RPC capacity workload size.
+        generic_tl_count: TL serialization/decode iterations per sample.
+        media_bytes: Deterministic upload/download payload size in bytes.
+        part_size: Media and scheduler part size in bytes.
+        scheduler_transfers: Concurrent scheduler transfers.
+        scheduler_parts: Parts issued by every scheduler transfer.
+        scheduler_max_bytes: Per-direction scheduler byte-window bound.
+        soak_cycles: Reconnect/cancellation fixture cycles.
+    """
+
     mode: str
     warmup: int
     samples: int
@@ -63,12 +88,27 @@ class BenchmarkProfile:
 
 @dataclass(slots=True)
 class _BackpressureInvoker:
+    """Controlled async download responder that measures iterator request overlap.
+
+    Attributes:
+        payload: Deterministic bytes returned for upload-file ranges.
+        active: Currently active responder calls.
+        max_active: Highest concurrently active responder-call count.
+        requests: Total upload-file requests observed.
+    """
+
     payload: bytes
     active: int = 0
     max_active: int = 0
     requests: int = 0
 
     async def __call__(self, request: object, **kwargs: object) -> object:
+        """Delay one upload-file request, track overlap, and return its byte slice.
+
+        Args:
+            request: Generated request expected to be ``UploadGetFile``.
+            **kwargs: Extra invoker keyword arguments intentionally ignored by the fixture.
+        """
         del kwargs
         if not isinstance(request, functions.UploadGetFile):
             raise TypeError(f"unexpected backpressure request: {type(request).__name__}")
@@ -87,22 +127,48 @@ class _BackpressureInvoker:
 
 
 def parse_args(argv: Sequence[str] | None = None, env: Mapping[str, str] | None = None) -> argparse.Namespace:
-    """Parse the deterministic benchmark CLI, with explicit arguments winning over environment defaults."""
+    """Parse the deterministic benchmark CLI, with explicit arguments winning over environment defaults.
+
+    Args:
+        argv: Optional argument sequence; ``None`` uses process arguments.
+        env: Optional environment mapping for reproducible tests; ``None`` uses
+            :data:`os.environ` for mode, sample, JSON, and loop-lag defaults.
+
+    Returns:
+        Parsed mode, optional sample override/output path, and loop-lag flag.
+
+    Raises:
+        ValueError: ``MINIPROTO_BENCH_SAMPLES`` is configured but is not an integer.
+        SystemExit: If argparse rejects an option or a supplied sample count is
+            less than one.
+    """
     values = os.environ if env is None else env
     parser = argparse.ArgumentParser(description="Run deterministic miniproto runtime acceptance benchmarks")
-    parser.add_argument("--mode", choices=("smoke", "full"), default=values.get("MINIPROTO_BENCH_MODE", "smoke"))
+    parser.add_argument(
+        "--mode",
+        choices=("smoke", "full"),
+        default=values.get("MINIPROTO_BENCH_MODE", "smoke"),
+        help="acceptance workload size; defaults to MINIPROTO_BENCH_MODE or smoke",
+    )
     parser.add_argument(
         "--samples",
         type=int,
         default=int(values["MINIPROTO_BENCH_SAMPLES"]) if values.get("MINIPROTO_BENCH_SAMPLES") else None,
+        help="samples per benchmark case; defaults to MINIPROTO_BENCH_SAMPLES or the selected mode's built-in count",
     )
     parser.add_argument(
         "--json",
         type=Path,
         default=Path(values["MINIPROTO_BENCH_JSON"]) if values.get("MINIPROTO_BENCH_JSON") else None,
+        help="optional JSON report path to create or replace; defaults to MINIPROTO_BENCH_JSON",
     )
     loop_lag_default = values.get("MINIPROTO_BENCH_LOOP_LAG", "1") == "1"
-    parser.add_argument("--loop-lag", action=argparse.BooleanOptionalAction, default=loop_lag_default)
+    parser.add_argument(
+        "--loop-lag",
+        action=argparse.BooleanOptionalAction,
+        default=loop_lag_default,
+        help="enable or disable the event-loop lag probe; defaults to MINIPROTO_BENCH_LOOP_LAG or enabled",
+    )
     args = parser.parse_args(argv)
     if args.samples is not None and args.samples < 1:
         parser.error("--samples must be positive")
@@ -110,7 +176,14 @@ def parse_args(argv: Sequence[str] | None = None, env: Mapping[str, str] | None 
 
 
 def resolve_profile(args: argparse.Namespace) -> BenchmarkProfile:
-    """Resolve bounded smoke or statistically broader full benchmark dimensions."""
+    """Resolve bounded smoke or statistically broader full benchmark dimensions.
+
+    ``args.samples`` only overrides the selected mode's measured sample count;
+    every other workload dimension stays deterministic for that mode.
+
+    Args:
+        args: Parsed CLI namespace containing the selected mode and sample override.
+    """
     if args.mode == "smoke":
         profile = BenchmarkProfile(
             mode="smoke",
@@ -145,11 +218,32 @@ def resolve_profile(args: argparse.Namespace) -> BenchmarkProfile:
 
 
 def evaluate_acceptance_invariants(results: Sequence[Mapping[str, Any]]) -> list[dict[str, str]]:
-    """Evaluate correctness and resource-accounting thresholds without host-dependent timing limits."""
+    """Evaluate deterministic correctness and resource-accounting invariants.
+
+    Args:
+        results: Named benchmark result mappings emitted by this module's local
+            workloads.
+
+    Returns:
+        Structured failures for unmet fixed invariants: pending-slot cleanup,
+        iterator prefetch bound, scheduler fairness/accounting, and reconnect
+        cleanup. An empty list means only these local invariants held.
+
+    Notes:
+        No host-dependent performance threshold is enforced here. Passing does
+        not certify live Telegram acceptance, throughput, latency, credentials,
+        datacenter routing, or production load behavior.
+    """
     by_name = {str(result.get("name")): result for result in results}
     failures: list[dict[str, str]] = []
 
     def require(condition: bool, message: str) -> None:
+        """Append one stable acceptance-failure record when an invariant is false.
+
+        Args:
+            condition: Invariant result to evaluate.
+            message: Stable failure message recorded when the invariant is false.
+        """
         if not condition:
             failures.append({"type": "AcceptanceThresholdError", "message": message})
 
@@ -187,7 +281,24 @@ def evaluate_acceptance_invariants(results: Sequence[Mapping[str, Any]]) -> list
 
 
 async def run_acceptance_benchmark(profile: BenchmarkProfile, *, probe_loop_lag: bool) -> dict[str, Any]:
-    """Run the deterministic runtime, media, reconnect, memory, and scheduling acceptance set."""
+    """Run the deterministic runtime, media, reconnect, memory, and scheduling set.
+
+    Args:
+        profile: Resolved workload dimensions and sampling counts.
+        probe_loop_lag: Enable the in-process loop-lag observer while workloads
+            run; it affects measurement overhead but not acceptance invariants.
+
+    Returns:
+        A standard benchmark report containing individual result mappings,
+        deterministic invariant failures, aggregate cases per second, RSS, and
+        optional loop-lag observations. The report is returned even if a workload
+        raises; that exception is represented in ``failures``.
+
+    Notes:
+        This owns local fake-server and client lifecycles. It intentionally
+        measures deterministic acceptance boundaries rather than live service
+        acceptance.
+    """
     started = time.perf_counter()
     probe = LoopLagProbe(interval_s=0.005, stall_threshold_s=0.005) if probe_loop_lag else None
     if probe is not None:
@@ -295,6 +406,11 @@ async def run_acceptance_benchmark(profile: BenchmarkProfile, *, probe_loop_lag:
 
 
 async def _generic_tl_roundtrip(count: int) -> int:
+    """Serialize once and repeatedly decode one generic TL request into a checksum.
+
+    Args:
+        count: Number of decode iterations in the deterministic sample.
+    """
     request = functions.HelpGetNearestDc()
     encoded = request.serialize()
     checksum = 0
@@ -307,11 +423,17 @@ async def _generic_tl_roundtrip(count: int) -> int:
 
 
 async def _pending_rpc_burst(count: int) -> dict[str, int]:
+    """Reserve all configured pending slots concurrently and verify they drain.
+
+    Args:
+        count: Pending-RPC capacity and number of concurrent reservations.
+    """
     sender = _benchmark_sender(max_pending_rpcs=count)
     gate = asyncio.Event()
     peak = 0
 
     async def hold() -> None:
+        """Hold one sender capacity reservation until the shared gate opens."""
         nonlocal peak
         sender._reserve_pending_slot()
         peak = max(peak, sender.sender_state.pending_count)
@@ -328,6 +450,12 @@ async def _pending_rpc_burst(count: int) -> dict[str, int]:
 
 
 async def _iterator_backpressure(payload: bytes, part_size: int) -> dict[str, Any]:
+    """Measure the deterministic two-part iterator prefetch window before close.
+
+    Args:
+        payload: Deterministic file bytes served by the fixture.
+        part_size: Requested and maximum download part size in bytes.
+    """
     invoker = _BackpressureInvoker(payload)
     location = types.InputDocumentFileLocation(id=1, access_hash=2, file_reference=b"bench", thumb_size="")
     started = time.perf_counter()
@@ -360,6 +488,12 @@ async def _iterator_backpressure(payload: bytes, part_size: int) -> dict[str, An
 
 
 async def _reconnect_transfer_cancel_soak(cycles: int, part_size: int) -> dict[str, Any]:
+    """Repeat deterministic reconnect-plus-download-cancellation cycles with RSS sampling.
+
+    Args:
+        cycles: Number of fixture reconnect/cancellation iterations.
+        part_size: Download part size in bytes for every iteration.
+    """
     rss_start = process_rss_bytes()
     rss_peak = rss_start
     objects_start = len(gc.get_objects())
@@ -395,11 +529,22 @@ async def _reconnect_transfer_cancel_soak(cycles: int, part_size: int) -> dict[s
 
 
 async def _reconnect_transfer_cancel_cycle(cycle: int, part_size: int) -> dict[str, int]:
+    """Force one first-request disconnect, then cancel a blocked later download part.
+
+    Args:
+        cycle: Zero-based iteration used to vary deterministic payload and IDs.
+        part_size: Download part size in bytes.
+    """
     payload = bytes([cycle % 251]) * (part_size * 4)
     later_started = asyncio.Event()
     release = asyncio.Event()
 
     async def handle(message: DecodedEncryptedMessage) -> object | None:
+        """Serve fixture discovery/download requests and block only later file offsets.
+
+        Args:
+            message: Decrypted client request envelope from the fake server.
+        """
         if message.seq_no % 2 == 0:
             return None
         request = _decode_innermost_request(message)
@@ -462,6 +607,11 @@ async def _reconnect_transfer_cancel_cycle(cycle: int, part_size: int) -> dict[s
 
 
 def _decode_innermost_request(message: DecodedEncryptedMessage) -> object:
+    """Decode a request leaf and unwrap standard layer/connection wrappers.
+
+    Args:
+        message: Decrypted request envelope to decode.
+    """
     request, offset = decode_object(message.body)
     if offset != len(message.body):
         raise ValueError("soak request has trailing TL bytes")
@@ -471,6 +621,11 @@ def _decode_innermost_request(message: DecodedEncryptedMessage) -> object:
 
 
 def _fake_server_storage(server: FakeMTProtoServer) -> InMemorySessionStorage:
+    """Build in-memory session data pointed at one started deterministic fake.
+
+    Args:
+        server: Started fake server supplying the local endpoint.
+    """
     endpoint = server.endpoint
     return InMemorySessionStorage(
         SessionRecord(
@@ -489,6 +644,15 @@ async def _measured_result[T](
     samples: int,
     details: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
+    """Warm, time, and summarize one awaitable operation without changing its workload.
+
+    Args:
+        name: Stable benchmark result name.
+        operation: Zero-argument awaitable operation to warm and sample.
+        warmup: Untimed operation invocations before samples.
+        samples: Timed operation invocations to collect.
+        details: Optional deterministic result fields merged into the sample mapping.
+    """
     for _ in range(warmup):
         await operation()
     durations_ms: list[float] = []
@@ -510,6 +674,15 @@ async def _measured_result[T](
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Run the selected deterministic suite, optionally write JSON, and return CI status.
+
+    Args:
+        argv: Optional benchmark CLI arguments; ``None`` uses process arguments.
+
+    Returns:
+        ``0`` when no local acceptance invariants or workload errors are
+        reported, otherwise ``1``. It never starts a live Telegram benchmark.
+    """
     args = parse_args(argv)
     profile = resolve_profile(args)
     report = asyncio.run(run_acceptance_benchmark(profile, probe_loop_lag=args.loop_lag))

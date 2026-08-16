@@ -1,3 +1,5 @@
+"""Public TL primitive and object codec APIs."""
+
 from miniproto.tl.codec import (
     BOOL_FALSE_ID,
     BOOL_TRUE_ID,

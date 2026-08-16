@@ -1,3 +1,5 @@
+"""Update-stream management, persistent cursors, duplicate tracking, and handler registration."""
+
 from __future__ import annotations
 
 from miniproto.updates.manager import UpdateHandler, UpdateInvoker, UpdateManager, UpdateQueueOverflowPolicy

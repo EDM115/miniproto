@@ -1,0 +1,22 @@
+---
+title: "Telegram result family: InputClientProxy"
+description: "Layer 228 result-family index for 1 canonical constructors returning InputClientProxy from tdlib."
+generated: true
+editUrl: false
+language: "telegram"
+kind: "index"
+qualified_name: "telegram.types.result.InputClientProxy"
+source_path: "tools/schema/schema.json"
+source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
+namespace: "results"
+layer: 228
+schema_source: "tdlib"
+---
+
+## Layer 228 result family `InputClientProxy`
+
+Selected canonical constructors in this family: 1.
+
+## Constructors
+
+- [`inputClientProxy`](/reference/telegram/types/base/input-client-proxy/): `InputClientProxy`

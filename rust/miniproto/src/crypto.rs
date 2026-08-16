@@ -1,3 +1,11 @@
+//! Native cryptographic primitives used by MTProto and its Python fallback-compatible API.
+//!
+//! Each `#[pyfunction]` is exported under its Rust name in `miniproto._native`.  Byte-heavy
+//! wrappers conditionally release the GIL, while `*_raw` functions are Rust-only building blocks
+//! that never require it. PyO3 rejects incompatible Python argument conversion first, preserving
+//! its `TypeError`, `OverflowError`, or source exception; algorithm and byte-shape validation in
+//! this module intentionally return Python `ValueError`. No caller-facing unsafe API is exposed.
+
 use aes::Aes256;
 use aes_gcm::aead::consts::U12;
 use aes_gcm::aead::{Aead, KeyInit, Payload};
@@ -12,11 +20,27 @@ use scrypt::{Params as ScryptParams, scrypt};
 use sha1::Sha1;
 use sha2::{Digest, Sha256};
 
+/// AES's fixed block size in bytes.
 pub(crate) const AES_BLOCK_SIZE: usize = 16;
+/// Required byte length of an MTProto authorization key.
 pub(crate) const MT_PROTO_AUTH_KEY_SIZE: usize = 256;
+/// Required byte length of an MTProto 2.0 message key.
 pub(crate) const MT_PROTO_MSG_KEY_SIZE: usize = 16;
+/// Work-size threshold above which native wrappers detach from the Python GIL.
 pub(crate) const GIL_RELEASE_THRESHOLD_BYTES: usize = 4 * 1024;
 
+/// Runs `f` without the GIL when its input work estimate exceeds the native threshold.
+///
+/// `work_bytes` is an estimate used solely for GIL scheduling; `f` must satisfy PyO3's `Ungil`
+/// requirements.  This helper preserves synchronous results and does not itself allocate.
+///
+/// # Arguments
+///
+/// - `T`: The GIL-independent result type returned by `f`.
+/// - `F`: The one-shot GIL-independent closure performing the native operation.
+/// - `py`: The acquired GIL token that can detach `f`.
+/// - `work_bytes`: Conservative byte-work estimate compared with the detach threshold.
+/// - `f`: The native computation to run attached or detached.
 pub(crate) fn detach_if_large<T, F>(py: Python<'_>, work_bytes: usize, f: F) -> T
 where
     T: Ungil,
@@ -29,6 +53,13 @@ where
     }
 }
 
+/// Registers this module's fallback-compatible Python callables on `miniproto._native`.
+///
+/// Returns a PyO3 exception if a callable cannot be added to `m`.
+///
+/// # Arguments
+///
+/// - `m`: The Python extension module receiving the crypto callables.
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(native_available, m)?)?;
     m.add_function(wrap_pyfunction!(sha1_digest, m)?)?;
@@ -51,26 +82,62 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
+/// Implements Python `native_available`, which always returns `true` while this compiled callable
+/// is importable. Python fallback selection happens before this function can be called.
 #[pyfunction]
 fn native_available() -> bool {
     true
 }
 
+/// Computes Python `sha1_digest(data)` and returns the 20-byte SHA-1 digest.
+///
+/// Large inputs are hashed with the GIL released.
+///
+/// # Arguments
+///
+/// - `py`: The acquired GIL token used to detach a large hash operation.
+/// - `data`: Bytes to hash.
 #[pyfunction]
 fn sha1_digest(py: Python<'_>, data: Vec<u8>) -> Vec<u8> {
     detach_if_large(py, data.len(), || sha1_digest_raw(&data))
 }
 
+/// Computes Python `sha256_digest(data)` and returns the 32-byte SHA-256 digest.
+///
+/// Large inputs are hashed with the GIL released.
+///
+/// # Arguments
+///
+/// - `py`: The acquired GIL token used to detach a large hash operation.
+/// - `data`: Bytes to hash.
 #[pyfunction]
 fn sha256_digest(py: Python<'_>, data: Vec<u8>) -> Vec<u8> {
     detach_if_large(py, data.len(), || sha256_digest_raw(&data))
 }
 
+/// Computes Python `mtproto_auth_key_id(auth_key)` from a validated 256-byte key.
+///
+/// Returns `ValueError` when `auth_key` has the wrong length.
+///
+/// # Arguments
+///
+/// - `auth_key`: The 256-byte MTProto authorization key.
 #[pyfunction]
 fn mtproto_auth_key_id(auth_key: &[u8]) -> PyResult<Vec<u8>> {
     mtproto_auth_key_id_raw(auth_key)
 }
 
+/// Computes Python `mtproto_message_key` for padded plaintext and one MTProto direction.
+///
+/// Returns a 16-byte message key; rejects an invalid authorization key and releases the GIL for
+/// large inputs.
+///
+/// # Arguments
+///
+/// - `py`: The acquired GIL token used to detach a large hash operation.
+/// - `auth_key`: The 256-byte MTProto authorization key.
+/// - `plaintext_with_padding`: Block-aligned inner plaintext that contributes to the message key.
+/// - `client_to_server`: Selects the directional MTProto key offset.
 #[pyfunction]
 fn mtproto_message_key(
     py: Python<'_>,
@@ -89,6 +156,18 @@ fn mtproto_message_key(
     })
 }
 
+/// Derives the AES-256 key and IV used by Python `mtproto_derive_aes_key_iv`.
+///
+/// Returns `(key, iv)` and validates both fixed-width inputs. Valid inputs total 272 bytes
+/// (`auth_key` 256 plus `msg_key` 16), so this wrapper never exceeds the detach threshold and
+/// performs the derivation while holding the GIL.
+///
+/// # Arguments
+///
+/// - `py`: The acquired GIL token retained by this bounded-size operation.
+/// - `auth_key`: The 256-byte MTProto authorization key.
+/// - `msg_key`: The 16-byte MTProto message key.
+/// - `client_to_server`: Selects the directional MTProto key offset.
 #[pyfunction]
 fn mtproto_derive_aes_key_iv(
     py: Python<'_>,
@@ -108,6 +187,17 @@ fn mtproto_derive_aes_key_iv(
     })
 }
 
+/// Encrypts padded MTProto plaintext for Python `mtproto_encrypt_payload`.
+///
+/// Returns `(auth_key_id, msg_key, ciphertext)` or `ValueError` for invalid key or block input;
+/// large work runs without the GIL.
+///
+/// # Arguments
+///
+/// - `py`: The acquired GIL token used to detach large encryption work.
+/// - `auth_key`: The 256-byte MTProto authorization key.
+/// - `plaintext_with_padding`: AES-block-aligned inner plaintext to encrypt.
+/// - `client_to_server`: Selects the directional MTProto key schedule.
 #[pyfunction]
 fn mtproto_encrypt_payload(
     py: Python<'_>,
@@ -121,6 +211,18 @@ fn mtproto_encrypt_payload(
     })
 }
 
+/// Decrypts and verifies Python `mtproto_decrypt_payload` ciphertext.
+///
+/// Returns padded plaintext or `ValueError` for invalid lengths, key material, or message-key
+/// verification; large work runs without the GIL.
+///
+/// # Arguments
+///
+/// - `py`: The acquired GIL token used to detach large decryption work.
+/// - `auth_key`: The 256-byte MTProto authorization key.
+/// - `msg_key`: The 16-byte message key to verify.
+/// - `ciphertext`: AES-IGE ciphertext whose length must be an AES-block multiple.
+/// - `client_to_server`: Selects the directional MTProto key schedule.
 #[pyfunction]
 fn mtproto_decrypt_payload(
     py: Python<'_>,
@@ -135,11 +237,30 @@ fn mtproto_decrypt_payload(
     })
 }
 
+/// Returns the bytewise exclusive-or of Python `xor_bytes(left, right)` inputs.
+///
+/// Returns `ValueError` unless both inputs have equal length.
+///
+/// # Arguments
+///
+/// - `left`: First equal-length byte sequence.
+/// - `right`: Second equal-length byte sequence.
 #[pyfunction]
 fn xor_bytes(left: &[u8], right: &[u8]) -> PyResult<Vec<u8>> {
     xor_bytes_raw(left, right)
 }
 
+/// Encrypts block-aligned bytes with Python `aes_256_ige_encrypt`.
+///
+/// Requires a 32-byte key and IV; returns `ValueError` for invalid lengths and releases the GIL
+/// for large plaintexts.
+///
+/// # Arguments
+///
+/// - `py`: The acquired GIL token used to detach large encryption work.
+/// - `plaintext`: AES-block-aligned bytes to encrypt.
+/// - `key`: The 32-byte AES-256 key.
+/// - `iv`: The 32-byte AES-IGE initialization vector.
 #[pyfunction]
 fn aes_256_ige_encrypt(
     py: Python<'_>,
@@ -153,6 +274,17 @@ fn aes_256_ige_encrypt(
     })
 }
 
+/// Decrypts block-aligned bytes with Python `aes_256_ige_decrypt`.
+///
+/// Requires a 32-byte key and IV; returns `ValueError` for invalid lengths and releases the GIL
+/// for large ciphertexts.
+///
+/// # Arguments
+///
+/// - `py`: The acquired GIL token used to detach large decryption work.
+/// - `ciphertext`: AES-block-aligned bytes to decrypt.
+/// - `key`: The 32-byte AES-256 key.
+/// - `iv`: The 32-byte AES-IGE initialization vector.
 #[pyfunction]
 fn aes_256_ige_decrypt(
     py: Python<'_>,
@@ -166,6 +298,17 @@ fn aes_256_ige_decrypt(
     })
 }
 
+/// Encrypts block-aligned bytes with Python `aes_256_cbc_encrypt` without padding.
+///
+/// Requires 32-byte key and 16-byte IV inputs; invalid lengths become `ValueError` and large
+/// plaintexts release the GIL.
+///
+/// # Arguments
+///
+/// - `py`: The acquired GIL token used to detach large encryption work.
+/// - `plaintext`: AES-block-aligned bytes to encrypt.
+/// - `key`: The 32-byte AES-256 key.
+/// - `iv`: The 16-byte CBC initialization vector.
 #[pyfunction]
 fn aes_256_cbc_encrypt(
     py: Python<'_>,
@@ -179,6 +322,17 @@ fn aes_256_cbc_encrypt(
     })
 }
 
+/// Decrypts block-aligned bytes with Python `aes_256_cbc_decrypt` without padding.
+///
+/// Requires 32-byte key and 16-byte IV inputs; invalid lengths become `ValueError` and large
+/// ciphertexts release the GIL.
+///
+/// # Arguments
+///
+/// - `py`: The acquired GIL token used to detach large decryption work.
+/// - `ciphertext`: AES-block-aligned bytes to decrypt.
+/// - `key`: The 32-byte AES-256 key.
+/// - `iv`: The 16-byte CBC initialization vector.
 #[pyfunction]
 fn aes_256_cbc_decrypt(
     py: Python<'_>,
@@ -192,6 +346,17 @@ fn aes_256_cbc_decrypt(
     })
 }
 
+/// Applies Python `aes_256_ctr_crypt` to data using AES-CTR keystream XOR.
+///
+/// The same routine encrypts and decrypts; it validates the 32-byte key and 16-byte counter IV,
+/// and releases the GIL for large data.
+///
+/// # Arguments
+///
+/// - `py`: The acquired GIL token used to detach large counter-mode work.
+/// - `data`: Bytes to encrypt or decrypt.
+/// - `key`: The 32-byte AES-256 key.
+/// - `iv`: The 16-byte initial counter block.
 #[pyfunction]
 fn aes_256_ctr_crypt(
     py: Python<'_>,
@@ -205,6 +370,18 @@ fn aes_256_ctr_crypt(
     })
 }
 
+/// Authenticated-encrypts Python `aes_256_gcm_encrypt` plaintext and associated data.
+///
+/// Returns ciphertext followed by its GCM tag, or `ValueError` for a bad 32-byte key, 12-byte
+/// nonce, or encryption failure; large work releases the GIL.
+///
+/// # Arguments
+///
+/// - `py`: The acquired GIL token used to detach large authenticated-encryption work.
+/// - `plaintext`: Bytes to encrypt.
+/// - `key`: The 32-byte AES-256 key.
+/// - `nonce`: The 12-byte GCM nonce.
+/// - `associated_data`: Authenticated bytes that are not encrypted.
 #[pyfunction]
 fn aes_256_gcm_encrypt(
     py: Python<'_>,
@@ -219,6 +396,18 @@ fn aes_256_gcm_encrypt(
     })
 }
 
+/// Authenticated-decrypts Python `aes_256_gcm_decrypt` ciphertext-and-tag bytes.
+///
+/// Returns plaintext or `ValueError` for invalid key/nonce material or authentication failure;
+/// large work releases the GIL.
+///
+/// # Arguments
+///
+/// - `py`: The acquired GIL token used to detach large authenticated-decryption work.
+/// - `ciphertext_and_tag`: GCM ciphertext followed by its authentication tag.
+/// - `key`: The 32-byte AES-256 key.
+/// - `nonce`: The 12-byte GCM nonce.
+/// - `associated_data`: Authenticated bytes that are not encrypted.
 #[pyfunction]
 fn aes_256_gcm_decrypt(
     py: Python<'_>,
@@ -233,6 +422,21 @@ fn aes_256_gcm_decrypt(
     })
 }
 
+/// Derives Python `scrypt_derive` bytes from password, salt, and scrypt cost parameters.
+///
+/// `n` must be a power of two above one and `length` is limited to 1..=1024; invalid parameters
+/// return `ValueError`. The GIL is released only when `n * r > 4096`, the exact `work_bytes`
+/// condition supplied to `detach_if_large`; it remains held at or below that threshold.
+///
+/// # Arguments
+///
+/// - `py`: The acquired GIL token used to detach only sufficiently large scrypt work.
+/// - `password`: Password bytes accepted by scrypt.
+/// - `salt`: Salt bytes accepted by scrypt.
+/// - `n`: CPU/memory cost, required to be a power of two greater than one.
+/// - `r`: scrypt block-size cost parameter.
+/// - `p`: scrypt parallelization cost parameter.
+/// - `length`: Requested derived-key length in the inclusive range 1..=1024.
 #[pyfunction]
 fn scrypt_derive(
     py: Python<'_>,
@@ -251,25 +455,61 @@ fn scrypt_derive(
     })
 }
 
+/// Factorizes Python `pq_factorize(pq)` into ordered nontrivial `u64` factors.
+///
+/// Returns `ValueError` for non-composite values and runs the potentially expensive search with
+/// the GIL released.
+///
+/// # Arguments
+///
+/// - `py`: The acquired GIL token used to detach the factorization search.
+/// - `pq`: Composite MTProto handshake value to split into ordered factors.
 #[pyfunction]
 fn pq_factorize(py: Python<'_>, pq: u64) -> PyResult<(u64, u64)> {
     detach_if_large(py, 8 * 1024, move || pq_factorize_raw(pq))
 }
 
+/// Computes SHA-1 for Rust callers without Python or GIL interaction.
+///
+/// # Arguments
+///
+/// - `data`: Bytes to hash.
 pub(crate) fn sha1_digest_raw(data: &[u8]) -> Vec<u8> {
     Sha1::digest(data).to_vec()
 }
 
+/// Computes SHA-256 for Rust callers without Python or GIL interaction.
+///
+/// # Arguments
+///
+/// - `data`: Bytes to hash.
 pub(crate) fn sha256_digest_raw(data: &[u8]) -> Vec<u8> {
     Sha256::digest(data).to_vec()
 }
 
+/// Derives the trailing eight SHA-1 bytes that identify a validated MTProto authorization key.
+///
+/// Returns `ValueError` if the key is not exactly 256 bytes; does not acquire the GIL.
+///
+/// # Arguments
+///
+/// - `auth_key`: Authorization key whose SHA-1 tail supplies the identifier.
 pub(crate) fn mtproto_auth_key_id_raw(auth_key: &[u8]) -> PyResult<Vec<u8>> {
     validate_auth_key(auth_key)?;
     let digest = Sha1::digest(auth_key);
     Ok(digest[12..20].to_vec())
 }
 
+/// Derives an MTProto 2.0 message key from a validated authorization key and padded plaintext.
+///
+/// Callers must validate the authorization-key length before use because this internal primitive
+/// slices its fixed protocol ranges directly.
+///
+/// # Arguments
+///
+/// - `auth_key`: Previously validated 256-byte authorization key.
+/// - `plaintext_with_padding`: Padded inner plaintext to include in the SHA-256 derivation.
+/// - `client_to_server`: Selects the directional key offset.
 pub(crate) fn mtproto_message_key_raw(
     auth_key: &[u8],
     plaintext_with_padding: &[u8],
@@ -283,6 +523,15 @@ pub(crate) fn mtproto_message_key_raw(
     digest[8..24].to_vec()
 }
 
+/// Derives the MTProto 2.0 AES-IGE key and IV from validated fixed-width key material.
+///
+/// Callers must validate `auth_key` and `msg_key` before calling; the function has no GIL use.
+///
+/// # Arguments
+///
+/// - `auth_key`: Previously validated 256-byte authorization key.
+/// - `msg_key`: Previously validated 16-byte message key.
+/// - `client_to_server`: Selects the directional key offset.
 pub(crate) fn mtproto_derive_aes_key_iv_raw(
     auth_key: &[u8],
     msg_key: &[u8],
@@ -311,6 +560,15 @@ pub(crate) fn mtproto_derive_aes_key_iv_raw(
     (aes_key, aes_iv)
 }
 
+/// Produces the auth-key identifier, message key, and AES-IGE ciphertext for padded plaintext.
+///
+/// Returns `ValueError` for malformed keys or non-block-aligned plaintext; no GIL interaction.
+///
+/// # Arguments
+///
+/// - `auth_key`: 256-byte authorization key used for id, message key, and AES derivation.
+/// - `plaintext_with_padding`: AES-block-aligned inner plaintext to encrypt.
+/// - `client_to_server`: Selects the directional MTProto key schedule.
 pub(crate) fn mtproto_encrypt_payload_raw(
     auth_key: &[u8],
     plaintext_with_padding: &[u8],
@@ -325,6 +583,16 @@ pub(crate) fn mtproto_encrypt_payload_raw(
     Ok((auth_key_id, msg_key, ciphertext))
 }
 
+/// Decrypts and authenticates an MTProto payload using validated directional key derivation.
+///
+/// Returns `ValueError` for malformed inputs or a message-key mismatch; no GIL interaction.
+///
+/// # Arguments
+///
+/// - `auth_key`: 256-byte authorization key used for directional AES derivation.
+/// - `msg_key`: 16-byte message key expected after decryption.
+/// - `ciphertext`: AES-block-aligned encrypted payload.
+/// - `client_to_server`: Selects the directional MTProto key schedule.
 pub(crate) fn mtproto_decrypt_payload_raw(
     auth_key: &[u8],
     msg_key: &[u8],
@@ -344,6 +612,14 @@ pub(crate) fn mtproto_decrypt_payload_raw(
     Ok(plaintext_with_padding)
 }
 
+/// Computes bytewise XOR for equal-length Rust byte slices.
+///
+/// Returns `ValueError` for unequal lengths and does not use the GIL.
+///
+/// # Arguments
+///
+/// - `left`: First equal-length byte slice.
+/// - `right`: Second equal-length byte slice.
 pub(crate) fn xor_bytes_raw(left: &[u8], right: &[u8]) -> PyResult<Vec<u8>> {
     if left.len() != right.len() {
         return Err(PyValueError::new_err(
@@ -353,6 +629,15 @@ pub(crate) fn xor_bytes_raw(left: &[u8], right: &[u8]) -> PyResult<Vec<u8>> {
     Ok(left.iter().zip(right.iter()).map(|(a, b)| a ^ b).collect())
 }
 
+/// Encrypts a block-aligned byte slice using AES-256 IGE for Rust callers.
+///
+/// Returns `ValueError` unless the key, IV, and plaintext lengths meet AES-IGE requirements.
+///
+/// # Arguments
+///
+/// - `plaintext`: AES-block-aligned bytes to encrypt.
+/// - `key`: The 32-byte AES-256 key.
+/// - `iv`: The 32-byte AES-IGE initialization vector.
 pub(crate) fn aes_256_ige_encrypt_raw(
     plaintext: &[u8],
     key: &[u8],
@@ -382,6 +667,15 @@ pub(crate) fn aes_256_ige_encrypt_raw(
     Ok(output)
 }
 
+/// Decrypts a block-aligned AES-256 IGE ciphertext for Rust callers.
+///
+/// Returns `ValueError` unless the key, IV, and ciphertext lengths meet AES-IGE requirements.
+///
+/// # Arguments
+///
+/// - `ciphertext`: AES-block-aligned bytes to decrypt.
+/// - `key`: The 32-byte AES-256 key.
+/// - `iv`: The 32-byte AES-IGE initialization vector.
 pub(crate) fn aes_256_ige_decrypt_raw(
     ciphertext: &[u8],
     key: &[u8],
@@ -411,6 +705,15 @@ pub(crate) fn aes_256_ige_decrypt_raw(
     Ok(output)
 }
 
+/// Encrypts a block-aligned byte slice with unpadded AES-256 CBC.
+///
+/// Returns `ValueError` unless the key, IV, and plaintext lengths are valid.
+///
+/// # Arguments
+///
+/// - `plaintext`: AES-block-aligned bytes to encrypt.
+/// - `key`: The 32-byte AES-256 key.
+/// - `iv`: The 16-byte CBC initialization vector.
 pub(crate) fn aes_256_cbc_encrypt_raw(
     plaintext: &[u8],
     key: &[u8],
@@ -433,6 +736,15 @@ pub(crate) fn aes_256_cbc_encrypt_raw(
     Ok(output)
 }
 
+/// Decrypts a block-aligned unpadded AES-256 CBC ciphertext.
+///
+/// Returns `ValueError` unless the key, IV, and ciphertext lengths are valid.
+///
+/// # Arguments
+///
+/// - `ciphertext`: AES-block-aligned bytes to decrypt.
+/// - `key`: The 32-byte AES-256 key.
+/// - `iv`: The 16-byte CBC initialization vector.
 pub(crate) fn aes_256_cbc_decrypt_raw(
     ciphertext: &[u8],
     key: &[u8],
@@ -456,6 +768,15 @@ pub(crate) fn aes_256_cbc_decrypt_raw(
     Ok(output)
 }
 
+/// XORs bytes with an AES-256 CTR keystream; the same operation encrypts and decrypts.
+///
+/// Returns `ValueError` unless `key` is 32 bytes and `iv` is one AES block.
+///
+/// # Arguments
+///
+/// - `data`: Bytes to XOR with the generated CTR keystream.
+/// - `key`: The 32-byte AES-256 key.
+/// - `iv`: The 16-byte initial counter block.
 pub(crate) fn aes_256_ctr_crypt_raw(data: &[u8], key: &[u8], iv: &[u8]) -> PyResult<Vec<u8>> {
     validate_aes_key(key)?;
     validate_cbc_ctr_iv(iv)?;
@@ -472,6 +793,16 @@ pub(crate) fn aes_256_ctr_crypt_raw(data: &[u8], key: &[u8], iv: &[u8]) -> PyRes
     Ok(output)
 }
 
+/// Authenticated-encrypts plaintext with AES-256 GCM and returns ciphertext plus tag.
+///
+/// Returns `ValueError` for an invalid key or nonce or if the cipher rejects the operation.
+///
+/// # Arguments
+///
+/// - `plaintext`: Bytes to encrypt.
+/// - `key`: The 32-byte AES-256 key.
+/// - `nonce`: The 12-byte GCM nonce.
+/// - `associated_data`: Authenticated bytes that are not encrypted.
 pub(crate) fn aes_256_gcm_encrypt_raw(
     plaintext: &[u8],
     key: &[u8],
@@ -495,6 +826,16 @@ pub(crate) fn aes_256_gcm_encrypt_raw(
         .map_err(|_| PyValueError::new_err("AES-GCM encryption failed"))
 }
 
+/// Authenticated-decrypts AES-256 GCM ciphertext-and-tag data.
+///
+/// Returns `ValueError` for invalid key/nonce material or a failed authentication check.
+///
+/// # Arguments
+///
+/// - `ciphertext_and_tag`: GCM ciphertext followed by its authentication tag.
+/// - `key`: The 32-byte AES-256 key.
+/// - `nonce`: The 12-byte GCM nonce.
+/// - `associated_data`: Authenticated bytes that are not encrypted.
 pub(crate) fn aes_256_gcm_decrypt_raw(
     ciphertext_and_tag: &[u8],
     key: &[u8],
@@ -518,6 +859,19 @@ pub(crate) fn aes_256_gcm_decrypt_raw(
         .map_err(|_| PyValueError::new_err("AES-GCM authentication failed"))
 }
 
+/// Runs scrypt with validated protocol-level output limits for Rust callers.
+///
+/// Returns `ValueError` for invalid cost parameters, an unsupported output length, or derivation
+/// failure.  This is a synchronous, GIL-free primitive.
+///
+/// # Arguments
+///
+/// - `password`: Password bytes accepted by scrypt.
+/// - `salt`: Salt bytes accepted by scrypt.
+/// - `n`: CPU/memory cost, required to be a power of two greater than one.
+/// - `r`: scrypt block-size cost parameter.
+/// - `p`: scrypt parallelization cost parameter.
+/// - `length`: Requested derived-key length in the inclusive range 1..=1024.
 pub(crate) fn scrypt_derive_raw(
     password: &[u8],
     salt: &[u8],
@@ -546,6 +900,13 @@ pub(crate) fn scrypt_derive_raw(
     Ok(output)
 }
 
+/// Finds and orders the two nontrivial factors of an MTProto `pq` value.
+///
+/// Returns `ValueError` for values below four or values that are not composite.
+///
+/// # Arguments
+///
+/// - `pq`: Candidate composite integer to split into its two ordered factors.
 fn pq_factorize_raw(pq: u64) -> PyResult<(u64, u64)> {
     if pq < 4 {
         return Err(PyValueError::new_err("pq must be a composite integer >= 4"));
@@ -562,6 +923,13 @@ fn pq_factorize_raw(pq: u64) -> PyResult<(u64, u64)> {
     })
 }
 
+/// Validates the fixed 256-byte MTProto authorization-key width.
+///
+/// Returns `ValueError` rather than allowing fixed-offset protocol code to panic.
+///
+/// # Arguments
+///
+/// - `auth_key`: Candidate authorization key expected to contain 256 bytes.
 pub(crate) fn validate_auth_key(auth_key: &[u8]) -> PyResult<()> {
     if auth_key.len() != MT_PROTO_AUTH_KEY_SIZE {
         return Err(PyValueError::new_err("MTProto auth_key must be 256 bytes"));
@@ -569,6 +937,13 @@ pub(crate) fn validate_auth_key(auth_key: &[u8]) -> PyResult<()> {
     Ok(())
 }
 
+/// Validates the fixed 16-byte MTProto message-key width.
+///
+/// Returns `ValueError` on a malformed input slice.
+///
+/// # Arguments
+///
+/// - `msg_key`: Candidate message key expected to contain 16 bytes.
 pub(crate) fn validate_msg_key(msg_key: &[u8]) -> PyResult<()> {
     if msg_key.len() != MT_PROTO_MSG_KEY_SIZE {
         return Err(PyValueError::new_err("MTProto msg_key must be 16 bytes"));
@@ -576,6 +951,13 @@ pub(crate) fn validate_msg_key(msg_key: &[u8]) -> PyResult<()> {
     Ok(())
 }
 
+/// Validates that AES block-mode input has a whole-number count of AES blocks.
+///
+/// Returns `ValueError` when the byte length is not divisible by 16.
+///
+/// # Arguments
+///
+/// - `data`: Candidate AES block-mode input.
 pub(crate) fn validate_block_multiple(data: &[u8]) -> PyResult<()> {
     if !data.len().is_multiple_of(AES_BLOCK_SIZE) {
         return Err(PyValueError::new_err(
@@ -585,6 +967,11 @@ pub(crate) fn validate_block_multiple(data: &[u8]) -> PyResult<()> {
     Ok(())
 }
 
+/// Validates a 32-byte AES-256 key and returns `ValueError` otherwise.
+///
+/// # Arguments
+///
+/// - `key`: Candidate AES-256 key.
 fn validate_aes_key(key: &[u8]) -> PyResult<()> {
     if key.len() != 32 {
         return Err(PyValueError::new_err("AES-256 key must be 32 bytes"));
@@ -592,6 +979,11 @@ fn validate_aes_key(key: &[u8]) -> PyResult<()> {
     Ok(())
 }
 
+/// Validates the two-block, 32-byte IV required by AES-IGE.
+///
+/// # Arguments
+///
+/// - `iv`: Candidate AES-IGE initialization vector.
 fn validate_ige_iv(iv: &[u8]) -> PyResult<()> {
     if iv.len() != 32 {
         return Err(PyValueError::new_err("AES-IGE IV must be 32 bytes"));
@@ -599,6 +991,11 @@ fn validate_ige_iv(iv: &[u8]) -> PyResult<()> {
     Ok(())
 }
 
+/// Validates the one-block IV or counter used by CBC and CTR modes.
+///
+/// # Arguments
+///
+/// - `iv`: Candidate CBC initialization vector or CTR counter block.
 fn validate_cbc_ctr_iv(iv: &[u8]) -> PyResult<()> {
     if iv.len() != AES_BLOCK_SIZE {
         return Err(PyValueError::new_err("AES IV must be 16 bytes"));
@@ -606,6 +1003,11 @@ fn validate_cbc_ctr_iv(iv: &[u8]) -> PyResult<()> {
     Ok(())
 }
 
+/// Validates the 12-byte nonce mandated by this AES-GCM interface.
+///
+/// # Arguments
+///
+/// - `nonce`: Candidate AES-GCM nonce.
 fn validate_gcm_nonce(nonce: &[u8]) -> PyResult<()> {
     if nonce.len() != 12 {
         return Err(PyValueError::new_err("AES-GCM nonce must be 12 bytes"));
@@ -613,10 +1015,21 @@ fn validate_gcm_nonce(nonce: &[u8]) -> PyResult<()> {
     Ok(())
 }
 
+/// Returns the MTProto key-schedule offset for the requested packet direction.
+///
+/// # Arguments
+///
+/// - `client_to_server`: Whether the packet travels from client to server.
 fn direction_offset(client_to_server: bool) -> usize {
     if client_to_server { 0 } else { 8 }
 }
 
+/// Computes a fixed-width XOR block used by the AES block-mode loops.
+///
+/// # Arguments
+///
+/// - `left`: First AES-sized block.
+/// - `right`: Second AES-sized block.
 fn xor_block(left: &[u8; AES_BLOCK_SIZE], right: &[u8; AES_BLOCK_SIZE]) -> [u8; AES_BLOCK_SIZE] {
     let mut output = [0_u8; AES_BLOCK_SIZE];
     for index in 0..AES_BLOCK_SIZE {
@@ -625,6 +1038,11 @@ fn xor_block(left: &[u8; AES_BLOCK_SIZE], right: &[u8; AES_BLOCK_SIZE]) -> [u8; 
     output
 }
 
+/// Advances a big-endian AES-CTR counter in place, wrapping at the full block width.
+///
+/// # Arguments
+///
+/// - `counter`: Mutable AES-sized counter block to increment.
 fn increment_counter(counter: &mut [u8; AES_BLOCK_SIZE]) {
     for byte in counter.iter_mut().rev() {
         let (next, carry) = byte.overflowing_add(1);
@@ -635,6 +1053,12 @@ fn increment_counter(counter: &mut [u8; AES_BLOCK_SIZE]) {
     }
 }
 
+/// Computes the greatest common divisor used by Pollard-rho factorization.
+///
+/// # Arguments
+///
+/// - `left`: First nonnegative integer.
+/// - `right`: Second nonnegative integer.
 fn gcd(mut left: u64, mut right: u64) -> u64 {
     while right != 0 {
         let remainder = left % right;
@@ -644,10 +1068,34 @@ fn gcd(mut left: u64, mut right: u64) -> u64 {
     left
 }
 
+/// Multiplies modulo `modulus` with a widened intermediate to avoid `u64` overflow.
+///
+/// # Panics
+///
+/// Panics if `modulus` is zero because the remainder operation is undefined. Callers must also
+/// pass a nonzero modulus; `u128` widening prevents multiplication overflow for all `u64` inputs.
+///
+/// # Arguments
+///
+/// - `left`: First modular multiplicand.
+/// - `right`: Second modular multiplicand.
+/// - `modulus`: Nonzero modulus used for the reduced product.
 fn mul_mod(left: u64, right: u64, modulus: u64) -> u64 {
     (((left as u128) * (right as u128)) % (modulus as u128)) as u64
 }
 
+/// Computes modular exponentiation for deterministic Miller-Rabin witnesses.
+///
+/// # Panics
+///
+/// Panics if `modulus` is zero because both reduction paths use remainder operations. Arithmetic
+/// overflow is avoided by delegating products to `mul_mod` with its widened intermediate.
+///
+/// # Arguments
+///
+/// - `base`: Base to exponentiate modulo `modulus`.
+/// - `exponent`: Nonnegative exponent encoded as `u64`.
+/// - `modulus`: Nonzero modulus used for every reduction.
 fn pow_mod(mut base: u64, mut exponent: u64, modulus: u64) -> u64 {
     let mut result = 1_u64;
     while exponent > 0 {
@@ -660,6 +1108,11 @@ fn pow_mod(mut base: u64, mut exponent: u64, modulus: u64) -> u64 {
     result
 }
 
+/// Deterministically tests whether a `u64` is prime using fixed Miller-Rabin witnesses.
+///
+/// # Arguments
+///
+/// - `value`: Unsigned integer to classify as prime or composite.
 fn is_prime_u64(value: u64) -> bool {
     if value < 2 {
         return false;
@@ -701,6 +1154,11 @@ fn is_prime_u64(value: u64) -> bool {
     true
 }
 
+/// Returns one factor of a composite `u64` using trial division and Pollard-rho iteration.
+///
+/// # Arguments
+///
+/// - `value`: Composite unsigned integer whose nontrivial factor is requested.
 fn factor_u64(value: u64) -> u64 {
     if value.is_multiple_of(2) {
         return 2;
@@ -731,11 +1189,13 @@ fn factor_u64(value: u64) -> u64 {
     }
 }
 
+/// Unit tests for native crypto primitives and stable interoperability vectors.
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
+    /// Locks down SHA and MTProto authorization-key identifier test vectors.
     fn sha_and_auth_key_outputs_are_stable() {
         assert_eq!(
             sha1_digest_raw(b"abc"),
@@ -759,6 +1219,7 @@ mod tests {
     }
 
     #[test]
+    /// Verifies AES-IGE round-trips a block-aligned fixture.
     fn aes_ige_roundtrips() {
         let plaintext = bytes_mod(64, 1);
         let key = bytes_mod(32, 2);
@@ -772,6 +1233,7 @@ mod tests {
     }
 
     #[test]
+    /// Verifies that applying AES-CTR twice with the same counter restores the input.
     fn aes_ctr_is_symmetric() {
         let plaintext = bytes_mod(65, 4);
         let key = bytes_mod(32, 5);
@@ -785,6 +1247,7 @@ mod tests {
     }
 
     #[test]
+    /// Locks down AES-GCM and scrypt interoperability vectors.
     fn aes_gcm_and_scrypt_match_stable_vectors() {
         let key = scrypt_derive_raw(b"password", b"NaCl", 16_384, 8, 1, 32).unwrap();
         assert_eq!(
@@ -801,6 +1264,7 @@ mod tests {
     }
 
     #[test]
+    /// Verifies native MTProto payload encryption and verified decryption round-trip.
     fn mtproto_payload_encrypt_decrypt_roundtrips() {
         let auth_key = auth_key();
         let plaintext = vec![0x58; 64];
@@ -814,6 +1278,7 @@ mod tests {
     }
 
     #[test]
+    /// Covers XOR validation and `pq` factorization helpers.
     fn xor_and_pq_helpers_work() {
         assert_eq!(
             xor_bytes_raw(&[0x0f, 0xf0], &[0xf0, 0x0f]).unwrap(),
@@ -825,16 +1290,28 @@ mod tests {
         );
     }
 
+    /// Returns the deterministic 256-byte authorization-key fixture.
     fn auth_key() -> Vec<u8> {
         (0..=255).collect()
     }
 
+    /// Builds a deterministic byte fixture with modular progression.
+    ///
+    /// # Arguments
+    ///
+    /// - `len`: Number of fixture bytes to produce.
+    /// - `multiplier`: Per-index multiplier before truncation to a byte.
     fn bytes_mod(len: usize, multiplier: u8) -> Vec<u8> {
         (0..len)
             .map(|index| (index as u8).wrapping_mul(multiplier))
             .collect()
     }
 
+    /// Formats fixture bytes as lowercase hexadecimal for stable-vector assertions.
+    ///
+    /// # Arguments
+    ///
+    /// - `value`: Fixture bytes to render.
     fn hex(value: &[u8]) -> String {
         value.iter().map(|byte| format!("{byte:02x}")).collect()
     }

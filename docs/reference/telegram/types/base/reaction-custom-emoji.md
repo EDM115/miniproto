@@ -1,0 +1,75 @@
+---
+title: "reactionCustomEmoji"
+description: "No description provided by the pinned schema."
+generated: true
+editUrl: false
+language: "telegram"
+kind: "type"
+qualified_name: "reactionCustomEmoji"
+source_path: "tools/schema/schema.json"
+source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
+namespace: "base"
+layer: 228
+schema_source: "tdlib"
+constructor_id: "0x8935fc73"
+---
+
+# `reactionCustomEmoji`
+
+No description provided by the pinned schema.
+
+## Signature
+
+```tl
+reactionCustomEmoji#8935fc73 document_id:long = Reaction;
+```
+
+## Result type
+
+`Reaction`
+
+## Parameters
+
+| Name | Type | Flag | Default | Description |
+| --- | --- | --- | --- | --- |
+| document_id | long | — | — | No description provided by the pinned schema. |
+
+## Python binding
+
+```python
+from miniproto.raw.types import ReactionCustomEmoji
+```
+
+Public access: `miniproto.raw.types.ReactionCustomEmoji`.
+
+## Safe usage shape
+
+```python
+from miniproto.raw.types import ReactionCustomEmoji
+
+# Naming the raw constructor class is local only; it performs no I/O or network request.
+constructor_type = ReactionCustomEmoji
+```
+
+## Result family
+
+[`Reaction`](/reference/telegram/types/results/reaction/)
+
+## Relationships
+
+- Result family: [`Reaction`](/reference/telegram/types/results/reaction/)
+- Related constructors: [`reactionEmoji`](/reference/telegram/types/base/reaction-emoji/), [`reactionEmpty`](/reference/telegram/types/base/reaction-empty/), [`reactionPaid`](/reference/telegram/types/base/reaction-paid/)
+- Accepted by: [`messages.getMessageReactionsList`](/reference/telegram/functions/messages/get-message-reactions-list/), [`messages.search`](/reference/telegram/functions/messages/search/), [`messages.sendReaction`](/reference/telegram/functions/messages/send-reaction/), [`messages.setDefaultReaction`](/reference/telegram/functions/messages/set-default-reaction/), [`messages.updateSavedReactionTag`](/reference/telegram/functions/messages/update-saved-reaction-tag/), [`stories.getStoryReactionsList`](/reference/telegram/functions/stories/get-story-reactions-list/), [`stories.sendReaction`](/reference/telegram/functions/stories/send-reaction/), [`chatReactionsSome`](/reference/telegram/types/base/chat-reactions-some/), [`config`](/reference/telegram/types/base/config/), [`mediaAreaSuggestedReaction`](/reference/telegram/types/base/media-area-suggested-reaction/), [`messagePeerReaction`](/reference/telegram/types/base/message-peer-reaction/), [`messages.reactions`](/reference/telegram/types/messages/reactions/), [`reactionCount`](/reference/telegram/types/base/reaction-count/), [`savedReactionTag`](/reference/telegram/types/base/saved-reaction-tag/), [`storyItem`](/reference/telegram/types/base/story-item/), [`storyReaction`](/reference/telegram/types/base/story-reaction/), [`storyView`](/reference/telegram/types/base/story-view/), [`updateBotMessageReaction`](/reference/telegram/types/base/update-bot-message-reaction/), [`updateNewStoryReaction`](/reference/telegram/types/base/update-new-story-reaction/), [`updateSentStoryReaction`](/reference/telegram/types/base/update-sent-story-reaction/)
+
+## Provenance
+
+- layer: 228
+- structural source: `tdlib`
+- canonical schema: https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/telegram_api.tl
+- prose merge precedence: TDLib → Telegram Desktop → Core JSON
+- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 228 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
+
+## Source-diff notes
+
+- tdlib_vs_core: changed_count=68; core_only_count=1; overlap_count=2302; tdlib_only_count=158
+- tdlib_vs_tdesktop: changed_count=0; overlap_count=2448; tdesktop_only=null; tdlib_only=accessPointRule, ephemeral.editMessage, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret, updateEphemeralBotCallbackQuery

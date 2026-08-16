@@ -1,4 +1,9 @@
-# Faked And Deferred Methods
+---
+title: Faked And Deferred Methods
+description: Living ledger of fake-backed tests and public work still requiring live Telegram validation.
+slug: /project/testing/faked-methods/
+generated: false
+---
 
 Status: living ledger for fake-backed tests, private hooks, and public methods that still need live Telegram validation or later implementation.
 

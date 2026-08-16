@@ -1,3 +1,10 @@
+"""Fresh-interpreter import benchmarks with optional ``tracemalloc`` memory snapshots.
+
+Each sample runs a fixed statement in a child Python process, so reported wall
+time is measured in seconds across a subprocess boundary rather than in the
+benchmark runner's already-warmed interpreter.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -17,6 +24,20 @@ CASES: Mapping[str, str] = {
 
 
 def summarize(samples: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Summarize child-process import samples using medians.
+
+    Args:
+        samples: JSON-compatible child outputs containing elapsed seconds and
+            optional retained/peak ``tracemalloc`` bytes.
+
+    Returns:
+        Median timing in seconds, median memory counters in bytes, imported raw
+        module names, and the unmodified individual samples.
+
+    Raises:
+        statistics.StatisticsError: ``samples`` is empty.
+        KeyError: A sample does not include ``seconds``.
+    """
     raw_modules = sorted({module for sample in samples for module in sample.get("raw_modules", ())})
     return {
         "median_seconds": statistics.median(float(sample["seconds"]) for sample in samples),
@@ -28,6 +49,21 @@ def summarize(samples: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
 
 
 def measure_case(name: str, *, runs: int, tracemalloc_enabled: bool = False) -> list[dict[str, Any]]:
+    """Measure one fixed import case in repeated clean subprocesses.
+
+    Args:
+        name: Key in :data:`CASES` identifying the exact child statement.
+        runs: Number of independent interpreter launches.
+        tracemalloc_enabled: Capture retained and peak allocation bytes when true.
+
+    Returns:
+        One decoded measurement mapping per subprocess run.
+
+    Raises:
+        KeyError: ``name`` is not a registered case.
+        subprocess.CalledProcessError: A child interpreter fails.
+        json.JSONDecodeError: A child does not emit its expected JSON payload.
+    """
     statement = CASES[name]
     child_code = _child_code(statement, tracemalloc_enabled=tracemalloc_enabled)
     samples: list[dict[str, Any]] = []
@@ -40,6 +76,12 @@ def measure_case(name: str, *, runs: int, tracemalloc_enabled: bool = False) -> 
 
 
 def _child_code(statement: str, *, tracemalloc_enabled: bool) -> str:
+    """Generate the isolated timing program, with seconds and bytes as explicit units.
+
+    Args:
+        statement: Fixed import or access statement executed in each fresh child interpreter.
+        tracemalloc_enabled: Whether the child starts tracemalloc and reports retained and peak bytes.
+    """
     trace_start = "import tracemalloc; tracemalloc.start();" if tracemalloc_enabled else ""
     memory_read = (
         "retained_bytes,peak_bytes=tracemalloc.get_traced_memory();"
@@ -63,8 +105,18 @@ def _child_code(statement: str, *, tracemalloc_enabled: bool) -> str:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Run configured fresh-process import benchmarks and print deterministic JSON.
+
+    Args:
+        argv: Optional CLI arguments; ``--runs`` defaults to ten child processes.
+
+    Returns:
+        Zero after printing the aggregate report.
+    """
     parser = argparse.ArgumentParser(description="Benchmark fresh-process miniproto import paths.")
-    parser.add_argument("--runs", type=int, default=10)
+    parser.add_argument(
+        "--runs", type=int, default=10, help="fresh interpreter processes measured per import case; defaults to 10"
+    )
     args = parser.parse_args(argv)
     if args.runs < 1:
         parser.error("--runs must be at least one")

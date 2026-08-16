@@ -1,3 +1,5 @@
+"""TL primitive, vector, and generated-object wire codec primitives."""
+
 from __future__ import annotations
 
 import re
@@ -16,86 +18,261 @@ _constructor_class_cache: dict[int, type[Any]] = {}
 
 
 class TLCodecError(ValueError):
+    """Raised when TL wire data, types, or generated metadata cannot be encoded or decoded."""
+
     pass
 
 
 def encode_int(value: int) -> bytes:
+    """Encode a signed TL ``int``.
+
+    Args:
+        value: Integer to encode.
+
+    Returns:
+        Four little-endian TL bytes.
+    """
     return _native.tl_encode_int(value)
 
 
 def decode_int(data: bytes | memoryview, offset: int = 0) -> tuple[int, int]:
+    """Decode a signed TL ``int``.
+
+    Args:
+        data: TL wire bytes.
+        offset: Starting byte offset, defaulting to ``0``.
+
+    Returns:
+        Decoded integer and first unread offset.
+    """
     return _native.tl_decode_int(data, offset)
 
 
 def encode_uint(value: int) -> bytes:
+    """Encode an unsigned 32-bit TL value.
+
+    Args:
+        value: Unsigned integer to encode.
+
+    Returns:
+        Four little-endian bytes.
+    """
     return _native.tl_encode_uint(value)
 
 
 def decode_uint(data: bytes | memoryview, offset: int = 0) -> tuple[int, int]:
+    """Decode an unsigned 32-bit TL value.
+
+    Args:
+        data: TL wire bytes.
+        offset: Starting byte offset, defaulting to ``0``.
+
+    Returns:
+        Decoded unsigned integer and first unread offset.
+    """
     return _native.tl_decode_uint(data, offset)
 
 
 def encode_constructor_id(value: int) -> bytes:
+    """Encode a TL constructor identifier as an unsigned 32-bit value.
+
+    Args:
+        value: Constructor ID; only its low 32 bits are encoded.
+
+    Returns:
+        Four little-endian constructor bytes.
+    """
     return encode_uint(value & 0xFFFFFFFF)
 
 
 def decode_constructor_id(data: bytes | memoryview, offset: int = 0) -> tuple[int, int]:
+    """Decode an unsigned TL constructor identifier.
+
+    Args:
+        data: TL wire bytes.
+        offset: Starting byte offset, defaulting to ``0``.
+
+    Returns:
+        Constructor ID and first unread offset.
+    """
     return decode_uint(data, offset)
 
 
 def encode_long(value: int) -> bytes:
+    """Encode a signed TL ``long``.
+
+    Args:
+        value: Integer to encode.
+
+    Returns:
+        Eight little-endian TL bytes.
+    """
     return _native.tl_encode_long(value)
 
 
 def decode_long(data: bytes | memoryview, offset: int = 0) -> tuple[int, int]:
+    """Decode a signed TL ``long``.
+
+    Args:
+        data: TL wire bytes.
+        offset: Starting byte offset, defaulting to ``0``.
+
+    Returns:
+        Decoded integer and first unread offset.
+    """
     return _native.tl_decode_long(data, offset)
 
 
 def encode_int128(value: int) -> bytes:
+    """Encode an unsigned 128-bit TL integer.
+
+    Args:
+        value: Integer in the inclusive range ``0`` through ``2**128 - 1``.
+
+    Returns:
+        Sixteen little-endian bytes.
+    """
     return _native.tl_encode_int128(value)
 
 
 def decode_int128(data: bytes | memoryview, offset: int = 0) -> tuple[int, int]:
+    """Decode an unsigned 128-bit TL integer.
+
+    Args:
+        data: TL wire bytes.
+        offset: Starting byte offset, defaulting to ``0``.
+
+    Returns:
+        Decoded integer and first unread offset.
+    """
     return _native.tl_decode_int128(data, offset)
 
 
 def encode_int256(value: int) -> bytes:
+    """Encode an unsigned 256-bit TL integer.
+
+    Args:
+        value: Integer in the inclusive range ``0`` through ``2**256 - 1``.
+
+    Returns:
+        Thirty-two little-endian bytes.
+    """
     return _native.tl_encode_int256(value)
 
 
 def decode_int256(data: bytes | memoryview, offset: int = 0) -> tuple[int, int]:
+    """Decode an unsigned 256-bit TL integer.
+
+    Args:
+        data: TL wire bytes.
+        offset: Starting byte offset, defaulting to ``0``.
+
+    Returns:
+        Decoded integer and first unread offset.
+    """
     return _native.tl_decode_int256(data, offset)
 
 
 def encode_double(value: float) -> bytes:
+    """Encode a TL ``double``.
+
+    Args:
+        value: Floating-point value to encode.
+
+    Returns:
+        Eight little-endian IEEE-754 bytes.
+    """
     return _native.tl_encode_double(value)
 
 
 def decode_double(data: bytes | memoryview, offset: int = 0) -> tuple[float, int]:
+    """Decode a TL ``double``.
+
+    Args:
+        data: TL wire bytes.
+        offset: Starting byte offset, defaulting to ``0``.
+
+    Returns:
+        Decoded float and first unread offset.
+    """
     return _native.tl_decode_double(data, offset)
 
 
 def encode_bytes(value: bytes) -> bytes:
+    """Encode TL's length-prefixed, padded byte-string value.
+
+    Args:
+        value: Raw byte value.
+
+    Returns:
+        TL byte-string encoding including its length and padding.
+    """
     return _native.tl_encode_bytes(value)
 
 
 def decode_bytes(data: bytes | memoryview, offset: int = 0) -> tuple[bytes, int]:
+    """Decode a TL length-prefixed byte string.
+
+    Args:
+        data: TL wire bytes.
+        offset: Starting byte offset, defaulting to ``0``.
+
+    Returns:
+        Decoded bytes and first unread offset.
+    """
     return _native.tl_decode_bytes(data, offset)
 
 
 def encode_string(value: str) -> bytes:
+    """UTF-8 encode a string as a TL byte string.
+
+    Args:
+        value: Text to encode.
+
+    Returns:
+        Length-prefixed, padded TL string bytes.
+    """
     return _native.tl_encode_string(value)
 
 
 def decode_string(data: bytes | memoryview, offset: int = 0) -> tuple[str, int]:
+    """Decode a UTF-8 TL string.
+
+    Args:
+        data: TL wire bytes.
+        offset: Starting byte offset, defaulting to ``0``.
+
+    Returns:
+        Decoded text and first unread offset.
+    """
     return _native.tl_decode_string(data, offset)
 
 
 def encode_bool(value: bool) -> bytes:
+    """Encode a TL ``Bool`` constructor.
+
+    Args:
+        value: Boolean value.
+
+    Returns:
+        ``boolTrue`` or ``boolFalse`` constructor bytes.
+    """
     return encode_constructor_id(BOOL_TRUE_ID if value else BOOL_FALSE_ID)
 
 
 def decode_bool(data: bytes | memoryview, offset: int = 0) -> tuple[bool, int]:
+    """Decode a TL ``Bool`` constructor.
+
+    Args:
+        data: TL wire bytes.
+        offset: Starting byte offset, defaulting to ``0``.
+
+    Returns:
+        Boolean value and first unread offset.
+
+    Raises:
+        TLCodecError: If the constructor is not a TL boolean.
+    """
     constructor_id, offset = decode_constructor_id(data, offset)
     if constructor_id == BOOL_TRUE_ID:
         return True, offset
@@ -105,6 +282,15 @@ def decode_bool(data: bytes | memoryview, offset: int = 0) -> tuple[bool, int]:
 
 
 def encode_vector(values: Iterable[Any], item_type: str) -> bytes:
+    """Encode a boxed TL vector.
+
+    Args:
+        values: Items to serialize.
+        item_type: Schema type of each item.
+
+    Returns:
+        Vector constructor, item count, and encoded items.
+    """
     items = tuple(values)
     clean_item_type = _clean_type(item_type)
     if clean_item_type in {"int", "#"}:
@@ -119,6 +305,19 @@ def encode_vector(values: Iterable[Any], item_type: str) -> bytes:
 
 
 def decode_vector(data: bytes | memoryview, offset: int, item_type: str) -> tuple[tuple[Any, ...], int]:
+    """Decode a boxed TL vector.
+
+    Args:
+        data: TL wire bytes.
+        offset: Offset at the vector constructor.
+        item_type: Schema type of each item.
+
+    Returns:
+        Decoded immutable item tuple and first unread offset.
+
+    Raises:
+        TLCodecError: If the constructor or count is invalid.
+    """
     clean_item_type = _clean_type(item_type)
     if clean_item_type in {"int", "#"}:
         return _native.tl_decode_int_vector(data, offset)
@@ -138,6 +337,18 @@ def decode_vector(data: bytes | memoryview, offset: int, item_type: str) -> tupl
 
 
 def serialize_object(obj: Any, *, boxed: bool = True) -> bytes:
+    """Serialize a generated TL object using its generated or generic metadata path.
+
+    Args:
+        obj: Generated TL object instance.
+        boxed: Include its constructor ID, defaulting to ``True``.
+
+    Returns:
+        TL wire representation of the object.
+
+    Raises:
+        TLCodecError: If ``obj`` does not expose generated TL metadata.
+    """
     cls = type(obj)
     if not _looks_like_tl_class(cls):
         raise TLCodecError(f"expected TL object, got {type(obj).__name__}")
@@ -154,6 +365,20 @@ def serialize_object(obj: Any, *, boxed: bool = True) -> bytes:
 def deserialize_object[TLObjectT](
     cls: type[TLObjectT], data: bytes | memoryview, offset: int = 0, *, boxed: bool = True
 ) -> tuple[TLObjectT, int]:
+    """Deserialize one generated TL object of an expected class.
+
+    Args:
+        cls: Generated class defining constructor and field metadata.
+        data: TL wire bytes.
+        offset: Starting byte offset, defaulting to ``0``.
+        boxed: Whether input begins with a constructor ID.
+
+    Returns:
+        Object instance and first unread offset.
+
+    Raises:
+        TLCodecError: If class metadata or a boxed constructor is invalid.
+    """
     if not _looks_like_tl_class(cls):
         raise TLCodecError(f"expected TL object class, got {cls!r}")
     generated_deserialize = getattr(cls, "_deserialize", None)
@@ -169,6 +394,19 @@ def deserialize_object[TLObjectT](
 
 
 def decode_object(data: bytes | memoryview, offset: int = 0, expected_type: str | None = None) -> tuple[Any, int]:
+    """Decode a primitive or generated TL object selected by its constructor.
+
+    Args:
+        data: TL wire bytes.
+        offset: Starting byte offset, defaulting to ``0``.
+        expected_type: Optional schema type used for primitive dispatch.
+
+    Returns:
+        Decoded value and first unread offset.
+
+    Raises:
+        TLCodecError: If the constructor is unknown or a bare type lacks a concrete class.
+    """
     if expected_type is not None and _clean_type(expected_type) in _PRIMITIVES:
         return decode_value(expected_type, data, offset)
     constructor_id, value_offset = decode_constructor_id(data, offset)
@@ -191,6 +429,18 @@ def decode_object(data: bytes | memoryview, offset: int = 0, expected_type: str 
 
 
 def encode_value(type_name: str, value: Any) -> bytes:
+    """Encode one value according to a TL schema type expression.
+
+    Args:
+        type_name: Primitive, vector, bare, or object schema type.
+        value: Value compatible with that type.
+
+    Returns:
+        TL wire bytes for the value.
+
+    Raises:
+        TLCodecError: If the value cannot be represented by the type expression.
+    """
     clean = _clean_type(type_name)
     vector_item_type = _vector_item_type(clean)
     if vector_item_type is not None:
@@ -221,6 +471,19 @@ def encode_value(type_name: str, value: Any) -> bytes:
 
 
 def decode_value(type_name: str, data: bytes | memoryview, offset: int) -> tuple[Any, int]:
+    """Decode one value according to a TL schema type expression.
+
+    Args:
+        type_name: Primitive, vector, bare, or object schema type.
+        data: TL wire bytes.
+        offset: Starting byte offset.
+
+    Returns:
+        Decoded value and first unread offset.
+
+    Raises:
+        TLCodecError: If a bare value lacks a concrete decoding class.
+    """
     clean = _clean_type(type_name)
     vector_item_type = _vector_item_type(clean)
     if vector_item_type is not None:
@@ -251,6 +514,12 @@ def decode_value(type_name: str, data: bytes | memoryview, offset: int) -> tuple
 
 
 def _serialize_fields(obj: Any, cls: type[Any]) -> bytes:
+    """Serialize generic generated fields, including optional-flag words.
+
+    Args:
+        obj: Generated object providing field values.
+        cls: Generated class providing field and flag metadata.
+    """
     fields = tuple(getattr(cls, "TL_FIELDS", ()))
     flag_groups = tuple(getattr(cls, "TL_FLAG_GROUPS", ()))
     flag_values = _flag_values(obj, fields)
@@ -272,6 +541,13 @@ def _serialize_fields(obj: Any, cls: type[Any]) -> bytes:
 
 
 def _deserialize_fields(cls: type[Any], data: bytes | memoryview, offset: int) -> tuple[dict[str, Any], int]:
+    """Decode generic generated fields and reconstruct optional-flag values.
+
+    Args:
+        cls: Generated class providing field and flag metadata.
+        data: TL wire bytes.
+        offset: Starting byte offset.
+    """
     fields = tuple(getattr(cls, "TL_FIELDS", ()))
     flag_groups = tuple(getattr(cls, "TL_FLAG_GROUPS", ()))
     flag_values: dict[str, int] = {}
@@ -295,6 +571,12 @@ def _deserialize_fields(cls: type[Any], data: bytes | memoryview, offset: int) -
 
 
 def _flag_values(obj: Any, fields: tuple[Any, ...]) -> dict[str, int]:
+    """Compute serialized TL flags from optional generated fields.
+
+    Args:
+        obj: Generated object providing optional field values.
+        fields: Generated field metadata.
+    """
     values: dict[str, int] = {}
     for field in fields:
         if not field.is_optional or field.flag is None or field.flag_index is None:
@@ -307,6 +589,11 @@ def _flag_values(obj: Any, fields: tuple[Any, ...]) -> dict[str, int]:
 
 
 def _flag_groups_by_index(flag_groups: tuple[Any, ...]) -> dict[int, tuple[Any, ...]]:
+    """Group generated flag metadata by the field position it precedes.
+
+    Args:
+        flag_groups: Generated optional-flag group metadata.
+    """
     grouped: dict[int, list[Any]] = {}
     for group in flag_groups:
         grouped.setdefault(int(group.before_field_index), []).append(group)
@@ -315,20 +602,36 @@ def _flag_groups_by_index(flag_groups: tuple[Any, ...]) -> dict[int, tuple[Any, 
 
 @cache
 def _constructor_maps() -> Mapping[int, type[Any]]:
+    """Lazily import and cache the generated constructor registry."""
     from miniproto.raw._registry import CONSTRUCTORS
 
     return CONSTRUCTORS
 
 
 def _looks_like_tl_object(value: Any) -> bool:
+    """Return whether an instance exposes generated TL class metadata.
+
+    Args:
+        value: Candidate generated-object instance.
+    """
     return _looks_like_tl_class(type(value))
 
 
 def _looks_like_tl_class(cls: type[Any]) -> bool:
+    """Return whether a class exposes the generated TL metadata contract.
+
+    Args:
+        cls: Candidate generated-object class.
+    """
     return all(hasattr(cls, name) for name in ("CONSTRUCTOR_ID", "TL_FIELDS", "QUALNAME"))
 
 
 def _clean_type(type_name: str) -> str:
+    """Normalize schema type syntax for primitive and vector dispatch.
+
+    Args:
+        type_name: Raw TL schema type expression.
+    """
     clean = type_name.removeprefix("!").strip()
     while clean.startswith("(") and clean.endswith(")"):
         clean = clean[1:-1].strip()
@@ -336,6 +639,11 @@ def _clean_type(type_name: str) -> str:
 
 
 def _is_bare_type(type_name: str) -> bool:
+    """Return whether a schema type denotes a bare generated object.
+
+    Args:
+        type_name: Raw TL schema type expression.
+    """
     clean = type_name.removeprefix("!").strip()
     if clean.startswith("%"):
         return True
@@ -344,6 +652,11 @@ def _is_bare_type(type_name: str) -> bool:
 
 
 def _vector_item_type(type_name: str) -> str | None:
+    """Return the item type from supported vector syntax, if present.
+
+    Args:
+        type_name: Normalized TL schema type expression.
+    """
     match = _VECTOR_RE.match(type_name)
     if match is None:
         return None

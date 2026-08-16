@@ -1,4 +1,9 @@
-# Media Primitives
+---
+title: Media Primitives
+description: Media upload, download, scheduling, and integrity primitives in miniproto.
+slug: /guides/media/
+generated: false
+---
 
 Status: Phase 10 plus v0.1.0 Alpha Wave 2 media implementation complete with deterministic and fake-server acceptance passing; live Telegram upload/download remains separately gated.
 

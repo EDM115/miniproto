@@ -20,11 +20,11 @@
     "src/miniproto/raw/_types_shards/*.py",
     "src/miniproto/raw/_function_shards/*.py",
     "src/miniproto/raw/errors.py",
+    "tools/schema/telegram-bindings.json",
     "src/miniproto/tl/fast_metadata.py",
-    "rust/miniproto/src/generated_tl.rs",
-    "docs/raw-api.md"
+    "rust/miniproto/src/generated_tl.rs"
   ],
-  "generator_version": "4",
+  "generator_version": "5",
   "layer": 228,
   "layer_source_url": "https://raw.githubusercontent.com/telegramdesktop/tdesktop/refs/heads/dev/Telegram/SourceFiles/mtproto/scheme/api.tl",
   "rpc_error_count": 818,

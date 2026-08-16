@@ -36,6 +36,10 @@ dev = [
   "ruff==0.16.2",
   "ty==0.0.70",
 ]
+docs = [
+  "griffe==2.1.0",
+  "griffe2md==1.5.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/EDM115/miniproto"
@@ -55,6 +59,8 @@ miniproto-bench-session-crypto = "miniproto._cli:bench_session_crypto"
 miniproto-bench-tl-fast-paths = "miniproto._cli:bench_tl_fast_paths"
 miniproto-bench-tglib = "miniproto._cli:bench_tglib"
 miniproto-bench-transport-framing = "miniproto._cli:bench_transport_framing"
+miniproto-docs = "miniproto._cli:docs"
+miniproto-docs-rust = "miniproto._cli:docs_rust"
 miniproto-profile-lazy-raw-codec = "miniproto._cli:profile_lazy_raw_codec"
 miniproto-provision-benchmark-session = "miniproto._cli:provision_benchmark_session"
 miniproto-release-check = "miniproto._cli:release_check"
@@ -79,7 +85,9 @@ testpaths = ["tests"]
 pythonpath = ["."]
 
 [tool.ruff]
-exclude = [".venv", ".tmp"]
+# Generated reference Markdown is validated by the documentation generator and
+# Astro build; Ruff must not rewrite committed output after a drift check.
+exclude = [".venv", ".tmp", "docs/reference"]
 target-version = "py313"
 line-length = 120
 src = ["src", "tests"]

@@ -1,3 +1,10 @@
+"""Microprofile lazy raw-codec paths in milliseconds within one controlled process.
+
+Results compare interleaved fixed-iteration operations, not end-to-end Telegram
+workloads. Garbage collection is temporarily disabled during timed loops and is
+restored afterwards, so measurements are advisory implementation evidence only.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -16,6 +23,12 @@ from miniproto.tl import decode_object
 
 
 def _interleaved(cases: dict[str, Callable[[], Any]], *, rounds: int = 10) -> dict[str, dict[str, Any]]:
+    """Run fixed cases round-robin and report per-invocation elapsed milliseconds.
+
+    Args:
+        cases: Named zero-argument operations to run in rotated order.
+        rounds: Number of round-robin passes per operation. Defaults to ``10``.
+    """
     durations = {name: [] for name in cases}
     names = tuple(cases)
     was_enabled = gc.isenabled()
@@ -37,6 +50,14 @@ def _interleaved(cases: dict[str, Callable[[], Any]], *, rounds: int = 10) -> di
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Profile selected lazy generated-codec paths and print JSON microbenchmark evidence.
+
+    Args:
+        argv: Optional CLI arguments; none are currently accepted.
+
+    Returns:
+        Zero after emitting best, median, and raw milliseconds samples.
+    """
     parser = argparse.ArgumentParser(description="Profile the lazy generated raw API codec paths")
     parser.parse_args(argv)
     request_type = functions.UploadGetFile
@@ -58,12 +79,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     tl_codec._constructor_class_cache[constructor_id] = upload_file_type
 
     def encode_local() -> int:
+        """Serialize the request ten thousand times through its bound instance method."""
         total = 0
         for _index in range(10_000):
             total += len(request.serialize())
         return total
 
     def encode_class_method() -> int:
+        """Serialize the same request ten thousand times through the class function."""
         total = 0
         serialize = request_type.serialize
         for _index in range(10_000):
@@ -71,36 +94,42 @@ def main(argv: Sequence[str] | None = None) -> int:
         return total
 
     def decode_current_mapping() -> int:
+        """Probe the lazy generated constructor mapping one hundred thousand times."""
         found = 0
         for _index in range(100_000):
             found += CONSTRUCTORS.get(constructor_id) is upload_file_type
         return found
 
     def decode_direct_dict() -> int:
+        """Probe an equivalent eager local constructor dictionary one hundred thousand times."""
         found = 0
         for _index in range(100_000):
             found += cached_constructor.get(constructor_id) is upload_file_type
         return found
 
     def decode_codec_hot_cache() -> int:
+        """Probe the codec's warmed constructor cache one hundred thousand times."""
         found = 0
         for _index in range(100_000):
             found += tl_codec._constructor_class_cache.get(constructor_id) is upload_file_type
         return found
 
     def facade_attribute() -> int:
+        """Read the generated facade attribute one hundred thousand times."""
         found = 0
         for _index in range(100_000):
             found += types.UploadFile is upload_file_type
         return found
 
     def direct_local_attribute() -> int:
+        """Read the already-bound local type one hundred thousand times as a baseline."""
         found = 0
         for _index in range(100_000):
             found += upload_file_type is upload_file_type
         return found
 
     def decode_full() -> int:
+        """Decode and validate one hundred serialized upload-file payloads."""
         total = 0
         for _index in range(100):
             decoded, offset = decode_object(encoded)

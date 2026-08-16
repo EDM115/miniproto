@@ -1,4 +1,9 @@
-# Session Security
+---
+title: Session Security
+description: Durable session storage, portable session strings, and secret-handling constraints.
+slug: /guides/session-security/
+generated: false
+---
 
 Status: encrypted durable default and atomic domain storage are implemented; explicit key-rotation tooling remains future work.
 

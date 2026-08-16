@@ -1,3 +1,5 @@
+"""Optional native fast paths for selected generated TL constructors."""
+
 from __future__ import annotations
 
 from importlib import import_module
@@ -15,6 +17,16 @@ else:
 
 
 def encode_fast(constructor_id: int, values: tuple[object, ...], *, boxed: bool = True) -> bytes | None:
+    """Attempt native serialization for a generated TL constructor.
+
+    Args:
+        constructor_id: Unsigned 32-bit TL constructor identifier.
+        values: Constructor field values in generated-field order.
+        boxed: Whether the wire value includes its constructor identifier.
+
+    Returns:
+        Encoded bytes when the native fast path accepts the constructor, otherwise ``None``.
+    """
     if _native_encode is None:
         return None
     result = _native_encode(constructor_id & 0xFFFFFFFF, values, boxed)
@@ -24,6 +36,17 @@ def encode_fast(constructor_id: int, values: tuple[object, ...], *, boxed: bool 
 def decode_fast(
     constructor_id: int, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True
 ) -> tuple[tuple[object, ...], int] | None:
+    """Attempt native deserialization for a generated TL constructor.
+
+    Args:
+        constructor_id: Unsigned 32-bit TL constructor identifier.
+        data: Wire bytes; memoryviews deliberately use the Python path.
+        offset: Initial byte offset, defaulting to ``0``.
+        boxed: Whether the input includes a constructor identifier.
+
+    Returns:
+        Decoded field values and next offset, or ``None`` when no fast path applies.
+    """
     if _native_decode is None or isinstance(data, memoryview):
         return None
     result = _native_decode(constructor_id & 0xFFFFFFFF, data, offset, boxed)
@@ -34,6 +57,18 @@ def decode_fast(
 
 
 def materialize_empty_object(constructor_id: object) -> object:
+    """Resolve a native empty-object token to its generated TL instance.
+
+    Args:
+        constructor_id: Integer TL constructor identifier returned by native code.
+
+    Returns:
+        A newly constructed generated object with no TL fields.
+
+    Raises:
+        TypeError: If the token is not an integer or resolves to a non-empty constructor.
+        KeyError: If no generated constructor has the identifier.
+    """
     from miniproto.raw import types
 
     if not isinstance(constructor_id, int):
@@ -45,6 +80,7 @@ def materialize_empty_object(constructor_id: object) -> object:
 
 
 def native_fast_paths_available() -> bool:
+    """Report whether both native TL encode and decode fast paths were imported."""
     return _native_encode is not None and _native_decode is not None
 
 

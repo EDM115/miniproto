@@ -1,3 +1,14 @@
+//! Stateful native codecs for Telegram TCP abridged, intermediate, and padded-intermediate frames.
+//!
+//! `TransportCodec` is exported to Python as `miniproto._native.TransportCodec` and mirrors the
+//! Python fallback's framing contract.  It accepts arbitrary receive fragmentation, emits payload,
+//! quick-ACK, and transport-error events, and returns Python exceptions for malformed or oversized
+//! data rather than panicking. `FramePump` itself is Python-independent, but the PyO3 methods in
+//! this module currently do not detach regular parsing or encoding work from the GIL; the GIL is
+//! also required while their results are converted to Python objects.
+//! Incompatible Python inputs retain PyO3's `TypeError`, `OverflowError`, or source conversion
+//! exception; framing validation that runs after conversion intentionally returns `ValueError`.
+
 use pyo3::IntoPyObjectExt;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -5,19 +16,41 @@ use pyo3::types::{PyBytes, PyModule};
 use pyo3::wrap_pyfunction;
 use sha2::{Digest, Sha256};
 
+/// Abridged header byte that introduces its three-byte word-length form.
 const ABRIDGED_LONG_MARKER: u8 = 0x7f;
+/// Wire bit that asks the peer to return a quick-ACK token.
 const QUICK_ACK_MASK: u32 = 0x8000_0000;
+/// Padded-intermediate payload marker identifying a quick-ACK response.
 const PADDED_QUICK_ACK_MARKER: [u8; 4] = [0xff; 4];
+/// Maximum random padding bytes allowed by padded-intermediate TCP framing.
 const MAX_TRANSPORT_PADDING: usize = 15;
+/// Largest drained receive-buffer allocation retained for later chunks.
 const RETAINED_BUFFER_LIMIT: usize = 1024 * 1024;
+/// Python `feed_data` event tuple: kind, payload, numeric detail, quick-ACK request flag.
 type PythonFrameEvent = (u8, Vec<u8>, i64, bool);
 
+/// Registers Python `TransportCodec` and `quick_ack_token` on `miniproto._native`.
+///
+/// Returns a PyO3 exception if either export cannot be installed.
+///
+/// # Arguments
+///
+/// - `m`: The Python extension module receiving the transport exports.
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<TransportCodec>()?;
     m.add_function(wrap_pyfunction!(quick_ack_token, m)?)?;
     Ok(())
 }
 
+/// Computes the flagged quick-ACK token for Python `quick_ack_token`.
+///
+/// The 256-byte `auth_key` and nonempty encrypted portion of `encrypted_packet` are validated.
+/// Returns the token with the quick-ACK bit set or `ValueError` for invalid packet/key input.
+///
+/// # Arguments
+///
+/// - `auth_key`: 256-byte MTProto authorization key used by the quick-ACK hash schedule.
+/// - `encrypted_packet`: Full MTProto packet whose nonempty encrypted suffix is hashed.
 #[pyfunction]
 fn quick_ack_token(auth_key: &[u8], encrypted_packet: &[u8]) -> PyResult<u32> {
     if auth_key.len() != 256 {
@@ -34,14 +67,25 @@ fn quick_ack_token(auth_key: &[u8], encrypted_packet: &[u8]) -> PyResult<u32> {
     Ok(u32::from_le_bytes([digest[0], digest[1], digest[2], digest[3]]) | QUICK_ACK_MASK)
 }
 
+/// Supported Telegram TCP framing modes selected by their Python wire-name strings.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum TransportMode {
+    /// TCP abridged framing with a word-count prefix.
     Abridged,
+    /// TCP intermediate framing with a four-byte byte-count prefix.
     Intermediate,
+    /// Intermediate framing with up to 15 random padding bytes.
     PaddedIntermediate,
 }
 
 impl TransportMode {
+    /// Parses one Python transport mode name into its internal framing strategy.
+    ///
+    /// Returns `ValueError` for unsupported values.
+    ///
+    /// # Arguments
+    ///
+    /// - `value`: Python transport mode name to map to a framing variant.
     fn parse(value: &str) -> PyResult<Self> {
         match value {
             "tcp_abridged" => Ok(Self::Abridged),
@@ -54,24 +98,47 @@ impl TransportMode {
     }
 }
 
+/// One native frame-pump result before it is converted to a Python return shape.
 #[derive(Debug, Eq, PartialEq)]
 enum FrameEvent {
+    /// A complete MTProto payload and whether the peer requested a quick ACK.
     Payload {
+        /// Complete transport payload with padding removed where relevant.
         payload: Vec<u8>,
+        /// Whether the inbound header requested a quick-ACK response.
         quick_ack_requested: bool,
     },
+    /// A quick-ACK token received from the peer.
+    ///
+    /// The contained `u32` is the wire token, including its quick-ACK mask bit.
     QuickAck(u32),
+    /// A negative MTProto transport error received in its dedicated wire form.
+    ///
+    /// The contained `i32` is the peer-provided negative transport error code.
     TransportError(i32),
 }
 
+/// Python-visible incremental TCP framing codec, exported as `miniproto._native.TransportCodec`.
 #[pyclass(module = "miniproto._native")]
 struct TransportCodec {
+    /// Stateful native parser and encoder backing this Python object.
     pump: FramePump,
 }
 
 #[pymethods]
 impl TransportCodec {
     #[new]
+    /// Creates `TransportCodec(mode, max_payload_size, server_side=False)`.
+    ///
+    /// `mode` must be a supported Python transport name and `max_payload_size` must be positive;
+    /// otherwise this constructor raises `ValueError`.
+    ///
+    /// # Arguments
+    ///
+    /// - `mode`: One of the supported Python TCP mode names.
+    /// - `max_payload_size`: Positive upper bound for decoded application payload bytes.
+    /// - `server_side`: Whether inbound quick-ACK request bits remain payload metadata instead of
+    ///   being interpreted as quick-ACK response frames.
     #[pyo3(signature = (mode, max_payload_size, server_side=false))]
     fn new(mode: &str, max_payload_size: usize, server_side: bool) -> PyResult<Self> {
         Ok(Self {
@@ -79,11 +146,28 @@ impl TransportCodec {
         })
     }
 
+    /// Encodes Python `encode_packet(payload, quick_ack=False)` into a single TCP frame.
+    ///
+    /// Returns `ValueError` for oversized payloads, invalid abridged alignment, length overflow,
+    /// or operating-system randomness failure in padded mode.
+    ///
+    /// # Arguments
+    ///
+    /// - `payload`: Complete MTProto payload to frame.
+    /// - `quick_ack`: Whether to set the outbound quick-ACK request bit where the mode supports it.
     #[pyo3(signature = (payload, quick_ack=false))]
     fn encode_packet(&self, payload: &[u8], quick_ack: bool) -> PyResult<Vec<u8>> {
         self.pump.encode_packet(payload, quick_ack)
     }
 
+    /// Feeds Python `feed_data(data)` and returns tagged native event tuples.
+    ///
+    /// Tuple kinds are `0` payload, `1` quick ACK, and `2` negative transport error. It preserves
+    /// incomplete trailing bytes for the next call and raises Python errors for invalid framing.
+    ///
+    /// # Arguments
+    ///
+    /// - `data`: Newly received TCP bytes to append to this codec's buffered stream.
     fn feed_data(&mut self, data: &[u8]) -> PyResult<Vec<PythonFrameEvent>> {
         self.pump.feed_data(data).map(|events| {
             events
@@ -100,6 +184,15 @@ impl TransportCodec {
         })
     }
 
+    /// Feeds compatibility `feed_transport_data(data)` and returns bytes or integer Python events.
+    ///
+    /// The GIL token is used only for object conversion after native parsing; malformed framing
+    /// returns a Python exception.
+    ///
+    /// # Arguments
+    ///
+    /// - `py`: The acquired GIL token used to build Python `bytes` and integer events.
+    /// - `data`: Newly received TCP bytes to append to this codec's buffered stream.
     fn feed_transport_data(&mut self, py: Python<'_>, data: &[u8]) -> PyResult<Vec<Py<PyAny>>> {
         self.pump
             .feed_data(data)?
@@ -115,15 +208,30 @@ impl TransportCodec {
     }
 }
 
+/// GIL-free incremental parser/encoder retaining incomplete receive data between calls.
 struct FramePump {
+    /// Framing variant used for every operation.
     mode: TransportMode,
+    /// Maximum permitted decoded MTProto payload size.
     max_payload_size: usize,
+    /// Whether inbound quick-ACK request bits represent payload frames rather than ACK responses.
     server_side: bool,
+    /// Accumulated unconsumed receive bytes.
     buffer: Vec<u8>,
+    /// Leading consumed byte count within `buffer`.
     offset: usize,
 }
 
 impl FramePump {
+    /// Creates a framed-stream pump after validating its positive payload limit.
+    ///
+    /// Returns `ValueError` for zero `max_payload_size`.
+    ///
+    /// # Arguments
+    ///
+    /// - `mode`: Internal TCP framing strategy for this pump.
+    /// - `max_payload_size`: Positive upper bound for decoded application payload bytes.
+    /// - `server_side`: Whether quick-ACK request bits are decoded as payload metadata.
     fn new(mode: TransportMode, max_payload_size: usize, server_side: bool) -> PyResult<Self> {
         if max_payload_size == 0 {
             return Err(PyValueError::new_err("max_payload_size must be positive"));
@@ -137,6 +245,14 @@ impl FramePump {
         })
     }
 
+    /// Encodes one payload using the pump's configured TCP transport mode.
+    ///
+    /// Returns `ValueError` for size/alignment violations or downstream frame construction errors.
+    ///
+    /// # Arguments
+    ///
+    /// - `payload`: Complete MTProto payload to frame.
+    /// - `quick_ack`: Whether to set the outbound quick-ACK request bit where allowed.
     fn encode_packet(&self, payload: &[u8], quick_ack: bool) -> PyResult<Vec<u8>> {
         if payload.len() > self.max_payload_size {
             return Err(PyValueError::new_err(
@@ -152,6 +268,14 @@ impl FramePump {
         }
     }
 
+    /// Encodes an abridged frame with a one- or four-byte word-count header.
+    ///
+    /// Returns `ValueError` unless `payload` is four-byte aligned and representable on the wire.
+    ///
+    /// # Arguments
+    ///
+    /// - `payload`: Four-byte-aligned MTProto payload to frame.
+    /// - `quick_ack`: Whether to set abridged's quick-ACK request bit.
     fn encode_abridged(&self, payload: &[u8], quick_ack: bool) -> PyResult<Vec<u8>> {
         if !payload.len().is_multiple_of(4) {
             return Err(PyValueError::new_err(
@@ -188,6 +312,14 @@ impl FramePump {
         Ok(output)
     }
 
+    /// Encodes an intermediate frame with a flagged four-byte byte-count header.
+    ///
+    /// Returns `ValueError` for unrepresentable transport lengths.
+    ///
+    /// # Arguments
+    ///
+    /// - `payload`: MTProto payload to frame.
+    /// - `quick_ack`: Whether to set intermediate's quick-ACK request bit.
     fn encode_intermediate(&self, payload: &[u8], quick_ack: bool) -> PyResult<Vec<u8>> {
         let payload_length = u32::try_from(payload.len())
             .map_err(|_| PyValueError::new_err("tcp intermediate payload is too large"))?;
@@ -199,6 +331,14 @@ impl FramePump {
         encode_length_prefixed(payload, payload_length, quick_ack)
     }
 
+    /// Encodes an intermediate frame with random zero-to-fifteen-byte padding.
+    ///
+    /// Returns `ValueError` for arithmetic, size, or operating-system randomness failures.
+    ///
+    /// # Arguments
+    ///
+    /// - `payload`: MTProto payload to frame before random transport padding.
+    /// - `quick_ack`: Whether to set the intermediate quick-ACK request bit.
     fn encode_padded_intermediate(&self, payload: &[u8], quick_ack: bool) -> PyResult<Vec<u8>> {
         let mut random = [0_u8; 1];
         getrandom::fill(&mut random)
@@ -224,6 +364,13 @@ impl FramePump {
         Ok(output)
     }
 
+    /// Buffers `data`, parses every complete frame, and retains a partial suffix for later input.
+    ///
+    /// Returns parsed events or a Python exception for allocation, overflow, or invalid framing.
+    ///
+    /// # Arguments
+    ///
+    /// - `data`: Newly received TCP bytes to append before parsing complete frames.
     fn feed_data(&mut self, data: &[u8]) -> PyResult<Vec<FrameEvent>> {
         self.buffer
             .try_reserve(data.len())
@@ -241,6 +388,9 @@ impl FramePump {
         Ok(events)
     }
 
+    /// Attempts to parse one complete frame without mutating the receive buffer.
+    ///
+    /// Returns `None` for an incomplete frame or a Python exception for malformed framing.
     fn parse_one(&self) -> PyResult<Option<(FrameEvent, usize)>> {
         match self.mode {
             TransportMode::Abridged => self.parse_abridged(),
@@ -249,6 +399,9 @@ impl FramePump {
         }
     }
 
+    /// Parses one abridged frame or client-side quick-ACK response from buffered input.
+    ///
+    /// Returns `None` while incomplete and `ValueError` for oversized or overflowing frames.
     fn parse_abridged(&self) -> PyResult<Option<(FrameEvent, usize)>> {
         let available = self.buffer.len().saturating_sub(self.offset);
         if available < 1 {
@@ -296,6 +449,14 @@ impl FramePump {
         )))
     }
 
+    /// Parses one intermediate or padded-intermediate frame from buffered input.
+    ///
+    /// `padded` selects padded payload processing. Returns `None` while incomplete or `ValueError`
+    /// for invalid lengths and protocol-incompatible quick-ACK forms.
+    ///
+    /// # Arguments
+    ///
+    /// - `padded`: Whether the wire payload carries padded-intermediate transport suffix bytes.
     fn parse_intermediate(&self, padded: bool) -> PyResult<Option<(FrameEvent, usize)>> {
         let available = self.buffer.len().saturating_sub(self.offset);
         if available < 4 {
@@ -332,6 +493,16 @@ impl FramePump {
         )))
     }
 
+    /// Converts a complete raw transport payload to an application, ACK, or error event.
+    ///
+    /// Removes and validates padded-intermediate suffix bytes when `padded`; returns `ValueError`
+    /// for invalid encapsulated packet shape or a payload above the configured maximum.
+    ///
+    /// # Arguments
+    ///
+    /// - `payload`: Complete raw payload after its transport frame prefix.
+    /// - `padded`: Whether to classify and remove padded-intermediate suffix bytes.
+    /// - `quick_ack_requested`: Whether the inbound frame header requested a quick ACK.
     fn payload_event(
         &self,
         mut payload: Vec<u8>,
@@ -374,6 +545,14 @@ impl FramePump {
         })
     }
 
+    /// Validates a declared frame payload length against this pump's configured maximum.
+    ///
+    /// Adds the allowed padded-mode suffix and returns `ValueError` on overflow or excess.
+    ///
+    /// # Arguments
+    ///
+    /// - `payload_length`: Declared transport payload size in bytes.
+    /// - `padded`: Whether the frame may include up to `MAX_TRANSPORT_PADDING` bytes.
     fn validate_frame_length(&self, payload_length: usize, padded: bool) -> PyResult<()> {
         let maximum = self
             .max_payload_size
@@ -387,6 +566,14 @@ impl FramePump {
         Ok(())
     }
 
+    /// Borrows a checked range from the accumulated receive buffer.
+    ///
+    /// Returns `ValueError` rather than panicking on overflow or a truncated frame.
+    ///
+    /// # Arguments
+    ///
+    /// - `offset`: Absolute buffered-stream offset at which the range begins.
+    /// - `length`: Number of bytes to borrow.
     fn read_slice(&self, offset: usize, length: usize) -> PyResult<&[u8]> {
         let end = offset
             .checked_add(length)
@@ -396,10 +583,19 @@ impl FramePump {
             .ok_or_else(|| PyValueError::new_err("transport frame ended unexpectedly"))
     }
 
+    /// Reads an exactly `N`-byte receive-buffer field at `offset`.
+    ///
+    /// Returns `ValueError` for missing bytes.
+    ///
+    /// # Arguments
+    ///
+    /// - `N`: Compile-time field width to read.
+    /// - `offset`: Absolute buffered-stream offset at which the field begins.
     fn read_fixed<const N: usize>(&self, offset: usize) -> PyResult<[u8; N]> {
         to_fixed(self.read_slice(offset, N)?)
     }
 
+    /// Discards consumed data while retaining only bounded buffer capacity for future chunks.
     fn compact(&mut self) {
         if self.offset == 0 {
             return;
@@ -420,6 +616,15 @@ impl FramePump {
     }
 }
 
+/// Encodes a four-byte little-endian length prefix and payload, optionally setting quick-ACK bit.
+///
+/// Returns `ValueError` if header-plus-payload length overflows `usize`.
+///
+/// # Arguments
+///
+/// - `payload`: Bytes to follow the four-byte header.
+/// - `payload_length`: Already validated wire length, excluding the header.
+/// - `quick_ack`: Whether to set the intermediate quick-ACK request bit.
 fn encode_length_prefixed(
     payload: &[u8],
     payload_length: u32,
@@ -435,6 +640,14 @@ fn encode_length_prefixed(
     Ok(output)
 }
 
+/// Determines the embedded MTProto packet length within a padded-intermediate payload.
+///
+/// Returns `ValueError` for malformed unencrypted or encrypted packet shapes; it deliberately
+/// does not treat arbitrary encrypted payload bytes as transport error indicators.
+///
+/// # Arguments
+///
+/// - `payload`: Padded-intermediate contents containing an embedded MTProto packet and suffix.
 fn padded_packet_length(payload: &[u8]) -> PyResult<usize> {
     if payload.len() >= 20 && payload[..8] == [0; 8] {
         let body_length = i32::from_le_bytes(to_fixed::<4>(&payload[16..20])?);
@@ -464,18 +677,29 @@ fn padded_packet_length(payload: &[u8]) -> PyResult<usize> {
     }
 }
 
+/// Converts a slice to an exact fixed-width array for frame header decoding.
+///
+/// Returns `ValueError` rather than panicking on an unexpected length.
+///
+/// # Arguments
+///
+/// - `N`: Compile-time width required by the caller.
+/// - `data`: Slice expected to contain exactly `N` bytes.
 fn to_fixed<const N: usize>(data: &[u8]) -> PyResult<[u8; N]> {
     data.try_into()
         .map_err(|_| PyValueError::new_err("transport frame ended unexpectedly"))
 }
 
+/// Unit tests for TCP transport framing, fragmentation, and quick-ACK interpretation.
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    /// Four-byte-aligned payload fixture shared by framing tests.
     const PAYLOAD: [u8; 40] = [7; 40];
 
     #[test]
+    /// Verifies fragmentation and coalescing behavior in every native TCP framing mode.
     fn all_modes_roundtrip_fragmented_and_coalesced_frames() {
         for mode in [
             TransportMode::Abridged,
@@ -503,6 +727,7 @@ mod tests {
     }
 
     #[test]
+    /// Verifies server-side decoders preserve quick-ACK requests as payload metadata.
     fn server_side_decodes_quick_ack_request_bits() {
         for mode in [
             TransportMode::Abridged,
@@ -523,6 +748,7 @@ mod tests {
     }
 
     #[test]
+    /// Verifies client-side decoders recognize each published quick-ACK wire representation.
     fn client_side_decodes_all_quick_ack_wire_forms() {
         let token = 0x9234_5678_u32;
         let cases = [
@@ -549,6 +775,7 @@ mod tests {
     }
 
     #[test]
+    /// Prevents abridged parsing from mistaking encrypted payload bytes for transport errors.
     fn abridged_does_not_peek_for_errors_inside_payload() {
         let mut payload = PAYLOAD;
         payload[..4].copy_from_slice(&(-429_i32).to_le_bytes());
@@ -565,6 +792,7 @@ mod tests {
     }
 
     #[test]
+    /// Ensures declared oversized frame length fails before payload accumulation.
     fn rejects_oversized_frame_at_header() {
         let mut decoder = FramePump::new(TransportMode::Intermediate, 4, false).unwrap();
         let error = decoder.feed_data(&8_u32.to_le_bytes()).unwrap_err();
@@ -572,6 +800,7 @@ mod tests {
     }
 
     #[test]
+    /// Ensures a drained oversized receive allocation is dropped rather than retained.
     fn releases_oversized_receive_buffer_after_drain() {
         let payload = vec![7; RETAINED_BUFFER_LIMIT + 16];
         let encoder = FramePump::new(TransportMode::Intermediate, payload.len(), false).unwrap();
@@ -585,6 +814,7 @@ mod tests {
     }
 
     #[test]
+    /// Locks down the published SHA-256 quick-ACK token vector.
     fn quick_ack_token_matches_published_sha256_vector() {
         let auth_key: Vec<u8> = (0_u8..=255).collect();
         let mut packet = vec![0x11; 8];

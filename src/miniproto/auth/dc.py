@@ -1,3 +1,5 @@
+"""Normalize and select Telegram data-center connection options."""
+
 from __future__ import annotations
 
 import os
@@ -8,6 +10,8 @@ from miniproto.session.models import DCOption
 
 
 class RawDCOption(Protocol):
+    """Structural interface for raw Telegram ``dcOption`` values."""
+
     id: int
     ip_address: str
     port: int
@@ -34,6 +38,17 @@ PRODUCTION_DC_OPTIONS: tuple[DCOption, ...] = (
 
 
 def dc_options_from_env(environ: Mapping[str, str] | None = None) -> tuple[DCOption, ...]:
+    """Read local test-DC overrides from environment-style mappings.
+
+    Args:
+        environ: Mapping to read instead of :data:`os.environ`; defaults to the process environment.
+
+    Returns:
+        Static options for populated ``MINIPROTO_TEST_DC1`` through ``MINIPROTO_TEST_DC5`` entries.
+
+    Raises:
+        ValueError: If an override is not a valid ``host:port`` or ``[ipv6]:port`` endpoint.
+    """
     source = os.environ if environ is None else environ
     options: list[DCOption] = []
     for dc_id in range(1, 6):
@@ -46,6 +61,14 @@ def dc_options_from_env(environ: Mapping[str, str] | None = None) -> tuple[DCOpt
 
 
 def default_dc_options(*, test_mode: bool) -> tuple[DCOption, ...]:
+    """Return test overrides/defaults or the built-in production DC endpoints.
+
+    Args:
+        test_mode: Whether the client will connect to Telegram's test environment.
+
+    Returns:
+        Ordered static connection options suitable for the selected environment.
+    """
     if test_mode:
         env_options = dc_options_from_env()
         return env_options or TEST_DC_OPTIONS
@@ -53,6 +76,14 @@ def default_dc_options(*, test_mode: bool) -> tuple[DCOption, ...]:
 
 
 def dc_options_from_raw(raw_options: Iterable[RawDCOption]) -> tuple[DCOption, ...]:
+    """Convert raw Telegram DC options to immutable session-model options.
+
+    Args:
+        raw_options: Decoded Telegram configuration options.
+
+    Returns:
+        Equivalent session options with optional raw flags normalized to booleans.
+    """
     options: list[DCOption] = []
     for raw in raw_options:
         options.append(
@@ -73,6 +104,20 @@ def dc_options_from_raw(raw_options: Iterable[RawDCOption]) -> tuple[DCOption, .
 def select_dc_option(
     options: Iterable[DCOption], dc_id: int, *, prefer_ipv6: bool = False, allow_media_only: bool = False
 ) -> DCOption:
+    """Choose the best endpoint for a data center.
+
+    Args:
+        options: Candidate connection options.
+        dc_id: Required Telegram data-center identifier.
+        prefer_ipv6: Prefer an IPv6 candidate when one is available.
+        allow_media_only: Permit endpoints reserved for media traffic.
+
+    Returns:
+        A non-media endpoint when possible, otherwise the best available candidate.
+
+    Raises:
+        ValueError: If ``options`` has no endpoint for ``dc_id``.
+    """
     candidates = [option for option in options if option.id == dc_id]
     if not candidates:
         raise ValueError(f"no DC option for dc_id={dc_id}")
@@ -90,6 +135,12 @@ def select_dc_option(
 
 
 def _parse_endpoint(value: str, *, field: str) -> tuple[str, int]:
+    """Parse a configured hostname/port endpoint, including bracketed IPv6 literals.
+
+    Args:
+        value: Raw ``host:port`` or ``[ipv6]:port`` configuration value.
+        field: Environment/configuration field name included in validation errors.
+    """
     if value.startswith("["):
         host, separator, rest = value[1:].partition("]:")
         if separator != "]:":

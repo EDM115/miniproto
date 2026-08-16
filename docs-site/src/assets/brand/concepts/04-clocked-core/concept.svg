@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1200 720" role="img" aria-labelledby="title description">
+  <title id="title">Clocked Core logo concept for miniproto</title>
+  <desc id="description">A vector presentation showing an open timing orbit and three acknowledgement nodes around a stable core, with light, dark, monochrome, and small-size treatments.</desc>
+  <defs>
+    <g id="wordmark" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 60V28c0-9 6-15 14-15s14 6 14 15v32M32 28c0-9 6-15 14-15s14 6 14 15v32M80 22v38M80 5h.01M100 60V28c0-9 6-15 16-15s16 6 16 15v32M152 22v38M152 5h.01M172 78V13m0 17c0-10 7-17 16-17 11 0 18 9 18 23s-7 24-18 24c-9 0-16-7-16-17M226 60V30c0-10 7-17 17-17m-17 15c4-9 11-15 20-15M280 13c-13 0-22 10-22 23s9 24 22 24 22-11 22-24-9-23-22-23ZM330 2v44c0 10 5 15 14 15M318 18h27M382 13c-13 0-22 10-22 23s9 24 22 24 22-11 22-24-9-23-22-23Z"/>
+    </g>
+    <g id="mark">
+      <circle cx="64" cy="64" r="48" fill="none" stroke="#FF2D96" stroke-width="12" stroke-linecap="round" stroke-dasharray="258 44" transform="rotate(-36 64 64)"/>
+      <circle cx="30" cy="30" r="9" fill="#FF2D96"/>
+      <circle cx="112" cy="66" r="9" fill="#FF2D96"/>
+      <circle cx="43" cy="108" r="9" fill="#FF2D96"/>
+      <rect x="46" y="46" width="36" height="36" rx="9" fill="#FFB000"/>
+    </g>
+    <g id="mark-mono" fill="currentColor" stroke="currentColor">
+      <circle cx="64" cy="64" r="48" fill="none" stroke-width="12" stroke-linecap="round" stroke-dasharray="258 44" transform="rotate(-36 64 64)"/>
+      <circle cx="30" cy="30" r="9" stroke="none"/>
+      <circle cx="112" cy="66" r="9" stroke="none"/>
+      <circle cx="43" cy="108" r="9" stroke="none"/>
+      <rect x="46" y="46" width="36" height="36" rx="9" stroke="none"/>
+    </g>
+  </defs>
+  <rect width="1200" height="720" rx="30" fill="#F0EAF0"/>
+  <rect x="24" y="24" width="564" height="300" rx="22" fill="#FAF7F2" stroke="#DDD1DE"/>
+  <rect x="612" y="24" width="564" height="300" rx="22" fill="#160B20"/>
+  <rect x="24" y="348" width="564" height="348" rx="22" fill="#FFFCF8" stroke="#DDD1DE"/>
+  <rect x="612" y="348" width="564" height="348" rx="22" fill="#1D1028"/>
+  <use href="#mark" xlink:href="#mark" transform="translate(72 90) scale(1.16)"/>
+  <use href="#wordmark" xlink:href="#wordmark" transform="translate(244 128) scale(.73)" style="color:#160B20"/>
+  <use href="#mark" xlink:href="#mark" transform="translate(660 90) scale(1.16)"/>
+  <use href="#wordmark" xlink:href="#wordmark" transform="translate(832 128) scale(.73)" style="color:#FAF7F2"/>
+  <use href="#mark" xlink:href="#mark" transform="translate(82 407) scale(1.48)"/>
+  <use href="#wordmark" xlink:href="#wordmark" transform="translate(288 448) scale(.62)" style="color:#160B20"/>
+  <use href="#mark-mono" xlink:href="#mark-mono" transform="translate(96 585) scale(.68)" style="color:#151B2C"/>
+  <use href="#mark-mono" xlink:href="#mark-mono" transform="translate(664 402) scale(1.12)" style="color:#FFFFFF"/>
+  <use href="#wordmark" xlink:href="#wordmark" transform="translate(824 438) scale(.66)" style="color:#FFFFFF"/>
+  <g transform="translate(690 585)"><rect width="82" height="82" rx="18" fill="#FAF7F2"/><use href="#mark" xlink:href="#mark" transform="translate(9 9) scale(.5)"/></g>
+  <g transform="translate(814 598)"><rect width="58" height="58" rx="14" fill="#FAF7F2"/><use href="#mark" xlink:href="#mark" transform="translate(9 9) scale(.31)"/></g>
+  <g transform="translate(914 611)"><rect width="36" height="36" rx="9" fill="#FAF7F2"/><use href="#mark" xlink:href="#mark" transform="translate(10 10) scale(.125)"/></g>
+</svg>

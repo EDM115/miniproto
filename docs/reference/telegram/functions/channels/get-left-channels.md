@@ -1,0 +1,96 @@
+---
+title: "channels.getLeftChannels"
+description: "No description provided by the pinned schema."
+generated: true
+editUrl: false
+language: "telegram"
+kind: "function"
+qualified_name: "channels.getLeftChannels"
+source_path: "tools/schema/schema.json"
+source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
+namespace: "channels"
+layer: 228
+schema_source: "tdlib"
+constructor_id: "0x8341ecc0"
+---
+
+# `channels.getLeftChannels`
+
+No description provided by the pinned schema.
+
+## Signature
+
+```tl
+channels.getLeftChannels#8341ecc0 offset:int = messages.Chats;
+```
+
+## Result type
+
+`messages.Chats`
+
+## Parameters
+
+| Name | Type | Flag | Default | Description |
+| --- | --- | --- | --- | --- |
+| offset | int | — | — | No description provided by the pinned schema. |
+
+## Python binding
+
+```python
+from miniproto.raw.functions import ChannelsGetLeftChannels
+```
+
+Public access: `miniproto.raw.functions.ChannelsGetLeftChannels`.
+
+## Safe usage shape
+
+```python
+from miniproto.raw.functions import ChannelsGetLeftChannels
+
+# Naming the raw request class is local only; it performs no I/O or network request.
+request_type = ChannelsGetLeftChannels
+```
+
+## Result family
+
+[`messages.Chats`](/reference/telegram/types/results/messages-chats/)
+
+## RPC errors
+
+| Code | Error | Description |
+| ---: | --- | --- |
+| 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) | This method was invoked over a business connection using [invokeWithBusinessConnection](https://core.telegram.org/api/business#connected-bots), but either (1) we're a user, and users cannot invoke methods over a business connection; (2) we're a bot, but business mode was disabled in @botfather or (3); we're a bot, but this method cannot be invoked over a business connection. |
+| 400 | [`TAKEOUT_INVALID`](/reference/telegram/errors/takeout-invalid/) | The specified takeout ID is invalid. |
+| 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) | The specified authorization key is not registered in the system (for example, a PFS temporary key has expired). |
+| 403 | [`TAKEOUT_REQUIRED`](/reference/telegram/errors/takeout-required-403/) | A [takeout](https://core.telegram.org/api/takeout) session needs to be initialized first, [see here &raquo; for more info](https://core.telegram.org/api/takeout). |
+
+## Accepted types
+
+No non-primitive type relationships were found.
+
+
+## Returned types
+
+[`messages.Chats`](/reference/telegram/types/results/messages-chats/)
+Known selected constructors: [`messages.chats`](/reference/telegram/types/messages/chats/), [`messages.chatsSlice`](/reference/telegram/types/messages/chats-slice/)
+
+## Related methods
+
+[`channels.getAdminedPublicChannels`](/reference/telegram/functions/channels/get-admined-public-channels/), [`channels.getChannelRecommendations`](/reference/telegram/functions/channels/get-channel-recommendations/), [`channels.getChannels`](/reference/telegram/functions/channels/get-channels/), [`channels.getGroupsForDiscussion`](/reference/telegram/functions/channels/get-groups-for-discussion/), [`communities.getJoinedCommunities`](/reference/telegram/functions/communities/get-joined-communities/), [`messages.getChats`](/reference/telegram/functions/messages/get-chats/), [`messages.getCommonChats`](/reference/telegram/functions/messages/get-common-chats/), [`stories.getChatsToSend`](/reference/telegram/functions/stories/get-chats-to-send/)
+
+## Availability evidence
+
+- user only
+
+## Provenance
+
+- layer: 228
+- structural source: `tdlib`
+- canonical schema: https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/telegram_api.tl
+- prose merge precedence: TDLib → Telegram Desktop → Core JSON
+- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 228 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
+
+## Source-diff notes
+
+- tdlib_vs_core: changed_count=68; core_only_count=1; overlap_count=2302; tdlib_only_count=158
+- tdlib_vs_tdesktop: changed_count=0; overlap_count=2448; tdesktop_only=null; tdlib_only=accessPointRule, ephemeral.editMessage, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret, updateEphemeralBotCallbackQuery

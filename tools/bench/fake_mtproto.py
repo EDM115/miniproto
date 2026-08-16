@@ -1,4 +1,11 @@
-"""Deterministic local MTProto server used by acceptance benchmarks and tests."""
+"""Deterministic loopback MTProto fakes for benchmark and test protocol paths.
+
+These servers exercise production client transport framing, encrypted envelopes,
+and (for :class:`FakeAuthMTProtoServer`) the auth-key exchange. They deliberately
+do not model Telegram routing, authorization policy, server timing, load,
+datacenter behavior, or live credentials, so their results prove deterministic
+invariants only and are not live-service acceptance evidence.
+"""
 
 from __future__ import annotations
 
@@ -45,6 +52,49 @@ FakeHandler = Callable[[DecodedEncryptedMessage], Awaitable[bytes | object | Non
 
 @dataclass(slots=True)
 class FakeMTProtoServer:
+    """Serve deterministic encrypted RPCs over a loopback MTProto transport.
+
+    Args:
+        auth_key: Pre-shared 256-byte test key used for every encrypted envelope.
+        config: Transport framing mode and bounds to mirror in the fake.
+        handler: Synchronous or asynchronous function receiving each non-ACK
+            decoded request leaf and returning a response body, or ``None``.
+        server_salt: Fixed salt advertised in encrypted responses.
+        session_id: Fixed session identifier expected by benchmark clients.
+        host: Loopback bind host; defaults to ``127.0.0.1``.
+        drop_connections_before_packet: Number of accepted connections to close
+            after framing handshake and before their first packet.
+        drop_connections_after_packet: Number to close after reading one framed
+            packet but before its handler/response work.
+        quick_ack_enabled: Whether requested quick ACK tokens are sent.
+        quick_ack_after_response: Delay enabled quick ACKs until response sends.
+
+    Attributes:
+        auth_key: Pre-shared 256-byte fixture key, never a live credential.
+        config: Loopback transport framing configuration.
+        handler: Deterministic fixture request handler.
+        server_salt: Fixed encrypted-envelope salt advertised by the fixture.
+        session_id: Fixed encrypted-envelope session identifier.
+        host: Local bind interface, defaulting to IPv4 loopback.
+        drop_connections_before_packet: Remaining deterministic pre-packet drops.
+        drop_connections_after_packet: Remaining deterministic post-packet drops.
+        quick_ack_enabled: Whether requested quick ACK tokens are emitted.
+        quick_ack_after_response: Whether ACK emission follows the response.
+        connections_accepted: Count of framed fixture connections accepted.
+        acks_received: Acknowledged message IDs recorded from nested ACKs.
+        containered_bodies: Count of non-ACK leaves unwrapped from containers.
+        quick_acks_sent: Tokens emitted by this local fixture.
+        quick_ack_requests: Tokens requested by connected fixture clients.
+        errors: Unexpected handler/protocol exceptions observed by the fixture.
+        _server: Bound asyncio loopback listener while running.
+        _state: Deterministic MTProto state used for encrypted replies.
+
+    Notes:
+        This fake binds an ephemeral local port and accepts only its simplified,
+        deterministic protocol behavior. It records observable test state but
+        neither authenticates users nor represents live Telegram acceptance.
+    """
+
     auth_key: bytes
     config: TransportConfig
     handler: FakeHandler
@@ -66,6 +116,11 @@ class FakeMTProtoServer:
 
     @property
     def endpoint(self) -> ConnectionEndpoint:
+        """Return the assigned loopback endpoint after :meth:`start` binds it.
+
+        Raises:
+            RuntimeError: If the server is not started or exposes no bound socket.
+        """
         if self._server is None:
             raise RuntimeError("fake server is not started")
         sockets = getattr(self._server, "sockets", None)
@@ -76,17 +131,27 @@ class FakeMTProtoServer:
         return ConnectionEndpoint(str(host), int(port))
 
     async def __aenter__(self) -> FakeMTProtoServer:
+        """Start the server and return it for ``async with`` lifecycle ownership."""
         await self.start()
         return self
 
     async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
+        """Close the bound listener when its ``async with`` block exits.
+
+        Args:
+            exc_type: Exception type from the context body, if any.
+            exc: Exception instance from the context body, if any.
+            tb: Traceback from the context body, if any.
+        """
         await self.close()
 
     async def start(self) -> None:
+        """Initialize deterministic server state and bind an ephemeral loopback listener."""
         self._state = MTProtoState(auth_key=self.auth_key, server_salt=self.server_salt, session_id=self.session_id)
         self._server = await asyncio.start_server(self._handle_client, self.host, 0)
 
     async def close(self) -> None:
+        """Idempotently close the listener; already-active client handlers finish independently."""
         if self._server is None:
             return
         self._server.close()
@@ -94,6 +159,12 @@ class FakeMTProtoServer:
         self._server = None
 
     async def _handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+        """Process one framed encrypted client stream, recording fixture failures.
+
+        Args:
+            reader: Accepted loopback stream reader.
+            writer: Accepted loopback stream writer closed after this fixture session.
+        """
         transport = _ServerTransport(reader, writer, self.config)
         try:
             await transport.read_handshake()
@@ -154,6 +225,9 @@ class FakeMTProtoServer:
         instead of reaching the handler, mirroring how a real server consumes
         them; top-level MsgsAck frames still reach the handler for tests that
         assert standalone ack flushes.
+
+        Args:
+            incoming: Decoded encrypted request that may contain a message container.
         """
         body = decode_message_body(incoming.body)
         if not isinstance(body, MessageContainer):
@@ -185,6 +259,35 @@ class FakeAuthMTProtoServer:
     RSA_PAD envelope without embedding a private production/test key. All DH,
     temporary-AES, nonce-hash, transport, and encrypted-envelope work on the
     client side still runs through production code.
+
+    Args:
+        config: Transport framing mode and bounds used by the loopback server.
+        handler: Synchronous or asynchronous response function for encrypted
+            request leaves after the exchange.
+        host: Loopback bind host; defaults to ``127.0.0.1``.
+        rsa_key: Deterministic exponent-one fixture key; it is deliberately not a
+            production or secret private key.
+
+    Attributes:
+        config: Loopback transport framing configuration.
+        handler: Deterministic encrypted-request response handler.
+        host: Local bind interface, defaulting to IPv4 loopback.
+        rsa_key: Exponent-one fixture key used only to reverse test padding.
+        auth_key: Derived fixture authorization key after one completed handshake.
+        server_salt: Derived fixture salt after one completed handshake.
+        auth_handshakes: Number of accepted auth-key exchanges.
+        encrypted_connections: Number of encrypted connections after authentication.
+        encrypted_requests: Number of encrypted request leaves served.
+        acks_received: Nested acknowledgment IDs consumed by the fixture.
+        containered_bodies: Non-ACK encrypted leaves unwrapped from containers.
+        errors: Unexpected protocol or handler exceptions observed by the fixture.
+        _server: Bound asyncio loopback listener while running.
+        _state: MTProto state available after a successful handshake.
+
+    Notes:
+        The fake validates selected handshake structure and performs real client
+        crypto paths, but it does not establish a real Telegram identity,
+        datacenter session, network condition, or live acceptance result.
     """
 
     config: TransportConfig
@@ -204,6 +307,7 @@ class FakeAuthMTProtoServer:
 
     @property
     def endpoint(self) -> ConnectionEndpoint:
+        """Return the ephemeral loopback endpoint after :meth:`start` succeeds."""
         if self._server is None:
             raise RuntimeError("fake auth server is not started")
         sockets = getattr(self._server, "sockets", None)
@@ -213,16 +317,26 @@ class FakeAuthMTProtoServer:
         return ConnectionEndpoint(str(host), int(port))
 
     async def __aenter__(self) -> FakeAuthMTProtoServer:
+        """Start this fixture and return it for asynchronous context management."""
         await self.start()
         return self
 
     async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
+        """Close the fixture listener when the asynchronous context exits.
+
+        Args:
+            exc_type: Exception type from the context body, if any.
+            exc: Exception instance from the context body, if any.
+            tb: Traceback from the context body, if any.
+        """
         await self.close()
 
     async def start(self) -> None:
+        """Bind the auth fixture to an ephemeral port without starting any client flow."""
         self._server = await asyncio.start_server(self._handle_client, self.host, 0)
 
     async def close(self) -> None:
+        """Idempotently close the fixture listener."""
         if self._server is None:
             return
         self._server.close()
@@ -230,6 +344,12 @@ class FakeAuthMTProtoServer:
         self._server = None
 
     async def _handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+        """Classify the first packet as auth or encrypted traffic and serve that stream.
+
+        Args:
+            reader: Accepted loopback stream reader.
+            writer: Accepted loopback stream writer closed after this fixture session.
+        """
         transport = _ServerTransport(reader, writer, self.config)
         try:
             await transport.read_handshake()
@@ -248,6 +368,12 @@ class FakeAuthMTProtoServer:
             await writer.wait_closed()
 
     async def _handle_auth_exchange(self, transport: _ServerTransport, first_packet: bytes) -> None:
+        """Perform the deterministic single auth-key exchange and retain its session state.
+
+        Args:
+            transport: Framed local transport carrying this handshake.
+            first_packet: Already-read unencrypted ``req_pq_multi`` packet.
+        """
         if self.auth_key is not None:
             raise ValueError("fake auth server received a duplicate auth-key exchange")
         req_pq = decode_unencrypted_message(first_packet)
@@ -306,6 +432,13 @@ class FakeAuthMTProtoServer:
         )
 
     def _decode_req_dh_params(self, body: bytes | memoryview, *, nonce: int, server_nonce: int) -> int:
+        """Validate ``req_DH_params`` and recover its deterministic client nonce.
+
+        Args:
+            body: Serialized request body after the unencrypted envelope.
+            nonce: Original client nonce from ``req_pq_multi``.
+            server_nonce: Fixture server nonce returned in ``resPQ``.
+        """
         constructor_id, offset = decode_constructor_id(body, 0)
         if constructor_id != 0xD712E4BE:
             raise ValueError("fake auth server expected req_DH_params")
@@ -339,6 +472,14 @@ class FakeAuthMTProtoServer:
 
     @staticmethod
     def _decode_set_client_dh_params(body: bytes | memoryview, *, nonce: int, server_nonce: int, new_nonce: int) -> int:
+        """Validate and decrypt ``set_client_DH_params`` to obtain the client DH value.
+
+        Args:
+            body: Serialized request body after the unencrypted envelope.
+            nonce: Original client nonce from ``req_pq_multi``.
+            server_nonce: Fixture server nonce returned in ``resPQ``.
+            new_nonce: Client nonce recovered from ``req_DH_params``.
+        """
         constructor_id, offset = decode_constructor_id(body, 0)
         if constructor_id != 0xF5045F1F:
             raise ValueError("fake auth server expected set_client_DH_params")
@@ -363,6 +504,12 @@ class FakeAuthMTProtoServer:
         return int.from_bytes(g_b, "big")
 
     async def _handle_encrypted_connection(self, transport: _ServerTransport, first_packet: bytes) -> None:
+        """Dispatch encrypted request leaves and return encrypted handler responses.
+
+        Args:
+            transport: Framed local transport carrying encrypted messages.
+            first_packet: First encrypted payload already read by the caller.
+        """
         packet = first_packet
         while True:
             auth_key = self.auth_key
@@ -393,6 +540,11 @@ class FakeAuthMTProtoServer:
             packet = await transport.read_packet()
 
     def _leaves(self, incoming: DecodedEncryptedMessage) -> Iterator[DecodedEncryptedMessage]:
+        """Yield non-ACK container leaves while recording piggyback acknowledgements.
+
+        Args:
+            incoming: Decoded encrypted request that may contain a message container.
+        """
         body = decode_message_body(incoming.body)
         if not isinstance(body, MessageContainer):
             yield incoming
@@ -416,11 +568,22 @@ class FakeAuthMTProtoServer:
 
     @staticmethod
     async def _send_unencrypted(transport: _ServerTransport, body: bytes) -> None:
+        """Frame an unencrypted server message with a server-style message ID.
+
+        Args:
+            transport: Framed local transport to write.
+            body: Serialized unencrypted MTProto message body.
+        """
         msg_id = (int(time.time() * 2**32) & ~3) | 1
         await transport.send_packet(encode_unencrypted_message(msg_id, body))
 
 
 def _reverse_exponent_one_rsa_pad(encrypted_data: bytes) -> bytes:
+    """Reverse the fixture's exponent-one RSA_PAD envelope after integrity validation.
+
+    Args:
+        encrypted_data: 256-byte fixture RSA_PAD payload encrypted with exponent one.
+    """
     if len(encrypted_data) != 256:
         raise ValueError("RSA_PAD envelope must be 256 bytes")
     temp_key_xor = encrypted_data[:32]
@@ -434,7 +597,28 @@ def _reverse_exponent_one_rsa_pad(encrypted_data: bytes) -> bytes:
 
 
 class _ServerTransport:
+    """Server-side framing adapter shared by the deterministic loopback fakes.
+
+    Args:
+        reader: Accepted loopback stream reader.
+        writer: Accepted loopback stream writer.
+        config: Transport framing configuration selecting the production codec.
+
+    Attributes:
+        reader: Accepted loopback stream reader.
+        writer: Accepted loopback stream writer.
+        config: Transport framing configuration selecting the production codec.
+        _codec: Instantiated production framing codec for the selected mode.
+    """
+
     def __init__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, config: TransportConfig) -> None:
+        """Select a server-side transport codec for the configured framing mode.
+
+        Args:
+            reader: Accepted loopback stream reader.
+            writer: Accepted loopback stream writer.
+            config: Transport framing configuration selecting the production codec.
+        """
         self.reader = reader
         self.writer = writer
         self.config = config
@@ -451,6 +635,7 @@ class _ServerTransport:
                 raise ValueError(f"unsupported transport mode {config.mode!r}")
 
     async def read_handshake(self) -> None:
+        """Read and validate the mode's initial handshake tag when it has one."""
         tag = self._codec.handshake_tag
         if tag:
             received = await self.reader.readexactly(len(tag))
@@ -458,9 +643,11 @@ class _ServerTransport:
                 raise ValueError("unexpected transport handshake tag")
 
     async def read_packet(self) -> bytes:
+        """Read one payload frame and return its unframed MTProto packet bytes."""
         return (await self.read_frame()).payload
 
     async def read_frame(self) -> PayloadFrame:
+        """Read framing events until a payload arrives or a client error frame fails."""
         while True:
             event = await self._codec.read_event(self.reader)
             if isinstance(event, PayloadFrame):
@@ -469,10 +656,20 @@ class _ServerTransport:
                 raise ConnectionError(f"client transport error {event.code}")
 
     async def send_packet(self, payload: bytes) -> None:
+        """Frame and flush one server-to-client MTProto packet.
+
+        Args:
+            payload: MTProto payload bytes to frame and write.
+        """
         self.writer.write(self._codec.encode_packet(payload))
         await self.writer.drain()
 
     async def send_quick_ack(self, token: int) -> None:
+        """Encode and flush a mode-specific quick-ACK receipt token.
+
+        Args:
+            token: 32-bit quick-ack token derived from the framed request.
+        """
         match self.config.mode:
             case "tcp_abridged":
                 encoded = token.to_bytes(4, "big")

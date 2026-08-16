@@ -1,3 +1,11 @@
+"""Guarded live bot-transfer benchmark compatible with tglib's result payload.
+
+The benchmark requires explicit environment opt-in and real authorized bot
+credentials. Its compatibility JSON retains tglib's epoch-second boundaries;
+the companion report adds configuration, throughput, finalization, and optional
+event-loop-lag evidence without making a compatibility claim about those extras.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -20,7 +28,21 @@ TGLIB_GUARD_ENV = "MINIPROTO_TGLIB_BENCH"
 def build_tglib_compatibility_payload(
     *, size: int, download_started: float, download_finished: float, upload_started: float, upload_finished: float
 ) -> list[Any]:
-    """Build the exact tglib-bench `[size, [t0,t1,t2,t3]]` result payload."""
+    """Build the exact tglib-bench ``[size, [t0, t1, t2, t3]]`` payload.
+
+    Args:
+        size: Positive transferred file size in bytes.
+        download_started: Epoch seconds at tglib's download-start boundary.
+        download_finished: Epoch seconds after download bytes materialize.
+        upload_started: Epoch seconds at upload start.
+        upload_finished: Epoch seconds when the last upload byte is accepted.
+
+    Returns:
+        The legacy payload only; final media-message submission is deliberately excluded.
+
+    Raises:
+        ValueError: ``size`` is non-positive or a phase's timestamps are reversed.
+    """
     if size <= 0:
         raise ValueError("size must be positive")
     if download_finished < download_started:
@@ -39,7 +61,22 @@ def build_tglib_report(
     environment: Mapping[str, Any] | None = None,
     loop_lag: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Build miniproto's rich companion report without changing the compatibility payload."""
+    """Build the rich companion report without changing tglib compatibility data.
+
+    Args:
+        size: Positive media size in bytes.
+        timestamps: Exactly ``t0`` through ``t3`` epoch-second compatibility boundaries.
+        finalize_finished: Epoch seconds after final ``sendMedia`` completion.
+        configuration: Non-secret benchmark settings, redacted by report generation.
+        environment: Optional non-secret environment evidence; collected when absent.
+        loop_lag: Optional sampling report; it is auxiliary scheduling evidence, not transfer throughput.
+
+    Returns:
+        A normalized seconds-based benchmark report including MiB-per-second throughput.
+
+    Raises:
+        ValueError: The timestamp sequence is not four entries or finalization precedes upload completion.
+    """
     if len(timestamps) != 4:
         raise ValueError("timestamps must contain t0, t1, t2, and t3")
     compatibility = build_tglib_compatibility_payload(
@@ -86,42 +123,92 @@ def build_tglib_report(
 
 
 def parse_args(argv: Sequence[str] | None = None, env: Mapping[str, str] | None = None) -> argparse.Namespace:
-    """Parse the guarded compatibility runner without accepting secrets as CLI arguments."""
+    """Parse the guarded runner while taking credentials only from the environment.
+
+    Args:
+        argv: Optional command-line flags for non-secret transfer parameters.
+        env: Environment mapping supplying defaults, file IDs, and peer targets.
+
+    Returns:
+        Validated CLI namespace. API credentials and sessions are intentionally not CLI options.
+
+    Raises:
+        ValueError: A numeric ``MINIPROTO_TGLIB_*`` default cannot be parsed.
+        SystemExit: argparse rejects missing file/peer values or non-positive transfer settings.
+    """
     values = os.environ if env is None else env
     parser = argparse.ArgumentParser(description="Run a guarded tglib-bench-compatible bot transfer")
     parser.add_argument(
         "--file-id",
         default=values.get("MINIPROTO_TGLIB_FILE_ID"),
         required=not bool(values.get("MINIPROTO_TGLIB_FILE_ID")),
+        help="remote miniproto file ID to download; defaults to MINIPROTO_TGLIB_FILE_ID and performs live Telegram I/O only after the runner guard succeeds",
     )
     parser.add_argument(
-        "--peer", default=values.get("MINIPROTO_TGLIB_PEER"), required=not bool(values.get("MINIPROTO_TGLIB_PEER"))
-    )
-    parser.add_argument("--dc-id", type=int, default=int(values.get("MINIPROTO_TGLIB_DC_ID", "0")) or None)
-    parser.add_argument("--size", type=int, default=int(values.get("MINIPROTO_TGLIB_SIZE", str(TGLIB_DEFAULT_SIZE))))
-    parser.add_argument(
-        "--request-timeout", type=float, default=float(values.get("MINIPROTO_TGLIB_REQUEST_TIMEOUT", "300"))
+        "--peer",
+        default=values.get("MINIPROTO_TGLIB_PEER"),
+        required=not bool(values.get("MINIPROTO_TGLIB_PEER")),
+        help="Telegram peer receiving the upload; defaults to MINIPROTO_TGLIB_PEER",
     )
     parser.add_argument(
-        "--download-concurrency", type=int, default=int(values.get("MINIPROTO_TGLIB_DOWNLOAD_CONCURRENCY", "6"))
+        "--dc-id",
+        type=int,
+        default=int(values.get("MINIPROTO_TGLIB_DC_ID", "0")) or None,
+        help="optional Telegram data-center override; defaults to MINIPROTO_TGLIB_DC_ID or the session/media DC",
     )
     parser.add_argument(
-        "--upload-concurrency", type=int, default=int(values.get("MINIPROTO_TGLIB_UPLOAD_CONCURRENCY", "8"))
+        "--size",
+        type=int,
+        default=int(values.get("MINIPROTO_TGLIB_SIZE", str(TGLIB_DEFAULT_SIZE))),
+        help="generated upload and expected download size in bytes; defaults to MINIPROTO_TGLIB_SIZE or the tglib-compatible size",
+    )
+    parser.add_argument(
+        "--request-timeout",
+        type=float,
+        default=float(values.get("MINIPROTO_TGLIB_REQUEST_TIMEOUT", "300")),
+        help="per-request timeout in seconds; defaults to MINIPROTO_TGLIB_REQUEST_TIMEOUT or 300",
+    )
+    parser.add_argument(
+        "--download-concurrency",
+        type=int,
+        default=int(values.get("MINIPROTO_TGLIB_DOWNLOAD_CONCURRENCY", "6")),
+        help="simultaneous download part requests; defaults to MINIPROTO_TGLIB_DOWNLOAD_CONCURRENCY or 6",
+    )
+    parser.add_argument(
+        "--upload-concurrency",
+        type=int,
+        default=int(values.get("MINIPROTO_TGLIB_UPLOAD_CONCURRENCY", "8")),
+        help="simultaneous upload part requests; defaults to MINIPROTO_TGLIB_UPLOAD_CONCURRENCY or 8",
     )
     parser.add_argument(
         "--download-chunk-size",
         type=int,
         default=int(values.get("MINIPROTO_TGLIB_DOWNLOAD_CHUNK_SIZE", str(512 * 1024))),
+        help="download part size in bytes; defaults to MINIPROTO_TGLIB_DOWNLOAD_CHUNK_SIZE or 524288",
     )
     parser.add_argument(
-        "--compat-json", type=Path, default=Path(values.get("MINIPROTO_TGLIB_COMPAT_JSON", "results.json"))
+        "--compat-json",
+        type=Path,
+        default=Path(values.get("MINIPROTO_TGLIB_COMPAT_JSON", "results.json")),
+        help="tglib-compatible JSON report path to create or replace; defaults to MINIPROTO_TGLIB_COMPAT_JSON or results.json",
     )
     parser.add_argument(
-        "--json", type=Path, default=Path(values.get("MINIPROTO_TGLIB_JSON", ".tmp/tglib/miniproto.json"))
+        "--json",
+        type=Path,
+        default=Path(values.get("MINIPROTO_TGLIB_JSON", ".tmp/tglib/miniproto.json")),
+        help="detailed miniproto JSON report path to create or replace; defaults to MINIPROTO_TGLIB_JSON or .tmp/tglib/miniproto.json",
     )
-    parser.add_argument("--work-dir", type=Path, default=Path(values.get("MINIPROTO_TGLIB_WORK_DIR", ".tmp/tglib")))
     parser.add_argument(
-        "--loop-lag", action=argparse.BooleanOptionalAction, default=values.get("MINIPROTO_TGLIB_LOOP_LAG", "1") == "1"
+        "--work-dir",
+        type=Path,
+        default=Path(values.get("MINIPROTO_TGLIB_WORK_DIR", ".tmp/tglib")),
+        help="directory for generated payloads and downloaded files; defaults to MINIPROTO_TGLIB_WORK_DIR or .tmp/tglib",
+    )
+    parser.add_argument(
+        "--loop-lag",
+        action=argparse.BooleanOptionalAction,
+        default=values.get("MINIPROTO_TGLIB_LOOP_LAG", "1") == "1",
+        help="enable or disable event-loop lag sampling; defaults to MINIPROTO_TGLIB_LOOP_LAG or enabled",
     )
     args = parser.parse_args(argv)
     if args.size <= 0 or args.request_timeout <= 0 or args.download_concurrency <= 0 or args.upload_concurrency <= 0:
@@ -130,7 +217,24 @@ def parse_args(argv: Sequence[str] | None = None, env: Mapping[str, str] | None 
 
 
 async def run_tglib_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> tuple[list[Any], dict[str, Any]]:
-    """Run one bot download/upload using tglib-compatible transfer timing boundaries."""
+    """Run one real bot transfer using tglib-compatible epoch-second boundaries.
+
+    Args:
+        args: Validated runner options, including a resolvable fixture file ID and peer.
+        env: Live credential environment consumed by the authorized-client helper.
+
+    Returns:
+        The exact compatibility payload and its richer redacted companion report.
+
+    Raises:
+        SystemExit: The file's DC and supplied DC are absent or incompatible.
+        RuntimeError: Download size or terminal upload progress contradicts requested transfer evidence.
+        asyncio.CancelledError: The live transfer is cancelled; probe shutdown and client disconnection still run.
+
+    Live Requirements:
+        This coroutine performs a real download and upload. The caller must enforce
+        :data:`TGLIB_GUARD_ENV` and provide authorized live bot configuration.
+    """
     media = media_from_file_id(args.file_id)
     media_dc_id = media.dc_id
     if media_dc_id is None and args.dc_id is None:
@@ -147,6 +251,12 @@ async def run_tglib_benchmark(args: argparse.Namespace, env: Mapping[str, str]) 
     upload_finished: float | None = None
 
     async def upload_progress(current: int, total: int | None) -> None:
+        """Record the tglib upload-stop timestamp at the first terminal progress callback.
+
+        Args:
+            current: Bytes acknowledged by the progress callback.
+            total: Expected upload bytes when the callback knows them, or ``None`` otherwise.
+        """
         nonlocal upload_finished
         if total is not None and current >= total and upload_finished is None:
             upload_finished = time.time()
@@ -208,6 +318,15 @@ async def run_tglib_benchmark(args: argparse.Namespace, env: Mapping[str, str]) 
 
 
 def main(argv: Sequence[str] | None = None, *, env: Mapping[str, str] | None = None) -> int:
+    """Enforce the live opt-in, run one benchmark, and write compatibility/report JSON.
+
+    Args:
+        argv: Optional non-secret runner flags.
+        env: Optional live environment override, otherwise dotenv-backed values.
+
+    Returns:
+        ``0`` on completion or ``2`` when the explicit live-transfer guard is absent.
+    """
     values = load_dotenv() if env is None else dict(env)
     args = parse_args(argv, values)
     if values.get(TGLIB_GUARD_ENV) != "1":

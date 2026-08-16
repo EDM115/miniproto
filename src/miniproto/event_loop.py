@@ -24,17 +24,39 @@ _STDLIB_DEBUG_FALLBACK_THROUGH = {
 
 
 def backend_name() -> str:
-    """Return the optimized event-loop package selected for this platform."""
+    """Return the optimized event-loop package selected for this platform.
+
+    Returns:
+        ``winloop`` on Windows and ``uvloop`` on every other platform. The name
+        is selected without importing or installing the package.
+    """
     return _BACKEND_NAME
 
 
 def backend() -> ModuleType | None:
-    """Load and return the optimized backend module when it is available."""
+    """Load and return the optimized backend module when it is available.
+
+    Returns:
+        The cached import of the platform-selected backend, or ``None`` when
+        that package is not installed.
+
+    Raises:
+        Exception: Propagates an import failure raised inside the backend rather
+            than treating a broken installation as unavailable.
+    """
     return _load_backend()
 
 
 def backend_version() -> str | None:
-    """Return the installed optimized backend version, if available."""
+    """Return the installed optimized backend version, if available.
+
+    Returns:
+        Distribution metadata, then the backend's ``__version__`` fallback, or
+        ``None`` when no backend is importable or exposes a version.
+
+    Raises:
+        Exception: Propagates failures while importing the selected backend.
+    """
     selected_backend = _load_backend()
     if selected_backend is None:
         return None
@@ -46,22 +68,51 @@ def backend_version() -> str | None:
 
 
 def optimized_available() -> bool:
-    """Return whether the platform's optimized event-loop backend can be loaded."""
+    """Return whether the platform's optimized event-loop backend can be loaded.
+
+    Raises:
+        Exception: Propagates import failures other than an absent selected
+            backend package.
+    """
     return _load_backend() is not None
 
 
 def installed() -> bool:
-    """Return whether miniproto installed an optimized event-loop policy."""
+    """Return whether :func:`install` last installed a legacy backend policy.
+
+    This flag does not probe asyncio's current policy and remains false when
+    applications use :func:`run` or :func:`new_event_loop` instead.
+    """
     return _INSTALLED
 
 
 def install_error() -> Exception | None:
-    """Return the most recent explicit-install or backend-load error, if any."""
+    """Return the most recent explicit-install or backend-load error, if any.
+
+    Returns:
+        The stored exception from :func:`install` or backend import, otherwise
+        ``None``. Reading this value never retries installation.
+    """
     return _INSTALL_ERROR or _BACKEND_LOAD_ERROR
 
 
 def install() -> bool:
-    """Explicitly install the legacy optimized event-loop policy before Python 3.16."""
+    """Install the backend's deprecated global policy on Python before 3.16.
+
+    Returns:
+        ``True`` after the selected backend's legacy ``install`` hook succeeds;
+        ``False`` if no backend/hook is available, installation fails, or Python
+        3.16+ rejects policy installation.
+
+    Raises:
+        DeprecationWarning: Always warns because policy installation is a
+            deprecated asyncio integration path.
+
+    Notes:
+        This process-global operation is not safe to race with other tasks that
+        create loops. Prefer :func:`run` or ``asyncio.Runner`` with
+        :func:`new_event_loop` for scoped lifecycle control.
+    """
     global _INSTALLED, _INSTALL_ERROR
     warnings.warn(
         "event_loop.install() uses the deprecated asyncio policy system; use event_loop.run() or asyncio.Runner(loop_factory=event_loop.new_event_loop)",
@@ -93,7 +144,20 @@ def install() -> bool:
 
 
 def new_event_loop() -> asyncio.AbstractEventLoop:
-    """Create an optimized event loop when available, otherwise create a stdlib loop."""
+    """Create and register an optimized loop, falling back to asyncio's loop.
+
+    Returns:
+        A newly created event loop, also made current with
+        :func:`asyncio.set_event_loop` for the calling thread.
+
+    Raises:
+        Exception: Propagates a selected backend import failure other than a
+            missing package.
+
+    Notes:
+        Callers own the returned loop's lifecycle. Use it as an
+        ``asyncio.Runner`` factory or close it after standalone use.
+    """
     selected_backend = _load_backend()
     factory = getattr(selected_backend, "new_event_loop", None) if selected_backend else None
     loop = factory() if callable(factory) else asyncio.new_event_loop()
@@ -102,7 +166,23 @@ def new_event_loop() -> asyncio.AbstractEventLoop:
 
 
 def run[T](main: Coroutine[Any, Any, T], *, debug: bool | None = None) -> T:
-    """Run a coroutine with Runner and the optimized backend factory when available."""
+    """Run one coroutine with an optimized ``asyncio.Runner`` when possible.
+
+    Args:
+        main: The coroutine to execute until it returns or raises.
+        debug: Passed to ``asyncio.Runner``. ``None`` preserves asyncio's
+            default; known backend/debug incompatibilities use the stdlib loop.
+
+    Returns:
+        The coroutine's result.
+
+    Raises:
+        BaseException: Any exception raised by ``main`` or backend setup.
+
+    Notes:
+        The runner creates, closes, and clears its loop. It must not be called
+        while another event loop is running in this thread.
+    """
     loop_factory = None if _requires_stdlib_debug_runner(debug) else new_event_loop
     try:
         with asyncio.Runner(debug=debug, loop_factory=loop_factory) as runner:
@@ -112,6 +192,11 @@ def run[T](main: Coroutine[Any, Any, T], *, debug: bool | None = None) -> T:
 
 
 def _requires_stdlib_debug_runner(debug: bool | None) -> bool:
+    """Return whether debug mode needs asyncio's loop for this backend version.
+
+    Args:
+        debug: Requested ``asyncio.Runner`` debug setting.
+    """
     if not debug:
         return False
     fallback_through = _STDLIB_DEBUG_FALLBACK_THROUGH.get(_BACKEND_NAME)
@@ -130,6 +215,7 @@ def _requires_stdlib_debug_runner(debug: bool | None) -> bool:
 
 
 def _load_backend() -> ModuleType | None:
+    """Import and cache the selected backend, distinguishing absence from breakage."""
     global _BACKEND, _BACKEND_LOADED, _BACKEND_LOAD_ERROR
     if _BACKEND_LOADED:
         if _BACKEND_LOAD_ERROR is not None:

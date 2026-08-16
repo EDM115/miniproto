@@ -1,3 +1,5 @@
+"""Retry-delay calculation for transient media-transfer failures."""
+
 from __future__ import annotations
 
 import random
@@ -14,11 +16,16 @@ def backoff_delay(
     cap: float = DEFAULT_BACKOFF_CAP,
     jitter: float = DEFAULT_BACKOFF_JITTER,
 ) -> float:
-    """Jittered exponential backoff for transient (non-flood) media retries.
+    """Calculate a jittered exponential delay for a transient non-flood retry.
 
-    ``attempt`` is the zero-based attempt that just failed, so the first retry
-    sleeps roughly ``base`` seconds and each further retry doubles it up to ``cap``,
-    with +/- ``jitter`` (fraction) of randomization to avoid thundering herds.
+    Args:
+        attempt: Zero-based failed attempt; ``0`` produces approximately ``base`` seconds.
+        base: Initial delay in seconds; defaults to :data:`DEFAULT_BACKOFF_BASE`.
+        cap: Maximum unjittered delay in seconds; defaults to :data:`DEFAULT_BACKOFF_CAP`.
+        jitter: Symmetric random fraction applied to the capped delay; defaults to :data:`DEFAULT_BACKOFF_JITTER`.
+
+    Returns:
+        A non-negative sleep duration in seconds. Randomization prevents synchronized retries.
     """
     delay = min(cap, base * (2 ** max(0, attempt)))
     spread = delay * jitter

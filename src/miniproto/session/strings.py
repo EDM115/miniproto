@@ -1,3 +1,11 @@
+"""Import and export validated portable bearer session strings without client dependencies.
+
+Only protected native strings use scrypt-derived AES-256-GCM authenticated encryption.
+Plain native strings, Telethon strings, and Pyrogram strings are bearer encodings:
+they are validated for shape and may carry a checksum, but do not authenticate a
+holder or protect their contained authorization key.
+"""
+
 from __future__ import annotations
 
 import base64
@@ -65,6 +73,7 @@ class SessionString(str):
     __miniproto_secret__ = True
 
     def __repr__(self) -> str:
+        """Return a redacted representation that never exposes session material."""
         return "SessionString('[redacted]')"
 
 
@@ -76,9 +85,26 @@ def export_session_string(
     api_id: int | None = None,
     test_mode: bool | None = None,
 ) -> SessionString:
-    """Export a loaded session record without importing another client library.
+    """Export a typed or decoded session record in a portable bearer format.
 
-    Generic asynchronous storage is exported through :meth:`Client.export_session_string`; this synchronous layer accepts a typed record or an already loaded record mapping.
+    Args:
+        record_or_mapping: A validated record or an already decoded record mapping.
+        format: Native ``miniproto`` (default), ``telethon``, or ``pyrogram``.
+        passphrase: Optional native-only authenticated encryption using scrypt and AES-256-GCM.
+        api_id: Required for Pyrogram when absent from record metadata.
+        test_mode: Required for Pyrogram when absent from record metadata.
+
+    Returns:
+        A redacted-on-representation bearer session string.
+
+    Raises:
+        SessionEnvelopeError: If data, authentication material, limits, or format options are invalid.
+        TypeError: If the input is neither a record nor mapping.
+
+    Protected native strings authenticate and encrypt their payload. Plain native,
+    Telethon, and Pyrogram outputs remain validated bearer encodings. Generic
+    asynchronous storage is exported through ``Client.export_session_string``; this
+    layer deliberately only accepts already loaded state.
     """
 
     record = _coerce_record(record_or_mapping)
@@ -96,7 +122,20 @@ def export_session_string(
 def import_session_string(
     value: str, *, format: SessionStringFormat = "auto", passphrase: str | bytes | None = None
 ) -> SessionRecord:
-    """Import a native, Telethon v1, or Pyrogram session string."""
+    """Import a native, Telethon v1, or Pyrogram string into a validated record.
+
+    Args:
+        value: Bearer session string; it is parsed without stripping characters.
+        format: Explicit format or ``auto`` detection from strict wire shapes.
+        passphrase: Required only for protected native miniproto strings.
+
+    Returns:
+        A normalized session record. Foreign formats set bootstrap metadata.
+
+    Raises:
+        SessionEnvelopeError: If the string, envelope, protected-native authentication, or format is invalid.
+        TypeError: If ``value`` is not a string.
+    """
 
     raw = _ordinary_string(value)
     selected = _detect_format(raw) if format == "auto" else format
@@ -112,6 +151,15 @@ def import_session_string(
 
 
 def _export_native(record: SessionRecord, *, passphrase: str | bytes | None) -> SessionString:
+    """Encode native plaintext-checksummed or scrypt/AES-GCM-protected state.
+
+    Plain native strings have an unkeyed checksum and remain bearer encodings;
+    passphrase-protected strings use authenticated encryption.
+
+    Args:
+        record: Validated session record to encode.
+        passphrase: Optional native protection secret; ``None`` emits a plain checksummed string.
+    """
     _validate_record_limits(record)
     payload = serialize_session_data(record)
     if len(payload) > MAX_SESSION_PAYLOAD_BYTES:
@@ -144,6 +192,12 @@ def _export_native(record: SessionRecord, *, passphrase: str | bytes | None) -> 
 
 
 def _import_native(value: str, *, passphrase: str | bytes | None) -> SessionRecord:
+    """Validate and decode the versioned native envelope before loading its record.
+
+    Args:
+        value: Raw native session string with the required ``mp1:`` prefix.
+        passphrase: Required secret for authenticated encrypted native strings.
+    """
     if not value.startswith(NATIVE_SESSION_PREFIX):
         if value.startswith("mp"):
             raise SessionEnvelopeError("unsupported miniproto session string version")
@@ -214,6 +268,11 @@ def _import_native(value: str, *, passphrase: str | bytes | None) -> SessionReco
 
 
 def _record_from_native_payload(payload: bytes) -> SessionRecord:
+    """Reject ambiguous JSON and unknown fields before constructing native state.
+
+    Args:
+        payload: Decoded native JSON session payload bytes.
+    """
     try:
         document = json.loads(payload.decode("utf-8"), object_pairs_hook=_reject_duplicate_fields)
     except _DuplicateFieldError as exc:
@@ -235,6 +294,11 @@ def _record_from_native_payload(payload: bytes) -> SessionRecord:
 
 
 def _import_telethon(value: str) -> SessionRecord:
+    """Decode strict Telethon v1 IPv4 or IPv6 bearer session material.
+
+    Args:
+        value: Raw Telethon v1 session string.
+    """
     if not value or value[0] != "1":
         raise SessionEnvelopeError("unsupported Telethon session string version")
     if len(value) not in {353, 369}:
@@ -262,6 +326,13 @@ def _import_telethon(value: str) -> SessionRecord:
 
 
 def _export_telethon(record: SessionRecord) -> SessionString:
+    """Encode the active non-media endpoint and 256-byte auth key for Telethon v1.
+
+    The result is a validated bearer encoding, not encrypted or authenticated.
+
+    Args:
+        record: Session record with active DC, endpoint, and 256-byte authorization key.
+    """
     dc_id, auth_key = _required_dc_and_auth(record, format_name="Telethon")
     option = next(
         (candidate for candidate in record.dc_options if candidate.id == dc_id and not candidate.media_only), None
@@ -278,6 +349,11 @@ def _export_telethon(record: SessionRecord) -> SessionString:
 
 
 def _import_pyrogram(value: str) -> SessionRecord:
+    """Decode supported Pyrogram legacy or v2 bearer layouts and record import metadata.
+
+    Args:
+        value: Raw Pyrogram legacy or v2 session string.
+    """
     from miniproto.auth.dc import default_dc_options
 
     selected = _PYROGRAM_LAYOUTS_BY_TEXT_SIZE.get(len(value))
@@ -319,6 +395,15 @@ def _import_pyrogram(value: str) -> SessionRecord:
 
 
 def _export_pyrogram(record: SessionRecord, *, api_id: int | None, test_mode: bool | None) -> SessionString:
+    """Encode the modern Pyrogram layout using explicit or stored API settings.
+
+    The result is a validated bearer encoding, not encrypted or authenticated.
+
+    Args:
+        record: Session record with active DC, key, and account identity.
+        api_id: Optional API ID overriding record metadata.
+        test_mode: Optional test-mode value overriding record metadata.
+    """
     dc_id, auth_key = _required_dc_and_auth(record, format_name="Pyrogram")
     resolved_api_id = api_id if api_id is not None else _metadata_int(record.metadata, "api_id")
     if resolved_api_id is None or resolved_api_id <= 0:
@@ -342,6 +427,12 @@ def _export_pyrogram(record: SessionRecord, *, api_id: int | None, test_mode: bo
 
 
 def _required_dc_and_auth(record: SessionRecord, *, format_name: str) -> tuple[int, bytes]:
+    """Require a matching active DC and exact 256-byte foreign-format auth key.
+
+    Args:
+        record: Session record to validate for foreign-format export.
+        format_name: Human-readable target format included in validation errors.
+    """
     if record.dc_id is None or record.auth_key is None:
         raise SessionEnvelopeError(f"{format_name} export requires an active datacenter and auth key")
     if len(record.auth_key.key) != 256:
@@ -352,6 +443,11 @@ def _required_dc_and_auth(record: SessionRecord, *, format_name: str) -> tuple[i
 
 
 def _detect_format(value: str) -> Literal["miniproto", "telethon", "pyrogram"]:
+    """Detect a format only from unambiguous version prefixes and strict lengths.
+
+    Args:
+        value: Raw session string whose wire shape is inspected.
+    """
     if value.startswith("mp"):
         return "miniproto"
     if value.startswith("1") and len(value) in {353, 369}:
@@ -362,6 +458,11 @@ def _detect_format(value: str) -> Literal["miniproto", "telethon", "pyrogram"]:
 
 
 def _coerce_record(value: SessionRecord | Mapping[str, Any]) -> SessionRecord:
+    """Accept typed state or validate a decoded record mapping for export.
+
+    Args:
+        value: Typed session record or decoded canonical mapping.
+    """
     if isinstance(value, SessionRecord):
         return value
     if isinstance(value, Mapping):
@@ -373,12 +474,22 @@ def _coerce_record(value: SessionRecord | Mapping[str, Any]) -> SessionRecord:
 
 
 def _ordinary_string(value: str) -> str:
+    """Recover actual string contents even from a redacting ``SessionString``.
+
+    Args:
+        value: Plain or redacting string instance containing session material.
+    """
     if not isinstance(value, str):
         raise TypeError("session string must be str")
     return str.__str__(value) if isinstance(value, SessionString) else value
 
 
 def _passphrase_bytes(passphrase: str | bytes) -> bytes:
+    """Encode a non-empty native protection passphrase as secret bytes.
+
+    Args:
+        passphrase: Text or binary secret used for native authenticated encryption.
+    """
     secret = passphrase.encode("utf-8") if isinstance(passphrase, str) else bytes(passphrase)
     if not secret:
         raise SessionEnvelopeError("session string passphrase must not be empty")
@@ -386,6 +497,12 @@ def _passphrase_bytes(passphrase: str | bytes) -> bytes:
 
 
 def _derive_protected_key(passphrase: bytes, salt: bytes) -> bytes:
+    """Derive the fixed-size native encryption key with the supported scrypt cost.
+
+    Args:
+        passphrase: Non-empty passphrase bytes.
+        salt: Fresh native-envelope scrypt salt.
+    """
     try:
         return scrypt_derive(passphrase, salt, _SCRYPT_N, _SCRYPT_R, _SCRYPT_P, 32)
     except (MemoryError, TypeError, ValueError) as exc:
@@ -393,10 +510,21 @@ def _derive_protected_key(passphrase: bytes, salt: bytes) -> bytes:
 
 
 def _encode_unpadded(value: bytes) -> str:
+    """Encode canonical unpadded URL-safe base64.
+
+    Args:
+        value: Binary session-string payload to encode.
+    """
     return base64.urlsafe_b64encode(value).decode("ascii").rstrip("=")
 
 
 def _decode_unpadded(value: str, *, field: str) -> bytes:
+    """Decode only canonical unpadded URL-safe base64 for a named field.
+
+    Args:
+        value: Candidate unpadded URL-safe base64 text.
+        field: Field name included in validation errors.
+    """
     if not value or _URLSAFE_UNPADDED_RE.fullmatch(value) is None:
         raise SessionEnvelopeError(f"{field} is not strict URL-safe base64")
     try:
@@ -409,6 +537,12 @@ def _decode_unpadded(value: str, *, field: str) -> bytes:
 
 
 def _decode_padded(value: str, *, field: str) -> bytes:
+    """Decode only canonical padded URL-safe base64 for a named field.
+
+    Args:
+        value: Candidate padded URL-safe base64 text.
+        field: Field name included in validation errors.
+    """
     if not value or _URLSAFE_PADDED_RE.fullmatch(value) is None or len(value) % 4:
         raise SessionEnvelopeError(f"{field} is not strict URL-safe base64")
     try:
@@ -421,6 +555,12 @@ def _decode_padded(value: str, *, field: str) -> bytes:
 
 
 def _validate_foreign_auth(dc_id: int, auth_key: bytes) -> None:
+    """Require usable foreign session DC and non-zero 256-byte auth material.
+
+    Args:
+        dc_id: Decoded foreign-format data-center ID.
+        auth_key: Decoded foreign-format 256-byte authorization key.
+    """
     if dc_id <= 0:
         raise SessionEnvelopeError("session string contains an invalid datacenter")
     if len(auth_key) != 256 or not any(auth_key):
@@ -428,6 +568,11 @@ def _validate_foreign_auth(dc_id: int, auth_key: bytes) -> None:
 
 
 def _validate_record_limits(record: SessionRecord) -> None:
+    """Enforce bounded DC-option and peer counts before native export.
+
+    Args:
+        record: Validated record whose collection limits are checked.
+    """
     if len(record.dc_options) > MAX_DC_OPTIONS:
         raise SessionEnvelopeError("session record contains too many DC options")
     if len(record.peers) > MAX_PEERS:
@@ -435,6 +580,11 @@ def _validate_record_limits(record: SessionRecord) -> None:
 
 
 def _validate_mapping_limits(mapping: Mapping[str, Any]) -> None:
+    """Enforce bounded decoded collection shapes before record construction.
+
+    Args:
+        mapping: Decoded native record mapping whose collection shapes are checked.
+    """
     dc_options = mapping.get("dc_options", ())
     peers = mapping.get("peers", ())
     if not isinstance(dc_options, list | tuple) or len(dc_options) > MAX_DC_OPTIONS:
@@ -444,15 +594,28 @@ def _validate_mapping_limits(mapping: Mapping[str, Any]) -> None:
 
 
 def _metadata_int(metadata: Mapping[str, Any], key: str) -> int | None:
+    """Return a non-boolean integer metadata value when present.
+
+    Args:
+        metadata: Session metadata mapping to inspect.
+        key: Metadata key expected to hold an integer.
+    """
     value = metadata.get(key)
     return value if isinstance(value, int) and not isinstance(value, bool) else None
 
 
 class _DuplicateFieldError(ValueError):
+    """Internal marker raised when JSON decoding detects duplicate object keys."""
+
     pass
 
 
 def _reject_duplicate_fields(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    """Build a JSON object mapping while rejecting duplicate keys fail-closed.
+
+    Args:
+        pairs: Ordered key/value pairs supplied by JSON's object-pairs hook.
+    """
     result: dict[str, object] = {}
     for key, value in pairs:
         if key in result:

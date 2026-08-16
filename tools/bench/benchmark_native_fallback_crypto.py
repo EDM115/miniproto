@@ -1,3 +1,14 @@
+"""Measure parity-checked native and fallback crypto, envelope, and TL workloads.
+
+Durations are per-call wall-clock milliseconds sampled after one warmup call
+(except the explicitly first-run DH fixtures).  Reports retain all samples and
+their median; native and Python calls are compared only after exact normalized
+output parity succeeds.  Cases are omitted when the compiled module or the
+``cryptography`` fallback is unavailable, so a ratio is never a cross-platform
+or generalized speed claim.  CPU governor, interpreter build, extension build,
+cryptography provider, and current system load can materially change results.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -51,41 +62,77 @@ except ModuleNotFoundError:
 
 @dataclass(frozen=True, slots=True)
 class BenchmarkResult:
+    """One implementation's wall-clock samples, expressed in milliseconds.
+
+    Attributes:
+        name: Stable workload-and-implementation label for the sample series.
+        samples_ms: Retained single-call wall-clock durations in milliseconds.
+    """
+
     name: str
     samples_ms: tuple[float, ...]
 
     @property
     def runs(self) -> int:
+        """Return the number of measured samples, excluding warmups."""
         return len(self.samples_ms)
 
     @property
     def best_ms(self) -> float:
+        """Return the minimum observed duration in milliseconds."""
         return min(self.samples_ms)
 
     @property
     def median_ms(self) -> float:
+        """Return the median observed duration in milliseconds."""
         return statistics.median(self.samples_ms)
 
 
 @dataclass(frozen=True, slots=True)
 class BenchmarkCase:
+    """One parity-checked native-versus-fallback workload, with optional sides.
+
+    Attributes:
+        name: Stable workload name written to the report.
+        native: Bound extension callable, or ``None`` when native is unavailable.
+        python: Bound fallback callable, or ``None`` when its dependency is unavailable.
+    """
+
     name: str
     native: Callable[[], object] | None
     python: Callable[[], object] | None
 
 
 def parse_args(argv: Sequence[str] | None = None, env: Mapping[str, str] | None = None) -> argparse.Namespace:
-    """Parse the benchmark CLI, with explicit arguments taking precedence over environment defaults."""
+    """Parse the benchmark CLI, with explicit arguments taking precedence over environment defaults.
+
+    Args:
+        argv: Optional argument tokens; ``None`` reads the process command line.
+        env: Optional environment mapping; ``None`` reads ``os.environ``.
+
+    Raises:
+        ValueError: ``MINIPROTO_BENCH_RUNS`` is configured but is not an integer.
+        SystemExit: CLI parsing fails or the resolved run count is not positive.
+    """
     values = os.environ if env is None else env
     parser = argparse.ArgumentParser(description="Benchmark native crypto/envelope/TL primitives against fallbacks")
-    parser.add_argument("--mode", choices=("smoke", "full"), default=values.get("MINIPROTO_BENCH_MODE", "smoke"))
     parser.add_argument(
-        "--runs", type=int, default=int(values["MINIPROTO_BENCH_RUNS"]) if values.get("MINIPROTO_BENCH_RUNS") else None
+        "--mode",
+        choices=("smoke", "full"),
+        default=values.get("MINIPROTO_BENCH_MODE", "smoke"),
+        help="workload size; defaults to MINIPROTO_BENCH_MODE or smoke",
+    )
+    parser.add_argument(
+        "--runs",
+        type=int,
+        default=int(values["MINIPROTO_BENCH_RUNS"]) if values.get("MINIPROTO_BENCH_RUNS") else None,
+        help="samples per primitive; defaults to MINIPROTO_BENCH_RUNS or the selected mode's built-in count",
     )
     parser.add_argument(
         "--json",
         type=Path,
         default=Path(values["MINIPROTO_BENCH_JSON"]) if values.get("MINIPROTO_BENCH_JSON") else None,
+        help="optional JSON report path to create or replace; defaults to MINIPROTO_BENCH_JSON",
     )
     args = parser.parse_args(argv)
     if args.runs is None:
@@ -96,7 +143,11 @@ def parse_args(argv: Sequence[str] | None = None, env: Mapping[str, str] | None 
 
 
 def benchmark_result_record(result: BenchmarkResult) -> dict[str, Any]:
-    """Serialize one measured implementation with its full distribution."""
+    """Serialize one measured implementation with its full distribution.
+
+    Args:
+        result: Sample series to expose with reporting statistics.
+    """
     return {
         "runs": result.runs,
         "samples_ms": list(result.samples_ms),
@@ -105,6 +156,16 @@ def benchmark_result_record(result: BenchmarkResult) -> dict[str, Any]:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Run configured crypto/TL workloads and emit a normalized JSON report.
+
+    The report uses milliseconds per complete callable invocation.  It records
+    unavailable sides rather than substituting a different workload, and raises
+    when the fixed RFC fixture or a native/fallback output comparison fails.
+    Command-line ``--runs`` changes only the number of retained samples.
+
+    Args:
+        argv: Optional CLI tokens; ``None`` reads the process command line.
+    """
     args = parse_args(argv)
     native_impl = _load_native_module()
     key = bytes(range(32))
@@ -305,6 +366,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def _load_native_module() -> ModuleType | None:
+    """Import the optional extension, returning ``None`` only on import failure."""
     try:
         return importlib.import_module("miniproto._native")
     except ImportError:
@@ -312,6 +374,13 @@ def _load_native_module() -> ModuleType | None:
 
 
 def _call(module: ModuleType | None, name: str, *args: object) -> Callable[[], object] | None:
+    """Bind an extension callable and fixed arguments when that module exists.
+
+    Args:
+        module: Imported native extension, or ``None`` when it is unavailable.
+        name: Native attribute name to bind.
+        *args: Positional workload arguments captured by the returned callable.
+    """
     if module is None:
         return None
     func = getattr(module, name)
@@ -319,42 +388,87 @@ def _call(module: ModuleType | None, name: str, *args: object) -> Callable[[], o
 
 
 def _cryptography_fallback(function: Callable[[], object]) -> Callable[[], object] | None:
+    """Keep a fallback case only when its ``cryptography`` dependency is present.
+
+    Args:
+        function: Bound fallback workload requiring ``cryptography``.
+    """
     return function if _CRYPTOGRAPHY_AVAILABLE else None
 
 
 def _call_aes_ige_roundtrip(
     module: ModuleType | None, payload: bytes, key: bytes, iv: bytes
 ) -> Callable[[], object] | None:
+    """Build the fixed AES-IGE encrypt/decrypt round-trip workload if native exists.
+
+    Args:
+        module: Imported native extension, or ``None`` when unavailable.
+        payload: Fixed block-aligned plaintext bytes for the workload.
+        key: Fixed 32-byte AES-256 key.
+        iv: Fixed 32-byte AES-IGE chaining IV.
+    """
     if module is None:
         return None
     return lambda: module.aes_256_ige_decrypt(module.aes_256_ige_encrypt(payload, key, iv), key, iv)
 
 
 def _call_tl_int_loop(module: ModuleType | None, values: tuple[int, ...]) -> Callable[[], object] | None:
+    """Bind a repeated scalar TL integer encode/decode workload when available.
+
+    Args:
+        module: Native extension to exercise, or ``None`` when unavailable.
+        values: Fixed signed integers processed by the returned loop.
+    """
     if module is None:
         return None
     return lambda: _tl_int_loop(module, values)
 
 
 def _call_tl_vector(module: ModuleType | None, values: tuple[int, ...]) -> Callable[[], object] | None:
+    """Bind the manual TL-vector construction workload when native exists.
+
+    Args:
+        module: Native extension to exercise, or ``None`` when unavailable.
+        values: Fixed integer values placed in the manual Vector encoding.
+    """
     if module is None:
         return None
     return lambda: _tl_vector(module, values)
 
 
 def _call_tl_int_vector_loop(module: ModuleType | None, values: tuple[int, ...]) -> Callable[[], object] | None:
+    """Bind the integer-vector encode/decode workload when native exists.
+
+    Args:
+        module: Native extension to exercise, or ``None`` when unavailable.
+        values: Fixed signed 32-bit values for the Vector workload.
+    """
     if module is None:
         return None
     return lambda: _tl_int_vector_loop(module, values)
 
 
 def _call_tl_long_vector_loop(module: ModuleType | None, values: tuple[int, ...]) -> Callable[[], object] | None:
+    """Bind the long-vector encode/decode workload when native exists.
+
+    Args:
+        module: Native extension to exercise, or ``None`` when unavailable.
+        values: Fixed signed 64-bit values for the Vector workload.
+    """
     if module is None:
         return None
     return lambda: _tl_long_vector_loop(module, values)
 
 
 def _run(name: str, func: Callable[[], object], runs: int = 10, *, warmup: int = 1) -> BenchmarkResult:
+    """Warm a callable, then collect ``runs`` single-call wall-clock samples in ms.
+
+    Args:
+        name: Stable label retained on the resulting sample series.
+        func: Zero-argument workload timed once per retained sample.
+        runs: Positive number of retained timed samples, defaulting to ten.
+        warmup: Untimed invocations before sampling, defaulting to one.
+    """
     for _ in range(warmup):
         func()
     durations: list[float] = []
@@ -366,6 +480,12 @@ def _run(name: str, func: Callable[[], object], runs: int = 10, *, warmup: int =
 
 
 def _measure_case(case: BenchmarkCase, *, runs: int) -> dict[str, Any]:
+    """Measure available sides and compute a median ratio only after parity passes.
+
+    Args:
+        case: Optional native/fallback workload pair to measure.
+        runs: Positive number of retained samples per available side.
+    """
     fallback_result = _run(f"{case.name}:python", case.python, runs=runs) if case.python is not None else None
     native_result = _run(f"{case.name}:native", case.native, runs=runs) if case.native is not None else None
     record: dict[str, Any] = {
@@ -390,6 +510,13 @@ def _measure_case(case: BenchmarkCase, *, runs: int) -> dict[str, Any]:
 
 
 def _assert_same_output(name: str, native: Callable[[], object], python: Callable[[], object]) -> None:
+    """Reject a comparison whose native and fallback workload outputs differ.
+
+    Args:
+        name: Workload label included in a parity-failure message.
+        native: Bound native workload to execute once for comparison.
+        python: Bound fallback workload to execute once for comparison.
+    """
     native_value = _normalize_result(native())
     python_value = _normalize_result(python())
     if native_value != python_value:
@@ -397,6 +524,12 @@ def _assert_same_output(name: str, native: Callable[[], object], python: Callabl
 
 
 def _tl_int_loop(module: ModuleType, values: tuple[int, ...]) -> int:
+    """Encode and decode every supplied signed TL integer, returning a checksum.
+
+    Args:
+        module: Native or fallback implementation supplying TL scalar methods.
+        values: Fixed signed integers to round-trip and sum.
+    """
     total = 0
     for value in values:
         decoded, _offset = module.tl_decode_int(module.tl_encode_int(value), 0)
@@ -405,6 +538,12 @@ def _tl_int_loop(module: ModuleType, values: tuple[int, ...]) -> int:
 
 
 def _tl_vector(module: ModuleType, values: tuple[int, ...]) -> bytes:
+    """Build a manual TL vector encoding for parity-oriented helper coverage.
+
+    Args:
+        module: Native or fallback implementation supplying TL encoders.
+        values: Fixed signed integers to append after the Vector header.
+    """
     encoded = bytearray()
     encoded.extend(module.tl_encode_uint(0x1CB5C415))
     encoded.extend(module.tl_encode_int(len(values)))
@@ -414,16 +553,33 @@ def _tl_vector(module: ModuleType, values: tuple[int, ...]) -> bytes:
 
 
 def _tl_int_vector_loop(module: ModuleType, values: tuple[int, ...]) -> object:
+    """Round-trip one integer vector through the selected module.
+
+    Args:
+        module: Native or fallback implementation supplying vector methods.
+        values: Fixed signed 32-bit vector contents.
+    """
     encoded = module.tl_encode_int_vector(values)
     return module.tl_decode_int_vector(encoded, 0)
 
 
 def _tl_long_vector_loop(module: ModuleType, values: tuple[int, ...]) -> object:
+    """Round-trip one long vector through the selected module.
+
+    Args:
+        module: Native or fallback implementation supplying vector methods.
+        values: Fixed signed 64-bit vector contents.
+    """
     encoded = module.tl_encode_long_vector(values)
     return module.tl_decode_long_vector(encoded, 0)
 
 
 def _normalize_result(value: object) -> object:
+    """Normalize list/tuple vector results before exact parity comparison.
+
+    Args:
+        value: Result returned by one native or fallback workload.
+    """
     if (
         isinstance(value, tuple)
         and len(value) == 2
@@ -435,6 +591,12 @@ def _normalize_result(value: object) -> object:
 
 
 def _format_single(name: str, python_result: BenchmarkResult) -> str:
+    """Render the legacy one-sided result summary in millisecond units.
+
+    Args:
+        name: Workload label included in the rendered summary.
+        python_result: Fallback sample series whose best and median are shown.
+    """
     return (
         f"{name}: python_best={python_result.best_ms:.3f}ms "
         f"python_median={python_result.median_ms:.3f}ms runs={python_result.runs}"
@@ -442,6 +604,14 @@ def _format_single(name: str, python_result: BenchmarkResult) -> str:
 
 
 def _format_comparison(name: str, native_result: BenchmarkResult, python_result: BenchmarkResult, ratio: float) -> str:
+    """Render a legacy parity-validated median comparison summary.
+
+    Args:
+        name: Workload label included in the rendered summary.
+        native_result: Native sample series whose milliseconds are rendered.
+        python_result: Fallback sample series whose milliseconds are rendered.
+        ratio: Fallback/native median ratio already computed for the same workload.
+    """
     return (
         f"{name}: native_best={native_result.best_ms:.3f}ms "
         f"native_median={native_result.median_ms:.3f}ms "

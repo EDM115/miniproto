@@ -1,3 +1,10 @@
+"""Deterministic per-DC media-scheduler workload, fairness, and cleanup benchmark.
+
+The benchmark exercises scheduler admission/accounting with cooperative
+``asyncio.sleep(0)`` work, not real transfer I/O. Its fairness and isolation
+results describe this controlled workload rather than live network throughput.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -13,6 +20,32 @@ from miniproto.media.scheduler import MEDIA_SCHEDULER_UNIT, MediaSchedulerRegist
 async def run_scheduler_benchmark(
     *, transfers: int = 10, parts_per_transfer: int = 64, part_size: int = 512 * 1024, max_bytes: int = 8 * 1024 * 1024
 ) -> dict[str, Any]:
+    """Run a deterministic concurrent scheduler workload and return accounting evidence.
+
+    Args:
+        transfers: Number of same-DC download transfers; defaults to 10.
+        parts_per_transfer: Permit acquisitions performed by each transfer;
+            defaults to 64.
+        part_size: Bytes requested by every acquisition; defaults to 512 KiB.
+        max_bytes: Per-direction scheduler byte-window limit; defaults to 8 MiB
+            and must be at least :data:`MEDIA_SCHEDULER_UNIT`.
+
+    Returns:
+        A report with byte/second throughput, per-transfer results, grant fairness
+        ratio, active/queued accounting, cross-DC/direction isolation, and queued
+        waiter cancellation cleanup. Byte counters are bytes; durations/waits are
+        seconds; throughput is bytes per second.
+
+    Raises:
+        ValueError: If dimensions are non-positive or the byte limit is below one
+            scheduler allocation unit.
+        RuntimeError: If closing all handles leaves an idle scheduler registered.
+
+    Notes:
+        Transfers only yield cooperatively after acquiring permits and release
+        immediately. This preserves a reproducible admission/fairness workload;
+        it does not perform media network I/O or establish live acceptance.
+    """
     if transfers <= 0 or parts_per_transfer <= 0 or part_size <= 0 or max_bytes < MEDIA_SCHEDULER_UNIT:
         raise ValueError("benchmark dimensions and limits must be positive")
     registry = MediaSchedulerRegistry(
@@ -31,6 +64,11 @@ async def run_scheduler_benchmark(
     queue_wait_seconds: list[float] = []
 
     async def run_transfer(index: int) -> None:
+        """Acquire/release every part for one transfer and store its ordered result.
+
+        Args:
+            index: Position selecting this transfer's pre-opened scheduler handle.
+        """
         nonlocal peak_active_bytes
         handle = handles[index]
         transfer_started = time.perf_counter()
@@ -128,15 +166,39 @@ async def run_scheduler_benchmark(
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
+    """Parse deterministic scheduler workload dimensions from CLI arguments.
+
+    Args:
+        argv: Optional argument sequence; ``None`` uses process arguments.
+    """
     parser = argparse.ArgumentParser(description="Run the deterministic per-DC media scheduler benchmark")
-    parser.add_argument("--transfers", type=int, default=10)
-    parser.add_argument("--parts-per-transfer", type=int, default=64)
-    parser.add_argument("--part-size", type=int, default=512 * 1024)
-    parser.add_argument("--max-bytes", type=int, default=8 * 1024 * 1024)
+    parser.add_argument(
+        "--transfers",
+        type=int,
+        default=10,
+        help="simultaneous synthetic transfers competing for the scheduler; defaults to 10",
+    )
+    parser.add_argument(
+        "--parts-per-transfer",
+        type=int,
+        default=64,
+        help="permit acquisitions simulated for each transfer; defaults to 64",
+    )
+    parser.add_argument(
+        "--part-size", type=int, default=512 * 1024, help="requested bytes per synthetic part; defaults to 524288"
+    )
+    parser.add_argument(
+        "--max-bytes", type=int, default=8 * 1024 * 1024, help="shared scheduler byte budget; defaults to 8388608"
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Run the local scheduler workload, emit its JSON report, and return success.
+
+    Args:
+        argv: Optional argument sequence forwarded to :func:`parse_args`.
+    """
     args = parse_args(argv)
     report = asyncio.run(
         run_scheduler_benchmark(

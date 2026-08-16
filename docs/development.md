@@ -1,4 +1,9 @@
-# Development Commands
+---
+title: Development Commands
+description: Commands and operating constraints for routine miniproto development.
+slug: /project/development/
+generated: false
+---
 
 This file is the command reference for routine `miniproto` development. Run commands from the repository root unless noted otherwise.
 

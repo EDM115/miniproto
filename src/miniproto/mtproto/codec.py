@@ -1,3 +1,5 @@
+"""MTProto encrypted framing and core service-message body codecs."""
+
 from __future__ import annotations
 
 import gzip
@@ -52,6 +54,18 @@ type ByteBuffer = bytes | memoryview
 
 @dataclass(frozen=True, slots=True)
 class DecodedEncryptedMessage:
+    """Authenticated encrypted MTProto envelope with decrypted body and padding.
+
+    Attributes:
+        auth_key_id: Eight-byte authorization-key identifier from the envelope.
+        server_salt: Decrypted 64-bit server salt.
+        session_id: Decrypted 64-bit session ID.
+        msg_id: MTProto message ID.
+        seq_no: MTProto sequence number.
+        body: Decrypted message body view.
+        padding: Decrypted trailing padding view.
+    """
+
     auth_key_id: bytes
     server_salt: int
     session_id: int
@@ -63,33 +77,73 @@ class DecodedEncryptedMessage:
 
 @dataclass(frozen=True, slots=True)
 class UnencryptedMessage:
+    """Unencrypted MTProto envelope carrying a message ID and raw body.
+
+    Attributes:
+        msg_id: MTProto message ID.
+        body: Raw unencrypted message-body view.
+    """
+
     msg_id: int
     body: ByteBuffer
 
 
 @dataclass(frozen=True, slots=True)
 class MsgsAck:
+    """MTProto ``msgs_ack`` body acknowledging received message IDs.
+
+    Attributes:
+        msg_ids: Acknowledged MTProto message IDs.
+    """
+
     msg_ids: tuple[int, ...]
 
 
 @dataclass(frozen=True, slots=True)
 class MsgsStateReq:
+    """MTProto ``msgs_state_req`` body requesting message states.
+
+    Attributes:
+        msg_ids: Message IDs whose states are requested.
+    """
+
     msg_ids: tuple[int, ...]
 
 
 @dataclass(frozen=True, slots=True)
 class MsgsStateInfo:
+    """MTProto ``msgs_state_info`` body answering a state request.
+
+    Attributes:
+        req_msg_id: Message ID of the corresponding state request.
+        info: Opaque state information bytes.
+    """
+
     req_msg_id: int
     info: bytes
 
 
 @dataclass(frozen=True, slots=True)
 class MsgResendReq:
+    """MTProto ``msg_resend_req`` body requesting retransmission of message IDs.
+
+    Attributes:
+        msg_ids: Message IDs requested for retransmission.
+    """
+
     msg_ids: tuple[int, ...]
 
 
 @dataclass(frozen=True, slots=True)
 class MessageContainerItem:
+    """One message entry inside an MTProto message container.
+
+    Attributes:
+        msg_id: Contained MTProto message ID.
+        seq_no: Contained MTProto sequence number.
+        body: Raw or encodable contained message body.
+    """
+
     msg_id: int
     seq_no: int
     body: ByteBuffer | object
@@ -97,25 +151,60 @@ class MessageContainerItem:
 
 @dataclass(frozen=True, slots=True)
 class MessageContainer:
+    """MTProto ``msg_container`` body containing ordered message entries.
+
+    Attributes:
+        messages: Ordered contained message entries.
+    """
+
     messages: tuple[MessageContainerItem, ...]
 
 
 @dataclass(frozen=True, slots=True)
 class GzipPacked:
+    """MTProto ``gzip_packed`` service body holding compressed message bytes.
+
+    Attributes:
+        packed_data: Gzip-compressed message-body bytes.
+    """
+
     packed_data: ByteBuffer
 
     def unpack(self) -> bytes:
+        """Decompress the contained gzip payload.
+
+        Returns:
+            Uncompressed message-body bytes.
+
+        Raises:
+            OSError: If the stored bytes are not a valid gzip stream.
+        """
         return gzip.decompress(self.packed_data)
 
 
 @dataclass(frozen=True, slots=True)
 class Pong:
+    """MTProto ``pong`` response correlating a server message and ping ID.
+
+    Attributes:
+        msg_id: Server message ID carrying the response.
+        ping_id: Caller-selected ID from the corresponding ping.
+    """
+
     msg_id: int
     ping_id: int
 
 
 @dataclass(frozen=True, slots=True)
 class BadMsgNotification:
+    """MTProto notice that a message ID, sequence number, or other field was invalid.
+
+    Attributes:
+        bad_msg_id: Rejected message ID.
+        bad_msg_seq_no: Rejected sequence number.
+        error_code: MTProto validation error code.
+    """
+
     bad_msg_id: int
     bad_msg_seq_no: int
     error_code: int
@@ -123,6 +212,15 @@ class BadMsgNotification:
 
 @dataclass(frozen=True, slots=True)
 class BadServerSalt:
+    """MTProto bad-message notice that additionally carries a replacement server salt.
+
+    Attributes:
+        bad_msg_id: Rejected message ID.
+        bad_msg_seq_no: Rejected sequence number.
+        error_code: MTProto validation error code.
+        new_server_salt: Replacement 64-bit server salt.
+    """
+
     bad_msg_id: int
     bad_msg_seq_no: int
     error_code: int
@@ -131,6 +229,14 @@ class BadServerSalt:
 
 @dataclass(frozen=True, slots=True)
 class NewSessionCreated:
+    """MTProto notification that establishes a new server session and salt.
+
+    Attributes:
+        first_msg_id: First client message ID in the session.
+        unique_id: Server-provided session uniqueness value.
+        server_salt: Initial 64-bit server salt.
+    """
+
     first_msg_id: int
     unique_id: int
     server_salt: int
@@ -138,22 +244,56 @@ class NewSessionCreated:
 
 @dataclass(frozen=True, slots=True)
 class RpcErrorBody:
+    """Decoded MTProto ``rpc_error`` result body.
+
+    Attributes:
+        error_code: Telegram RPC error code.
+        error_message: Telegram RPC error name or detail string.
+    """
+
     error_code: int
     error_message: str
 
 
 @dataclass(frozen=True, slots=True)
 class RpcResult:
+    """MTProto ``rpc_result`` body containing raw or decoded result data.
+
+    Attributes:
+        req_msg_id: Message ID of the corresponding RPC request.
+        result: Raw result bytes or a decoded result object.
+    """
+
     req_msg_id: int
     result: ByteBuffer | object
 
 
 def encode_unencrypted_message(msg_id: int, body: bytes | object) -> bytes:
+    """Frame an unencrypted MTProto message with ``auth_key_id = 0``.
+
+    Args:
+        msg_id: MTProto message identifier.
+        body: Raw body bytes or a supported encodable body object.
+
+    Returns:
+        Complete unencrypted MTProto envelope bytes.
+    """
     body_bytes = encode_message_body(body)
     return b"\x00" * 8 + _pack_i64(msg_id) + encode_int(len(body_bytes)) + body_bytes
 
 
 def decode_unencrypted_message(packet: ByteBuffer) -> UnencryptedMessage:
+    """Validate and decode an unencrypted MTProto envelope.
+
+    Args:
+        packet: Complete unencrypted packet bytes.
+
+    Returns:
+        Message identifier and a body memoryview.
+
+    Raises:
+        ValueError: If the packet is too short, nonzero-authenticated, or malformed.
+    """
     packet_view = memoryview(packet)
     if len(packet) < 20:
         raise ValueError("unencrypted MTProto packet is too short")
@@ -177,6 +317,21 @@ def encode_encrypted_message(
     client_to_server: bool = True,
     padding: bytes | None = None,
 ) -> bytes:
+    """Encrypt and frame one MTProto message using the configured authorization key.
+
+    Args:
+        auth_key: 256-byte MTProto authorization key.
+        server_salt: Current 64-bit server salt.
+        session_id: Current 64-bit session ID.
+        msg_id: MTProto message identifier.
+        seq_no: MTProto sequence number.
+        body: Raw or supported encoded body.
+        client_to_server: Use client-to-server derivation, defaulting to ``True``.
+        padding: Optional explicit padding; native codec chooses valid padding when omitted.
+
+    Returns:
+        Complete encrypted MTProto packet bytes.
+    """
     body_bytes = encode_message_body(body)
     return _mtproto_encode_message(
         auth_key,
@@ -193,6 +348,19 @@ def encode_encrypted_message(
 def decode_encrypted_message(
     auth_key: bytes, packet: ByteBuffer, *, client_to_server: bool = False
 ) -> DecodedEncryptedMessage:
+    """Authenticate, decrypt, and parse one MTProto encrypted envelope.
+
+    Args:
+        auth_key: 256-byte MTProto authorization key.
+        packet: Complete encrypted packet bytes.
+        client_to_server: Direction used for message-key derivation; defaults to server-to-client.
+
+    Returns:
+        Decrypted envelope fields with body and padding views.
+
+    Raises:
+        ValueError: If the native codec rejects framing, key, or integrity data.
+    """
     auth_key_id, server_salt, session_id, msg_id, seq_no, body, padding = _mtproto_decode_message(
         auth_key, packet, client_to_server=client_to_server
     )
@@ -208,6 +376,17 @@ def decode_encrypted_message(
 
 
 def encode_message_body(body: ByteBuffer | object) -> bytes:
+    """Encode raw, generated, or built-in MTProto service message bodies.
+
+    Args:
+        body: Bytes, generated TL object, or supported service-body object.
+
+    Returns:
+        Constructor-prefixed MTProto body bytes where applicable.
+
+    Raises:
+        TypeError: If the body is not supported by this codec.
+    """
     if isinstance(body, bytes):
         return body
     if isinstance(body, bytearray | memoryview):
@@ -293,6 +472,17 @@ def encode_message_body(body: ByteBuffer | object) -> bytes:
 
 
 def decode_message_body(data: ByteBuffer) -> ByteBuffer | object:
+    """Decode recognized MTProto service bodies, preserving unknown data as a view.
+
+    Args:
+        data: Exactly one MTProto body.
+
+    Returns:
+        Service-body dataclass, ping tuple, RPC error/result, or the original ``ByteBuffer`` input for an unknown constructor.
+
+    Raises:
+        ValueError: If a recognized body is truncated, malformed, or has trailing bytes.
+    """
     data_view = memoryview(data)
     constructor_id, offset = decode_constructor_id(data, 0)
     if constructor_id in _FAST_SERVICE_IDS and len(data) <= 4096:
@@ -386,6 +576,12 @@ def decode_message_body(data: ByteBuffer) -> ByteBuffer | object:
 
 
 def _materialize_fast_service(constructor_id: int, values: tuple[object, ...]) -> object:
+    """Materialize a recognized native fast-path result as its service dataclass.
+
+    Args:
+        constructor_id: Recognized MTProto service constructor ID.
+        values: Native decoder field values in manifest order.
+    """
     if constructor_id == _MSGS_ACK_ID:
         return MsgsAck(msg_ids=tuple(cast(tuple[int, ...], values[0])))
     if constructor_id == _MSGS_STATE_REQ_ID:
@@ -421,18 +617,49 @@ def _materialize_fast_service(constructor_id: int, values: tuple[object, ...]) -
 
 
 def encode_ping(ping_id: int) -> bytes:
+    """Encode an MTProto ``ping`` service body.
+
+    Args:
+        ping_id: Caller-chosen 64-bit ping correlation ID.
+
+    Returns:
+        Constructor-prefixed ``ping`` body bytes.
+    """
     return encode_constructor_id(_PING_ID) + _pack_i64(ping_id)
 
 
 def encode_ping_delay_disconnect(ping_id: int, disconnect_delay: int) -> bytes:
+    """Encode an MTProto ``ping_delay_disconnect`` service body.
+
+    Args:
+        ping_id: Caller-chosen 64-bit ping correlation ID.
+        disconnect_delay: Requested disconnect-delay seconds.
+
+    Returns:
+        Constructor-prefixed service-body bytes.
+    """
     return encode_constructor_id(_PING_DELAY_DISCONNECT_ID) + _pack_i64(ping_id) + encode_int(disconnect_delay)
 
 
 def gzip_pack(body: ByteBuffer | object) -> GzipPacked:
+    """Compress an encodable MTProto body into a ``gzip_packed`` service object.
+
+    Args:
+        body: Raw or supported encodable body.
+
+    Returns:
+        Service object containing gzip-compressed body bytes.
+    """
     return GzipPacked(packed_data=gzip.compress(encode_message_body(body)))
 
 
 def _decode_long_vector(data: ByteBuffer, offset: int) -> tuple[tuple[int, ...], int]:
+    """Decode the MTProto ``Vector<long>`` form used by service bodies.
+
+    Args:
+        data: Service-body wire bytes.
+        offset: Offset at the vector constructor.
+    """
     constructor_id, offset = decode_constructor_id(data, offset)
     if constructor_id != 0x1CB5C415:
         raise ValueError("expected TL vector constructor")
@@ -447,29 +674,64 @@ def _decode_long_vector(data: ByteBuffer, offset: int) -> tuple[tuple[int, ...],
 
 
 def _pack_i64(value: int) -> bytes:
+    """Pack one signed 64-bit MTProto integer.
+
+    Args:
+        value: Integer to encode.
+    """
     return int(value).to_bytes(8, "little", signed=True)
 
 
 def _pack_u64(value: int) -> bytes:
+    """Pack one masked unsigned 64-bit MTProto integer.
+
+    Args:
+        value: Integer whose low 64 bits are encoded.
+    """
     return int(value & 0xFFFFFFFFFFFFFFFF).to_bytes(8, "little", signed=False)
 
 
 def _unpack_i64(data: ByteBuffer, offset: int) -> int:
+    """Read one signed 64-bit little-endian field after checking its length.
+
+    Args:
+        data: Wire bytes containing the field.
+        offset: Starting byte offset.
+    """
     _require_length(data, offset, 8)
     return int.from_bytes(data[offset : offset + 8], "little", signed=True)
 
 
 def _unpack_u64(data: ByteBuffer, offset: int) -> int:
+    """Read one unsigned 64-bit little-endian field after checking its length.
+
+    Args:
+        data: Wire bytes containing the field.
+        offset: Starting byte offset.
+    """
     _require_length(data, offset, 8)
     return int.from_bytes(data[offset : offset + 8], "little", signed=False)
 
 
 def _require_length(data: ByteBuffer, offset: int, length: int) -> None:
+    """Reject a field range that is outside an MTProto payload.
+
+    Args:
+        data: Wire bytes being bounds-checked.
+        offset: Requested field start offset.
+        length: Requested field length in bytes.
+    """
     if offset < 0 or offset + length > len(data):
         raise ValueError("MTProto payload ended before the requested field")
 
 
 def _require_consumed(data: ByteBuffer, offset: int) -> None:
+    """Reject recognized MTProto bodies that contain trailing bytes.
+
+    Args:
+        data: Complete recognized body bytes.
+        offset: First unread byte offset.
+    """
     if offset != len(data):
         raise ValueError("MTProto body has trailing bytes")
 

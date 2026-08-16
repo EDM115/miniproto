@@ -1,3 +1,12 @@
+"""Normalized benchmark reporting with recursive configuration redaction and loop-lag sampling.
+
+Reports retain measurements in their declared units. Configuration keys whose
+names indicate credentials or personal identifiers are replaced recursively;
+callers must still avoid placing secrets in free-form values or result text.
+Loop lag measures event-loop scheduling delay and probe callback overhead, not
+network latency, transfer duration, or application throughput.
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -22,7 +31,18 @@ _SECRET_KEY_PARTS = ("api_hash", "auth_key", "file_id", "password", "phone", "se
 
 
 def sample_statistics(samples: Sequence[float]) -> dict[str, float | int]:
-    """Summarize a non-empty numeric sample using linearly interpolated percentiles."""
+    """Summarize finite numeric samples in their caller-declared unit.
+
+    Args:
+        samples: Non-empty finite measurements, such as seconds, milliseconds, or bytes.
+
+    Returns:
+        Count, extrema, mean, median, and linearly interpolated p50/p95/p99 values.
+        No unit conversion occurs.
+
+    Raises:
+        ValueError: ``samples`` is empty or contains a non-finite value.
+    """
     if not samples:
         raise ValueError("samples must not be empty")
     ordered = sorted(float(sample) for sample in samples)
@@ -41,7 +61,17 @@ def sample_statistics(samples: Sequence[float]) -> dict[str, float | int]:
 
 
 def collect_environment() -> dict[str, Any]:
-    """Collect non-secret runtime information used to interpret benchmark results."""
+    """Collect non-secret local runtime evidence used to interpret benchmark results.
+
+    Returns:
+        Package/native availability, platform, interpreter, tool, Git, and event-loop
+        metadata. Missing commands and distributions are represented by ``None``.
+
+    Evidence Limits:
+        This is contextual metadata only. It does not prove clean-tree state,
+        native correctness, live connectivity, or that a benchmark is comparable
+        across machines.
+    """
     native_version: str | None = None
     native_available = False
     try:
@@ -87,7 +117,30 @@ def build_benchmark_report(
     failures: Sequence[Mapping[str, Any]] = (),
     results: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
-    """Build the shared machine-readable benchmark envelope."""
+    """Build the shared machine-readable benchmark envelope with key-based redaction.
+
+    Args:
+        benchmark: Non-empty benchmark identifier.
+        mode: Supported execution mode: ``smoke``, ``full``, ``live``, or ``tglib``.
+        warmup: Number of excluded warmup iterations.
+        samples: Measurement values expressed in ``unit``.
+        unit: Unit label applied to every sample and statistic without conversion.
+        configuration: Settings recursively redacted when a mapping key appears secret-bearing.
+        environment: Optional non-secret environment evidence; collected when omitted.
+        throughput: Optional derived throughput values with caller-specified key units.
+        rss: Optional resident-memory values with caller-specified key units.
+        loop_lag: Optional event-loop scheduling probe results; distinct from workload latency.
+        failures: Optional serializable failure records.
+        results: Optional serializable benchmark-specific records.
+
+    Returns:
+        A JSON-compatible schema-v1 envelope. Secret-looking configuration keys
+        become ``<redacted>``; arbitrary non-configuration values are normalized,
+        not automatically scrubbed.
+
+    Raises:
+        ValueError: ``benchmark`` is empty, mode is unsupported, or ``warmup`` is negative.
+    """
     if not benchmark:
         raise ValueError("benchmark must not be empty")
     if mode not in {"smoke", "full", "live", "tglib"}:
@@ -115,15 +168,46 @@ def build_benchmark_report(
 
 
 def write_benchmark_report(path: Path, report: Mapping[str, Any]) -> None:
-    """Write one normalized report using deterministic key ordering and UTF-8 newlines."""
+    """Write a normalized report with deterministic keys and UTF-8 LF newlines.
+
+    Args:
+        path: Destination JSON file; missing parent directories are created.
+        report: JSON-compatible normalized report mapping.
+
+    Raises:
+        OSError: The report path cannot be created or written.
+
+    Redaction:
+        This writer does not redact independently; callers should use
+        :func:`build_benchmark_report` before persisting untrusted configuration.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
 
 
 class LoopLagProbe:
-    """Measure event-loop scheduling delay at a fixed cadence when explicitly enabled."""
+    """Measure event-loop scheduling delay and callback overhead at a fixed cadence.
+
+    Args:
+        interval_s: Requested probe cadence in seconds; defaults to 10 ms.
+        stall_threshold_s: Delay above which a sample is counted as a stall; defaults to 5 ms.
+
+    Semantics:
+        Each sample is non-negative delay from its scheduled loop-time target,
+        measured in milliseconds. Missed cadences collapse into one subsequent
+        sample, preventing catch-up bursts from inflating the distribution.
+    """
 
     def __init__(self, *, interval_s: float = 0.01, stall_threshold_s: float = 0.005) -> None:
+        """Validate cadence thresholds and initialize a single-use stopped probe.
+
+        Args:
+            interval_s: Positive requested scheduling cadence in seconds.
+            stall_threshold_s: Non-negative delay threshold in seconds used for stall counts.
+
+        Raises:
+            ValueError: ``interval_s`` is non-positive or ``stall_threshold_s`` is negative.
+        """
         if interval_s <= 0:
             raise ValueError("interval_s must be positive")
         if stall_threshold_s < 0:
@@ -137,14 +221,27 @@ class LoopLagProbe:
         self._report: dict[str, Any] | None = None
 
     async def start(self) -> None:
-        """Start sampling; a probe instance may be started exactly once."""
+        """Start asynchronous sampling; a probe instance may be started exactly once.
+
+        Raises:
+            RuntimeError: The probe has already been started.
+        """
         if self._task is not None:
             raise RuntimeError("loop-lag probe has already been started")
         self._task = asyncio.create_task(self._run(), name="miniproto-benchmark-loop-lag")
         await asyncio.sleep(0)
 
     async def stop(self) -> dict[str, Any]:
-        """Stop sampling and return latency plus callback-overhead distributions."""
+        """Stop sampling and return scheduling-delay plus probe-overhead distributions.
+
+        Returns:
+            A copy with delay percentiles in milliseconds and callback overhead
+            in nanoseconds; it never claims network or workload latency.
+
+        Raises:
+            RuntimeError: The probe was never started.
+            asyncio.CancelledError: Awaiting the probe task is cancelled.
+        """
         if self._task is None:
             raise RuntimeError("loop-lag probe has not been started")
         if self._report is not None:
@@ -167,6 +264,7 @@ class LoopLagProbe:
         return dict(self._report)
 
     async def _run(self) -> None:
+        """Sample scheduled loop-time delay until stop, skipping missed cadence catch-up."""
         loop = asyncio.get_running_loop()
         target = loop.time() + self._interval_s
         while not self._stop.is_set():
@@ -182,12 +280,24 @@ class LoopLagProbe:
 
 
 def _advance_probe_target(*, target: float, observed: float, interval: float) -> float:
-    """Advance beyond missed cadences so one stall produces one sample rather than a catch-up burst."""
+    """Advance beyond missed cadences so one stall produces one sample rather than a catch-up burst.
+
+    Args:
+        target: Previously scheduled event-loop time in seconds.
+        observed: Current observed event-loop time in seconds.
+        interval: Requested cadence in seconds.
+    """
     missed = max(math.floor((observed - target) / interval), 0)
     return target + (missed + 1) * interval
 
 
 def _percentile(ordered: Sequence[float], quantile: float) -> float:
+    """Interpolate a percentile from an already sorted non-empty numeric sequence.
+
+    Args:
+        ordered: Non-empty sample values sorted in ascending caller-declared units.
+        quantile: Desired percentile from zero through one.
+    """
     position = (len(ordered) - 1) * quantile
     lower = math.floor(position)
     upper = math.ceil(position)
@@ -197,6 +307,11 @@ def _percentile(ordered: Sequence[float], quantile: float) -> float:
 
 
 def _redact_mapping(value: Mapping[str, Any]) -> dict[str, Any]:
+    """Recursively redact values whose mapping keys contain configured secret fragments.
+
+    Args:
+        value: Configuration mapping to normalize and redact by key name.
+    """
     redacted: dict[str, Any] = {}
     for key in sorted(value):
         item = value[key]
@@ -211,6 +326,11 @@ def _redact_mapping(value: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _json_value(value: Any) -> Any:
+    """Convert nested report values to stable JSON-compatible primitives.
+
+    Args:
+        value: Nested report value to normalize without independent redaction.
+    """
     if value is None or isinstance(value, str | int | float | bool):
         return value
     if isinstance(value, Path):
@@ -223,6 +343,11 @@ def _json_value(value: Any) -> Any:
 
 
 def _distribution_version(name: str) -> str | None:
+    """Return an installed distribution version, or ``None`` when it is absent.
+
+    Args:
+        name: Installed Python distribution name to query.
+    """
     try:
         return importlib.metadata.version(name)
     except importlib.metadata.PackageNotFoundError:
@@ -230,6 +355,11 @@ def _distribution_version(name: str) -> str | None:
 
 
 def _command_output(command: tuple[str, ...]) -> str | None:
+    """Run one fixed diagnostic subprocess for at most five seconds and return stdout only.
+
+    Args:
+        command: Fixed diagnostic executable and arguments, never shell text.
+    """
     try:
         completed = subprocess.run(  # noqa: S603 - callers pass fixed diagnostic commands only
             command, check=False, capture_output=True, text=True, timeout=5

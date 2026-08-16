@@ -76,6 +76,21 @@ def test_redact_text_handles_log_style_key_value_pairs() -> None:
     assert rendered.count(REDACTED) == 4
 
 
+def test_redact_text_consumes_complete_quoted_values_with_spaces() -> None:
+    rendered = redact_text('password="alpha beta" secret=\'gamma delta\' visible="keep me"')
+
+    assert rendered == 'password="[redacted]" secret=\'[redacted]\' visible="keep me"'
+    assert "alpha beta" not in rendered
+    assert "gamma delta" not in rendered
+
+
+def test_redact_text_fails_closed_for_unterminated_quoted_secret() -> None:
+    rendered = redact_text('password="alpha beta')
+
+    assert rendered == 'password="[redacted]"'
+    assert "alpha beta" not in rendered
+
+
 def test_safe_repr_redacts_dataclass_secret_fields() -> None:
     record = SessionRecord(
         auth_key=AuthKey(dc_id=1, key=b"auth-secret"),

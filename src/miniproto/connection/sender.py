@@ -1,3 +1,5 @@
+"""Concurrent encrypted MTProto request sending, acknowledgement, and recovery."""
+
 from __future__ import annotations
 
 import asyncio
@@ -62,6 +64,11 @@ class QuickAckReceipt:
     """Early transport-acknowledgement metadata for one encrypted send attempt.
 
     A receipt confirms only that Telegram accepted the encrypted transport packet; it does not complete the RPC or replace the later result, error, or MTProto service acknowledgement.
+
+    Args:
+        token: Opaque token supplied by Telegram's quick-ACK frame.
+        latency_ms: Elapsed monotonic send-to-ACK time in milliseconds.
+        attempt: One-based encrypted send attempt that requested the ACK.
     """
 
     token: int
@@ -71,6 +78,22 @@ class QuickAckReceipt:
 
 @dataclass(slots=True)
 class PendingRequest:
+    """Internal state retained for one unresolved request and its resend aliases.
+
+    Args:
+        body: Original encoded or serializable request body.
+        content_related: Whether MTProto sequence allocation marks it as content.
+        future: Future completed with the RPC result or terminal exception.
+        retry_safe: Whether transport loss may resend this request automatically.
+        attempts: Number of encrypted send attempts already made.
+        transport: Transport used for the latest attempt.
+        aliases: Message IDs that currently map to this request after retries.
+        quick_ack: Whether the latest attempts request transport-level quick ACKs.
+        quick_ack_callback: Optional synchronous callback for the first receipt.
+        quick_ack_received: Whether a non-stale receipt was already delivered.
+        quick_ack_waiters: Registered receipt correlations awaiting removal.
+    """
+
     body: bytes | object
     content_related: bool
     future: asyncio.Future[object]
@@ -86,6 +109,16 @@ class PendingRequest:
 
 @dataclass(slots=True)
 class QuickAckWaiter:
+    """Internal correlation record linking a quick-ACK token to one attempt.
+
+    Args:
+        token: Opaque token calculated for the framed encrypted packet.
+        pending: Request record to mark and notify when the token is received.
+        sent_at: Monotonic timestamp captured immediately before its send.
+        attempt: One-based send attempt associated with this registration.
+        transport: Exact transport instance that carried the attempted packet.
+    """
+
     token: int
     pending: PendingRequest
     sent_at: float
@@ -95,12 +128,30 @@ class QuickAckWaiter:
 
 @dataclass(frozen=True, slots=True)
 class SenderState:
+    """Snapshot of sender liveness and pending RPC capacity.
+
+    Args:
+        pending_count: Reserved request slots, including requests awaiting send.
+        connected: Whether transport and receive-loop tasks are both live.
+        receive_task_done: Whether no receive loop exists or the current one has
+            finished.
+    """
+
     pending_count: int
     connected: bool
     receive_task_done: bool
 
 
 class MTProtoSender:
+    """Manage a concurrent encrypted MTProto session over a reconnecting transport.
+
+    One sender serializes message-ID/sequence assignment and transport writes
+    while supporting concurrent :meth:`request` callers. It owns its receive and
+    keepalive tasks after :meth:`connect`; callers must eventually
+    :meth:`disconnect`. On a routine transport loss it retries only explicitly
+    ``retry_safe`` requests and reports an ambiguous result for unsafe requests.
+    """
+
     def __init__(
         self,
         endpoint: ConnectionEndpoint,
@@ -118,6 +169,37 @@ class MTProtoSender:
         on_salt_change: Callable[[int], None] | None = None,
         reconnect_cooldown: float = DEFAULT_RECONNECT_COOLDOWN,
     ) -> None:
+        """Configure a disconnected sender and its bounded background machinery.
+
+        Args:
+            endpoint: Remote MTProto TCP destination.
+            transport_config: Transport framing, deadline, and reconnect bounds.
+            state: Mutable authorization/session state used to encrypt, validate,
+                sequence, acknowledge, and persist MTProto messages.
+            connector: Optional stream factory passed to every transport open.
+            reconnect_attempts: Maximum connection attempts per recovery cycle;
+                defaults to 3.
+            ping_disconnect_delay: Telegram disconnect timeout armed by pings;
+                defaults to 75 seconds.
+            ping_interval: Requested ping cadence, clamped to at least 0.05 s
+                and no more than half the read deadline; defaults to 45 s.
+            ack_flush_threshold: Pending acknowledgements that trigger an eager
+                flush; clamped to at least 1 and defaults to 16.
+            ack_max_delay: Maximum age before the keepalive task flushes queued
+                acknowledgements; clamped to at least 0.05 s and defaults to 10.
+            max_pending_rpcs: Optional hard concurrent :meth:`request` limit.
+            incoming_queue_size: Bounded unsolicited-message queue capacity;
+                clamped to at least 1 and defaults to 256. Oldest items are
+                dropped when it is full.
+            on_salt_change: Optional synchronous callback invoked after the
+                sender accepts a server salt update; callback errors are logged.
+            reconnect_cooldown: Minimum paced delay after a young connection
+                dies; clamped to zero or greater and defaults to one second.
+
+        Notes:
+            Construction starts no tasks or network I/O. Methods share internal
+            connect/send locks; use this instance from one event loop.
+        """
         self.endpoint = endpoint
         self.transport_config = transport_config
         self.state = state
@@ -153,6 +235,7 @@ class MTProtoSender:
 
     @property
     def is_connected(self) -> bool:
+        """Return whether transport and its current receive loop are both live."""
         receive_task = self._receive_task
         return (
             self._transport is not None
@@ -176,6 +259,7 @@ class MTProtoSender:
 
     @property
     def sender_state(self) -> SenderState:
+        """Return a point-in-time liveness and pending-request snapshot."""
         return SenderState(
             pending_count=self._pending_slots_used,
             connected=self.is_connected,
@@ -183,6 +267,16 @@ class MTProtoSender:
         )
 
     async def connect(self) -> None:
+        """Open the transport and start owned receive and keepalive tasks.
+
+        Concurrent calls serialize on a lock; a call made while already healthy
+        is a no-op. A stored fatal receive-loop error is raised once and cleared
+        before a new connection is attempted.
+
+        Raises:
+            BaseException: A remembered fatal receive-loop failure, or any error
+                raised while opening the configured transport.
+        """
         started = time.perf_counter()
         async with self._connect_lock:
             if self.is_connected:
@@ -204,6 +298,12 @@ class MTProtoSender:
         )
 
     async def disconnect(self) -> None:
+        """Stop background tasks, close the transport, and fail unresolved requests.
+
+        This is the terminal lifecycle action for this connection instance until
+        a later :meth:`connect` call. Pending request futures receive
+        :class:`TransportClosed`; cancellation of owned tasks is awaited.
+        """
         started = time.perf_counter()
         self._closing = True
         await self._cancel_keepalive_task()
@@ -221,9 +321,11 @@ class MTProtoSender:
 
     @property
     def has_fatal_error(self) -> bool:
+        """Return whether the receive loop stopped on a non-transport fatal error."""
         return self._fatal_error is not None
 
     def take_fatal_error(self) -> BaseException | None:
+        """Return and clear the most recent fatal receive-loop exception, if any."""
         fatal = self._fatal_error
         self._fatal_error = None
         return fatal
@@ -238,6 +340,42 @@ class MTProtoSender:
         quick_ack: bool = False,
         quick_ack_callback: Callable[[QuickAckReceipt], None] | None = None,
     ) -> object:
+        """Send one RPC and await its decoded result with safe retry controls.
+
+        Args:
+            body: Encoded MTProto bytes or a serializable TL request object.
+            content_related: Allocate a content-related sequence number;
+                defaults to ``True``.
+            retry_safe: Permit automatic resend with a fresh message ID after a
+                transport loss; defaults to ``False`` to avoid duplicating
+                unknown-side-effect RPCs.
+            request_timeout: Optional caller wait bound in seconds. ``None``
+                waits until a result, lifecycle failure, or cancellation.
+            quick_ack: Request a transport quick ACK for the encrypted attempt;
+                defaults to ``False`` and never completes this RPC by itself.
+            quick_ack_callback: Optional synchronous callback receiving the first
+                non-stale :class:`QuickAckReceipt`; supplying it also requests an
+                ACK. Callback failures are isolated and recorded.
+
+        Returns:
+            The decoded ``RpcResult.result`` or a service response such as
+            :class:`Pong`.
+
+        Raises:
+            PendingRpcLimitExceeded: If ``max_pending_rpcs`` capacity is full.
+            TimeoutError: If ``request_timeout`` expires; its pending aliases
+                and quick-ACK registrations are removed.
+            AmbiguousRpcResult: If an unsafe request loses transport after it may
+                have reached Telegram.
+            TransportError: If connection/recovery exhausts or protocol handling
+                fails.
+            asyncio.CancelledError: If the caller cancels; its pending state is
+                removed without cancelling other requests.
+
+        Notes:
+            Calls may run concurrently. Sending and message ID allocation are
+            serialized internally, while futures resolve independently.
+        """
         started = time.perf_counter()
         self._reserve_pending_slot()
         outcome = "success"
@@ -277,6 +415,17 @@ class MTProtoSender:
         retry_safe: bool = False,
         request_timeout: float | None = None,
     ) -> object:
+        """Issue an internal service request without quick-ACK registration.
+
+        Args:
+            body: Encoded or serializable MTProto service request body.
+            content_related: Whether to allocate a content-related sequence
+                number; defaults to ``True``.
+            retry_safe: Whether routine transport loss may resend the request;
+                defaults to ``False``.
+            request_timeout: Optional caller wait limit in seconds, or ``None``
+                to wait until completion or lifecycle failure.
+        """
         return await self._request_core(
             body,
             content_related=content_related,
@@ -296,6 +445,17 @@ class MTProtoSender:
         quick_ack: bool,
         quick_ack_callback: Callable[[QuickAckReceipt], None] | None,
     ) -> object:
+        """Connect, register a pending request, send it, and await its future.
+
+        Args:
+            body: Encoded bytes or serializable request body retained for retry.
+            content_related: Whether sequence allocation marks this as content.
+            retry_safe: Whether recovery may replay the request with a new ID.
+            request_timeout: Optional maximum wait in seconds for its future.
+            quick_ack: Whether the encrypted attempt should request a quick ACK.
+            quick_ack_callback: Callback for the first valid quick-ACK receipt,
+                or ``None`` to observe no receipt callback.
+        """
         await self.connect()
         loop = asyncio.get_running_loop()
         future: asyncio.Future[object] = loop.create_future()
@@ -321,6 +481,24 @@ class MTProtoSender:
         return result
 
     async def send(self, body: bytes | object, *, content_related: bool = True) -> int:
+        """Send a one-way encrypted message and return its MTProto message ID.
+
+        Args:
+            body: Encoded bytes or serializable TL body to encrypt and send.
+            content_related: Whether sequence allocation marks the message as
+                content-related; defaults to ``True``.
+
+        Returns:
+            The allocated message ID after the packet is accepted by the local
+            transport write path.
+
+        Raises:
+            TransportError: If connection or send/recovery fails.
+
+        Notes:
+            This does not create a result future and may retry a raw transport
+            write once during recovery. It serializes with all requests.
+        """
         await self.connect()
         async with self._send_lock:
             msg_id = self.state.next_msg_id()
@@ -338,6 +516,19 @@ class MTProtoSender:
             return msg_id
 
     async def ping(self) -> Pong:
+        """Send a retry-safe ``ping_delay_disconnect`` and require its ``Pong``.
+
+        Returns:
+            Telegram's matching :class:`Pong`.
+
+        Raises:
+            TransportError: If the request fails, times out, or returns a body
+                other than ``Pong``.
+
+        Notes:
+            The keepalive task invokes this on its fixed cadence to prevent idle
+            read deadlines and refresh Telegram's ping-disconnect timer.
+        """
         ping_id = secrets.randbits(63)
         response = await self._request_service(
             encode_ping_delay_disconnect(ping_id, self._ping_disconnect_delay),
@@ -350,12 +541,36 @@ class MTProtoSender:
         return response
 
     async def recv_message(self) -> DecodedEncryptedMessage:
+        """Wait for the next unsolicited validated encrypted message.
+
+        Returns:
+            A message not consumed as an RPC result or MTProto service update.
+
+        Notes:
+            The queue has the configured bounded capacity. On overflow, the
+            receive loop discards the oldest unsolicited message.
+        """
         return await self._incoming.get()
 
     def acked(self, msg_id: int) -> bool:
+        """Return whether Telegram has sent a ``msgs_ack`` containing ``msg_id``.
+
+        Args:
+            msg_id: Outgoing MTProto message ID to look up in received ACKs.
+        """
         return msg_id in self._acks_received
 
     async def flush_acks(self) -> int | None:
+        """Send currently queued acknowledgements, or return ``None`` when empty.
+
+        Returns:
+            The outgoing acknowledgement message ID, or ``None`` if there were
+            no pending acknowledgements to flush.
+
+        Raises:
+            BaseException: Any send failure after restoring popped
+                acknowledgements to the state queue.
+        """
         msg_ids = self.state.pop_pending_acks(limit=DEFAULT_ACK_FLUSH_LIMIT)
         if not msg_ids:
             return None
@@ -368,6 +583,13 @@ class MTProtoSender:
         return msg_id
 
     async def _send_pending(self, pending: PendingRequest, *, fail_future_on_error: bool = True) -> int:
+        """Serialize one pending attempt, including piggyback ACKs and recovery.
+
+        Args:
+            pending: Unresolved request record to encrypt, alias, and send.
+            fail_future_on_error: Whether terminal send/recovery errors detach
+                and cancel the record's future; resends keep it false.
+        """
         async with self._send_lock:
             while True:
                 try:
@@ -442,6 +664,12 @@ class MTProtoSender:
                 return msg_id
 
     def _encode_pending_attempt(self, pending: PendingRequest) -> tuple[int, bytes, tuple[int, ...]]:
+        """Encrypt one request attempt, bundling queued acknowledgements when present.
+
+        Args:
+            pending: Request whose current message ID, sequence number, and body
+                are encoded into this attempt.
+        """
         # Pending acks ride inside a msg_container with the outgoing request:
         # one transport frame, no standalone ack round trip.
         ack_ids = self.state.pop_pending_acks(limit=DEFAULT_ACK_FLUSH_LIMIT)
@@ -475,6 +703,13 @@ class MTProtoSender:
         return msg_id, payload, ack_ids
 
     async def _send_payload(self, payload: bytes, *, retry_transport_error: bool = True) -> Transport:
+        """Send raw encrypted bytes and retry once through transport recovery.
+
+        Args:
+            payload: Already-encrypted MTProto envelope bytes.
+            retry_transport_error: Reconnect and retry once after a transport
+                error when true; otherwise propagate it immediately.
+        """
         transport = await self._connected_transport()
         try:
             await transport.send(payload)
@@ -491,6 +726,7 @@ class MTProtoSender:
         return transport
 
     async def _connected_transport(self) -> Transport:
+        """Return a live transport, reconnecting when the current one is absent or closed."""
         transport = self._transport
         if transport is None or not transport.is_connected:
             await self._reconnect(failed_transport=transport)
@@ -500,6 +736,12 @@ class MTProtoSender:
         return transport
 
     async def _receive_loop(self) -> None:
+        """Own the receive side, resolve futures, and recover routine transport loss.
+
+        Quick-ACK frames trigger callbacks without resolving RPC futures. Transport
+        errors reconnect under the connect lock and resend only retry-safe pending
+        requests; malformed protocol input becomes a stored fatal error.
+        """
         while not self._closing:
             if self._receive_task is not asyncio.current_task():
                 # connect() opened a fresh connection (with its own receive loop)
@@ -564,9 +806,21 @@ class MTProtoSender:
                 return
 
     async def _prevalidate_and_commit_incoming(self, message: DecodedEncryptedMessage) -> None:
+        """Decode nested bodies, validate all IDs, then atomically commit receipt state.
+
+        Args:
+            message: Outer encrypted message whose containers and gzip wrappers
+                are fully decoded before any incoming-state mutation commits.
+        """
         messages: list[tuple[DecodedEncryptedMessage, object]] = []
 
         async def collect(candidate: DecodedEncryptedMessage) -> None:
+            """Recursively unpack gzip/container bodies into a validation batch.
+
+            Args:
+                candidate: One outer or container-leaf message to decode and
+                    append before recursively visiting its children.
+            """
             body = decode_message_body(candidate.body)
             while isinstance(body, GzipPacked):
                 body = decode_message_body(await _unpack_gzip(body))
@@ -609,6 +863,11 @@ class MTProtoSender:
             self.state.commit_incoming(candidate.msg_id, content_related=candidate.seq_no % 2 == 1, now=now)
 
     def _validate_bad_message_correlation(self, body: object) -> None:
+        """Reject bad-message service replies that do not reference a pending RPC.
+
+        Args:
+            body: Decoded service or application body being prevalidated.
+        """
         if not isinstance(body, BadMsgNotification | BadServerSalt):
             return
         pending = self._pending.get(body.bad_msg_id)
@@ -618,6 +877,13 @@ class MTProtoSender:
             )
 
     async def _handle_incoming(self, message: DecodedEncryptedMessage, *, committed: bool = False) -> None:
+        """Route a validated message to RPC completion, service handling, or the queue.
+
+        Args:
+            message: Decrypted inbound message, possibly a nested container leaf.
+            committed: Whether incoming state was already validated and committed
+                by the outer-message prevalidation pass.
+        """
         body = decode_message_body(message.body)
         while isinstance(body, GzipPacked):
             body = decode_message_body(await _unpack_gzip(body))
@@ -686,6 +952,12 @@ class MTProtoSender:
         self._put_incoming(message)
 
     def _put_incoming(self, message: DecodedEncryptedMessage) -> None:
+        """Queue an unsolicited message, evicting the oldest item on overflow.
+
+        Args:
+            message: Validated application message not consumed by RPC/service
+                handling.
+        """
         queue = self._incoming
         while True:
             try:
@@ -699,6 +971,7 @@ class MTProtoSender:
                 record_metric("sender.incoming_dropped", 1)
 
     def _notify_salt_change(self) -> None:
+        """Invoke the optional salt-persistence callback without exposing its errors."""
         callback = self.on_salt_change
         if callback is None:
             return
@@ -708,6 +981,7 @@ class MTProtoSender:
             record_metric("sender.salt_callback_errors", 1, attributes={"error_type": type(exc).__name__})
 
     async def _flush_acks_safely(self) -> None:
+        """Flush acknowledgements from the receive loop while isolating non-cancel errors."""
         try:
             await self.flush_acks()
         except asyncio.CancelledError:
@@ -716,6 +990,7 @@ class MTProtoSender:
             record_metric("sender.ack_flush_errors", 1, attributes={"error_type": type(exc).__name__})
 
     async def _keepalive_loop(self) -> None:
+        """Periodically flush old ACKs and ping while this connection owns the task."""
         # ping_delay_disconnect arms a server-side disconnect timer that is only reset
         # by ANOTHER message of the same type -- ordinary RPC traffic does not disarm
         # it. Pings therefore flow on a fixed cadence regardless of how busy the
@@ -741,6 +1016,7 @@ class MTProtoSender:
                 record_metric("sender.keepalive_errors", 1, attributes={"error_type": type(exc).__name__})
 
     async def _cancel_keepalive_task(self) -> None:
+        """Cancel and await the owned keepalive task unless it is already current."""
         keepalive_task = self._keepalive_task
         self._keepalive_task = None
         if keepalive_task is None or keepalive_task.done() or keepalive_task is asyncio.current_task():
@@ -779,6 +1055,11 @@ class MTProtoSender:
                     self._fail_pending_request(pending, exc)
 
     async def _retry_bad_message(self, bad_msg_id: int) -> None:
+        """Retry a pending request referenced by Telegram's resend/bad-message signal.
+
+        Args:
+            bad_msg_id: Current pending alias named by the service signal.
+        """
         pending = self._pending.get(bad_msg_id)
         if pending is None or pending.future.done():
             return
@@ -789,16 +1070,34 @@ class MTProtoSender:
         await self._send_pending(pending)
 
     def _fail_pending_for_message(self, msg_id: int, exc: Exception) -> None:
+        """Fail the unresolved request whose current alias is ``msg_id``.
+
+        Args:
+            msg_id: Message-ID alias used to locate the pending request.
+            exc: Terminal exception to place on its unresolved future.
+        """
         pending = self._pending.get(msg_id)
         if pending is not None and not pending.future.done():
             self._fail_pending_request(pending, exc)
 
     def _fail_pending(self, exc: Exception) -> None:
+        """Fail and detach every distinct pending request with one exception.
+
+        Args:
+            exc: Terminal exception shared by every unresolved request.
+        """
         for pending in self._pending_requests():
             self._fail_pending_request(pending, exc)
         self._pending.clear()
 
     def _fail_pending_after_transport_loss(self, exc: Exception, *, failed_transport: Transport | None) -> None:
+        """Fail only requests tied to a failed transport, preserving safe semantics.
+
+        Args:
+            exc: Recovery failure to expose to retry-safe requests.
+            failed_transport: Transport instance whose requests are eligible for
+                failure; ``None`` matches pending records without a transport.
+        """
         for pending in self._pending_requests():
             if pending.transport is not failed_transport:
                 continue
@@ -806,12 +1105,15 @@ class MTProtoSender:
             self._fail_pending_request(pending, terminal)
 
     def _pending_requests(self) -> tuple[PendingRequest, ...]:
+        """Return unique pending records despite multiple message-ID aliases."""
         return tuple({id(pending): pending for pending in self._pending.values()}.values())
 
     def _pending_alias_count(self) -> int:
+        """Return the number of message-ID aliases currently registered."""
         return len(self._pending)
 
     def _reserve_pending_slot(self) -> None:
+        """Reserve request capacity and atomically publish its pending-RPC metric."""
         used = self._pending_slots_used
         configured = self._max_pending_rpcs
         if configured is not None and used >= configured:
@@ -825,12 +1127,20 @@ class MTProtoSender:
             raise
 
     def _release_pending_slot(self) -> None:
+        """Release one request capacity reservation and publish the new metric."""
         used = self._pending_slots_used
         assert used > 0, "pending RPC slot counter underflow"
         self._pending_slots_used = used - 1
         record_metric("sender.pending_rpcs", self._pending_slots_used, unit="count")
 
     def _remove_pending(self, pending: PendingRequest, *, matched_msg_id: int | None = None) -> None:
+        """Detach all aliases and quick-ACK correlations for a pending request.
+
+        Args:
+            pending: Request record whose aliases and ACK waiters are removed.
+            matched_msg_id: Optional just-matched alias to pop directly before
+                scanning the record's remaining aliases.
+        """
         self._remove_quick_acks(pending)
         if matched_msg_id is not None:
             self._pending.pop(matched_msg_id, None)
@@ -840,11 +1150,18 @@ class MTProtoSender:
         pending.aliases.clear()
 
     def _fail_pending_request(self, pending: PendingRequest, exc: Exception) -> None:
+        """Detach one pending request and complete its future exceptionally once.
+
+        Args:
+            pending: Unresolved request record to remove and fail.
+            exc: Exception to set unless the future already completed.
+        """
         self._remove_pending(pending)
         if not pending.future.done():
             pending.future.set_exception(exc)
 
     async def _close_transport(self) -> None:
+        """Discard the current transport, remove its ACK waiters, and close it."""
         transport = self._transport
         self._transport = None
         if transport is not None:
@@ -852,6 +1169,13 @@ class MTProtoSender:
             await transport.close()
 
     def _register_quick_ack(self, pending: PendingRequest, payload: bytes, transport: Transport) -> None:
+        """Register a per-attempt quick-ACK token before writing its packet.
+
+        Args:
+            pending: Request whose callback and receipt state this token tracks.
+            payload: Encrypted bytes used to derive Telegram's ACK token.
+            transport: Exact connection that will transmit this attempt.
+        """
         token = quick_ack_token(self.state.auth_key, payload)
         waiter = QuickAckWaiter(
             token=token, pending=pending, sent_at=time.perf_counter(), attempt=pending.attempts, transport=transport
@@ -862,6 +1186,11 @@ class MTProtoSender:
         record_metric("sender.quick_ack_waiters", self._quick_ack_count, unit="count")
 
     def _handle_quick_ack(self, token: int) -> None:
+        """Consume one ACK waiter and invoke its callback without completing its RPC.
+
+        Args:
+            token: Opaque token carried by Telegram's quick-ACK transport frame.
+        """
         waiters = self._quick_acks.get(token)
         if not waiters:
             reason = self._quick_ack_history.get(token, "unknown")
@@ -893,17 +1222,33 @@ class MTProtoSender:
             record_metric("sender.quick_ack_callback_errors", 1, attributes={"error_type": type(exc).__name__})
 
     def _remove_quick_acks(self, pending: PendingRequest) -> None:
+        """Discard every quick-ACK waiter owned by a pending request.
+
+        Args:
+            pending: Request record whose receipt registrations are stale.
+        """
         for waiter in tuple(pending.quick_ack_waiters):
             self._discard_quick_ack_waiter(waiter)
         pending.quick_ack_waiters.clear()
 
     def _remove_quick_acks_for_transport(self, transport: Transport) -> None:
+        """Discard quick-ACK waiters tied to a closing transport instance.
+
+        Args:
+            transport: Closing connection whose receipt tokens can no longer
+                arrive meaningfully.
+        """
         for waiters in tuple(self._quick_acks.values()):
             for waiter in tuple(waiters):
                 if waiter.transport is transport:
                     self._discard_quick_ack_waiter(waiter)
 
     def _discard_quick_ack_waiter(self, waiter: QuickAckWaiter) -> None:
+        """Unregister one receipt waiter and retain a bounded stale-token record.
+
+        Args:
+            waiter: Registration to remove from both token and pending indexes.
+        """
         waiters = self._quick_acks.get(waiter.token)
         if waiters is None:
             return
@@ -918,15 +1263,34 @@ class MTProtoSender:
         record_metric("sender.quick_ack_waiters", self._quick_ack_count, unit="count")
 
     def _remember_quick_ack(self, token: int, reason: str) -> None:
+        """Remember a terminal token classification in the bounded ACK history.
+
+        Args:
+            token: Receipt token to classify for duplicate/stale diagnostics.
+            reason: Short terminal classification such as ``duplicate`` or
+                ``stale``.
+        """
         self._quick_ack_history[token] = reason
         self._quick_ack_history.move_to_end(token)
         while len(self._quick_ack_history) > _QUICK_ACK_HISTORY_LIMIT:
             self._quick_ack_history.popitem(last=False)
 
     def _quick_ack_waiter_count(self) -> int:
+        """Return the number of active quick-ACK waiter registrations."""
         return self._quick_ack_count
 
     async def _reconnect(self, *, failed_transport: Transport | None = None) -> None:
+        """Replace a failed transport with paced exponential-backoff connection attempts.
+
+        The connect lock collapses concurrent recovery attempts. It avoids closing
+        a healthy replacement installed by another task and gives young failed
+        connections a configurable cooldown before retrying.
+
+        Args:
+            failed_transport: Transport that triggered recovery. A healthy
+                replacement installed by another task causes this call to return
+                without disrupting that replacement.
+        """
         started = time.perf_counter()
         async with self._connect_lock:
             if self._closing:
@@ -993,6 +1357,14 @@ class MTProtoSender:
 
 
 def _emit_sender_event(event: str, started: float, *, outcome: str, **fields: object) -> None:
+    """Record sender duration metrics and emit one structured observability event.
+
+    Args:
+        event: Stable sender event name used for metrics and logs.
+        started: Monotonic operation-start timestamp used to derive duration.
+        outcome: Result classification controlling metric/log attributes.
+        **fields: Additional structured, already-safe event attributes.
+    """
     duration_ms = (time.perf_counter() - started) * 1000
     record_metric(f"{event}.duration", duration_ms, unit="ms", attributes={"outcome": outcome})
     emit_event(
@@ -1006,12 +1378,22 @@ def _emit_sender_event(event: str, started: float, *, outcome: str, **fields: ob
 
 
 async def _unpack_gzip(body: GzipPacked) -> bytes:
+    """Unpack a gzip body inline or in a worker thread above the size threshold.
+
+    Args:
+        body: Decoded gzip wrapper whose packed bytes determine thread offload.
+    """
     if len(body.packed_data) >= _GZIP_THREAD_THRESHOLD_BYTES:
         return await asyncio.to_thread(body.unpack)
     return body.unpack()
 
 
 def _message_body_bytes(body: bytes | bytearray | memoryview | object) -> bytes | memoryview:
+    """Return wire bytes for a body while avoiding a copy for immutable buffers.
+
+    Args:
+        body: Existing byte buffer or serializable TL object to normalize.
+    """
     if isinstance(body, bytes | memoryview):
         return body
     if isinstance(body, bytearray):
@@ -1020,6 +1402,12 @@ def _message_body_bytes(body: bytes | bytearray | memoryview | object) -> bytes 
 
 
 def _ambiguous_rpc_result(pending: PendingRequest, *, error: BaseException | None = None) -> AmbiguousRpcResult:
+    """Describe an unsafe request whose transport loss leaves server execution unknown.
+
+    Args:
+        pending: Request record containing the type descriptor and attempt count.
+        error: Optional underlying transport/recovery error to add as context.
+    """
     context: dict[str, object] = {"attempts": pending.attempts}
     if error is not None:
         context["error_type"] = type(error).__name__
@@ -1027,6 +1415,11 @@ def _ambiguous_rpc_result(pending: PendingRequest, *, error: BaseException | Non
 
 
 def _request_descriptor(body: bytes | object) -> str:
+    """Return a stable request type label, unwrapping common ``query`` wrappers.
+
+    Args:
+        body: Encoded request bytes or wrapped/serializable request object.
+    """
     current = body
     while True:
         query = getattr(current, "query", None)
@@ -1038,6 +1431,11 @@ def _request_descriptor(body: bytes | object) -> str:
 
 
 def _normalize_protocol_validation_error(exc: ValueError) -> ProtocolValidationError:
+    """Map low-level decode text to a stable protocol-validation reason code.
+
+    Args:
+        exc: Decoder validation error whose message selects the stable reason.
+    """
     message = str(exc)
     if "auth_key_id" in message:
         reason = "auth_key_id"

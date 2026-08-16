@@ -1,3 +1,5 @@
+"""Public MTProto message framing, service-body, and state APIs."""
+
 from miniproto.mtproto.codec import (
     BadMsgNotification,
     BadServerSalt,

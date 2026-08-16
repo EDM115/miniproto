@@ -1,3 +1,14 @@
+"""Measure native, ``cryptography``, and selected protected-session backends.
+
+Each sample is wall-clock milliseconds per operation, obtained by timing a
+fixed number of iterations and dividing by that count.  Every available backend
+must produce the same output before timing; order rotates for each run to reduce
+position bias, and smoke/full modes select distinct warmup and iteration counts.
+The report's winner and median ratio describe only this host, build, payload,
+and provider state.  Missing capabilities are recorded, not emulated, and no
+failure threshold or observed winner establishes a cross-platform speed claim.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -23,11 +34,29 @@ _SCRYPT_LENGTH = 32
 
 @dataclass(frozen=True, slots=True)
 class BenchmarkResult:
+    """Per-operation wall-clock samples in milliseconds for one backend.
+
+    Attributes:
+        samples_ms: Retained elapsed milliseconds divided by iterations per run.
+    """
+
     samples_ms: tuple[float, ...]
 
 
 @dataclass(frozen=True, slots=True)
 class BenchmarkCase:
+    """One fixed workload and its optional explicit backend implementations.
+
+    Attributes:
+        name: Stable workload name written to the report.
+        native: Explicit native callable, or ``None`` when its capability is absent.
+        cryptography: Explicit fallback callable, or ``None`` when unavailable.
+        selected: Callable using the public native-first selection policy.
+        selected_backend: Report label for the selected policy's current backend.
+        smoke_iterations: Operations per timed smoke-mode sample.
+        full_iterations: Operations per timed full-mode sample.
+    """
+
     name: str
     native: BenchmarkCallable | None
     cryptography: BenchmarkCallable | None
@@ -38,16 +67,37 @@ class BenchmarkCase:
 
 
 def parse_args(argv: Sequence[str] | None = None, env: Mapping[str, str] | None = None) -> argparse.Namespace:
+    """Parse mode, sample count, and optional JSON path from CLI/environment.
+
+    Explicit CLI arguments take precedence over ``MINIPROTO_BENCH_*`` defaults; smoke retains three samples by default and full retains ten. A non-positive ``--runs`` value is rejected by the argument parser.
+
+    Args:
+        argv: Optional argument tokens; ``None`` reads the process command line.
+        env: Optional environment mapping; ``None`` reads ``os.environ``.
+
+    Raises:
+        ValueError: A configured ``MINIPROTO_BENCH_RUNS`` value is not an integer.
+        SystemExit: CLI parsing fails or the resolved run count is not positive.
+    """
     values = os.environ if env is None else env
     parser = argparse.ArgumentParser(description="Benchmark native and cryptography protected-session primitives")
-    parser.add_argument("--mode", choices=("smoke", "full"), default=values.get("MINIPROTO_BENCH_MODE", "smoke"))
     parser.add_argument(
-        "--runs", type=int, default=int(values["MINIPROTO_BENCH_RUNS"]) if values.get("MINIPROTO_BENCH_RUNS") else None
+        "--mode",
+        choices=("smoke", "full"),
+        default=values.get("MINIPROTO_BENCH_MODE", "smoke"),
+        help="workload size; defaults to MINIPROTO_BENCH_MODE or smoke",
+    )
+    parser.add_argument(
+        "--runs",
+        type=int,
+        default=int(values["MINIPROTO_BENCH_RUNS"]) if values.get("MINIPROTO_BENCH_RUNS") else None,
+        help="samples per operation; defaults to MINIPROTO_BENCH_RUNS, then 3 in smoke mode or 10 in full mode",
     )
     parser.add_argument(
         "--json",
         type=Path,
         default=Path(values["MINIPROTO_BENCH_JSON"]) if values.get("MINIPROTO_BENCH_JSON") else None,
+        help="optional JSON report path to create or replace; defaults to MINIPROTO_BENCH_JSON",
     )
     args = parser.parse_args(argv)
     if args.runs is None:
@@ -58,6 +108,11 @@ def parse_args(argv: Sequence[str] | None = None, env: Mapping[str, str] | None 
 
 
 def benchmark_result_record(result: BenchmarkResult) -> dict[str, Any]:
+    """Serialize samples and derived statistics without discarding the distribution.
+
+    Args:
+        result: Per-operation sample series to include in a report record.
+    """
     return {
         "runs": len(result.samples_ms),
         "samples_ms": list(result.samples_ms),
@@ -66,6 +121,15 @@ def benchmark_result_record(result: BenchmarkResult) -> dict[str, Any]:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Execute all session-crypto cases and print a JSON benchmark report.
+
+    ``unit`` is milliseconds per operation.  The selection policy mirrors the
+    public native-first session API, while explicit native and ``cryptography``
+    measurements remain separate for a valid like-for-like comparison.
+
+    Args:
+        argv: Optional CLI tokens; ``None`` reads the process command line.
+    """
     args = parse_args(argv)
     warmup = 1 if args.mode == "smoke" else 3
     cases = _build_cases()
@@ -94,6 +158,12 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def _build_cases() -> tuple[BenchmarkCase, ...]:
+    """Construct deterministic AES-GCM, Scrypt, and combined-session workloads.
+
+    Native callables exist only when the optional extension exposes each exact
+    capability.  ``cryptography`` callables exist only when installed; the
+    selected callable retains the production native-first/fallback policy.
+    """
     key = bytes(range(32))
     nonce = bytes(range(12))
     associated_data = b"miniproto-protected-session-v1"
@@ -252,6 +322,19 @@ def _build_cases() -> tuple[BenchmarkCase, ...]:
 
 
 def _measure_case(case: BenchmarkCase, *, mode: str, runs: int, warmup: int) -> dict[str, Any]:
+    """Warm, parity-check, interleave, and summarize one backend comparison.
+
+    Timed values are ns-to-ms elapsed time divided by ``iterations``.  Backend
+    order rotates per retained run; a result is invalidated with ``AssertionError``
+    before timing if available implementations disagree.  Ratios are emitted only
+    when both explicit native and ``cryptography`` samples exist.
+
+    Args:
+        case: Workload with available explicit and selected backend callables.
+        mode: ``smoke`` or ``full``; chooses the case iteration count.
+        runs: Positive number of retained samples for each available backend.
+        warmup: Untimed interleaved repetitions before collecting samples.
+    """
     iterations = case.smoke_iterations if mode == "smoke" else case.full_iterations
     implementations: dict[str, BenchmarkCallable] = {"selected": case.selected}
     if case.cryptography is not None:
@@ -315,16 +398,39 @@ def _protected_session_roundtrip(
     associated_data: bytes,
     payload: bytes,
 ) -> bytes:
+    """Run the fixed Scrypt → AES-GCM encrypt → decrypt session workload.
+
+    Args:
+        scrypt: Bound Scrypt implementation used to derive the session key.
+        encrypt: Bound AES-GCM encrypt implementation.
+        decrypt: Bound AES-GCM decrypt implementation.
+        passphrase: Fixed secret input bytes for the Scrypt workload.
+        salt: Fixed salt bytes for the Scrypt workload.
+        nonce: Fixed AES-GCM nonce for the deterministic benchmark fixture.
+        associated_data: Fixed authenticated but unencrypted session metadata.
+        payload: Fixed plaintext session bytes to round-trip.
+    """
     key = scrypt(passphrase, salt, _SCRYPT_N, _SCRYPT_R, _SCRYPT_P, _SCRYPT_LENGTH)
     ciphertext = encrypt(payload, key, nonce, associated_data)
     return decrypt(ciphertext, key, nonce, associated_data)
 
 
 def _native_capability_available(name: str) -> bool:
+    """Report whether the loaded extension exposes one optional session primitive.
+
+    Args:
+        name: Native session-crypto attribute name to look up.
+    """
     return session_crypto._native_session_crypto_function(name) is not None
 
 
 def _aes_iterations(size: int, *, mode: str) -> int:
+    """Return the fixed per-sample AES iteration count for size and mode.
+
+    Args:
+        size: Fixed AES payload size in bytes.
+        mode: ``smoke`` or ``full`` benchmark mode.
+    """
     if size == 1024:
         return 1_000 if mode == "smoke" else 10_000
     if size == 65536:
@@ -333,6 +439,12 @@ def _aes_iterations(size: int, *, mode: str) -> int:
 
 
 def _repeat(function: BenchmarkCallable, iterations: int) -> object:
+    """Execute a callable exactly ``iterations`` times, retaining its last result.
+
+    Args:
+        function: Zero-argument backend workload to repeat.
+        iterations: Exact positive number of executions to perform.
+    """
     result: object = None
     for _ in range(iterations):
         result = function()
@@ -340,6 +452,12 @@ def _repeat(function: BenchmarkCallable, iterations: int) -> object:
 
 
 def _assert_same_output(name: str, implementations: Mapping[str, BenchmarkCallable]) -> None:
+    """Reject a benchmark whose available backend outputs are not identical.
+
+    Args:
+        name: Workload label included in a parity-failure message.
+        implementations: Named available backend callables to compare once.
+    """
     outputs = {implementation: function() for implementation, function in implementations.items()}
     first = next(iter(outputs.values()))
     if any(output != first for output in outputs.values()):
@@ -347,6 +465,11 @@ def _assert_same_output(name: str, implementations: Mapping[str, BenchmarkCallab
 
 
 def _median(result: BenchmarkResult) -> float:
+    """Return the reporting helper's median of per-operation ms samples.
+
+    Args:
+        result: Per-operation sample series to summarize.
+    """
     return float(sample_statistics(result.samples_ms)["median"])
 
 

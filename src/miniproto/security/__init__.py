@@ -1,3 +1,5 @@
+"""Public helpers for redacting sensitive values before diagnostic output."""
+
 from miniproto.security.redaction import (
     REDACTED,
     is_sensitive_key,

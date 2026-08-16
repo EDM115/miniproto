@@ -1,3 +1,5 @@
+"""Telegram authorization, data-center selection, key exchange, and SRP helpers."""
+
 from miniproto.auth.dc import TEST_DC_OPTIONS, dc_options_from_env, dc_options_from_raw, select_dc_option
 from miniproto.auth.key_exchange import (
     AuthKeyExchange,

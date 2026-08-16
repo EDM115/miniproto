@@ -1,3 +1,10 @@
+"""Concurrent Telegram media downloading with retry, integrity, cache, and destination handling.
+
+The public coroutines support bounded streaming and file materialization while
+preserving ordered ranges, cancellable cleanup, optional CDN/plain-file
+verification, and safe reuse of cached byte ranges.
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -28,11 +35,26 @@ type Destination = str | os.PathLike[str] | BinaryIO | None
 
 
 class MediaDownloadError(RuntimeError):
-    pass
+    """Raised when a requested media range cannot be downloaded or materialized."""
 
 
 class MediaIntegrityError(MediaDownloadError):
+    """Raised when declared file hashes or download-range invariants are violated.
+
+    Args:
+        reason: Machine-readable explanation of the integrity failure.
+        offset: First affected media byte offset.
+        limit: Number of affected bytes.
+    """
+
     def __init__(self, reason: str, *, offset: int, limit: int) -> None:
+        """Record the corrupted interval and format the transfer error message.
+
+        Args:
+            reason: Integrity-failure classification included in the exception message.
+            offset: First affected byte offset.
+            limit: Number of affected bytes.
+        """
         self.offset = offset
         self.limit = limit
         self.reason = reason
@@ -77,6 +99,16 @@ _PROGRESS_MAX_PARTS = 8
 
 @dataclass(frozen=True, slots=True)
 class MediaDownloadResult:
+    """Completed materialized-download metadata and optional in-memory payload.
+
+    Attributes:
+        bytes_downloaded: Bytes committed for this operation, including resumed bytes.
+        offset: Requested starting byte offset.
+        destination: Resolved path or caller-owned stream, if one was used.
+        data: Downloaded bytes only when the destination was omitted.
+        raw_location: Effective raw location, potentially refreshed after a stale reference.
+    """
+
     bytes_downloaded: int
     offset: int
     destination: Path | BinaryIO | None = None
@@ -86,6 +118,19 @@ class MediaDownloadResult:
 
 @dataclass(slots=True)
 class _DestinationHandle:
+    """Internal ownership, rollback, and data-extraction policy for an output handle.
+
+    Attributes:
+        handle: Open binary output receiving downloaded bytes.
+        path: Owned filesystem path, or ``None`` for caller-owned/in-memory streams.
+        should_close: Whether transfer cleanup closes ``handle``.
+        remove_on_cancel: Whether failure removes a newly created path.
+        discard_on_failure: Whether an owned in-memory buffer is emptied on failure.
+        existing_bytes: Aligned pre-transfer bytes retained by a resumed destination.
+        get_data: Callback returning bytes only for an internally owned memory buffer.
+        restore_on_failure: Optional rollback callback for a caller-provided ``BytesIO``.
+    """
+
     handle: BinaryIO
     path: Path | None
     should_close: bool
@@ -98,6 +143,14 @@ class _DestinationHandle:
 
 @dataclass(slots=True)
 class _DownloadWriterStats:
+    """Internal aggregate queueing and write timing emitted as download metrics.
+
+    Attributes:
+        queued_seconds: Cumulative seconds writes spent awaiting the writer worker.
+        write_seconds: Cumulative seconds spent performing writes and flushes.
+        writes: Number of successfully committed write requests.
+    """
+
     queued_seconds: float = 0.0
     write_seconds: float = 0.0
     writes: int = 0
@@ -105,6 +158,15 @@ class _DownloadWriterStats:
 
 @dataclass(slots=True)
 class _WriteRequest:
+    """Internal asynchronous destination-write request with its completion future.
+
+    Attributes:
+        offset: Byte seek offset for a non-sequential destination.
+        payload: Downloaded bytes to write; the buffer is not zeroized after use.
+        queued_at: Monotonic timestamp used to accumulate queue delay in seconds.
+        acknowledgement: Future completed when the payload is committed or fails.
+    """
+
     offset: int
     payload: bytes
     queued_at: float
@@ -112,6 +174,14 @@ class _WriteRequest:
 
 
 def _validate_concurrent_payload(request_offset: int, payload: bytes, *, expect_limit: int, target_end: int) -> bytes:
+    """Trim allowed overreads and reject gaps in a concurrently requested target range.
+
+    Args:
+        request_offset: Start byte of the request that produced ``payload``.
+        payload: Raw response bytes, retained by the caller after any allowed trim.
+        expect_limit: Exact bytes needed from this request within the target range.
+        target_end: Exclusive end byte of the caller's requested interval.
+    """
     if request_offset < 0 or expect_limit < 0 or request_offset + expect_limit > target_end:
         raise ValueError("concurrent download range is outside the target interval")
     received = len(payload)
@@ -126,7 +196,27 @@ def _validate_concurrent_payload(request_offset: int, payload: bytes, *, expect_
 
 
 class DownloadRangeCache:
+    """Async LRU cache that deduplicates exact media-range requests and bounded prefetches.
+
+    Args:
+        max_bytes: Maximum payload bytes retained by the LRU; defaults to
+            :data:`DEFAULT_RANGE_CACHE_BYTES`.
+
+    Resource Semantics:
+        Cache entries are shared by ``(key, offset, limit)``. ``clear()`` cancels
+        in-progress owner and background prefetch tasks; callers awaiting them
+        receive their normal task outcome or cancellation.
+    """
+
     def __init__(self, *, max_bytes: int = DEFAULT_RANGE_CACHE_BYTES) -> None:
+        """Initialize an empty bounded cache.
+
+        Args:
+            max_bytes: Positive aggregate byte capacity for cached payloads.
+
+        Raises:
+            ValueError: ``max_bytes`` is not positive.
+        """
         if max_bytes <= 0:
             raise ValueError("range cache max_bytes must be positive")
         self.max_bytes = int(max_bytes)
@@ -137,6 +227,13 @@ class DownloadRangeCache:
         self._lock = asyncio.Lock()
 
     async def get(self, key: str, offset: int, limit: int) -> bytes | None:
+        """Return and refresh an exact cached range, or ``None`` on a cache miss.
+
+        Args:
+            key: Stable media identity partitioning cache entries.
+            offset: Exact starting byte offset of the desired range.
+            limit: Exact requested byte length.
+        """
         cache_key = (key, offset, limit)
         async with self._lock:
             payload = self._entries.get(cache_key)
@@ -148,6 +245,14 @@ class DownloadRangeCache:
             return payload
 
     async def put(self, key: str, offset: int, limit: int, payload: bytes) -> None:
+        """Store a non-empty fitting range and evict least-recently-used entries.
+
+        Args:
+            key: Stable media identity partitioning cache entries.
+            offset: Exact starting byte offset represented by ``payload``.
+            limit: Wire request length associated with the cache key.
+            payload: Non-empty response bytes; oversized bytes are intentionally not cached or zeroized.
+        """
         if not payload or len(payload) > self.max_bytes:
             return
         cache_key = (key, offset, limit)
@@ -163,13 +268,36 @@ class DownloadRangeCache:
             record_metric("media.download.range_cache_bytes", self._size, unit="bytes")
 
     async def get_or_fetch(self, key: str, offset: int, limit: int, fetch: Callable[[], Awaitable[bytes]]) -> bytes:
-        async def run_fetch() -> bytes:
-            return await fetch()
+        """Return a cached range or await one task shared by concurrent callers.
 
+        Args:
+            key: Stable media identity partitioning cache entries.
+            offset: Exact starting byte offset of the desired range.
+            limit: Exact wire request length used in the cache key.
+            fetch: Async producer called once when no cache entry or pending task exists.
+
+        Cancellation Semantics:
+            Each waiter shields the shared owner task, so cancelling one caller
+            does not cancel the producer or other waiters. Explicit cache
+            clearing still cancels pending producers.
+        """
         cached = await self.get(key, offset, limit)
         if cached is not None:
             return cached
         cache_key = (key, offset, limit)
+
+        async def run_fetch() -> bytes:
+            """Populate the cache and retire this key's shared owner task."""
+            try:
+                payload = await fetch()
+                await self.put(key, offset, limit, payload)
+                return payload
+            finally:
+                current = asyncio.current_task()
+                async with self._lock:
+                    if self._pending.get(cache_key) is current:
+                        del self._pending[cache_key]
+
         async with self._lock:
             task = self._pending.get(cache_key)
             if task is None:
@@ -178,16 +306,17 @@ class DownloadRangeCache:
                 record_metric("media.download.range_cache_fetches", 1)
             else:
                 record_metric("media.download.range_cache_deduped", 1)
-        try:
-            payload = await task
-        finally:
-            async with self._lock:
-                if self._pending.get(cache_key) is task:
-                    del self._pending[cache_key]
-        await self.put(key, offset, limit, payload)
-        return payload
+        return await asyncio.shield(task)
 
     def prefetch(self, key: str, offset: int, limit: int, fetch: Callable[[], Awaitable[bytes]]) -> None:
+        """Schedule a bounded best-effort cached fetch without awaiting its outcome.
+
+        Args:
+            key: Stable media identity partitioning cache entries.
+            offset: Starting byte of the speculative range.
+            limit: Requested speculative range length.
+            fetch: Async producer used if this range is not cached or pending.
+        """
         if len(self._background) >= _MAX_BACKGROUND_PREFETCHES:
             # Unbounded background fetches were 3x slower than no read-ahead at
             # all on live benches; skip instead of queueing ever more work.
@@ -195,6 +324,7 @@ class DownloadRangeCache:
             return
 
         async def run() -> None:
+            """Populate the cache and convert prefetch failures into telemetry only."""
             try:
                 await self.get_or_fetch(key, offset, limit, fetch)
             except Exception:
@@ -205,6 +335,7 @@ class DownloadRangeCache:
         task.add_done_callback(self._background.discard)
 
     async def clear(self) -> None:
+        """Evict all values and cancel deduplicated or background cache tasks."""
         async with self._lock:
             pending = tuple(self._pending.values())
             background = tuple(self._background)
@@ -219,6 +350,8 @@ class DownloadRangeCache:
 
 
 class _PlainFileHashVerifier:
+    """Internal demand-loaded verifier for Telegram plain-file SHA-256 intervals."""
+
     _MAX_HASH_REQUESTS = 32
     _MAX_HASH_INTERVAL = MAX_DOWNLOAD_CHUNK_SIZE
 
@@ -236,6 +369,20 @@ class _PlainFileHashVerifier:
         file_reference_refresher: FileReferenceRefresher | None,
         max_cached_bytes: int,
     ) -> None:
+        """Configure metadata, refreshed-location, and bounded verified-payload state.
+
+        Args:
+            invoke: Raw RPC invoker for file hashes and missing validation ranges.
+            location_state: Mutable active location used to reject stale verification state.
+            precise: Whether validation range requests use 1 KiB protocol alignment.
+            cdn_supported: Whether nested recovery requests may follow CDN redirects.
+            request_timeout: Optional per-RPC timeout in seconds.
+            max_retries: Non-flood transient retry budget for nested range recovery.
+            flood_sleep_threshold: Largest server flood wait retried during recovery.
+            reference_deduper: Shared stale-reference refresh coordinator.
+            file_reference_refresher: Optional callback renewing stale file locations.
+            max_cached_bytes: Upper byte bound for retained verified payload intervals.
+        """
         self._invoke = invoke
         self._location_state = location_state
         self._precise = precise
@@ -254,6 +401,13 @@ class _PlainFileHashVerifier:
         self._metadata_lock = asyncio.Lock()
 
     async def verify(self, location: object, *, offset: int, payload: bytes) -> None:
+        """Verify every byte of a plain response against stable Telegram hash intervals.
+
+        Args:
+            location: Raw location whose identity must stay stable while validating.
+            offset: File byte offset of the first response byte.
+            payload: Plain response bytes; they are retained in verification caches and not zeroized.
+        """
         if not payload:
             return
         identity = _plain_location_identity(location)
@@ -278,6 +432,11 @@ class _PlainFileHashVerifier:
                 raise MediaIntegrityError("mismatch", offset=overlap_start, limit=overlap_end - overlap_start)
 
     async def _ensure_identity(self, identity: tuple[object, ...]) -> None:
+        """Discard cached metadata whenever the mutable file location changes identity.
+
+        Args:
+            identity: Normalized immutable fields of the current raw location.
+        """
         async with self._metadata_lock:
             if self._identity == identity:
                 return
@@ -289,10 +448,24 @@ class _PlainFileHashVerifier:
             record_metric("media.download.plain_hash_cache_invalidations", 1)
 
     def _assert_identity(self, identity: tuple[object, ...], *, offset: int, limit: int) -> None:
+        """Fail verification if concurrent reference refresh changed the source location.
+
+        Args:
+            identity: Expected normalized location identity.
+            offset: Affected byte offset reported on mismatch.
+            limit: Affected byte length reported on mismatch.
+        """
         if self._identity != identity or _plain_location_identity(self._location_state.current) != identity:
             raise MediaIntegrityError("location changed during verification", offset=offset, limit=limit)
 
     async def _ensure_hash_coverage(self, location: object, start: int, end: int) -> tuple[tuple[int, int, bytes], ...]:
+        """Fetch enough non-overlapping hash metadata to cover an interval or raise.
+
+        Args:
+            location: Current raw location for ``upload.getFileHashes`` requests.
+            start: Inclusive byte offset requiring coverage.
+            end: Exclusive byte offset requiring coverage.
+        """
         async with self._metadata_lock:
             for _attempt in range(self._MAX_HASH_REQUESTS):
                 covered = self._covering_intervals(start, end)
@@ -315,6 +488,11 @@ class _PlainFileHashVerifier:
             raise MediaIntegrityError("hash response limit exceeded", offset=cursor, limit=end - cursor)
 
     def _remember_hash(self, item: object) -> None:
+        """Validate and retain one non-overlapping raw Telegram file hash.
+
+        Args:
+            item: Candidate raw ``FileHash`` metadata object.
+        """
         if not isinstance(item, types.FileHash):
             raise MediaIntegrityError("invalid hash metadata", offset=0, limit=0)
         offset = int(item.offset)
@@ -340,6 +518,12 @@ class _PlainFileHashVerifier:
         self._hashes[key] = digest
 
     def _covering_intervals(self, start: int, end: int) -> tuple[tuple[int, int, bytes], ...] | None:
+        """Return contiguous cached hash intervals spanning the target, if available.
+
+        Args:
+            start: Inclusive byte offset requiring coverage.
+            end: Exclusive byte offset requiring coverage.
+        """
         cursor = start
         result: list[tuple[int, int, bytes]] = []
         for (offset, limit), digest in sorted(self._hashes.items()):
@@ -355,6 +539,12 @@ class _PlainFileHashVerifier:
         return None
 
     def _first_uncovered_offset(self, start: int, end: int) -> int:
+        """Find the first byte in an interval not spanned by cached hash metadata.
+
+        Args:
+            start: Inclusive range start.
+            end: Exclusive range end.
+        """
         cursor = start
         for (offset, limit), _digest in sorted(self._hashes.items()):
             interval_end = offset + limit
@@ -370,6 +560,14 @@ class _PlainFileHashVerifier:
     async def _validated_interval(
         self, identity: tuple[object, ...], offset: int, limit: int, expected_hash: bytes
     ) -> bytes:
+        """Reuse or coalesce retrieval of one fully verified hash interval.
+
+        Args:
+            identity: Expected raw-location identity for the cached bytes.
+            offset: Beginning of the hash interval.
+            limit: Exact verified hash-interval byte length.
+            expected_hash: SHA-256 digest required for the interval.
+        """
         key = (identity, offset, limit, expected_hash)
         cached = self._validated.get(key)
         if cached is not None:
@@ -391,6 +589,14 @@ class _PlainFileHashVerifier:
     async def _fetch_and_verify_interval(
         self, identity: tuple[object, ...], offset: int, limit: int, expected_hash: bytes
     ) -> bytes:
+        """Download every fragment of a hash interval before validating its digest.
+
+        Args:
+            identity: Location identity that must remain stable through recovery.
+            offset: Beginning of the full hash interval.
+            limit: Exact full hash-interval byte length.
+            expected_hash: SHA-256 digest for the assembled interval.
+        """
         cursor = offset
         remaining = limit
         chunks: list[bytes] = []
@@ -426,6 +632,14 @@ class _PlainFileHashVerifier:
 
     @staticmethod
     def _verify_digest(payload: bytes, expected_hash: bytes, *, offset: int, limit: int) -> bytes:
+        """Return ``payload`` after matching its SHA-256 digest, otherwise raise.
+
+        Args:
+            payload: Complete byte interval to hash; it is returned unchanged and not zeroized.
+            expected_hash: Expected SHA-256 digest bytes.
+            offset: Interval start reported if hashes differ.
+            limit: Interval length reported if hashes differ.
+        """
         if hashlib.sha256(payload).digest() != expected_hash:
             record_metric("media.download.plain_hash_mismatches", 1)
             raise MediaIntegrityError("hash mismatch", offset=offset, limit=limit)
@@ -433,6 +647,12 @@ class _PlainFileHashVerifier:
         return payload
 
     def _remember_validated(self, key: tuple[tuple[object, ...], int, int, bytes], payload: bytes) -> None:
+        """Insert verified bytes into the bounded LRU payload cache.
+
+        Args:
+            key: Location identity, interval, and expected-hash cache key.
+            payload: Verified bytes retained until LRU eviction; buffers are not zeroized.
+        """
         previous = self._validated.pop(key, None)
         if previous is not None:
             self._validated_bytes -= len(previous)
@@ -454,6 +674,11 @@ def _legal_request_limit(offset: int, max_bytes: int, *, precise: bool) -> int |
     they must be divisible by 1024. In both modes a request must never straddle
     a 1 MiB boundary. Returns ``None`` when no legal request fits ``max_bytes``
     (the caller defers or over-requests the tail and truncates).
+
+    Args:
+        offset: Requested byte offset at which protocol alignment is evaluated.
+        max_bytes: Maximum caller-desired request length before protocol restrictions.
+        precise: Select 1 KiB precise mode instead of ordinary 4 KiB constraints.
     """
     alignment = _PRECISE_ALIGNMENT if precise else _ALIGNMENT
     boundary_room = _MIB - (offset % _MIB)
@@ -472,6 +697,11 @@ def _resolve_precise_mode(start_offset: int, precise: bool, part_size: int) -> b
     Non-precise ``upload.getFile`` requires 4 KiB-aligned offsets and limits;
     precise mode relaxes both to 1 KiB. Offsets below 1 KiB alignment cannot be
     expressed at all and are rejected.
+
+    Args:
+        start_offset: Initial download offset to align against protocol requirements.
+        precise: Caller-requested precise-mode setting.
+        part_size: Initial requested part size used to infer required granularity.
     """
     if start_offset % _PRECISE_ALIGNMENT != 0:
         raise ValueError(
@@ -485,6 +715,13 @@ def _resolve_precise_mode(start_offset: int, precise: bool, part_size: int) -> b
 
 
 def _is_full_file_download(offset: int, limit: int | None, total_size: int | None) -> bool:
+    """Report whether a requested range covers the whole known file from its start.
+
+    Args:
+        offset: Requested range start.
+        limit: Requested byte count, or ``None`` for stream-to-EOF.
+        total_size: Known full media size, if available.
+    """
     if limit is None:
         return True
     return total_size is not None and offset + limit >= total_size
@@ -502,15 +739,30 @@ class _TransferWindow:
     """
 
     def __init__(self, max_bytes: int) -> None:
+        """Initialize a slot budget that admits an oversized first request.
+
+        Args:
+            max_bytes: Nominal in-flight byte capacity; coerced to at least one byte.
+        """
         self.max_bytes = max(1, max_bytes)
         self.in_flight_bytes = 0
         self.active = 0
         self._refill = asyncio.Event()
 
     def _has_room(self, nbytes: int) -> bool:
+        """Check whether the next request can enter the byte window.
+
+        Args:
+            nbytes: Requested wire bytes to reserve.
+        """
         return self.in_flight_bytes == 0 or self.in_flight_bytes + nbytes <= self.max_bytes
 
     def try_acquire(self, nbytes: int) -> bool:
+        """Reserve bytes and a request slot when capacity is currently available.
+
+        Args:
+            nbytes: Requested wire bytes to reserve.
+        """
         if not self._has_room(nbytes):
             return False
         self.in_flight_bytes += nbytes
@@ -518,11 +770,17 @@ class _TransferWindow:
         return True
 
     def release(self, nbytes: int) -> None:
+        """Return a completed request's byte reservation and wake refill waiters.
+
+        Args:
+            nbytes: Wire-byte charge recorded when the request was admitted.
+        """
         self.in_flight_bytes = max(0, self.in_flight_bytes - nbytes)
         self.active = max(0, self.active - 1)
         self._refill.set()
 
     async def wait_refill(self) -> None:
+        """Wait until a release signals that the transfer window may have capacity."""
         await self._refill.wait()
         self._refill.clear()
 
@@ -533,12 +791,20 @@ class _DownloadDelayGate:
     def __init__(
         self, *, initial: float = _STAGGER_INITIAL_DELAY, decay: float = _STAGGER_DECAY, floor: float = _STAGGER_FLOOR
     ) -> None:
+        """Initialize the decaying launch-delay parameters.
+
+        Args:
+            initial: Initial launch delay in seconds.
+            decay: Multiplicative decrease after each delayed launch.
+            floor: Minimum retained launch delay in seconds.
+        """
         self._initial = initial
         self._delay = initial
         self._decay = decay
         self._floor = floor
 
     async def wait(self) -> None:
+        """Sleep once using the current delay, then decay it toward its floor."""
         delay = self._delay
         self._delay = max(self._floor, delay * self._decay)
         if delay > 0:
@@ -553,6 +819,13 @@ class _DownloadLaunchPacer:
     """Pace launches after floods without reducing the fixed request slots."""
 
     def __init__(self, *, concurrency: int, clock: Clock = time.monotonic, sleep: SleepFunc = asyncio.sleep) -> None:
+        """Initialize launch-rate state using injectable time and sleep functions.
+
+        Args:
+            concurrency: Fixed request-slot count used for conservative pacing estimates.
+            clock: Monotonic time source returning seconds.
+            sleep: Awaitable sleep implementation receiving seconds.
+        """
         self._concurrency = max(1, concurrency)
         self._clock = clock
         self._sleep = sleep
@@ -563,6 +836,7 @@ class _DownloadLaunchPacer:
         self._clean_successes = 0
 
     async def wait(self) -> None:
+        """Honor flood-derived pacing before applying the start-of-transfer stagger."""
         if self._min_interval > 0:
             now = self._clock()
             wait_s = max(0.0, self._next_launch_at - now)
@@ -575,6 +849,7 @@ class _DownloadLaunchPacer:
             await self._stagger.wait()
 
     def on_success(self) -> None:
+        """Gradually relax additional pacing after sufficient clean request completions."""
         self._success_times.append(self._clock())
         if self._min_interval <= 0:
             return
@@ -589,6 +864,11 @@ class _DownloadLaunchPacer:
             record_metric("media.download.launch_pace_rate", 1.0 / self._min_interval)
 
     def on_flood(self, exc: FloodWait) -> None:
+        """Tighten launch pacing after server-side rate limiting.
+
+        Args:
+            exc: Server flood-wait signal used only to classify pacing telemetry.
+        """
         if self._stagger is not None:
             self._stagger.reset()
         self._clean_successes = 0
@@ -603,6 +883,7 @@ class _DownloadLaunchPacer:
         )
 
     def reset(self) -> None:
+        """Remove flood pacing and re-arm the initial stagger."""
         if self._stagger is not None:
             self._stagger.reset()
         self._min_interval = 0.0
@@ -611,11 +892,13 @@ class _DownloadLaunchPacer:
 
     @property
     def current_rate_per_s(self) -> float:
+        """Return the currently enforced maximum launch rate, or zero when unpaced."""
         if self._min_interval <= 0:
             return 0.0
         return 1.0 / self._min_interval
 
     def _target_rate(self) -> float:
+        """Estimate a conservative launch rate from the recent success window."""
         now = self._clock()
         while self._success_times and now - self._success_times[0] > 10.0:
             self._success_times.popleft()
@@ -626,10 +909,11 @@ class _DownloadLaunchPacer:
 
 
 class _ProgressReporter:
-    """Coalesce progress callbacks to >=250 ms apart or every 8 parts.
+    """Coalesce progress callbacks using configurable interval and part thresholds.
 
-    Per-part callbacks add measurable latency on 512 KiB parts; the final call
-    is always delivered via ``finish()`` so consumers observe completion.
+    The default policy reports no more often than every 250 ms unless eight
+    completed parts arrive first. Per-part callbacks add measurable latency on
+    512 KiB parts; ``finish()`` emits the final value if needed.
     """
 
     def __init__(
@@ -641,6 +925,15 @@ class _ProgressReporter:
         max_parts: int = _PROGRESS_MAX_PARTS,
         clock: Clock = time.monotonic,
     ) -> None:
+        """Store callback coalescing policy and the transfer total for later reports.
+
+        Args:
+            progress: Optional callback receiving committed byte counts and total bytes.
+            total: Known total byte count, or ``None`` for unknown stream length.
+            min_interval: Minimum seconds between ordinary reports; defaults to 250 ms.
+            max_parts: Completed-parts threshold that bypasses the time interval; defaults to eight.
+            clock: Monotonic seconds source used to coalesce callbacks.
+        """
         self._progress = progress
         self._total = total
         self._min_interval = min_interval
@@ -651,6 +944,11 @@ class _ProgressReporter:
         self._last_reported: int | None = None
 
     async def report(self, current: int) -> None:
+        """Deliver progress only when the time or completed-part threshold is met.
+
+        Args:
+            current: Byte count committed/yielded since this operation's initial offset.
+        """
         if self._progress is None:
             return
         self._parts_since_report += 1
@@ -663,6 +961,11 @@ class _ProgressReporter:
         await _call_progress(self._progress, current, self._total)
 
     async def finish(self, current: int) -> None:
+        """Deliver the final progress value if it has not already been reported.
+
+        Args:
+            current: Final byte count in the same units and origin as :meth:`report`.
+        """
         if self._progress is None or self._last_reported == current:
             return
         self._last_reported = current
@@ -697,7 +1000,52 @@ async def iter_download(
     verify_plain_hashes: bool = False,
     file_reference_refresher: FileReferenceRefresher | None = None,
 ) -> AsyncGenerator[bytes]:
-    """Yield an exact download range as ordered, bounded byte chunks."""
+    """Stream an exact media range as ordered, bounded byte chunks.
+
+    Args:
+        invoke: Async raw-RPC invoker used for Telegram file requests.
+        location: Telegram input file location to retrieve.
+        offset: Starting byte offset; defaults to ``0``.
+        limit: Exact byte count to yield, or ``None`` to stream until EOF.
+        part_size: Initial power-of-two request size; defaults to 512 KiB.
+        progress: Optional synchronous or async ``(current, total)`` callback;
+            ``current`` is bytes yielded from this invocation, while ``total`` is
+            ``limit`` for a finite range or ``total_size`` when streaming to EOF.
+        precise: Request Telegram's 1 KiB precise mode; it is enabled automatically when needed.
+        cdn_supported: Allow Telegram to redirect requests to its CDN; defaults to ``True``.
+        total_size: Known full size, used for exact range completion and concurrency.
+        request_timeout: Optional timeout passed to each raw request.
+        max_retries: Non-flood transient retry budget per part; defaults to ``2``.
+        flood_sleep_threshold: Retry server flood waits at or below this number of seconds; ``None`` disables them.
+            Eligible waits do not consume ``max_retries`` but are capped at 16 per part.
+        max_buffer_size: Legacy byte window alias used when ``max_in_flight_bytes`` is absent.
+        concurrency: Maximum concurrent part requests; defaults to :data:`DEFAULT_DOWNLOAD_CONCURRENCY`.
+        adaptive_concurrency: Reduce the active window on connection-health failures.
+        launch_stagger: Pace launch bursts and flood recovery; defaults to ``True``.
+        max_in_flight_bytes: Maximum requested but unyielded bytes.
+        adaptive_part_size: Probe larger legal parts for sufficiently large transfers.
+        max_part_size: Largest legal adaptive part size, at most one MiB.
+        range_cache: Exact-range cache instance, ``True`` for the shared cache, or ``False``/``None`` to disable it.
+        range_cache_key: Stable identity used to share cached ranges.
+        range_cache_max_bytes: Capacity for an implicitly created shared cache.
+        read_ahead_bytes: Best-effort cached prefetch budget for ranged reads only.
+        verify_plain_hashes: Validate non-CDN chunks against Telegram's file hashes.
+        file_reference_refresher: Optional sync/async callback to renew an expired file reference once per part.
+
+    Yields:
+        Contiguous ``bytes`` in increasing offset order. A bounded request window
+        limits in-flight resources; closing the generator cancels outstanding parts.
+        Progress reports ``current`` bytes only after a chunk has been yielded,
+        unlike :func:`download_file`, which reports after destination-write
+        acknowledgement and starts ``current`` at any retained resume prefix.
+
+    Raises:
+        ValueError: A range, alignment, part size, retry, or cache option is invalid.
+        TypeError: ``verify_plain_hashes`` or ``launch_stagger`` is not boolean.
+        MediaDownloadError: Telegram ends a finite requested interval before full coverage.
+        MediaIntegrityError: Optional plain-file verification finds missing or mismatched hashes.
+        asyncio.CancelledError: Iteration or an awaiting caller is cancelled.
+    """
 
     _validate_download_options(
         offset,
@@ -789,6 +1137,34 @@ async def _iter_download_parts(
     reference_deduper: _FileReferenceRefreshDeduper,
     file_reference_refresher: FileReferenceRefresher | None,
 ) -> AsyncGenerator[bytes]:
+    """Coordinate ordered concurrent part requests for the public streaming API.
+
+    Args:
+        invoke: Raw RPC invoker for file-part requests.
+        location_state: Mutable raw-location holder supporting stale-reference refresh.
+        offset: Initial requested byte offset.
+        limit: Exact remaining range length, or ``None`` for stream-to-EOF.
+        part_size: Initial legal request size in bytes.
+        progress: Optional callback receiving yielded byte counts and total bytes.
+        precise: Whether requests use 1 KiB precise protocol alignment.
+        cdn_supported: Whether file requests can be redirected to the CDN.
+        total_size: Known complete file size used for finite planning and prefetch bounds.
+        request_timeout: Optional raw-RPC timeout in seconds.
+        max_retries: Non-flood transient retry allowance per part.
+        flood_sleep_threshold: Largest retryable server flood wait in seconds.
+        concurrency: Maximum simultaneous requested parts for finite ranges.
+        adaptive_concurrency: Whether connection health signals lower active slots.
+        launch_stagger: Whether start/flood launch pacing is enabled.
+        max_in_flight_bytes: Maximum wire-byte reservation before new work waits.
+        adaptive_part_size: Whether large transfers may probe larger legal part sizes.
+        max_part_size: Maximum adaptive request size in bytes.
+        range_cache: Optional cache used to deduplicate exact requested ranges.
+        range_cache_key: Stable cache identity, required to use ``range_cache``.
+        read_ahead_bytes: Best-effort speculative cache-fill budget in bytes.
+        verify_plain_hashes: Whether non-CDN responses require Telegram file-hash validation.
+        reference_deduper: Shared coordinator for concurrent stale-reference refreshes.
+        file_reference_refresher: Optional callback supplying a renewed raw location.
+    """
     end_offset = None if limit is None else offset + limit
     next_request_offset = offset
     next_yield_offset = offset
@@ -834,6 +1210,12 @@ async def _iter_download_parts(
     exhausted = False
 
     async def on_part_retry(exc: Exception, attempt: int) -> None:
+        """Feed retry outcomes into adaptive concurrency and launch pacing controls.
+
+        Args:
+            exc: Retryable transport or flood exception just observed.
+            attempt: One-based applicable retry/flood attempt number for this part.
+        """
         if throttle is not None:
             await throttle.on_retry(exc, attempt)
             if launch_pacer is not None and throttle.limit <= 1:
@@ -842,6 +1224,13 @@ async def _iter_download_parts(
             launch_pacer.on_flood(exc)
 
     async def fetch(request_offset: int, wire_limit: int, expect_limit: int) -> tuple[int, bytes, int, int, bool]:
+        """Fetch one scheduled range, normalize its length, and record adaptation samples.
+
+        Args:
+            request_offset: Starting byte offset of the scheduled wire request.
+            wire_limit: Protocol-legal request length and byte-window charge.
+            expect_limit: Exact bytes required for the finite target after tail trimming.
+        """
         started = time.perf_counter()
         payload = await _download_part_cached(
             invoke,
@@ -882,6 +1271,7 @@ async def _iter_download_parts(
         return request_offset, payload, expect_limit, wire_limit, short_read
 
     async def fill_window() -> None:
+        """Launch legal parts until a slot, byte, or target boundary prevents more work."""
         nonlocal next_request_offset
         while not exhausted and (end_offset is None or next_request_offset < end_offset):
             allowed = effective_concurrency if throttle is None else min(effective_concurrency, throttle.limit)
@@ -991,6 +1381,62 @@ async def download_file(
     verify_plain_hashes: bool = False,
     file_reference_refresher: FileReferenceRefresher | None = None,
 ) -> MediaDownloadResult:
+    """Download media into memory, a path, or a caller-owned binary stream.
+
+    Args:
+        invoke: Async raw-RPC invoker used for Telegram file requests.
+        location: Telegram input file location to retrieve.
+        destination: ``None`` for in-memory bytes, a path to create/overwrite, or an open binary stream.
+        offset: Starting byte offset; defaults to ``0``.
+        limit: Exact requested byte count, or ``None`` to continue until EOF.
+        part_size: Initial power-of-two request size; defaults to 512 KiB.
+        resume: Append to an existing path from its 1 KiB-aligned size; defaults to ``False``.
+        progress: Optional synchronous or async ``(current, total)`` callback;
+            ``current`` is committed operation bytes and begins at any retained
+            resume prefix, while ``total`` is ``limit`` or otherwise ``total_size``.
+        precise: Request Telegram's 1 KiB precise mode; enabled automatically when required.
+        cdn_supported: Permit CDN redirects and their mandatory block verification.
+        total_size: Known full file size used to preserve finite concurrent coverage.
+        request_timeout: Optional timeout passed to each raw request.
+        max_retries: Non-flood transient retry budget per part; defaults to ``2``.
+        flood_sleep_threshold: Retry eligible flood waits at or below this number of seconds; ``None`` disables them.
+            Eligible waits retain their slot and are separately capped at 16 per part.
+        max_buffer_size: Legacy maximum in-flight byte window alias.
+        concurrency: Maximum concurrent requests and queued writes.
+        adaptive_concurrency: Adapt the active request window to connection failures.
+        launch_stagger: Pace start and flood-recovery request launches.
+        max_in_flight_bytes: Maximum requested bytes not yet released by the stream.
+        adaptive_part_size: Probe larger legal part sizes for large transfers.
+        max_part_size: Upper bound for adaptive parts, no greater than one MiB.
+        range_cache: Exact-range cache instance, ``True`` for shared cache, or disabled value.
+        range_cache_key: Stable media identity for range-cache sharing.
+        range_cache_max_bytes: Capacity used by an implicit shared cache.
+        read_ahead_bytes: Best-effort range prefetch budget; disabled for a full-file transfer.
+        verify_plain_hashes: Verify non-CDN data with Telegram plain-file SHA-256 metadata.
+        file_reference_refresher: Optional sync/async callback for one stale-reference refresh per part.
+
+    Returns:
+        Metadata including the resolved output. ``data`` is populated only for
+        an in-memory destination; caller-provided streams remain open.
+
+    Destination Ownership and Rollback:
+        ``None`` creates an internal ``BytesIO`` returned as ``data`` and clears it
+        on failure. A path creates parent directories; a new path is removed on
+        cancellation/failure, while an existing non-resume path is overwritten
+        rather than restored. A resumed path preserves its existing prefix after
+        truncating any non-1-KiB tail, and failure truncates it back to that
+        aligned prefix. A caller ``BytesIO`` is restored to its original contents
+        and position; arbitrary caller streams remain open and are not generally
+        restorable. Payload/key buffers are not explicitly zeroized.
+
+    Raises:
+        ValueError: An offset, limit, part/cache/window option is invalid.
+        TypeError: A boolean option has the wrong type.
+        MediaDownloadError: A response, finite range, or destination write is invalid.
+        MediaIntegrityError: CDN or requested plain-file integrity verification fails.
+        OSError: A path destination cannot be created, written, or restored.
+        asyncio.CancelledError: The transfer is cancelled; created paths are removed and owned buffers restored.
+    """
     _validate_download_options(
         offset,
         limit,
@@ -1043,6 +1489,11 @@ async def download_file(
     write_acks: deque[tuple[asyncio.Future[None], int]] = deque()
 
     async def report_committed(*, drain_all: bool = False) -> None:
+        """Advance progress only after the serialized writer acknowledges durable bytes.
+
+        Args:
+            drain_all: Await every queued acknowledgement instead of only completed heads.
+        """
         nonlocal downloaded
         while write_acks and (drain_all or write_acks[0][0].done()):
             acknowledgement, payload_size = write_acks.popleft()
@@ -1187,6 +1638,20 @@ async def download_file(
 
 
 async def iter_download_media(invoke: RawInvoker, media: object, **kwargs: Any) -> AsyncGenerator[bytes]:
+    """Resolve a supported media object and stream it through :func:`iter_download`.
+
+    Args:
+        invoke: Async raw-RPC invoker used for file requests.
+        media: A :class:`Media`, file ID, raw document/photo/message, or input file location.
+        kwargs: Forwarded ``**kwargs`` download options; a missing cache key and total size are inferred when possible.
+
+    Yields:
+        Ordered byte chunks with the cancellation, caching, CDN, and integrity semantics of :func:`iter_download`.
+
+    Raises:
+        MediaDownloadError: ``media`` cannot be resolved to an input file location.
+        asyncio.CancelledError: The active stream is cancelled and its pending requests are cleaned up.
+    """
     if "range_cache_key" not in kwargs or kwargs.get("range_cache_key") is None:
         kwargs["range_cache_key"] = _range_cache_key_from_media(media)
     location = download_location_from_media(media)
@@ -1208,6 +1673,22 @@ async def iter_download_media(invoke: RawInvoker, media: object, **kwargs: Any) 
 async def download_media(
     invoke: RawInvoker, media: object, destination: Destination = None, **kwargs: Any
 ) -> MediaDownloadResult:
+    """Resolve media and materialize it through :func:`download_file`.
+
+    Args:
+        invoke: Async raw-RPC invoker used for file requests.
+        media: A :class:`Media`, file ID, raw document/photo/message, or input file location.
+        destination: In-memory, path, or binary-stream destination forwarded to :func:`download_file`.
+        kwargs: Remaining forwarded ``**kwargs`` download options; cache identity and total size are inferred when possible.
+
+    Returns:
+        The same result and destination-ownership semantics as :func:`download_file`.
+
+    Raises:
+        MediaDownloadError: The supplied media cannot produce a download location.
+        MediaIntegrityError: CDN or enabled plain-file verification fails.
+        asyncio.CancelledError: The transfer is cancelled and destination cleanup runs.
+    """
     if "range_cache_key" not in kwargs or kwargs.get("range_cache_key") is None:
         kwargs["range_cache_key"] = _range_cache_key_from_media(media)
     location = download_location_from_media(media)
@@ -1228,6 +1709,17 @@ async def download_media(
 
 
 def download_location_from_media(media: object) -> object:
+    """Resolve a media model, raw Telegram object, file ID, or input location for download.
+
+    Args:
+        media: Supported high-level, raw, encoded, or already-resolved media input.
+
+    Returns:
+        A raw Telegram ``InputFileLocation`` suitable for ``upload.getFile``.
+
+    Raises:
+        MediaDownloadError: The object has no download-capable document or photo location.
+    """
     if is_file_id(media):
         return download_location_from_media(media_from_file_id(media))
     if isinstance(media, Media):
@@ -1256,6 +1748,14 @@ def download_location_from_media(media: object) -> object:
 
 
 def media_from_raw(raw: object) -> Media | None:
+    """Normalize supported raw Telegram media shapes into a :class:`Media` record.
+
+    Args:
+        raw: Media, message/update, document, photo, or input file location.
+
+    Returns:
+        A normalized media record, or ``None`` when ``raw`` is unsupported or absent.
+    """
     if isinstance(raw, Media):
         return raw
     if raw is None:
@@ -1278,17 +1778,31 @@ def media_from_raw(raw: object) -> Media | None:
 
 
 class _DownloadLocationState:
+    """Concurrency-safe mutable location holder for expired file-reference recovery."""
+
     def __init__(self, location: object) -> None:
+        """Initialize the state with the location used by the first request.
+
+        Args:
+            location: Initial raw location whose file reference can later be replaced.
+        """
         self._location = location
         self._lock = asyncio.Lock()
 
     @property
     def current(self) -> object:
+        """Return the currently active raw file location without waiting."""
         return self._location
 
     async def refresh(
         self, *, reference_deduper: _FileReferenceRefreshDeduper, refresher: FileReferenceRefresher
     ) -> object:
+        """Refresh stale reference metadata once and retain it unless another refresh won.
+
+        Args:
+            reference_deduper: Coordinator sharing refresh work for the old reference.
+            refresher: Sync or async callback returning an updated raw location.
+        """
         old_location = self._location
         new_location = await reference_deduper.refresh(old_location, refresher)
         async with self._lock:
@@ -1298,11 +1812,20 @@ class _DownloadLocationState:
 
 
 class _FileReferenceRefreshDeduper:
+    """Share concurrent stale-reference refreshes keyed by their old reference bytes."""
+
     def __init__(self) -> None:
+        """Initialize the in-flight refresher registry."""
         self._pending: dict[bytes, asyncio.Task[object]] = {}
         self._lock = asyncio.Lock()
 
     async def refresh(self, location: object, refresher: FileReferenceRefresher) -> object:
+        """Return a refreshed location while coalescing requests for the same stale reference.
+
+        Args:
+            location: Raw location with a possibly expired file reference.
+            refresher: Sync or async callback producing its renewed location.
+        """
         reference = _file_reference_bytes(location)
         if not reference:
             refreshed = refresher(location)
@@ -1324,6 +1847,12 @@ class _FileReferenceRefreshDeduper:
 
 
 async def _call_file_reference_refresher(refresher: FileReferenceRefresher, location: object) -> object:
+    """Call a sync or async reference refresher and normalize it to an awaited result.
+
+    Args:
+        refresher: Callback returning a raw location directly or as an awaitable.
+        location: Stale raw location supplied to the callback.
+    """
     refreshed = refresher(location)
     return await refreshed if inspect.isawaitable(refreshed) else refreshed
 
@@ -1338,6 +1867,17 @@ async def _payload_from_get_file_result(
     request_timeout: float | None,
     plain_verifier: _PlainFileHashVerifier | None,
 ) -> bytes:
+    """Extract plain bytes or follow a CDN redirect from one ``upload.getFile`` result.
+
+    Args:
+        invoke: Raw RPC invoker used for CDN reupload/hash operations.
+        result: Raw ``upload.getFile`` response to interpret.
+        location: Plain-file location used by optional hash verification.
+        offset: Response starting byte offset.
+        limit: Requested byte length for CDN retrieval.
+        request_timeout: Optional raw-RPC timeout in seconds.
+        plain_verifier: Optional non-CDN SHA-256 verifier.
+    """
     redirect = cdn_redirect_from_raw(result)
     if redirect is not None:
         return await get_cdn_file_part(invoke, redirect, offset=offset, limit=limit, request_timeout=request_timeout)
@@ -1367,9 +1907,29 @@ async def _download_part_cached(
     retry_observer: DownloadRetryObserver | None = None,
     plain_verifier: _PlainFileHashVerifier | None = None,
 ) -> bytes:
+    """Fetch a part directly or through the exact-range cache, then optionally verify it.
+
+    Args:
+        invoke: Raw RPC invoker for the requested part.
+        location_state: Current mutable raw location and refresh state.
+        offset: Requested part starting byte offset.
+        limit: Protocol-legal requested part length.
+        precise: Whether to use precise 1 KiB file-request alignment.
+        cdn_supported: Whether the request permits a CDN redirect.
+        request_timeout: Optional per-request timeout in seconds.
+        max_retries: Non-flood transient retry allowance.
+        flood_sleep_threshold: Largest server flood wait retried in seconds.
+        range_cache: Optional exact-range cache.
+        range_cache_key: Stable cache identity required to use the cache.
+        reference_deduper: Shared stale-reference refresh coordinator.
+        file_reference_refresher: Optional callback supplying a renewed location.
+        retry_observer: Optional sync/async listener for retry attempts.
+        plain_verifier: Optional plain-file hash verifier run after cache retrieval.
+    """
     use_range_cache = range_cache is not None and range_cache_key is not None
 
     async def fetch() -> bytes:
+        """Fetch the uncached range while preserving reference-refresh retry behavior."""
         return await _download_part_with_reference_refresh(
             invoke,
             location_state=location_state,
@@ -1411,6 +1971,23 @@ async def _download_part_with_reference_refresh(
     file_reference_refresher: FileReferenceRefresher | None,
     plain_verifier: _PlainFileHashVerifier | None = None,
 ) -> bytes:
+    """Retry a part once with a refreshed file reference when Telegram reports it stale.
+
+    Args:
+        invoke: Raw RPC invoker for file-part requests.
+        location_state: Mutable location holder updated by successful refresh.
+        offset: Requested part start byte.
+        limit: Requested part length.
+        precise: Whether to request precise 1 KiB alignment.
+        cdn_supported: Whether CDN redirects are accepted.
+        request_timeout: Optional request timeout in seconds.
+        max_retries: Non-flood transient retry allowance.
+        flood_sleep_threshold: Largest retryable flood wait in seconds.
+        retry_observer: Optional observer notified before transient retries.
+        reference_deduper: Shared stale-reference refresh coordinator.
+        file_reference_refresher: Optional callback producing a renewed location.
+        plain_verifier: Optional plain-file hash verifier.
+    """
     for refresh_attempt in range(2):
         try:
             return await _download_part(
@@ -1457,6 +2034,22 @@ async def _download_part(
     retry_observer: DownloadRetryObserver | None = None,
     plain_verifier: _PlainFileHashVerifier | None = None,
 ) -> bytes:
+    """Request one file part with transient retry and server flood-pacing semantics.
+
+    Args:
+        invoke: Raw RPC invoker for the file request.
+        location: Raw input location for the requested range.
+        offset: Requested range start byte.
+        limit: Protocol-legal request length in bytes.
+        precise: Whether to use Telegram's 1 KiB precise mode.
+        cdn_supported: Whether Telegram may return a CDN redirect.
+        request_timeout: Optional raw-RPC timeout in seconds.
+        max_retries: Retry budget for non-flood transient failures.
+        flood_sleep_threshold: Largest eligible flood wait in seconds; eligible waits
+            retain their scheduler slot and use a separate 16-retry cap.
+        retry_observer: Optional sync/async callback observing retry attempts.
+        plain_verifier: Optional non-CDN hash verifier for returned bytes.
+    """
     request = functions.UploadGetFile(
         precise=precise, cdn_supported=cdn_supported, location=location, offset=offset, limit=limit
     )
@@ -1509,6 +2102,12 @@ async def _download_part(
 
 
 def _media_from_document(document: types.Document, *, raw: object) -> Media:
+    """Build normalized media metadata and a full-size location from a raw document.
+
+    Args:
+        document: Raw Telegram document supplying identifiers and attributes.
+        raw: Original enclosing raw object retained on the normalized record.
+    """
     file_name = _document_file_name(document.attributes)
     location = types.InputDocumentFileLocation(
         id=document.id, access_hash=document.access_hash, file_reference=document.file_reference, thumb_size=""
@@ -1527,6 +2126,12 @@ def _media_from_document(document: types.Document, *, raw: object) -> Media:
 
 
 def _media_from_photo(photo: types.Photo, *, raw: object) -> Media:
+    """Build normalized media metadata and the largest-photo location from a raw photo.
+
+    Args:
+        photo: Raw Telegram photo supplying identifiers and size variants.
+        raw: Original enclosing raw object retained on the normalized record.
+    """
     size = _largest_photo_size(photo.sizes)
     thumb_size = _largest_photo_thumb_size(photo.sizes)
     location = types.InputPhotoFileLocation(
@@ -1545,6 +2150,11 @@ def _media_from_photo(photo: types.Photo, *, raw: object) -> Media:
 
 
 def _document_file_name(attributes: tuple[object, ...]) -> str | None:
+    """Return the declared document filename attribute, if Telegram supplied one.
+
+    Args:
+        attributes: Raw document attributes to inspect.
+    """
     for attribute in attributes:
         if isinstance(attribute, types.DocumentAttributeFilename):
             return attribute.file_name
@@ -1552,6 +2162,11 @@ def _document_file_name(attributes: tuple[object, ...]) -> str | None:
 
 
 def _largest_photo_size(sizes: tuple[object, ...]) -> int | None:
+    """Return the greatest numeric photo-size value from heterogeneous size entries.
+
+    Args:
+        sizes: Raw photo-size variants exposing optional numeric ``size`` attributes.
+    """
     candidates: list[int] = []
     for size in sizes:
         value = getattr(size, "size", None)
@@ -1561,6 +2176,11 @@ def _largest_photo_size(sizes: tuple[object, ...]) -> int | None:
 
 
 def _largest_photo_thumb_size(sizes: tuple[object, ...]) -> str:
+    """Select the type of the largest known photo size, with a typed fallback.
+
+    Args:
+        sizes: Raw photo-size variants exposing optional type and size attributes.
+    """
     sized: list[tuple[object, int]] = []
     for size in sizes:
         value = getattr(size, "size", None)
@@ -1578,10 +2198,20 @@ def _largest_photo_thumb_size(sizes: tuple[object, ...]) -> str:
 
 
 def _is_input_file_location(value: object) -> bool:
+    """Identify raw Telegram input file-location objects without importing every variant.
+
+    Args:
+        value: Candidate raw object to inspect for its generated result type.
+    """
     return getattr(type(value), "RESULT_TYPE", None) == "InputFileLocation"
 
 
 def _range_cache_key_from_media(media: object) -> str | None:
+    """Derive a stable cache identity from encoded, normalized, or raw media.
+
+    Args:
+        media: Encoded file ID, normalized media, or supported raw Telegram media.
+    """
     if is_file_id(media):
         return str(media)
     if isinstance(media, Media):
@@ -1593,6 +2223,13 @@ def _range_cache_key_from_media(media: object) -> str | None:
 def _resolve_range_cache(
     range_cache: DownloadRangeCache | bool | None, *, max_bytes: int, read_ahead_bytes: int
 ) -> DownloadRangeCache | None:
+    """Choose an explicit, implicit shared, or disabled range cache for a transfer.
+
+    Args:
+        range_cache: Explicit cache, ``True`` for shared cache, or disabled value.
+        max_bytes: Capacity required if a shared cache is selected.
+        read_ahead_bytes: Positive value that requires an implicit shared cache.
+    """
     if isinstance(range_cache, DownloadRangeCache):
         return range_cache
     if range_cache is False:
@@ -1603,6 +2240,11 @@ def _resolve_range_cache(
 
 
 def _default_range_cache(max_bytes: int) -> DownloadRangeCache:
+    """Return the process-local shared cache, replacing it when its capacity changes.
+
+    Args:
+        max_bytes: Required capacity for the shared cache.
+    """
     global _DEFAULT_RANGE_CACHE
     if _DEFAULT_RANGE_CACHE is None or _DEFAULT_RANGE_CACHE.max_bytes != max_bytes:
         _DEFAULT_RANGE_CACHE = DownloadRangeCache(max_bytes=max_bytes)
@@ -1627,6 +2269,25 @@ def _prefetch_read_ahead(
     reference_deduper: _FileReferenceRefreshDeduper,
     file_reference_refresher: FileReferenceRefresher | None,
 ) -> None:
+    """Schedule aligned low-priority cached ranges ahead of the yielded cursor.
+
+    Args:
+        invoke: Raw RPC invoker wrapped with background request priority.
+        location_state: Mutable raw location used for prefetches and refreshes.
+        precise: Whether planned prefetches use 1 KiB precise alignment.
+        cdn_supported: Whether prefetched requests may use CDN redirects.
+        request_timeout: Optional per-request timeout in seconds.
+        max_retries: Non-flood transient retry allowance for prefetches.
+        flood_sleep_threshold: Largest retryable server wait for prefetches.
+        range_cache: Cache that owns best-effort background task lifecycle.
+        range_cache_key: Stable media identity to cache planned ranges under.
+        start_offset: First byte after the latest yielded range.
+        part_size: Target legal request size used to partition prefetches.
+        read_ahead_bytes: Maximum speculative byte distance to schedule.
+        hard_end: Known exclusive file end that prefetching must not exceed.
+        reference_deduper: Shared stale-reference refresh coordinator.
+        file_reference_refresher: Optional callback producing a renewed location.
+    """
     if range_cache is None or range_cache_key is None or read_ahead_bytes <= 0:
         return
     alignment = _PRECISE_ALIGNMENT if precise else _ALIGNMENT
@@ -1650,7 +2311,20 @@ def _prefetch_read_ahead(
         limit_for_task = request_limit
 
         async def fetch(offset: int = offset_for_task, limit: int = limit_for_task) -> bytes:
+            """Retrieve one prefetched range using background transport priority.
+
+            Args:
+                offset: Captured starting byte offset for this background range.
+                limit: Captured protocol-legal background request length.
+            """
+
             async def background_invoke(request: object, **kwargs: Any) -> object:
+                """Mark a raw request as background work before delegating it to the caller.
+
+                Args:
+                    request: Raw Telegram request to execute with background priority.
+                    kwargs: Forwarded ``**kwargs`` transport options augmented with priority.
+                """
                 kwargs["_media_priority"] = "background"
                 return await invoke(request, **kwargs)
 
@@ -1675,6 +2349,11 @@ def _prefetch_read_ahead(
 
 
 def _file_reference_bytes(location: object) -> bytes:
+    """Normalize a location's file reference to immutable bytes for identity comparisons.
+
+    Args:
+        location: Raw location whose ``file_reference`` field may have several byte-like types.
+    """
     reference = getattr(location, "file_reference", b"")
     if isinstance(reference, bytes):
         return reference
@@ -1686,6 +2365,11 @@ def _file_reference_bytes(location: object) -> bytes:
 
 
 def _plain_location_identity(location: object) -> tuple[object, ...]:
+    """Build the location fields that must remain stable during plain-hash verification.
+
+    Args:
+        location: Raw location whose identifier, access, thumbnail, and reference fields are captured.
+    """
     return (
         getattr(type(location), "QUALNAME", type(location).__qualname__),
         getattr(location, "id", None),
@@ -1699,6 +2383,11 @@ def _plain_location_identity(location: object) -> tuple[object, ...]:
 
 
 def _is_file_reference_error(exc: Exception) -> bool:
+    """Recognize raw RPC failures that request a refreshed file reference.
+
+    Args:
+        exc: Exception raised by a raw file request.
+    """
     if not isinstance(exc, RpcError):
         return False
     message = exc.message.upper()
@@ -1721,6 +2410,23 @@ def _validate_download_options(
     read_ahead_bytes: int,
     precise: bool = False,
 ) -> None:
+    """Reject invalid transfer sizing, retry, cache, and memory-window configuration.
+
+    Args:
+        offset: Requested non-negative starting byte offset.
+        limit: Optional non-negative requested byte count.
+        part_size: Initial power-of-two part size between 1 KiB and one MiB.
+        max_retries: Non-negative non-flood transient retry budget.
+        flood_sleep_threshold: Optional non-negative maximum retryable server wait.
+        max_buffer_size: Legacy optional byte-window limit.
+        concurrency: Positive requested concurrent-part count.
+        max_in_flight_bytes: Preferred optional byte-window limit.
+        adaptive_part_size: Accepted feature setting; behavior is consumed by the caller.
+        max_part_size: Power-of-two adaptive ceiling between ``part_size`` and one MiB.
+        range_cache_max_bytes: Positive capacity for implicitly created range caches.
+        read_ahead_bytes: Non-negative speculative cache-fill length.
+        precise: Accepted alignment setting; 1 KiB mode is inferred separately.
+    """
     del precise  # part sizes below 4 KiB auto-enable precise mode instead
     if offset < 0:
         raise ValueError("offset must not be negative")
@@ -1759,6 +2465,8 @@ def _validate_download_options(
 
 
 class _ConcurrentDestinationWriter:
+    """Serialize asynchronous writes and surface destination failure to every submitter."""
+
     def __init__(
         self,
         destination: _DestinationHandle,
@@ -1767,6 +2475,14 @@ class _ConcurrentDestinationWriter:
         preallocate_size: int | None,
         sequential: bool = False,
     ) -> None:
+        """Start the writer worker and optionally preallocate a path-backed output.
+
+        Args:
+            destination: Handle ownership and rollback policy for the output.
+            queue_size: Maximum queued writes admitted before submitters wait.
+            preallocate_size: Optional byte length applied to a path-backed file before writes.
+            sequential: Append in submitted order instead of seeking each write offset.
+        """
         self._destination = destination
         self._queue: asyncio.Queue[_WriteRequest | None] = asyncio.Queue()
         self._queue_slots = asyncio.Semaphore(max(1, queue_size))
@@ -1786,6 +2502,16 @@ class _ConcurrentDestinationWriter:
         self._worker = asyncio.create_task(self._run())
 
     async def submit(self, offset: int, payload: bytes, *, wait_for_completion: bool = True) -> asyncio.Future[None]:
+        """Queue a write and return its acknowledgement after optional completion waiting.
+
+        Cancellation before admission releases any acquired queue slot; failures
+        are propagated to this and every pending acknowledgement.
+
+        Args:
+            offset: Destination byte offset when non-sequential seeking is enabled.
+            payload: Bytes to write; ownership remains with the caller and no zeroization occurs.
+            wait_for_completion: Await the acknowledgement before returning when true.
+        """
         loop = asyncio.get_running_loop()
         acknowledgement = loop.create_future()
         acknowledgement.add_done_callback(self._consume_acknowledgement)
@@ -1840,6 +2566,7 @@ class _ConcurrentDestinationWriter:
         return acknowledgement
 
     async def close(self) -> _DownloadWriterStats:
+        """Flush queued writes, await the worker, and return timing statistics."""
         async with self._state_lock:
             if not self._closed:
                 self._closed = True
@@ -1852,6 +2579,7 @@ class _ConcurrentDestinationWriter:
         return self._stats
 
     async def abort(self) -> None:
+        """Cancel queued acknowledgements, stop admission, and drain the worker safely."""
         async with self._state_lock:
             if not self._closed:
                 self._closed = True
@@ -1863,6 +2591,7 @@ class _ConcurrentDestinationWriter:
         await asyncio.shield(self._worker)
 
     async def _run(self) -> None:
+        """Consume write requests until a flush sentinel or terminal destination failure."""
         while True:
             item = await self._queue.get()
             if item is not None:
@@ -1888,6 +2617,12 @@ class _ConcurrentDestinationWriter:
                     item.acknowledgement.set_result(None)
 
     def _write(self, offset: int, payload: bytes) -> None:
+        """Seek when required and require the destination to accept the full payload.
+
+        Args:
+            offset: Byte seek target for non-sequential output.
+            payload: Bytes that the underlying output must write completely.
+        """
         if not self._sequential:
             self._destination.handle.seek(offset)
         written = self._destination.handle.write(payload)
@@ -1897,12 +2632,18 @@ class _ConcurrentDestinationWriter:
             )
 
     async def _flush(self) -> None:
+        """Flush the output, moving path-backed blocking I/O off the event loop."""
         if self._threaded:
             await asyncio.to_thread(self._destination.handle.flush)
         else:
             self._destination.handle.flush()
 
     async def _record_failure(self, exc: BaseException) -> None:
+        """Publish the first writer failure and fail all queued acknowledgements.
+
+        Args:
+            exc: First terminal write/flush exception to propagate to submitters.
+        """
         async with self._state_lock:
             if self._failure is None:
                 self._failure = exc
@@ -1912,11 +2653,21 @@ class _ConcurrentDestinationWriter:
             self._drain_queued_requests(self._failure)
 
     def _fail_all_acknowledgements(self, exc: BaseException) -> None:
+        """Set an exception on every unresolved submitted-write future.
+
+        Args:
+            exc: Terminal exception assigned to each unresolved future.
+        """
         for acknowledgement in tuple(self._acknowledgements):
             if not acknowledgement.done():
                 acknowledgement.set_exception(exc)
 
     def _drain_queued_requests(self, exc: BaseException) -> None:
+        """Remove queued writes, release slots, and fail their acknowledgements.
+
+        Args:
+            exc: Terminal exception assigned to drained write acknowledgements.
+        """
         while True:
             try:
                 queued = self._queue.get_nowait()
@@ -1928,10 +2679,21 @@ class _ConcurrentDestinationWriter:
 
     @staticmethod
     def _set_acknowledgement_exception(item: _WriteRequest | None, exc: BaseException) -> None:
+        """Fail one queued request's acknowledgement when it has not settled yet.
+
+        Args:
+            item: Optional queued write carrying the acknowledgement to fail.
+            exc: Exception assigned if that acknowledgement remains unresolved.
+        """
         if item is not None and not item.acknowledgement.done():
             item.acknowledgement.set_exception(exc)
 
     def _consume_acknowledgement(self, acknowledgement: asyncio.Future[None]) -> None:
+        """Release acknowledgement bookkeeping and consume unobserved future errors.
+
+        Args:
+            acknowledgement: Settled/cancelled writer-completion future to unregister.
+        """
         self._acknowledgements.discard(acknowledgement)
         if acknowledgement.cancelled():
             return
@@ -1940,6 +2702,11 @@ class _ConcurrentDestinationWriter:
 
 
 def _record_writer_stats(stats: _DownloadWriterStats) -> None:
+    """Emit writer queue and blocking-I/O metrics when at least one write completed.
+
+    Args:
+        stats: Aggregate durations in seconds and successfully committed write count.
+    """
     if stats.writes <= 0:
         return
     record_metric("media.download.writer_writes", stats.writes)
@@ -1948,6 +2715,8 @@ def _record_writer_stats(stats: _DownloadWriterStats) -> None:
 
 
 class _AdaptivePartSizer:
+    """Probe progressively larger legal chunks and settle at the best observed size."""
+
     def __init__(
         self,
         *,
@@ -1959,6 +2728,17 @@ class _AdaptivePartSizer:
         min_samples: int = 4,
         worse_tolerance: float = 0.03,
     ) -> None:
+        """Initialize adaptation thresholds and disable probing for unsuitable transfers.
+
+        Args:
+            initial_size: Starting legal request size in bytes.
+            max_size: Maximum legal request size in bytes.
+            total_bytes: Known transfer length, or ``None`` when unknown.
+            enabled: Whether adaptive probing is requested.
+            min_total_bytes: Minimum known transfer size that enables probing.
+            min_samples: Full-part samples required before choosing a larger size.
+            worse_tolerance: Relative throughput regression tolerated before settling.
+        """
         self.current_size = initial_size
         self._max_size = max(initial_size, max_size)
         self._enabled = (
@@ -1974,6 +2754,13 @@ class _AdaptivePartSizer:
         self._settled = not self._enabled
 
     def on_success(self, *, requested_size: int, received_size: int, duration_s: float) -> None:
+        """Record a full part and grow or settle only after enough comparable samples.
+
+        Args:
+            requested_size: Wire request size for the completed sample.
+            received_size: Actual response bytes; short reads do not drive adaptation.
+            duration_s: Measured part elapsed time in seconds.
+        """
         if self._settled or requested_size != self.current_size or received_size < requested_size:
             return
         self._sample_count += 1
@@ -2011,6 +2798,12 @@ class _AdaptivePartSizer:
         )
 
     def _try_grow(self, *, previous: int, reason: str) -> None:
+        """Double the legal part size, reset samples, or settle at the configured maximum.
+
+        Args:
+            previous: Previous request size recorded in metrics.
+            reason: Metric/event explanation for this growth attempt.
+        """
         if self.current_size >= self._max_size:
             self._settled = True
             return
@@ -2035,6 +2828,18 @@ class _AdaptivePartSizer:
 
 
 def _open_destination(destination: Destination, *, resume: bool) -> _DestinationHandle:
+    """Open or wrap a download target with explicit ownership and rollback semantics.
+
+    Args:
+        destination: ``None``, a path-like target, or caller-owned binary stream.
+        resume: Reuse an existing path from its aligned size when true.
+
+    ``None`` creates a new internal buffer. Path parents are created; a new path
+    is removed after failure, an existing non-resume path is overwritten, and a
+    resumed path is truncated to an aligned prefix then restored to that prefix
+    after failure. A ``BytesIO`` input is restored to original data/position;
+    arbitrary streams remain caller-owned and are not rolled back or closed.
+    """
     if destination is None:
         buffer = io.BytesIO()
         return _DestinationHandle(
@@ -2075,6 +2880,7 @@ def _open_destination(destination: Destination, *, resume: bool) -> _Destination
         original_position = destination.tell()
 
         def restore_bytesio() -> None:
+            """Restore caller-owned in-memory stream contents after a failed transfer."""
             destination.seek(0)
             destination.truncate(0)
             destination.write(original_data)
@@ -2095,7 +2901,15 @@ def _open_destination(destination: Destination, *, resume: bool) -> _Destination
 
 
 async def _truncate_destination(destination: _DestinationHandle, size: int) -> None:
+    """Truncate and flush a destination, moving path I/O off the event loop.
+
+    Args:
+        destination: Open destination handle to resize.
+        size: New destination length in bytes.
+    """
+
     def truncate_and_flush() -> None:
+        """Apply the blocking truncate-and-flush operation to the destination handle."""
         destination.handle.truncate(size)
         destination.handle.flush()
 
@@ -2106,6 +2920,11 @@ async def _truncate_destination(destination: _DestinationHandle, size: int) -> N
 
 
 async def _cleanup_failed_destination(destination: _DestinationHandle) -> None:
+    """Apply the target's cancellation/failure cleanup policy without closing caller streams.
+
+    Args:
+        destination: Ownership and rollback policy chosen when opening the target.
+    """
     if destination.path is not None:
         if destination.remove_on_cancel:
             if destination.should_close and not destination.handle.closed:
@@ -2114,6 +2933,7 @@ async def _cleanup_failed_destination(destination: _DestinationHandle) -> None:
             return
 
         def restore_prefix() -> None:
+            """Restore a resumed path to the aligned bytes present before this transfer."""
             destination.handle.truncate(destination.existing_bytes)
             destination.handle.flush()
             if destination.should_close:
@@ -2132,6 +2952,11 @@ async def _cleanup_failed_destination(destination: _DestinationHandle) -> None:
 
 
 async def _cancel_tasks(pending: set[asyncio.Task[Any]]) -> None:
+    """Cancel every pending task and await their terminal cleanup without propagating errors.
+
+    Args:
+        pending: Outstanding tasks to cancel and gather with exceptions suppressed.
+    """
     if not pending:
         return
     for task in pending:
@@ -2140,6 +2965,13 @@ async def _cancel_tasks(pending: set[asyncio.Task[Any]]) -> None:
 
 
 async def _call_progress(progress: ProgressCallback | None, current: int, total: int | None) -> None:
+    """Invoke an optional sync or async progress callback with committed transfer bytes.
+
+    Args:
+        progress: Optional callback receiving ``(current, total)`` byte counts.
+        current: Current committed/yielded operation bytes.
+        total: Known operation bytes, or ``None`` when unknown.
+    """
     if progress is None:
         return
     result = progress(current, total)
@@ -2148,10 +2980,21 @@ async def _call_progress(progress: ProgressCallback | None, current: int, total:
 
 
 def _is_premium_flood(exc: Exception) -> bool:
+    """Identify the premium flood-wait class without importing an optional subtype.
+
+    Args:
+        exc: Exception observed during a part request.
+    """
     return isinstance(exc, FloodWait) and type(exc).__name__ == "FloodPremiumWait"
 
 
 def _is_transient_download_error(exc: Exception, *, flood_sleep_threshold: int | None = 30) -> bool:
+    """Classify retryable transport, timeout, server, and eligible flood errors.
+
+    Args:
+        exc: Exception raised by a part request.
+        flood_sleep_threshold: Maximum server flood wait in seconds accepted as retryable.
+    """
     if isinstance(exc, FloodWait):
         return flood_sleep_threshold is not None and exc.seconds <= flood_sleep_threshold
     if isinstance(
@@ -2171,6 +3014,16 @@ def _is_transient_download_error(exc: Exception, *, flood_sleep_threshold: int |
 def _emit_part_retry(
     *, offset: int, limit: int, attempt: int, max_retries: int, error_type: str, flood_wait_seconds: int | None = None
 ) -> None:
+    """Emit observability records describing a retry and optional server wait duration.
+
+    Args:
+        offset: Retried part start byte.
+        limit: Retried part request length in bytes.
+        attempt: Retry/flood attempt number for this part.
+        max_retries: Non-flood retry budget shown in telemetry.
+        error_type: Exception type name used as a metric attribute.
+        flood_wait_seconds: Optional server-prescribed delay in seconds.
+    """
     record_metric("media.download.part_retries", 1, attributes={"error_type": error_type})
     fields: dict[str, object] = {
         "outcome": "retry",
@@ -2189,6 +3042,12 @@ def _emit_part_retry(
 
 
 async def _sleep_before_retry(exc: Exception, attempt: int = 0) -> None:
+    """Sleep for server pacing or jittered transient backoff before retrying a part.
+
+    Args:
+        exc: Flood wait or other transient exception determining the sleep policy.
+        attempt: Zero-based non-flood failure count used for exponential backoff.
+    """
     if isinstance(exc, FloodWait):
         # FLOOD_WAIT_0 retried instantly just re-triggers the flood. Positive
         # waits already carry server pacing, so only add tight jitter to
@@ -2214,6 +3073,12 @@ class _AdaptiveDownloadThrottle:
     """
 
     def __init__(self, max_limit: int, *, clock: Clock = time.monotonic) -> None:
+        """Initialize a fixed upper window and an immediately usable current limit.
+
+        Args:
+            max_limit: Maximum concurrent request slots allowed by the caller.
+            clock: Monotonic seconds source used for recovery cooldowns.
+        """
         self.max_limit = max(1, max_limit)
         self.limit = self.max_limit
         self._clock = clock
@@ -2222,6 +3087,12 @@ class _AdaptiveDownloadThrottle:
         self._premium_fallback = False
 
     async def on_retry(self, exc: Exception, attempt: int) -> None:
+        """Reduce on connection health failures and force one slot for premium floods.
+
+        Args:
+            exc: Retryable error that indicates flood pacing or connection health.
+            attempt: Current retry/flood attempt number recorded in telemetry.
+        """
         previous = self.limit
         if isinstance(exc, FloodWait):
             self._successes_since_change = 0
@@ -2274,6 +3145,7 @@ class _AdaptiveDownloadThrottle:
         )
 
     def on_success(self) -> None:
+        """Increase the active limit slowly after cooldown and enough clean completions."""
         if self._premium_fallback:
             return
         if self.limit >= self.max_limit:

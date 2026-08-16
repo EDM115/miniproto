@@ -1,0 +1,65 @@
+schema_version = 1
+repository_url = "https://github.com/EDM115/miniproto"
+output_root = "docs/reference"
+
+[python]
+source_root = "src"
+module_names = [
+  "miniproto",
+  "miniproto.auth",
+  "miniproto.auth.bootstrap",
+  "miniproto.client",
+  "miniproto.config",
+  "miniproto.connection",
+  "miniproto.connection.framing",
+  "miniproto.crypto",
+  "miniproto.errors",
+  "miniproto.event_loop",
+  "miniproto.file_id",
+  "miniproto.invoke",
+  "miniproto.media",
+  "miniproto.media.cdn",
+  "miniproto.media.download",
+  "miniproto.media.retry",
+  "miniproto.media.scheduler",
+  "miniproto.media.upload",
+  "miniproto.messages",
+  "miniproto.mtproto",
+  "miniproto.mtproto.codec",
+  "miniproto.mtproto.quick_ack",
+  "miniproto.observability",
+  "miniproto.peers",
+  "miniproto.security",
+  "miniproto.session",
+  "miniproto.session.peer_merge",
+  "miniproto.session.strings",
+  "miniproto.tl",
+  "miniproto.tl.fast",
+  "miniproto.types",
+  "miniproto.updates",
+]
+dynamic_all_modules = ["miniproto.errors"]
+excluded_roots = ["src/miniproto/raw"]
+
+[telegram]
+schema_path = "tools/schema/schema.json"
+metadata_path = "tools/schema/schema-metadata.json"
+rpc_errors_path = "tools/schema/rpc-errors.json"
+bindings_path = "tools/schema/telegram-bindings.json"
+relationships_path = "telegram/relationships.json"
+
+[rust]
+manifest_path = "rust/miniproto/Cargo.toml"
+source_root = "."
+toolchain_path = "rust/miniproto/rust-toolchain-docs.toml"
+crate = "miniproto_native"
+artifact_stem = "miniproto_native"
+reviewed_modules = ["crypto", "mtproto", "tl", "transport"]
+excluded_paths = ["rust/miniproto/src/generated_tl.rs"]
+
+[site]
+directory = "docs-site"
+package_manager = "pnpm"
+install_command = ["pnpm", "install", "--frozen-lockfile"]
+check_command = ["pnpm", "check"]
+build_command = ["pnpm", "build"]

@@ -1,3 +1,5 @@
+"""Compute Telegram's SRP proof for two-factor account passwords."""
+
 from __future__ import annotations
 
 import hashlib
@@ -11,6 +13,18 @@ from miniproto.raw import types
 def compute_check_password(
     password: str, password_state: types.AccountPassword
 ) -> types.InputCheckPasswordEmpty | types.InputCheckPasswordSRP:
+    """Build the request payload required to verify an account password.
+
+    Args:
+        password: Plain-text password supplied by the caller; it is only used to derive the proof.
+        password_state: Current Telegram password configuration and SRP parameters.
+
+    Returns:
+        An empty password check when no password is configured, otherwise a freshly randomized SRP proof.
+
+    Raises:
+        ValueError: If Telegram supplies unsupported, incomplete, or cryptographically invalid SRP parameters.
+    """
     if not getattr(password_state, "has_password", False) or password_state.current_algo is None:
         return types.InputCheckPasswordEmpty()
     algo = password_state.current_algo
@@ -49,6 +63,12 @@ def compute_check_password(
 
 
 def _password_hash(password: str, algo: types.PasswordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000SHA256ModPow) -> int:
+    """Derive Telegram's password hash integer using the advertised KDF salts.
+
+    Args:
+        password: Plain-text password used only for local SRP derivation.
+        algo: Telegram-supported KDF parameters containing salts, modulus, and generator.
+    """
     password_bytes = password.encode("utf-8")
     hash1 = sha256_digest(algo.salt1 + password_bytes + algo.salt1)
     hash2 = sha256_digest(algo.salt2 + hash1 + algo.salt2)
@@ -58,10 +78,21 @@ def _password_hash(password: str, algo: types.PasswordKdfAlgoSHA256SHA256PBKDF2H
 
 
 def _hash_as_int(value: bytes) -> int:
+    """Interpret a SHA-256 digest as an unsigned big-endian integer.
+
+    Args:
+        value: Bytes to hash before converting the digest to an integer.
+    """
     return int.from_bytes(sha256_digest(value), "big", signed=False)
 
 
 def _pad_for_hash(value: bytes, p: int) -> bytes:
+    """Left-pad an SRP value to the modulus width required by Telegram hashes.
+
+    Args:
+        value: Big-endian SRP value to normalize.
+        p: SRP modulus determining the target byte width.
+    """
     size = max(256, (p.bit_length() + 7) // 8)
     if len(value) > size:
         stripped = value.lstrip(b"\x00")
@@ -72,4 +103,9 @@ def _pad_for_hash(value: bytes, p: int) -> bytes:
 
 
 def _int_to_be(value: int) -> bytes:
+    """Encode a non-negative integer with the shortest non-empty big-endian form.
+
+    Args:
+        value: Integer to encode.
+    """
     return value.to_bytes(max(1, (value.bit_length() + 7) // 8), "big")

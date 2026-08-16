@@ -28,3 +28,9 @@ miniproto.session-*.sqlite
 *.log
 *.pdb
 .env
+
+# Derived Astro/Starlight documentation-site files.
+/docs-site/node_modules/
+/docs-site/.astro/
+/docs-site/dist/
+/.pnpm-store/

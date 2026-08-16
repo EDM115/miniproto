@@ -1,3 +1,5 @@
+"""Parse lightweight message markup and normalize Telegram message responses."""
+
 from __future__ import annotations
 
 import secrets
@@ -15,11 +17,31 @@ MessageParseMode = Literal["markdown", "markdown-lite", "md", "plain", "text", "
 
 @dataclass(frozen=True, slots=True)
 class ParsedMessageText:
+    """Rendered message text and UTF-16-indexed MTProto entities.
+
+    Attributes:
+        text: Rendered text after supported delimiters and escapes are removed.
+        entities: Immutable entities whose offsets and lengths are UTF-16 code units.
+    """
+
     text: str
     entities: tuple[object, ...] = ()
 
 
 def parse_message_text(text: str, parse_mode: str | None = None) -> ParsedMessageText:
+    """Render the supported lightweight Markdown delimiters into MTProto entities.
+
+    Args:
+        text: Source message text, with backslashes escaping the next character.
+        parse_mode: ``markdown``/``markdown-lite``/``md`` enables parsing;
+            ``None``, ``plain``, ``text``, and ``none`` preserve text verbatim.
+
+    Returns:
+        Rendered text and entities whose offsets and lengths use UTF-16 code units.
+
+    Raises:
+        ValueError: If ``parse_mode`` is not a supported spelling.
+    """
     mode = _normalize_parse_mode(parse_mode)
     if mode is None:
         return ParsedMessageText(text=text)
@@ -44,10 +66,22 @@ def parse_message_text(text: str, parse_mode: str | None = None) -> ParsedMessag
 
 
 def make_random_id() -> int:
+    """Return a non-zero random 63-bit client message identifier."""
     return secrets.randbits(63) or 1
 
 
 def message_from_send_result(result: object, *, peer: Peer, text: str, entities: Iterable[object] = ()) -> Message:
+    """Normalize a send response, retaining supplied values when Telegram omits a message.
+
+    Args:
+        result: Raw send result or update container.
+        peer: Destination peer used as the fallback message peer.
+        text: Submitted text used if no raw message is present.
+        entities: Submitted entities used if Telegram did not return entities.
+
+    Returns:
+        The sent message, with a zero ID and current UTC time only for incomplete responses.
+    """
     parsed_entities = tuple(entities)
     if isinstance(result, types.UpdateShortSentMessage):
         return Message(
@@ -66,12 +100,29 @@ def message_from_send_result(result: object, *, peer: Peer, text: str, entities:
 
 
 def message_from_raw(raw: types.Message, *, fallback_peer: Peer) -> Message:
+    """Convert a raw Telegram message using ``fallback_peer`` for unknown peer forms.
+
+    Args:
+        raw: Concrete Telegram message object.
+        fallback_peer: Destination peer retained when raw peer form is unknown or richer.
+    """
     return _message_from_raw(raw, fallback_peer=fallback_peer, fallback_entities=())
 
 
 def message_from_update_result(
     result: object, *, fallback_peer: Peer, fallback_text: str, entities: Iterable[object] = ()
 ) -> Message:
+    """Normalize an update response or create a fallback message when none is present.
+
+    The fallback has ID ``0`` and the current UTC time, preserving submitted text
+    and entities for response forms that do not carry a message object.
+
+    Args:
+        result: Raw update or response container to inspect.
+        fallback_peer: Peer used when no concrete message is found.
+        fallback_text: Submitted text used by the synthetic fallback.
+        entities: Submitted entities used when a concrete message omits entities.
+    """
     parsed_entities = tuple(entities)
     raw_message = _find_message_result(result)
     if raw_message is None:
@@ -82,6 +133,12 @@ def message_from_update_result(
 
 
 def messages_from_history_result(result: object, *, fallback_peer: Peer) -> tuple[Message, ...]:
+    """Convert only concrete raw messages from a history result in source order.
+
+    Args:
+        result: Raw history response with an optional ``messages`` sequence.
+        fallback_peer: Peer used for unknown raw peer representations.
+    """
     raw_messages = tuple(getattr(result, "messages", ()) or ())
     return tuple(
         _message_from_raw(raw, fallback_peer=fallback_peer, fallback_entities=())
@@ -91,6 +148,13 @@ def messages_from_history_result(result: object, *, fallback_peer: Peer) -> tupl
 
 
 def _parse_delimited_entity(text: str, index: int, output: list[str]) -> tuple[int, object | None] | None:
+    """Parse one closed delimiter at ``index`` and append its rendered content.
+
+    Args:
+        text: Original unrendered message text.
+        index: Character offset where a delimiter may begin.
+        output: Rendered text fragments emitted before and including this entity.
+    """
     for delimiter, kind in (("```", "pre"), ("**", "bold"), ("__", "italic"), ("`", "code")):
         if not text.startswith(delimiter, index):
             continue
@@ -108,6 +172,13 @@ def _parse_delimited_entity(text: str, index: int, output: list[str]) -> tuple[i
 
 
 def _entity(kind: str, offset: int, length: int) -> object:
+    """Create the MTProto entity for a supported lightweight markup kind.
+
+    Args:
+        kind: Supported delimiter kind: bold, italic, code, or pre.
+        offset: UTF-16 start offset in the rendered text.
+        length: UTF-16 entity length.
+    """
     if kind == "bold":
         return types.MessageEntityBold(offset=offset, length=length)
     if kind == "italic":
@@ -118,6 +189,11 @@ def _entity(kind: str, offset: int, length: int) -> object:
 
 
 def _normalize_parse_mode(parse_mode: str | None) -> str | None:
+    """Map public parse-mode aliases to parser modes or plain-text ``None``.
+
+    Args:
+        parse_mode: Optional public mode spelling supplied by the caller.
+    """
     if parse_mode is None:
         return None
     normalized = parse_mode.strip().casefold().replace("_", "-")
@@ -129,6 +205,11 @@ def _normalize_parse_mode(parse_mode: str | None) -> str | None:
 
 
 def _find_message_result(result: object) -> types.Message | None:
+    """Recursively find the first concrete message in supported update containers.
+
+    Args:
+        result: Raw message or supported update/result container.
+    """
     if isinstance(result, types.Message):
         return result
     if isinstance(result, types.UpdateNewMessage | types.UpdateNewChannelMessage) and isinstance(
@@ -152,6 +233,13 @@ def _find_message_result(result: object) -> types.Message | None:
 
 
 def _message_from_raw(raw: types.Message, *, fallback_peer: Peer, fallback_entities: tuple[object, ...]) -> Message:
+    """Build a message model while preserving raw media, date, and entity defaults.
+
+    Args:
+        raw: Concrete Telegram message object.
+        fallback_peer: Peer used when raw peer conversion cannot identify a kind.
+        fallback_entities: Submitted entities used only when raw entities are absent.
+    """
     return Message(
         id=raw.id,
         peer=_peer_from_raw(raw.peer_id, fallback_peer),
@@ -164,6 +252,12 @@ def _message_from_raw(raw: types.Message, *, fallback_peer: Peer, fallback_entit
 
 
 def _peer_from_raw(raw_peer: object, fallback: Peer) -> Peer:
+    """Convert supported raw peer IDs, retaining richer matching fallback metadata.
+
+    Args:
+        raw_peer: Raw Telegram peer identifier to convert.
+        fallback: Submitted peer retained for matching IDs or unsupported forms.
+    """
     if isinstance(raw_peer, types.PeerUser):
         if fallback.kind in {"self", "user"} and fallback.id == raw_peer.user_id:
             return fallback
@@ -180,6 +274,11 @@ def _peer_from_raw(raw_peer: object, fallback: Peer) -> Peer:
 
 
 def _utf16_length(value: str) -> int:
+    """Return a string length in Telegram entity UTF-16 code units.
+
+    Args:
+        value: Text whose code-unit length is required.
+    """
     return len(value.encode("utf-16-le")) // 2
 
 

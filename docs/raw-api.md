@@ -1,4 +1,9 @@
-# Raw API
+---
+title: Raw API
+description: TDLib-derived Telegram raw API structure, provenance, and runtime support.
+slug: /concepts/raw-api/
+generated: false
+---
 
 Status: generated Telegram Schema Layer 228 surface with implemented runtime transport support and lazy raw loading.
 

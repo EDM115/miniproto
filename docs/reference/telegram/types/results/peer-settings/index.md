@@ -1,0 +1,22 @@
+---
+title: "Telegram result family: PeerSettings"
+description: "Layer 228 result-family index for 1 canonical constructors returning PeerSettings from tdlib."
+generated: true
+editUrl: false
+language: "telegram"
+kind: "index"
+qualified_name: "telegram.types.result.PeerSettings"
+source_path: "tools/schema/schema.json"
+source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
+namespace: "results"
+layer: 228
+schema_source: "tdlib"
+---
+
+## Layer 228 result family `PeerSettings`
+
+Selected canonical constructors in this family: 1.
+
+## Constructors
+
+- [`peerSettings`](/reference/telegram/types/base/peer-settings/): `PeerSettings`

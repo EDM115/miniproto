@@ -1,3 +1,5 @@
+"""Asynchronous update ingestion with persistent cursors, duplicate filtering, and bounded gap recovery."""
+
 from __future__ import annotations
 
 import asyncio
@@ -35,12 +37,40 @@ _LOGGER = get_logger("updates")
 
 @dataclass(frozen=True, slots=True)
 class RawUpdateUnit:
+    """One raw update paired with an optional enclosing-container timestamp.
+
+    Attributes:
+        raw: Decoded Telegram update, message, or envelope payload.
+        date: Optional date inherited from an enclosing update container.
+    """
+
     raw: object
     date: object | None = None
 
 
 class UpdateManager:
+    """Process Telegram updates into public events while persisting recovery state.
+
+    Args:
+        config: Client configuration defining queue capacities, overflow policy, and duplicate-window size.
+        storage: Session storage used to load and atomically persist update cursors and discovered entities.
+        invoke: Async raw-RPC invoker used for ``updates.getState`` and difference recovery.
+
+    Lifecycle:
+        ``start`` restores state and launches a raw-update drainer. ``stop`` cancels that drainer but does not close or sentinel the public queue; consumers of ``iter_updates`` remain blocked until cancellation or a future event.
+
+    Persistence:
+        Raw update processing holds a state lock, applies cursor/entity/duplicate changes, and persists them before emitted public events are queued and handlers are called. Persisted state is therefore ahead of, or equal to, observable delivery; it does not provide application-level exactly-once handling.
+    """
+
     def __init__(self, config: ClientConfig, storage: SessionStorage, invoke: UpdateInvoker) -> None:
+        """Initialize bounded raw/public queues and uninitialized persistent cursor state.
+
+        Args:
+            config: Client queue capacities, overflow policy, and duplicate-window settings.
+            storage: Session storage used to load and atomically persist cursor state.
+            invoke: Async raw-RPC callable used for state and difference recovery.
+        """
         self._config = config
         self._storage = storage
         self._invoke = invoke
@@ -54,9 +84,14 @@ class UpdateManager:
 
     @property
     def handlers(self) -> dict[type[Update], list[UpdateHandler[Any]]]:
+        """Return the mutable mapping of registered update types to handlers."""
         return self._handlers
 
     async def start(self) -> None:
+        """Restore persistent state and start draining queued raw updates.
+
+        Repeated calls retain the existing drainer when it is still running. A failed load propagates and no new drainer is started.
+        """
         started = time.perf_counter()
         await self._ensure_loaded()
         if self._task is None or self._task.done():
@@ -70,6 +105,13 @@ class UpdateManager:
         )
 
     async def stop(self) -> None:
+        """Cancel and await the raw-update drainer without closing either queue.
+
+        Cancellation while a raw item is being processed can interrupt that processing. If an already-completed drainer failed, this method re-raises its exception.
+
+        Raises:
+            Exception: The completed drainer's exception, if any.
+        """
         started = time.perf_counter()
         task = self._task
         self._task = None
@@ -91,10 +133,27 @@ class UpdateManager:
         _emit_update_event("updates.stop", started, outcome="success", had_task=True)
 
     async def feed_raw_update(self, raw_update: object) -> None:
+        """Offer a raw Telegram update to the bounded background-processing queue.
+
+        Queue-full behavior is controlled by ``ClientConfig.update_queue_overflow``: ``"raise"`` propagates ``asyncio.QueueFull``, ``"drop_newest"`` discards this update, and ``"drop_oldest"`` replaces the oldest queued update.
+
+        Args:
+            raw_update: Decoded Telegram update or update-container object to enqueue.
+        """
         if not self._offer_queue(self._raw_updates, raw_update):
             return
 
     async def handle_raw_update(self, raw_update: object) -> None:
+        """Process one raw update synchronously, persist resulting state, then emit its public events.
+
+        Gap recovery and cursor mutation are serialized under the manager's state lock. Recovered events are date-ordered within a difference response; callers should not infer global ordering guarantees across independent input calls.
+
+        Args:
+            raw_update: Decoded Telegram update or update-container object to process.
+
+        Raises:
+            Exception: Propagates storage, RPC, gap-recovery, queue, and handler failures.
+        """
         started = time.perf_counter()
         async with self._state_lock:
             await self._ensure_loaded()
@@ -107,6 +166,17 @@ class UpdateManager:
         )
 
     async def emit_update(self, update: Update) -> None:
+        """Offer a normalized update to consumers, then invoke matching handlers sequentially.
+
+        If the public queue rejects the item under a dropping overflow policy, handlers are not invoked. Matching registered types are visited in registration-mapping order, and each handler is awaited before the next one when it returns an awaitable.
+
+        Args:
+            update: Normalized public update to queue and dispatch.
+
+        Raises:
+            asyncio.QueueFull: If the public queue is full and policy is ``"raise"``.
+            Exception: Propagates a matching handler failure.
+        """
         if not self._offer_queue(self._updates, update):
             record_metric(
                 "updates.queue_dropped", 1, attributes={"queue": "public", "policy": self._config.update_queue_overflow}
@@ -115,19 +185,55 @@ class UpdateManager:
         await self._dispatch_handlers(update)
 
     async def iter_updates(self) -> AsyncIterator[Update]:
+        """Yield normalized public updates from the FIFO queue until the consumer is cancelled.
+
+        Yields:
+            Updates accepted by the public queue. Dropped updates and items never processed due to drainer cancellation are not yielded.
+
+        Cancellation:
+            Stopping the manager does not end this iterator or wake a waiting consumer.
+        """
         while True:
             yield await self._updates.get()
 
     @overload
-    def on(self, update_type: type[UpdateT]) -> Callable[[UpdateHandler[UpdateT]], UpdateHandler[UpdateT]]: ...
+    def on(self, update_type: type[UpdateT]) -> Callable[[UpdateHandler[UpdateT]], UpdateHandler[UpdateT]]:
+        """Return a decorator that registers a handler for ``update_type``.
+
+        Args:
+            update_type: Normalized update subclass the decorator's handler receives.
+        """
+        ...
 
     @overload
-    def on(self, update_type: type[UpdateT], handler: UpdateHandler[UpdateT]) -> UpdateHandler[UpdateT]: ...
+    def on(self, update_type: type[UpdateT], handler: UpdateHandler[UpdateT]) -> UpdateHandler[UpdateT]:
+        """Register and return ``handler`` for ``update_type``.
+
+        Args:
+            update_type: Normalized update subclass matched with ``isinstance``.
+            handler: Synchronous or asynchronous callback to register.
+        """
+        ...
 
     def on(
         self, update_type: type[UpdateT], handler: UpdateHandler[UpdateT] | None = None
     ) -> UpdateHandler[UpdateT] | Callable[[UpdateHandler[UpdateT]], UpdateHandler[UpdateT]]:
+        """Register a handler directly or return a decorator for one update subtype.
+
+        Args:
+            update_type: Normalized update subclass to match with ``isinstance``.
+            handler: Optional synchronous or asynchronous callback.
+
+        Returns:
+            The registered handler, or a decorator that registers a supplied handler.
+        """
+
         def register(candidate: UpdateHandler[UpdateT]) -> UpdateHandler[UpdateT]:
+            """Append ``candidate`` while preserving handler registration order.
+
+            Args:
+                candidate: Synchronous or asynchronous handler to append.
+            """
             self._handlers.setdefault(update_type, []).append(candidate)
             return candidate
 
@@ -136,6 +242,15 @@ class UpdateManager:
         return register(handler)
 
     async def sync_state(self) -> UpdateCursor:
+        """Fetch Telegram's current global update state and persist it atomically.
+
+        Returns:
+            The loaded cursor after replacing its global PTS, QTS, sequence, and date fields.
+
+        Raises:
+            TypeError: If ``updates.getState`` does not return ``updates.State``.
+            Exception: Propagates RPC and session-storage failures.
+        """
         result = await self._invoke(functions.UpdatesGetState())
         if not isinstance(result, types.UpdatesState):
             raise TypeError("updates.getState returned a non-updates.State result")
@@ -148,11 +263,13 @@ class UpdateManager:
             return self._current_cursor()
 
     async def _drain_raw_updates(self) -> None:
+        """Continuously process raw queue entries until the task is cancelled or fails."""
         while True:
             raw_update = await self._raw_updates.get()
             await self.handle_raw_update(raw_update)
 
     async def _ensure_loaded(self) -> None:
+        """Load cursor, cached entities, and bounded duplicate keys from session storage once."""
         if self._cursor is not None:
             return
         payload = await self._storage.load()
@@ -161,10 +278,16 @@ class UpdateManager:
         self._duplicates = DuplicateTracker(self._cursor.duplicate_keys, max_size=self._config.update_duplicate_window)
 
     async def _persist_cursor(self) -> None:
+        """Atomically persist the current cursor, duplicate window, and merged peer entities."""
         cursor = self._current_cursor().with_duplicate_keys(self._duplicates.keys())
         self._cursor = cursor
 
         def persist(payload):
+            """Rebuild the session record with the manager's current persisted update state.
+
+            Args:
+                payload: Latest stored session mapping supplied by ``storage.mutate``.
+            """
             record = session_record_from_mapping(payload or {})
             return SessionRecord(
                 dc_id=record.dc_id,
@@ -179,6 +302,11 @@ class UpdateManager:
         await self._storage.mutate(persist)
 
     async def _process_raw_update(self, raw_update: object) -> list[Update]:
+        """Detect gaps, recover when needed, apply units, and return normalized events.
+
+        Args:
+            raw_update: Decoded Telegram update or container to inspect and apply.
+        """
         self._remember_entities(_extract_entity_references(raw_update))
         if isinstance(
             raw_update,
@@ -209,6 +337,15 @@ class UpdateManager:
         return events
 
     async def _recover_gap(self) -> list[Update]:
+        """Recover a global PTS/sequence gap through at most ten difference RPC rounds.
+
+        Returns:
+            Recovered events ordered by timestamp while preserving ties' original order.
+
+        Raises:
+            TypeError: If Telegram returns an unexpected difference type.
+            RuntimeError: If ten ``updates.getDifference`` rounds do not converge.
+        """
         started = time.perf_counter()
         record_metric("updates.gaps", 1)
         recovered: list[Update] = []
@@ -234,6 +371,17 @@ class UpdateManager:
         raise RuntimeError("updates.getDifference did not converge")
 
     async def _recover_channel_gap(self, channel_id: int) -> list[Update]:
+        """Recover one channel PTS gap when a cached access hash permits the RPC.
+
+        The method waits the configured possible-gap grace interval before polling and returns no events when the channel access hash is unavailable. Recovery stops after ten non-final rounds.
+
+        Args:
+            channel_id: Telegram channel identifier whose PTS gap is recovered.
+
+        Raises:
+            TypeError: If Telegram returns an unexpected channel-difference type.
+            RuntimeError: If ten channel-difference rounds do not converge.
+        """
         started = time.perf_counter()
         input_channel = self._input_channel_for_channel(channel_id)
         if input_channel is None:
@@ -281,6 +429,11 @@ class UpdateManager:
         raise RuntimeError("updates.getChannelDifference did not converge")
 
     def _apply_difference(self, difference: object) -> list[Update]:
+        """Apply a global difference response and update cursor/entity state.
+
+        Args:
+            difference: Decoded result of ``updates.getDifference``.
+        """
         self._remember_entities(_extract_entity_references(difference))
         if isinstance(difference, types.UpdatesDifferenceEmpty):
             self._set_cursor(self._current_cursor().with_state(seq=difference.seq, date=difference.date))
@@ -307,6 +460,12 @@ class UpdateManager:
         return []
 
     def _apply_channel_difference(self, channel_id: int, difference: object) -> list[Update]:
+        """Apply one channel difference response and update that channel's cursor.
+
+        Args:
+            channel_id: Channel whose cursor is updated.
+            difference: Decoded result of ``updates.getChannelDifference``.
+        """
         self._remember_entities(_extract_entity_references(difference))
         if isinstance(difference, types.UpdatesChannelDifferenceEmpty):
             self._set_cursor(self._current_cursor().with_channel_state(channel_id, pts=difference.pts))
@@ -329,6 +488,11 @@ class UpdateManager:
         return []
 
     def _apply_update_unit(self, unit: RawUpdateUnit) -> list[Update]:
+        """Drop duplicate/stale units or convert a new unit while advancing cursor state.
+
+        Args:
+            unit: Raw update paired with any enclosing-container timestamp.
+        """
         raw = unit.raw
         key = _raw_update_key(raw)
         cursor = self._current_cursor()
@@ -356,6 +520,11 @@ class UpdateManager:
         return events
 
     def _pts_gap(self, raw_update: object) -> bool:
+        """Return whether non-channel update units skip beyond the expected global PTS.
+
+        Args:
+            raw_update: Raw update or container whose non-channel PTS values are inspected.
+        """
         cursor = self._current_cursor()
         expected_pts = cursor.pts
         for unit in _iter_update_units(raw_update):
@@ -375,6 +544,11 @@ class UpdateManager:
         return False
 
     def _channel_pts_gaps(self, raw_update: object) -> tuple[int, ...]:
+        """Return unique channel IDs whose update units skip their expected PTS.
+
+        Args:
+            raw_update: Raw update or container whose channel PTS values are inspected.
+        """
         gaps: list[int] = []
         expected_by_channel: dict[int, int] = {}
         for unit in _iter_update_units(raw_update):
@@ -396,6 +570,11 @@ class UpdateManager:
         return tuple(dict.fromkeys(gaps))
 
     def _sequence_gap(self, raw_update: object) -> bool:
+        """Return whether a container sequence starts after the current global sequence.
+
+        Args:
+            raw_update: Raw update container whose sequence fields are inspected.
+        """
         cursor = self._current_cursor()
         if cursor.seq == 0:
             return False
@@ -406,6 +585,11 @@ class UpdateManager:
         return seq_start > cursor.seq + 1
 
     def _apply_sequence(self, raw_update: object) -> None:
+        """Advance global sequence state when the raw container carries a newer value.
+
+        Args:
+            raw_update: Raw update container supplying optional sequence/date fields.
+        """
         seq = _optional_int_attr(raw_update, "seq")
         if seq is None:
             return
@@ -414,12 +598,29 @@ class UpdateManager:
             self._set_cursor(cursor.with_state(seq=seq, date=_raw_date(raw_update, None)))
 
     def _remember_entities(self, entities: Iterable[EntityReference]) -> None:
+        """Merge observed entities into cursor state when the iterable is nonempty.
+
+        Args:
+            entities: Entity references extracted from raw update data.
+        """
         collected = tuple(entities)
         if not collected:
             return
         self._set_cursor(self._current_cursor().with_entities(collected))
 
     def _offer_queue(self, queue: asyncio.Queue[Any], item: Any) -> bool:
+        """Put an item according to the configured bounded-queue overflow policy.
+
+        Returns:
+            ``True`` when the queue accepted the item and ``False`` for ``drop_newest``.
+
+        Raises:
+            asyncio.QueueFull: If the queue is full and policy is ``"raise"``.
+
+        Args:
+            queue: Raw or public bounded queue receiving the item.
+            item: Update object to enqueue under the configured overflow policy.
+        """
         try:
             queue.put_nowait(item)
             record_metric("updates.queue_depth", queue.qsize(), attributes={"max_size": queue.maxsize})
@@ -442,6 +643,11 @@ class UpdateManager:
             raise
 
     async def _dispatch_handlers(self, update: Update) -> None:
+        """Run every matching registered handler sequentially, awaiting awaitable results.
+
+        Args:
+            update: Public update passed to handlers whose registered type matches it.
+        """
         for update_type, handlers in self._handlers.items():
             if isinstance(update, update_type):
                 for handler in handlers:
@@ -450,14 +656,29 @@ class UpdateManager:
                         await result
 
     def _current_cursor(self) -> UpdateCursor:
+        """Return loaded cursor state or fail when a caller bypasses initialization.
+
+        Raises:
+            RuntimeError: If state has not been loaded from session storage.
+        """
         if self._cursor is None:
             raise RuntimeError("update state has not been loaded")
         return self._cursor
 
     def _set_cursor(self, cursor: UpdateCursor) -> None:
+        """Set cursor state after replacing its persisted duplicate keys from the tracker.
+
+        Args:
+            cursor: Replacement cursor state before duplicate keys are synchronized.
+        """
         self._cursor = cursor.with_duplicate_keys(self._duplicates.keys())
 
     def _input_channel_for_channel(self, channel_id: int) -> object | None:
+        """Build an input channel from retained entity data, or return ``None`` without an access hash.
+
+        Args:
+            channel_id: Telegram channel identifier to convert for recovery RPCs.
+        """
         for entity in self._current_cursor().entities:
             if entity.kind == "channel" and entity.id == channel_id and entity.access_hash is not None:
                 return types.InputChannel(channel_id=channel_id, access_hash=entity.access_hash)
@@ -465,6 +686,11 @@ class UpdateManager:
 
 
 def _iter_update_units(raw_update: object) -> tuple[RawUpdateUnit, ...]:
+    """Expand short and container update envelopes into timestamp-associated units.
+
+    Args:
+        raw_update: Decoded Telegram update or envelope to expand.
+    """
     if isinstance(raw_update, types.UpdateShort):
         return (RawUpdateUnit(raw=raw_update.update, date=raw_update.date),)
     if isinstance(raw_update, types.Updates | types.UpdatesCombined):
@@ -475,6 +701,12 @@ def _iter_update_units(raw_update: object) -> tuple[RawUpdateUnit, ...]:
 
 
 def _public_updates_from_raw(raw: object, fallback_date: object | None = None) -> list[Update]:
+    """Convert supported raw updates to normalized public updates, preserving raw payloads.
+
+    Args:
+        raw: Decoded Telegram update/message to convert.
+        fallback_date: Enclosing timestamp used when ``raw`` carries no date.
+    """
     date = _raw_date(raw, fallback_date)
     if isinstance(raw, types.UpdateShortMessage):
         peer = Peer(id=raw.user_id, kind="user")
@@ -492,6 +724,12 @@ def _public_updates_from_raw(raw: object, fallback_date: object | None = None) -
 
 
 def _public_updates_from_message(raw_message: object, raw_update: object) -> list[Update]:
+    """Convert a raw message to ``NewMessage`` or retain an opaque update fallback.
+
+    Args:
+        raw_message: Candidate decoded Telegram message.
+        raw_update: Outer raw update retained by the public event.
+    """
     if not isinstance(raw_message, types.Message):
         return [Update(date=_raw_date(raw_update, None), raw=raw_update)]
     date = _raw_date(raw_message, None)
@@ -503,6 +741,11 @@ def _public_updates_from_message(raw_message: object, raw_update: object) -> lis
 
 
 def _peer_from_raw_peer(raw_peer: object) -> Peer:
+    """Normalize a raw peer variant, falling back to a self peer for unknown shapes.
+
+    Args:
+        raw_peer: Decoded raw peer variant from a Telegram message.
+    """
     if isinstance(raw_peer, types.PeerUser):
         return Peer(id=raw_peer.user_id, kind="user")
     if isinstance(raw_peer, types.PeerChat):
@@ -513,6 +756,11 @@ def _peer_from_raw_peer(raw_peer: object) -> Peer:
 
 
 def _channel_id_from_update(raw: object) -> int | None:
+    """Extract a channel ID from direct update data or a nested message peer.
+
+    Args:
+        raw: Raw update or message whose channel fields are inspected.
+    """
     direct_channel_id = getattr(raw, "channel_id", None)
     if isinstance(direct_channel_id, int):
         return direct_channel_id
@@ -524,6 +772,11 @@ def _channel_id_from_update(raw: object) -> int | None:
 
 
 def _extract_entity_references(raw: object) -> tuple[EntityReference, ...]:
+    """Collect users and chats carried by raw update/difference containers recursively.
+
+    Args:
+        raw: Raw update or difference container carrying users/chats and nested updates.
+    """
     entities: list[EntityReference] = []
     for user in _iter_attr_tuple(raw, "users"):
         if isinstance(user, types.User):
@@ -560,6 +813,12 @@ def _extract_entity_references(raw: object) -> tuple[EntityReference, ...]:
 
 
 def _iter_attr_tuple(raw: object, attr: str) -> tuple[object, ...]:
+    """Return a tuple view of a raw object's list or tuple attribute.
+
+    Args:
+        raw: Object carrying the optional collection attribute.
+        attr: Attribute name expected to hold a list or tuple.
+    """
     value = getattr(raw, attr, ())
     if isinstance(value, tuple):
         return cast("tuple[object, ...]", value)
@@ -569,21 +828,43 @@ def _iter_attr_tuple(raw: object, attr: str) -> tuple[object, ...]:
 
 
 def _raw_date(raw: object, fallback: object | None) -> Any:
+    """Extract and coerce a raw object's date, using ``fallback`` when absent.
+
+    Args:
+        raw: Raw object whose optional ``date`` attribute is read.
+        fallback: Date-like value used when the raw object omits ``date``.
+    """
     value = getattr(raw, "date", fallback)
     return coerce_update_datetime(cast("Any", value))
 
 
 def _metadata(raw: object, **extra: object) -> dict[str, object]:
+    """Build public update metadata with raw type plus caller-supplied fields.
+
+    Args:
+        raw: Raw Telegram object whose type name is recorded.
+        **extra: Additional metadata fields to merge after the raw type.
+    """
     values: dict[str, object] = {"raw_type": type(raw).__name__}
     values.update(extra)
     return values
 
 
 def _ordered_events(events: Iterable[Update]) -> list[Update]:
+    """Sort events by timestamp while preserving input order for equal timestamps.
+
+    Args:
+        events: Public updates to order by their datetime values.
+    """
     return [event for _, event in sorted(enumerate(events), key=lambda item: (item[1].date, item[0]))]
 
 
 def _raw_update_key(raw: object) -> str:
+    """Build a best-effort duplicate key from raw type and selected identity fields.
+
+    Args:
+        raw: Raw Telegram update/message from which identity attributes are read.
+    """
     parts = [type(raw).__name__]
     for attr in ("pts", "qts", "seq", "date", "id"):
         value = getattr(raw, attr, None)
@@ -598,6 +879,12 @@ def _raw_update_key(raw: object) -> str:
 
 
 def _optional_int_attr(raw: object, attr: str) -> int | None:
+    """Return an attribute coerced to ``int``, or ``None`` when it is absent.
+
+    Args:
+        raw: Object carrying the optional scalar attribute.
+        attr: Attribute name to read and coerce.
+    """
     value = getattr(raw, attr, None)
     if value is None:
         return None
@@ -605,6 +892,14 @@ def _optional_int_attr(raw: object, attr: str) -> int | None:
 
 
 def _emit_update_event(event: str, started: float, *, outcome: str, **fields: object) -> None:
+    """Emit structured update timing telemetry and an outcome-dependent log event.
+
+    Args:
+        event: Stable update event name used for telemetry.
+        started: Monotonic start timestamp used to calculate milliseconds elapsed.
+        outcome: Operation outcome used for log severity and metric attributes.
+        **fields: Additional non-secret structured telemetry fields.
+    """
     duration_ms = (time.perf_counter() - started) * 1000
     record_metric(f"{event}.duration", duration_ms, unit="ms", attributes={"outcome": outcome})
     emit_event(

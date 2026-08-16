@@ -1,3 +1,15 @@
+"""Benchmark in-memory native and legacy MTProto transport frame decoding.
+
+Each mode uses the same pre-fed encoded stream and compares complete batches in
+wall-clock milliseconds after three warmup batches. Native and legacy timing
+orders alternate each round, while payload equality and end-of-stream checks
+protect comparison validity. Results are not socket, network, latency, or
+cross-platform benchmarks: event-loop implementation, extension build, CPU
+state, and adapter choice (especially ``--raw-native``) can change them.
+``--check`` is a local Wave 3 acceptance threshold of 2x for every measured
+mode, not a universal performance guarantee.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -34,36 +46,77 @@ _SOCKET_READ_SIZE = 64 * 1024
 
 
 class FramePump(Protocol):
-    def feed_transport_data(self, data: bytes) -> Iterable[object]: ...
+    """Internal frame-decoder contract used by native and adapter benchmarks."""
+
+    def feed_transport_data(self, data: bytes) -> Iterable[object]:
+        """Accept a transport chunk and yield decoded framing events.
+
+        Args:
+            data: One raw transport chunk to feed into the frame decoder.
+        """
+        ...
 
 
 @dataclass(frozen=True, slots=True)
 class Result:
+    """Per-batch native and legacy timing samples for one transport mode.
+
+    Attributes:
+        mode: Transport framing mode used for both compared implementations.
+        native_ms: Retained native complete-batch durations in milliseconds.
+        legacy_ms: Retained legacy complete-batch durations in milliseconds.
+    """
+
     mode: str
     native_ms: tuple[float, ...]
     legacy_ms: tuple[float, ...]
 
     @property
     def native_median_ms(self) -> float:
+        """Return the median native batch duration in milliseconds."""
         return statistics.median(self.native_ms)
 
     @property
     def legacy_median_ms(self) -> float:
+        """Return the median legacy batch duration in milliseconds."""
         return statistics.median(self.legacy_ms)
 
     @property
     def speedup(self) -> float:
+        """Return this run's legacy/native median ratio without generalizing it."""
         return self.legacy_median_ms / self.native_median_ms
 
 
 def main() -> int:
+    """Run validated frame-pump comparisons and emit their JSON report.
+
+    ``--frames`` counts complete payloads per timed batch, ``--rounds`` supplies
+    one sample per side per mode, and durations are milliseconds per batch.
+    ``--check`` fails below the project-local 2x target; invalid input, missing
+    native transport support, or decoding mismatch also fails rather than
+    reporting an incomparable result.
+    """
     parser = argparse.ArgumentParser(
         description="Benchmark the warmed native MTProto frame pump against the former readexactly socket path"
     )
-    parser.add_argument("--frames", type=int, default=4096)
-    parser.add_argument("--payload-bytes", type=int, default=72)
-    parser.add_argument("--rounds", type=int, default=10)
-    parser.add_argument("--mode", choices=("smoke", "full"), default="full")
+    parser.add_argument(
+        "--frames", type=int, default=4096, help="transport frames processed per timed round; defaults to 4096"
+    )
+    parser.add_argument(
+        "--payload-bytes",
+        type=int,
+        default=72,
+        help="encrypted-frame payload bytes; must be at least 40 and congruent to 8 modulo 16",
+    )
+    parser.add_argument(
+        "--rounds", type=int, default=10, help="timed samples collected per implementation; defaults to 10"
+    )
+    parser.add_argument(
+        "--mode",
+        choices=("smoke", "full"),
+        default="full",
+        help="workload size; smoke caps frames and rounds while full uses the supplied values",
+    )
     parser.add_argument(
         "--raw-native", action="store_true", help="diagnose the Rust/PyO3 boundary without adapter objects"
     )
@@ -131,6 +184,14 @@ def main() -> int:
 async def _benchmark_all(
     payload: bytes, *, frames: int, rounds: int, raw_native: bool
 ) -> tuple[tuple[Result, ...], str]:
+    """Benchmark each supported mode and return its running event-loop identity.
+
+    Args:
+        payload: Fixed decoded payload bytes placed in every test frame.
+        frames: Positive number of payload frames per timed batch.
+        rounds: Positive number of retained samples per side and mode.
+        raw_native: Whether to benchmark the Rust/PyO3 codec directly.
+    """
     return (
         tuple(
             [
@@ -143,6 +204,15 @@ async def _benchmark_all(
 
 
 async def _benchmark_mode(mode: str, payload: bytes, *, frames: int, rounds: int, raw_native: bool) -> Result:
+    """Warm and interleave native/legacy batches for one fixed framing mode.
+
+    Args:
+        mode: Supported TCP framing mode to encode and decode.
+        payload: Fixed decoded payload bytes in every frame.
+        frames: Positive number of frames in each complete batch.
+        rounds: Positive number of retained samples per implementation.
+        raw_native: Whether to bypass the adapter and construct Rust codec directly.
+    """
     stream = _legacy_encoded_stream(mode, payload, frames)
     native: FramePump = (
         importlib.import_module("miniproto._native").TransportCodec(mode, len(payload), False)
@@ -169,6 +239,14 @@ async def _benchmark_mode(mode: str, payload: bytes, *, frames: int, rounds: int
 
 
 async def _decode_native(codec: FramePump, reader: asyncio.StreamReader, frames: int, payload: bytes) -> None:
+    """Decode every native event and reject mismatch, EOF, or leftovers.
+
+    Args:
+        codec: Native codec or adapter that accepts transport data chunks.
+        reader: EOF-terminated in-memory stream containing the encoded batch.
+        frames: Exact number of payload events required.
+        payload: Expected decoded payload for each event.
+    """
     events: deque[object] = deque()
     for _ in range(frames):
         while not events:
@@ -183,6 +261,14 @@ async def _decode_native(codec: FramePump, reader: asyncio.StreamReader, frames:
 
 
 async def _decode_legacy(mode: str, reader: asyncio.StreamReader, frames: int, payload: bytes) -> None:
+    """Decode every legacy-framed payload and reject mismatch or leftovers.
+
+    Args:
+        mode: TCP framing mode that selects legacy header decoding.
+        reader: EOF-terminated in-memory stream containing the encoded batch.
+        frames: Exact number of payloads required.
+        payload: Expected decoded payload for every frame.
+    """
     for _ in range(frames):
         if mode == "tcp_abridged":
             decoded = await _read_legacy_abridged(reader)
@@ -198,6 +284,11 @@ async def _decode_legacy(mode: str, reader: asyncio.StreamReader, frames: int, p
 
 
 async def _read_legacy_abridged(reader: asyncio.StreamReader) -> bytes:
+    """Read one abridged legacy frame, including its short or extended header.
+
+    Args:
+        reader: Stream positioned at an abridged frame header.
+    """
     first = await reader.readexactly(1)
     if first[0] < 0x7F:
         payload_length = first[0] * 4
@@ -208,6 +299,13 @@ async def _read_legacy_abridged(reader: asyncio.StreamReader) -> bytes:
 
 
 def _legacy_encoded_stream(mode: str, payload: bytes, frames: int) -> bytes:
+    """Build the deterministic pre-fed legacy byte stream for a timed batch.
+
+    Args:
+        mode: TCP framing mode whose header encoding is used.
+        payload: Bytes placed in every frame.
+        frames: Number of repeated header-and-payload frames to produce.
+    """
     if mode == "tcp_abridged":
         words = len(payload) // 4
         if len(payload) % 4:
@@ -219,6 +317,11 @@ def _legacy_encoded_stream(mode: str, payload: bytes, frames: int) -> bytes:
 
 
 def _prefed_reader(stream: bytes) -> asyncio.StreamReader:
+    """Return an EOF-terminated in-memory reader sized for the fixed stream.
+
+    Args:
+        stream: Complete encoded batch bytes to pre-feed before EOF.
+    """
     reader = asyncio.StreamReader(limit=max(_SOCKET_READ_SIZE * 2, len(stream)))
     reader.feed_data(stream)
     reader.feed_eof()
@@ -226,6 +329,11 @@ def _prefed_reader(stream: bytes) -> asyncio.StreamReader:
 
 
 def _payload_from_event(event: object) -> bytes:
+    """Extract one payload shape accepted from the native framing boundary.
+
+    Args:
+        event: Decoder event expected to carry one payload in a supported shape.
+    """
     if isinstance(event, bytes):
         return event
     if isinstance(event, PayloadFrame):

@@ -1,0 +1,4 @@
+# Documentation-only pin. This filename intentionally does not affect stable Rust builds, tests, or wheels.
+[documentation]
+nightly = "nightly-2026-08-12"
+cargo-docs-md = "0.2.4"
