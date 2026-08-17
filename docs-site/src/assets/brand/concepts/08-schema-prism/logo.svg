@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 -4 160 140" role="img" aria-labelledby="title description">
+  <title id="title">Schema Prism mark</title>
+  <desc id="description">Three colored source faces reconcile inside an asymmetric protocol prism that emits one rounded constructor tile.</desc>
+  <defs>
+    <linearGradient id="prism-violet" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#B77AFF"/><stop offset="1" stop-color="#8B55F5"/></linearGradient>
+    <linearGradient id="prism-aqua" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#58E6E2"/><stop offset="1" stop-color="#23C8D1"/></linearGradient>
+    <linearGradient id="prism-blue" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#264BFF"/><stop offset="1" stop-color="#1234DA"/></linearGradient>
+  </defs>
+  <g stroke-linejoin="round">
+    <path d="M16 48 72 8 75 64Z" fill="url(#prism-violet)"/>
+    <path d="M72 8 128 50 75 64Z" fill="url(#prism-aqua)"/>
+    <path d="M16 48 75 64 66 119Z" fill="url(#prism-blue)"/>
+    <path d="M75 64 128 50 101 94 66 119Z" fill="#0B1B58"/>
+    <rect x="96" y="78" width="48" height="42" rx="11" fill="#FFF4D6" transform="rotate(-18 120 99)"/>
+  </g>
+</svg>

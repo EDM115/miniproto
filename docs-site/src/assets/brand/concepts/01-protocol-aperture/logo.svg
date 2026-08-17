@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="-16 -16 232 182" role="img" aria-labelledby="title description">
+  <title id="title">Protocol Aperture mark</title>
+  <desc id="description">Three offset rounded protocol frames progress from cyan to blue to violet around one data pulse.</desc>
+  <defs>
+    <linearGradient id="aperture-cyan" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#08D7E8"/><stop offset=".58" stop-color="#02C9DA"/><stop offset="1" stop-color="#08B8D3"/></linearGradient>
+    <linearGradient id="aperture-blue" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0878F9"/><stop offset="1" stop-color="#1658EE"/></linearGradient>
+    <linearGradient id="aperture-violet" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8D50FA"/><stop offset="1" stop-color="#7435EE"/></linearGradient>
+  </defs>
+  <g fill="none" stroke-width="17" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M120 8c7-1 13 2 19 8l43 43c10 10 10 22 0 32l-43 43c-6 6-12 9-19 8" stroke="url(#aperture-violet)"/>
+    <path d="M82 8c7-1 13 2 19 8l43 43c10 10 10 22 0 32l-43 43c-6 6-12 9-19 8" stroke="url(#aperture-blue)"/>
+    <path d="M53 23c7 0 12 2 18 8l32 32c10 10 10 20 0 30l-32 32c-10 10-23 10-33 0L7 94c-10-10-10-22 0-32l31-31c5-5 10-8 15-8Z" stroke="url(#aperture-cyan)"/>
+    <circle cx="55" cy="78" r="13" fill="#04CFDF" stroke="none"/>
+  </g>
+</svg>

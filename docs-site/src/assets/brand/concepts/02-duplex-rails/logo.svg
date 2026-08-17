@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="-8 -16 190 180" role="img" aria-labelledby="title description">
+  <title id="title">Duplex Rails mark</title>
+  <desc id="description">Cobalt and coral rounded transport rails weave into an abstract m-p monogram around one packet gap.</desc>
+  <defs>
+    <linearGradient id="rail-blue" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#1669FA"/><stop offset="1" stop-color="#1754ED"/></linearGradient>
+    <linearGradient id="rail-coral" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FF5245"/><stop offset="1" stop-color="#FF3F35"/></linearGradient>
+  </defs>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M61 52v27c0 22 14 35 35 35h22c25 0 41-18 41-45V52c0-24-17-38-38-38-15 0-27 7-38 20" stroke="url(#rail-coral)" stroke-width="22"/>
+    <path d="M15 136V51C15 23 34 6 59 6c17 0 31 7 43 20l14 17" stroke="url(#rail-blue)" stroke-width="22"/>
+    <path d="M124 60v82" stroke="url(#rail-blue)" stroke-width="22"/>
+    <path d="M79 74h18" stroke="#0B1427" stroke-width="11"/>
+  </g>
+</svg>

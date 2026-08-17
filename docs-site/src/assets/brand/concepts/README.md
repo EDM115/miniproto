@@ -2,7 +2,7 @@
 
 These eight directions implement the approved Wave 5 brand brief without selecting a winner. The first four preserve the same marks and ideas as their original inspiration boards, but both the boards and canonical vectors have been regenerated cleanly to remove bloom, malformed lettering, accidental asymmetry, inconsistent variants, and other generated artifacts. The next four explore other recognizable parts of miniproto: Telegram-compatible delivery, free-threaded Python with a Rust core, quick acknowledgements, and multi-source schema generation.
 
-The selected direction will be refined into the production logo, dark variant, standalone mark, monochrome mark, favicon, horizontal and stacked wordmark lockups, social artwork, and documentation theme only after the maintainer chooses a family.
+Each family now includes a transparent standalone color mark for side-by-side review. The selected direction will be refined into the production logo system, dark and monochrome variants, favicon, horizontal and stacked wordmark lockups, social artwork, and documentation theme only after the maintainer chooses a family.
 
 ## Creative Brief
 
@@ -10,7 +10,7 @@ miniproto is a compact, async-first MTProto SDK whose identity should make speed
 
 The reference libraries demonstrate the value of one decisive silhouette: Pyrogram's flame and its Kurigram/Pyroblack variants, Hydrogram's droplet, Telethon's `T`, and mtcute's flower are recognizable before their wordmarks are read. Each miniproto direction therefore has one primary emblem rather than a scene or collection of unrelated symbols. Packet Plane deliberately alludes to Telegram's familiar delivery metaphor without copying its exact plane path, enclosing circle, or visual identity; the other seven avoid the paper-plane motif entirely.
 
-Every `concept.svg` is the canonical source for its family. It contains self-contained vector geometry, an accessible title and description, a `viewBox`, path-based wordmark lettering, no `<text>`, no `<image>`, no embedded bitmap, no external asset, and no installed-font dependency. The adjacent `preview.png` is a deterministic render of that SVG for convenient review. The adjacent `ideation.png` records the built-in image-generation exploration; it is neither traced nor embedded in the canonical artwork.
+Every `concept.svg` is the canonical presentation source for its family. It contains self-contained vector geometry, an accessible title and description, a `viewBox`, a literal SVG `<text>` wordmark backed by an embedded WOFF2 subset, no `<image>`, no embedded bitmap, no network dependency, and no installed-font dependency. Concepts 01–05 use embedded Nunito Sans ExtraBold at weight 800, while concepts 06–08 use embedded Quicksand SemiBold at weight 600; the complete source fonts, subsets, and SIL Open Font License texts are retained in the adjacent `fonts/` directory. The adjacent `logo.svg` is the same canonical color mark on a transparent canvas with no wordmark, font, presentation panel, or raster content. The adjacent `preview.png` is a deterministic Chromium render of `concept.svg` for convenient review because librsvg-based renderers silently substitute embedded webfonts. The adjacent `ideation.png` records the built-in image-generation exploration; it is neither traced nor embedded in the canonical artwork.
 
 ## Directions
 
@@ -39,4 +39,4 @@ The strongest family should be recognizable before the `miniproto` wordmark is r
 
 All eight PNG boards were produced with the built-in image-generation tool using a logo-brand exploration brief. The first four were regenerated from their original boards as image edits, preserving their named silhouettes and ideas while explicitly removing glow, malformed text, geometry drift, mockup effects, and inconsistent small-size variants. The next four were generated as new explorations around the Packet Plane, Threadburst, Quick-Ack Comet, and Schema Prism metaphors.
 
-Every prompt requested the exact `miniproto` lockup, light and dark presentation, a monochrome treatment, and 64/32/16 px samples. The boards are visual references only: generated lettering and sample geometry are not authoritative, and the SVGs deliberately rebuild the approved ideas as deterministic vector artwork instead of tracing raster output.
+Every prompt requested the exact `miniproto` lockup, light and dark presentation, a monochrome treatment, and 64/32/16 px samples. The boards are visual references rather than production sources: the SVGs deliberately rebuild the approved ideas as deterministic vector artwork instead of tracing raster output, while using real embedded typefaces rather than generated or hand-drawn lettering.

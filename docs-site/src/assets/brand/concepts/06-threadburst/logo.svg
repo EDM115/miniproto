@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="-38 -38 206 206" role="img" aria-labelledby="title description">
+  <title id="title">Threadburst mark</title>
+  <desc id="description">Four symmetric rounded execution strands curl around one compact amber native core.</desc>
+  <defs>
+    <linearGradient id="strand-violet" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#7B2CF6"/><stop offset="1" stop-color="#5F28ED"/></linearGradient>
+    <linearGradient id="strand-coral" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#FF3E58"/><stop offset="1" stop-color="#FF5164"/></linearGradient>
+    <linearGradient id="strand-cyan" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#05AEEE"/><stop offset="1" stop-color="#08BEE8"/></linearGradient>
+    <linearGradient id="strand-blue" x1="1" y1="0" x2="0" y2="1"><stop stop-color="#385EEF"/><stop offset="1" stop-color="#2C56EC"/></linearGradient>
+  </defs>
+  <g fill="none" stroke-width="27" stroke-linecap="round">
+    <path d="M65 65C43 64 26 52 19 36C11 18 17-2 34-11C41-15 48-17 55-16" stroke="url(#strand-violet)"/>
+    <path d="M65 65C43 64 26 52 19 36C11 18 17-2 34-11C41-15 48-17 55-16" stroke="url(#strand-coral)" transform="rotate(90 65 65)"/>
+    <path d="M65 65C43 64 26 52 19 36C11 18 17-2 34-11C41-15 48-17 55-16" stroke="url(#strand-cyan)" transform="rotate(180 65 65)"/>
+    <path d="M65 65C43 64 26 52 19 36C11 18 17-2 34-11C41-15 48-17 55-16" stroke="url(#strand-blue)" transform="rotate(270 65 65)"/>
+    <rect x="51" y="51" width="28" height="28" rx="6" fill="#FFB814" stroke="none"/>
+  </g>
+</svg>
