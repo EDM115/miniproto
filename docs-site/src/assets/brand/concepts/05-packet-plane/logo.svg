@@ -4,13 +4,11 @@
   <defs>
     <linearGradient id="plane-cyan" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#12D8F4"/><stop offset="1" stop-color="#00A9E8"/></linearGradient>
     <linearGradient id="plane-blue" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#167BFF"/><stop offset="1" stop-color="#1645E8"/></linearGradient>
-    <mask id="plane-cut" maskUnits="userSpaceOnUse" x="-12" y="-4" width="232" height="164"><rect x="-12" y="-4" width="232" height="164" fill="#fff"/><path d="M97 80 129 91 113 101 95 123 102 101 85 91Z" fill="#000"/></mask>
   </defs>
-  <g mask="url(#plane-cut)">
-    <path d="M36 65 205 8 108 148 77 116 93 82Z" fill="url(#plane-blue)"/>
-    <path d="M36 65 205 8 91 80Z" fill="url(#plane-cyan)"/>
-    <path d="M91 80 139 60 108 148 77 116Z" fill="#0C47C9"/>
-  </g>
+  <path d="M36 65 205 8 108 148 77 116 93 82Z" fill="url(#plane-blue)"/>
+  <path d="M36 65 205 8 91 80Z" fill="url(#plane-cyan)"/>
+  <path d="M91 80 124 83 101 118 85 120Z" fill="#0C47C9"/>
+  <path d="M96 62 145 81 101 118 124 83 90 68Z" fill="#FFFFFF"/>
   <rect x="0" y="79" width="23" height="17" rx="4" fill="#FF5C43" transform="rotate(-18 11.5 87.5)"/>
   <rect x="26" y="100" width="23" height="17" rx="4" fill="#2462F2" transform="rotate(-18 37.5 108.5)"/>
   <rect x="0" y="123" width="23" height="17" rx="4" fill="#0EBCE6" transform="rotate(-18 11.5 131.5)"/>
