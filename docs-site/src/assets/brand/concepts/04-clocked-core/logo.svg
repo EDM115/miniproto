@@ -1,15 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 136 128" role="img" aria-labelledby="title description">
-  <title id="title">Clocked Core mark</title>
-  <desc id="description">One open magenta timing orbit and three acknowledgement nodes synchronize around a stable amber core.</desc>
-  <defs>
-    <linearGradient id="orbit-magenta" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FF3AA7"/><stop offset="1" stop-color="#F41478"/></linearGradient>
-    <linearGradient id="core-amber" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FFC029"/><stop offset="1" stop-color="#FF9D00"/></linearGradient>
-  </defs>
-  <g fill="none" stroke="url(#orbit-magenta)" stroke-width="12" stroke-linecap="round">
-    <path d="M107 39A50 50 0 1 1 93 23"/>
-    <circle cx="21" cy="39" r="11.5" fill="#FF2D96" stroke="none"/>
-    <circle cx="114" cy="64" r="11.5" fill="#FF2D96" stroke="none"/>
-    <circle cx="39" cy="107" r="11.5" fill="#FF2D96" stroke="none"/>
-    <rect x="46" y="46" width="36" height="36" rx="9" fill="url(#core-amber)" stroke="none"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="512"
+     height="512"
+     viewBox="0 -30 618 618"
+     role="img"
+     aria-labelledby="title desc"
+     shape-rendering="geometricPrecision">
+  <title id="title">Circular nodes logo</title>
+  <desc id="desc">A pink broken orbital ring with three nodes around an orange rounded square.</desc>
+  <path d="M 484.001167 114.433260 A 235.574042 239.164190 14.084601 1 1 440.758614 78.176990 L 416.710409 106.132922 A 199.811181 204.136223 7.239716 1 0 458.839134 140.804685 Z" fill="#FD197B"/>
+  <ellipse cx="204.765339" cy="93.955835" rx="47.709719" ry="47.548426" fill="#FD197B"/>
+  <ellipse cx="527.761593" cy="299.862231" rx="46.663068" ry="47.052279" fill="#FD197B"/>
+  <ellipse cx="210.978908" cy="473.450599" rx="45.629921" ry="44.582384" fill="#FD197B"/>
+  <rect x="240.576200"
+        y="205.299015"
+        width="144.678705"
+        height="146.003149"
+        rx="28.978062"
+        fill="#FEA002"/>
 </svg>
