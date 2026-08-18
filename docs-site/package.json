@@ -1,24 +1,32 @@
 {
   "name": "miniproto-docs-site",
-  "private": true,
   "version": "0.1.0",
-  "packageManager": "pnpm@11.21.0",
-  "engines": {
-    "node": "24.19.0",
-    "pnpm": "11.21.0"
-  },
+  "private": true,
+  "type": "module",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "prebuild": "pnpm brand:check",
+    "build": "astro build --force",
+    "brand:build": "node scripts/build-brand.mjs",
+    "brand:check": "node scripts/build-brand.mjs --check",
     "check": "astro check",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "serve:static": "node scripts/serve-static.mjs",
+    "test:site": "playwright test"
   },
   "devDependencies": {
-    "@astrojs/check": "0.9.10",
-    "@astrojs/starlight": "0.41.7",
-    "astro": "7.2.2",
-    "pagefind": "1.5.2",
-    "sharp": "0.35.3",
-    "typescript": "6.0.3"
-  }
+    "@astrojs/check": "~0.9.10",
+    "@astrojs/markdown-remark": "~7.2.2",
+    "@astrojs/starlight": "~0.41.7",
+    "@playwright/test": "~1.62.1",
+    "astro": "~7.2.2",
+    "pagefind": "~1.5.2",
+    "sharp": "~0.35.3",
+    "typescript": "~6.0.3"
+  },
+  "engines": {
+    "node": "26.7.0",
+    "pnpm": "11.22.0"
+  },
+  "packageManager": "pnpm@11.22.0"
 }

@@ -23,4 +23,4 @@ The credentialed release extension is deliberately guarded and is not normal pul
 
 ## Publishing and history
 
-Publishing credentials, package promotion, tags, and the public release decision remain user-controlled operations. Read the root [CHANGELOG.md](../../CHANGELOG.md) for release history and Alpha breaking notes; this page intentionally does not duplicate or pre-write changelog entries.
+Publishing credentials, package promotion, tags, and the public release decision remain user-controlled operations. Read the repository [CHANGELOG.md](https://github.com/EDM115/miniproto/blob/master/CHANGELOG.md) for the complete Alpha capability summary and breaking notes; this page intentionally does not duplicate or pre-write changelog entries.

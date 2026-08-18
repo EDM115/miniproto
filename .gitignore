@@ -33,4 +33,6 @@ miniproto.session-*.sqlite
 /docs-site/node_modules/
 /docs-site/.astro/
 /docs-site/dist/
+/docs-site/.playwright-report/
+/docs-site/test-results/
 /.pnpm-store/

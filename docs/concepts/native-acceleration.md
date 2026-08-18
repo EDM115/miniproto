@@ -21,4 +21,4 @@ For selected Rust crypto work, GIL detachment is operation- and input-size-depen
 
 Native and fallback paths are intended to agree on output and validation behavior. The framing adapter accepts fragmented TCP input and emits payload, quick-ack, or negative transport-error events; malformed or oversized frames become Python errors rather than native process termination. A native codec initialization race/capability failure is distinct from an ordinary invalid-input `ValueError`.
 
-Rust acceleration is part of the wheel's implementation, not a separate stable Rust SDK for v1. When diagnosing a deployment, distinguish a missing/partial extension from an application error and retain the correct fallback rather than forcing a native-only path without capability evidence.
+Rust acceleration is part of the wheel's implementation, not a separately stable Rust SDK for the `0.1.x` Alpha line. When diagnosing a deployment, distinguish a missing/partial extension from an application error and retain the correct fallback rather than forcing a native-only path without capability evidence.

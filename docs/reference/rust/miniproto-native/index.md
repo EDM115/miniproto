@@ -51,7 +51,7 @@ public fallback policy and must remain correct when this extension cannot be imp
 ## Modules
 
 - [`crypto`](crypto/index.md) — Registers cryptographic Python callables.
-- [`generated_tl`](generated_tl/index.md) — Generated TL constructor metadata and field specifications.
+- `generated_tl` — Generated TL constructor metadata and field specifications.
 - [`mtproto`](mtproto/index.md) — Registers encrypted MTProto message-envelope callables.
 - [`tl`](tl/index.md) — Registers primitive and generated fast-path TL codec callables.
 - [`transport`](transport/index.md) — Registers TCP transport framing callables and the stateful codec class.

@@ -1,0 +1,91 @@
+name: Documentation
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+    types: [ready_for_review, synchronize]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  MINIPROTO_DOCS_BASE: /miniproto
+
+jobs:
+  build:
+    name: Generate, build, and test documentation
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          python-version: "3.14"
+          enable-cache: true
+          cache-suffix: docs
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          package_json_file: docs-site/package.json
+
+      - name: Bump Node.js to v26
+        uses: actions/setup-node@v6
+        with:
+          check-latest: true
+          node-version: 26
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: nightly-2026-08-12
+
+      - name: Install pinned Rust documentation renderer
+        run: cargo install cargo-docs-md --version 0.2.4 --locked
+
+      - name: Install locked Python and frontend dependencies
+        run: |
+          uv sync --extra dev,docs --frozen
+          pnpm --dir docs-site install --frozen-lockfile
+
+      - name: Check committed references, static site, search, and browser acceptance
+        run: uv run miniproto-docs --check --build --skip-install
+
+      - name: Upload portable static artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: miniproto-documentation-${{ github.sha }}
+          path: docs-site/dist
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy:
+    name: Publish documentation to gh-pages
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: build
+    runs-on: ubuntu-slim
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download the validated static artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: miniproto-documentation-${{ github.sha }}
+          path: docs-site/dist
+
+      - name: Replace the gh-pages root with the validated site
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./docs-site/dist
+          full_commit_message: "docs: deploy ${{ github.sha }}"

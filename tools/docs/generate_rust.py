@@ -33,6 +33,7 @@ _PYMETHOD_NEW_ATTRIBUTE = re.compile(r"#\[new\]")
 _PYTHON_NAME_OPTION = re.compile(r'\bname\s*=\s*"(?P<name>[^"]+)"')
 _PYTHON_MODULE_OPTION = re.compile(r'\bmodule\s*=\s*"(?P<module>[^"]+)"')
 _ARGUMENTS_HEADING = re.compile(r"^\s{0,3}#{1,6}\s+(?:arguments|parameters)\s*$", re.IGNORECASE)
+_CARGO_DOCS_MODULE_LINK = re.compile(r"\[(?P<label>[^\]\n]+)\]\((?P<slug>[A-Za-z0-9_.-]+)/index\.md\)")
 _HEADING = re.compile(r"^\s{0,3}#{1,6}\s+")
 _ARGUMENT = re.compile(
     r"^\s*[-*+]\s+(?:`(?P<code>[^`]+)`|\*\*(?P<bold>[^*]+)\*\*|(?P<plain>[A-Za-z_][A-Za-z0-9_]*))\s*(?::|-|–|—)\s*(?P<description>.*)$"  # noqa: RUF001 - accepts Rustdoc's ordinary dash separators.
@@ -978,14 +979,16 @@ def _module_body(
         item: Rustdoc module record providing visibility metadata.
         children: Selected direct child identifiers linked from this index.
         qualified_names: Stable Rust names for each selected child.
-        rendered_markdown: Complete unchanged cargo-docs-md module body.
+        rendered_markdown: Complete cargo-docs-md module body before unpublished-link filtering.
         crate: Cargo crate provenance.
         source_path: Repository-relative module source path.
         source_url: Line-anchored module source browser URL.
 
     Returns:
-        Normalized module body retaining converter-rendered prose verbatim.
+        Normalized module body retaining converter-rendered prose while collapsing links to deliberately unpublished modules.
     """
+    published_child_slugs = {_slug(qualified_names[child].rsplit("::", 1)[-1]) for child in children}
+    filtered_markdown = _filter_unpublished_module_links(rendered_markdown, published_child_slugs=published_child_slugs)
     item_links = "\n".join(
         f"- [`{qualified_names[child]}`](./{_slug(qualified_names[child].rsplit('::', 1)[-1])}/)" for child in children
     )
@@ -997,9 +1000,34 @@ def _module_body(
                 crate=crate, item=item, source_path=source_path, source_url=source_url, python_binding=None
             ),
             "## Documented items\n\n" + item_links,
-            "## cargo-docs-md rendering\n\n" + rendered_markdown.strip(),
+            "## cargo-docs-md rendering\n\n" + filtered_markdown.strip(),
         )
     )
+
+
+def _filter_unpublished_module_links(markdown: str, *, published_child_slugs: set[str]) -> str:
+    """Collapse cargo-docs-md module links whose generated destinations are intentionally unpublished.
+
+    Args:
+        markdown: Complete converter-owned module Markdown.
+        published_child_slugs: Relative child-route slugs emitted beneath the current module page.
+
+    Returns:
+        Converter Markdown with valid module links preserved and unavailable destinations reduced to their original labels.
+    """
+
+    def replace(match: re.Match[str]) -> str:
+        """Preserve one published module link or return its non-link label.
+
+        Args:
+            match: Regex match containing the converter label and relative module slug.
+
+        Returns:
+            Original Markdown for a published child, otherwise only the original visible label.
+        """
+        return match.group(0) if match.group("slug") in published_child_slugs else match.group("label")
+
+    return _CARGO_DOCS_MODULE_LINK.sub(replace, markdown)
 
 
 def _item_body(

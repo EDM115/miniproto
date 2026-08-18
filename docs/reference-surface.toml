@@ -63,3 +63,4 @@ package_manager = "pnpm"
 install_command = ["pnpm", "install", "--frozen-lockfile"]
 check_command = ["pnpm", "check"]
 build_command = ["pnpm", "build"]
+test_command = ["pnpm", "test:site"]

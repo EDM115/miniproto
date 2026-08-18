@@ -16,7 +16,7 @@ Status: encrypted durable default and atomic domain storage are implemented; exp
 
 When `ClientConfig.session_storage` is omitted, `Client` constructs `EncryptedSQLiteSessionStorage` for the relative path `miniproto.session.sqlite`. It validates the constructor or `MINIPROTO_SESSION_KEY` key before any network connection and does not create an empty SQLite file during construction. The file is created only when normal session storage work first needs it.
 
-This is a pre-alpha breaking change for callers that previously relied on `Client(ClientConfig(api_id=..., api_hash=...))` being ephemeral. Set `MINIPROTO_SESSION_KEY` through a secret manager before creating the client, and pass a unique absolute `session_path` for every account or deployment. Two clients that use the default relative path from the same working directory share one session file and must not represent different accounts.
+This is an Alpha breaking change for callers that previously relied on `Client(ClientConfig(api_id=..., api_hash=...))` being ephemeral. Set `MINIPROTO_SESSION_KEY` through a secret manager before creating the client, and pass a unique absolute `session_path` for every account or deployment. Two clients that use the default relative path from the same working directory share one session file and must not represent different accounts.
 
 An explicit `session_storage` always takes precedence over `session_path`. Use `InMemorySessionStorage()` explicitly for a test or throwaway workflow:
 
@@ -57,7 +57,7 @@ Built-in backends serialize load, save, mutate, clear, and close operations. SQL
 
 ## Custom Storage Migration
 
-The project is pre-alpha and `SessionStorage` now requires both `mutate()` and `domain_revisions()`. Custom backends must provide the same isolation, committed-result, revision, clear/close ordering, and post-close failure semantics as the built-in backends. A custom `mutate()` implemented as an unlocked `load()` followed by `save()` is not conformant because concurrent tasks can erase unrelated auth, peer, cursor, salt, or media-DC changes. Keep transforms synchronous and fetch all network data before entering the mutation.
+The `0.1.x` line is Alpha and `SessionStorage` requires both `mutate()` and `domain_revisions()`. Custom backends must provide the same isolation, committed-result, revision, clear/close ordering, and post-close failure semantics as the built-in backends. A custom `mutate()` implemented as an unlocked `load()` followed by `save()` is not conformant because concurrent tasks can erase unrelated auth, peer, cursor, salt, or media-DC changes. Keep transforms synchronous and fetch all network data before entering the mutation.
 
 ## Persisted Data
 

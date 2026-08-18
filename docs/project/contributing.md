@@ -7,7 +7,7 @@ generated: false
 
 ## Start with the repository policy
 
-The root [CONTRIBUTING.md](../../CONTRIBUTING.md) is the contribution policy. It establishes the local toolchain and the expected narrow-first then full verification approach. This page is a site pointer, not a second contribution policy.
+The repository's [CONTRIBUTING.md](https://github.com/EDM115/miniproto/blob/master/CONTRIBUTING.md) is the contribution policy. It establishes the local toolchain and the expected narrow-first then full verification approach. This page is a site pointer, not a second contribution policy.
 
 For exact environment setup, schema commands, formatting, linting, type checks, tests, builds, benchmarks, release diagnostics, and publish procedures, use the canonical [development guide](../development.md). Keep command changes there rather than copying version-sensitive command sequences into multiple pages.
 

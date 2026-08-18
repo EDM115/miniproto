@@ -43,7 +43,7 @@ python_visible: false
 
 ## cargo-docs-md rendering
 
-*[miniproto_native](../index.md) / [crypto](index.md)*
+*miniproto_native / [crypto](index.md)*
 
 ---
 

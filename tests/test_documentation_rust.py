@@ -576,7 +576,12 @@ def _rendered_markdown() -> dict[str, str]:
         Complete item bodies keyed by rustdoc item id.
     """
     return {
-        "0": "# miniproto_native\n\nNative acceleration crate.",
+        "0": (
+            "# miniproto_native\n\nNative acceleration crate.\n\n"
+            "## Modules\n\n"
+            "- [`crypto`](crypto/index.md) — Maintained helpers.\n"
+            "- [`generated_tl`](generated_tl/index.md) — Generated constructor metadata."
+        ),
         "1": "# crypto\n\nCryptographic native helpers.",
         "2": "# seal\n\nSeal packets for the native extension.",
         "3": "# NativeCodec\n\nMaintain an incremental native codec.",
@@ -824,6 +829,10 @@ def test_rust_reference_pages_exclude_generator_owned_rust(tmp_path: Path) -> No
 
     assert all("generated_codec" not in page.qualified_name for page in pages)
     assert all("generated_tl.rs" not in page.source_path for page in pages)
+    crate_body = next(page.body for page in pages if page.qualified_name == "miniproto_native")
+    assert "[`crypto`](crypto/index.md)" in crate_body
+    assert "[`generated_tl`](generated_tl/index.md)" not in crate_body
+    assert "`generated_tl` — Generated constructor metadata." in crate_body
 
 
 def test_rust_reference_pages_fail_honestly_for_missing_selected_docs(tmp_path: Path) -> None:

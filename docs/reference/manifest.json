@@ -4733,7 +4733,7 @@
       "path": "rust/miniproto-native/crypto/index.md",
       "qualified_name": "miniproto_native::crypto",
       "route": "/reference/rust/miniproto-native/crypto/",
-      "sha256": "823c097f636c138b5a69989036416ef6a2210d811b8c98295bb60ed73bc3decb",
+      "sha256": "39f771d1f280122ffb6d2902f3ef9a473d43b17b0c7e0f40454b56693dda7ade",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4895,7 +4895,7 @@
       "path": "rust/miniproto-native/index.md",
       "qualified_name": "miniproto_native",
       "route": "/reference/rust/miniproto-native/",
-      "sha256": "6aed8bb45a77c1f69d2d1c7b8096e31e026409bcd79123c3a47aa4fd7f4355ca",
+      "sha256": "c4d14f428039be5f7eed1631978db42d2b078faf1ddbb3b73ee40e258a8af2b9",
       "source_path": "rust/miniproto/src/lib.rs"
     },
     {
@@ -4904,7 +4904,7 @@
       "path": "rust/miniproto-native/mtproto/index.md",
       "qualified_name": "miniproto_native::mtproto",
       "route": "/reference/rust/miniproto-native/mtproto/",
-      "sha256": "4460f659abc26026684df87da39ae1c5a15f442a58177a310f639791ef36dd1a",
+      "sha256": "71e80401df0cf98b50848d3a3825b04b218b36063079f7127c01ce8602365900",
       "source_path": "rust/miniproto/src/mtproto.rs"
     },
     {
@@ -4940,7 +4940,7 @@
       "path": "rust/miniproto-native/tl/index.md",
       "qualified_name": "miniproto_native::tl",
       "route": "/reference/rust/miniproto-native/tl/",
-      "sha256": "80b8b0d27409b29eba769fe96be31c6b042e54ae3a2def11fdd0696ad8a3bab0",
+      "sha256": "20d4f237d6e23b9693ac12a8f48521546e505d0ecf5b6b72fdfce551326f2a0d",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5156,7 +5156,7 @@
       "path": "rust/miniproto-native/transport/index.md",
       "qualified_name": "miniproto_native::transport",
       "route": "/reference/rust/miniproto-native/transport/",
-      "sha256": "4de90bb5715718d72174ca5db55363784a2e8345a398d0df52a366a2b2073756",
+      "sha256": "64f1a9a0bae36aaa996280041ec2e35b7a9bc980a4bc2741657b29665f5de3eb",
       "source_path": "rust/miniproto/src/transport.rs"
     },
     {
@@ -40739,7 +40739,7 @@
   ],
   "schema_version": 1,
   "sources": {
-    "docs/reference-surface.toml": "b13f7ebe7e6fc17864681b4c269625d60f3954cc44503e1244c9c270b72efe97",
+    "docs/reference-surface.toml": "09156c13a1e5e1764f83ecf7aad92cc7c61115d6346e1a1a2360651d7bbaeeeb",
     "rust/miniproto/rust-toolchain-docs.toml": "5cbda3878b218a476f258cdc3bd06337a3dd2aff8bf8fcfc166969e91d0477cf",
     "rust/miniproto/src/crypto.rs": "bcd95973490fbbafa3a1e137b1b6521acb82180e64080e3ad1a4105aa3eb1d84",
     "rust/miniproto/src/lib.rs": "0781ff3d2de1bb6d85e9433761b44127254d504337bb099743c46f9fb543c276",
@@ -40800,10 +40800,10 @@
     "src/miniproto/updates/manager.py": "d29b07ddce978f6751bbc71d9fb9ccc32b0c10d9b4646e604ebfd7208c5c0f05",
     "src/miniproto/updates/state.py": "1b0386037aff8541bc81e1591bac8d20e3496a6df7928082554b698562b82f17",
     "tools/docs/__init__.py": "41546a3bca0d1d0e1719ffb3737c27b8223f448783b8118a75f69046f6b55cb1",
-    "tools/docs/__main__.py": "5b453056b59d205635b4676e173dc01384e61917873625e77681797618e2a964",
+    "tools/docs/__main__.py": "9cbfd2fb5e80ce7a57d943e354a757040c0f1ef8a9a1bf602fdac8de19855116",
     "tools/docs/audit.py": "0bdde1992e22076e2cf49f280c275ee69ca6ed42587353b7b34b74a104dbe9c1",
     "tools/docs/generate_python.py": "c6e296ee3e90a986d321277b81dc255f17ad290ae7f26f46624d23e8590af439",
-    "tools/docs/generate_rust.py": "5c7a81c920eef43c83ae198ebe00dccef74750cfe3d51f7b8ca0a5686ce2ad74",
+    "tools/docs/generate_rust.py": "10677a9032a69c7c46aa6b4c1b2dfec7c7e3a7c1a3795a0d534269810e81a29f",
     "tools/docs/generate_telegram.py": "a0f389940b0e74cb4a9ee7e057a77e68a6b2e436afb2cae30c3c3800dd80ef0f",
     "tools/docs/manifest.py": "416a6ed447a3964c5c1cb1e1dfbc37c837cfc6973ffc05776d6024fe4aada5f0",
     "tools/docs/model.py": "e4121b5921983233bab6280464f7726242c33cac3d283536911a90f417099408",

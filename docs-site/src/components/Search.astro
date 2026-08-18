@@ -1,0 +1,12 @@
+---
+import DefaultSearch from '@astrojs/starlight/components/Search.astro';
+---
+
+<div class="mp-search"><DefaultSearch {...Astro.props} /></div>
+
+<style>
+  .mp-search { display: contents; }
+  :global(.mp-search button[data-open-modal]) { border-color: var(--mp-seam-strong); background: var(--mp-surface-raised); }
+  :global(.mp-search dialog) { border-color: var(--mp-seam-strong); background: var(--mp-surface); }
+  :global(.mp-search #starlight__search) { --pagefind-ui-primary: var(--mp-lime); --pagefind-ui-border: var(--mp-seam-strong); --pagefind-ui-tag: var(--mp-teal-700); }
+</style>

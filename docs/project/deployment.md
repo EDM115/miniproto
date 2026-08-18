@@ -24,3 +24,42 @@ Telegram controls authorization, FloodWaits, and transport behavior. Bound work 
 ## Acceptance boundary
 
 Ordinary CI disables real integration credentials. Live tests and live benchmarks are explicitly guarded and require secrets plus Telegram-side prerequisites. When those are unavailable, report the gate as not run or externally blocked; do not claim that deterministic fake coverage proves a production deployment against Telegram.
+
+## Build the documentation as a portable static artifact
+
+The documentation site reads its canonical Markdown directly from `docs/`, validates the committed Python/Telegram/Rust reference, builds Astro/Starlight, creates a local Pagefind index, runs browser acceptance, and then validates the emitted routes and assets. From a clean checkout:
+
+```pwsh
+rustup toolchain install nightly-2026-08-12
+cargo install cargo-docs-md --version 0.2.4 --locked
+uv sync --extra dev,docs --frozen
+pnpm --dir docs-site install --frozen-lockfile
+uv run miniproto-docs --check --build --skip-install
+```
+
+The artifact is `docs-site/dist/`. Deploy or copy that directory as an indivisible output; do not regenerate search separately or combine HTML from one build with assets from another. The deployed site requires no Node.js, Python, Rust, database, or search process at runtime.
+
+The default build uses the origin root `/`. Configure only the canonical origin when building for an origin-root host:
+
+```pwsh
+$env:MINIPROTO_DOCS_SITE = "https://docs.example.com"
+uv run miniproto-docs --check --build --skip-install
+```
+
+For a subpath host, set `MINIPROTO_DOCS_BASE` to that public prefix, for example `/miniproto`. The GitHub workflow does this explicitly because `https://edm115.github.io/miniproto/` is a project Pages URL. Serve `docs-site/dist/` with any static web server or copy it into the server's immutable release directory, then point the web root at those bytes. Preserve trailing-slash routing and the generated `404.html`; do not proxy Pagefind queries to an application server.
+
+## Run the Alpine documentation image
+
+The repository also provides a multi-stage, root-base image. Build and validate the static output first, then package it from the repository root:
+
+```sh
+MINIPROTO_DOCS_SITE=https://docs.example.com MINIPROTO_DOCS_BASE=/ pnpm --dir docs-site build
+docker build --file docs-site/Dockerfile --tag miniproto-docs .
+docker run --rm --publish 8080:8080 miniproto-docs
+```
+
+The default Docker target checks the prepared artifact in Alpine 3.24 and packages it in unprivileged NGINX on Alpine 3.24. This path works on small builders where Astro cannot fit the complete reference collection into the daemon's memory allocation. The runtime listens on port 8080 as UID 101 and includes a local HTTP health check. It contains the static output only: no Python, Rust toolchain, Node.js, pnpm, source Markdown, or server-side search process. Set `MINIPROTO_DOCS_SITE` during the Astro build because canonical metadata is prerendered. The container deliberately uses `MINIPROTO_DOCS_BASE=/`; deploy it at the origin root or configure the reverse proxy without adding a path prefix.
+
+On a builder with at least 2 GiB available, `docker build --file docs-site/Dockerfile --target source-runtime --build-arg MINIPROTO_DOCS_SITE=https://docs.example.com --tag miniproto-docs .` performs the root-base Astro build inside Node.js 26.7.0 on Alpine 3.24 with pnpm 11.22.0, then copies the output into the same NGINX runtime. BuildKit caches the pnpm store, while every production build forces a fresh Astro content layer so imported Markdown-transform changes cannot leave stale rendered pages behind.
+
+The repository's documentation workflow builds and tests on pull requests without publication credentials and uploads the exact static artifact for inspection. A trusted `master` push downloads those same validated bytes and replaces the root of the `gh-pages` branch with a single orphan commit; `docs-site/dist/` remains ignored and is never committed alongside source on `master`. Configure GitHub Pages once to publish from the root of `gh-pages`. No custom domain or `CNAME` is assumed.

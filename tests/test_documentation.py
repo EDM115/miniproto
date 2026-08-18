@@ -21,6 +21,93 @@ from tools.docs.model import ReferenceLanguage, ReferencePage
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_release_facing_documents_cover_the_alpha_contract() -> None:
+    """Require the README, changelog, and security policy to retain Wave 5's public contract."""
+    readme = (REPOSITORY_ROOT / "README.md").read_text(encoding="utf-8")
+    changelog = (REPOSITORY_ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    security = (REPOSITORY_ROOT / "SECURITY.md").read_text(encoding="utf-8")
+
+    for required in (
+        "docs-site/src/assets/brand/mark.svg",
+        "0.1.x` Alpha",
+        "sign_in_phone",
+        "sign_in_bot",
+        "get_me",
+        "HelpGetConfig",
+        "send_message",
+        "send_file",
+        "iter_updates",
+        "download_media",
+        "iter_download",
+        "verify_plain_hashes",
+        "`miniproto` versus `mpgram`",
+        "https://edm115.github.io/miniproto/",
+        "SECURITY.md",
+        "CONTRIBUTING.md",
+    ):
+        assert required in readme
+
+    assert "## v0.1.0 — Alpha" in changelog
+    assert "### Breaking changes" in changelog
+    assert "Unreleased" not in changelog
+    assert "pre-alpha" not in changelog.casefold()
+    assert "**Full Changelog**" not in changelog
+    for category in ("feat :", "perf :", "security :", "fix :", "docs :", "tests :", "ci :", "build :"):
+        assert category in changelog
+
+    for required in (
+        "`0.1.x` line",
+        "security/advisories/new",
+        "miniproto@edm115.dev",
+        "MINIPROTO_SESSION_KEY",
+        "Telethon v1",
+        "Pyrogram",
+        "Live tests and benchmarks",
+        "Dependencies, native code, and artifacts",
+        "Do not open a public issue",
+    ):
+        assert required in security
+
+
+def test_readme_python_examples_are_syntactically_valid() -> None:
+    """Compile every README Python fence, including intentionally contextual async fragments."""
+    readme = (REPOSITORY_ROOT / "README.md").read_text(encoding="utf-8")
+    blocks = tuple(section.split("```", 1)[0] for section in readme.split("```python\n")[1:])
+
+    assert blocks
+    for index, block in enumerate(blocks, start=1):
+        compile(
+            block, f"README.md:python-block-{index}", "exec", flags=ast.PyCF_ALLOW_TOP_LEVEL_AWAIT, dont_inherit=True
+        )
+
+
+def test_codebase_knowledge_documents_follow_the_repository_site_contract() -> None:
+    """Require the adapted seven-document codebase map to remain complete and publishable."""
+    root = REPOSITORY_ROOT / "docs" / "codebase"
+    expected = {
+        "ARCHITECTURE.md",
+        "CONCERNS.md",
+        "CONVENTIONS.md",
+        "INTEGRATIONS.md",
+        "STACK.md",
+        "STRUCTURE.md",
+        "TESTING.md",
+    }
+
+    assert {path.name for path in root.glob("*.md")} == expected
+    for path in sorted(root.glob("*.md")):
+        text = path.read_text(encoding="utf-8")
+        slug = path.stem.casefold().replace("_", "-")
+        assert text.startswith("---\n")
+        assert "generated: false" in text
+        assert f"slug: /project/codebase/{slug}/" in text
+        assert "## Evidence" in text
+        assert "- `" in text.split("## Evidence", 1)[1]
+        assert "[VALUE]" not in text
+        assert "[FILE_PATH]" not in text
+        assert "[TODO]" not in text
+
+
 def test_telegram_reference_extractor_module_is_available() -> None:
     """Require the static Telegram reference extractor to have an owned module."""
     assert importlib.util.find_spec("tools.docs.generate_telegram") is not None

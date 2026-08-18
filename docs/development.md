@@ -11,6 +11,8 @@ This file is the command reference for routine `miniproto` development. Run comm
 
 - Python 3.13+ available through `uv`.
 - Rust toolchain with Cargo, rustfmt, and Clippy.
+- The current Node.js 26 and pnpm 11 releases for the documentation site. CI asks for the latest Node 26 patch and installs the package-manager version declared in `docs-site/package.json` through `pnpm/action-setup`; Corepack is not used.
+- The exact documentation-only Rust nightly in `rust/miniproto/rust-toolchain-docs.toml` plus `cargo-docs-md` 0.2.4 when regenerating Rust reference pages.
 - PyPI and crates.io credentials only for release publishing commands.
 
 ## Event Loop Ownership
@@ -110,6 +112,31 @@ This network-dependent check fails when any independently pinned upstream input 
 
 When reviewing an update, inspect `tools/schema/schema-source-diff.json`, `tools/schema/schema-metadata.json`, and the generated code diff before accepting it. Do not accept a newer file merely because its timestamp moved: a missing/malformed Desktop layer marker, any structural disagreement in shared TDLib/Desktop declarations, an unexpected constructor-ID collision, or an unknown TL declaration is a hard failure. The current TDLib canonical snapshot intentionally omits Desktop's `null`, so the old generated `miniproto.raw.types.Null` class is no longer part of Layer 228.
 
+## Documentation
+
+The documentation source remains in `docs/`. Handwritten pages live beside the committed generated reference tree; `docs/THOUGHTS.md` is internal and is excluded from routes, navigation, build output, and search. The single Python entry point validates maintained Python/Rust documentation, deterministically reconciles or checks all generated Markdown, runs the pinned Astro/Pagefind site pipeline, executes browser acceptance, and validates the resulting static artifact.
+
+```pwsh
+uv run miniproto-docs --help
+uv run miniproto-docs
+uv run miniproto-docs --check
+uv run miniproto-docs --check --build --skip-install
+```
+
+`--check` never rewrites committed reference pages. The Rust pass uses the exact nightly pin only for rustdoc JSON; stable Rust remains authoritative for normal compilation, Clippy, tests, wheels, and release artifacts. The site pipeline installs the frozen pnpm lockfile unless `--skip-install` is explicit, checks Astro types/content, builds all routes and Pagefind indexes, runs browser acceptance, then rejects missing routes/assets/search facets or an accidental `THOUGHTS.md` leak.
+
+For frontend-only iteration, use the exact package scripts directly:
+
+```pwsh
+pnpm --dir docs-site install --frozen-lockfile
+pnpm --dir docs-site check
+pnpm --dir docs-site build
+pnpm --dir docs-site test:site
+pnpm --dir docs-site dev
+```
+
+Packet Loom is the provisional identity while the community poll remains open. `pnpm --dir docs-site brand:check` proves that every derived asset still matches the canonical concept-03 source without editing its inner SVG. If the poll selects another family, replace the canonical source and regenerate derivatives through the same isolated brand script instead of embedding concept geometry in unrelated components.
+
 ## Format
 
 ```pwsh
@@ -149,7 +176,7 @@ uv run miniproto-release-check --offline --artifacts-dir .tmp/release-offline
 uv run miniproto-release-check --offline --keep-going --artifacts-dir .tmp/release-diagnostics
 ```
 
-`--offline` is the default release gate, so omitting it is equivalent. The docs stage is reported as `pending`, without being presented as a pass, until Wave 5 adds `tools.docs` and `docs-site`; it becomes a strict stage automatically once both are present. The individual commands below remain the diagnostic source when one aggregate stage fails. Windows subprocesses receive the uv base-Python directory in `PATH` so Cargo-built PyO3 tests can resolve the matching Python DLL.
+`--offline` is the default release gate, so omitting it is equivalent. The documentation stage is strict: it checks the committed Python/Telegram/Rust reference, builds the Astro/Pagefind site, runs browser acceptance, and validates the static artifact. The individual commands below remain the diagnostic source when one aggregate stage fails. Windows subprocesses receive the uv base-Python directory in `PATH` so Cargo-built PyO3 tests can resolve the matching Python DLL.
 
 The credentialed extension is separately guarded and is never part of ordinary pull-request CI:
 
@@ -308,7 +335,7 @@ cargo publish -p miniproto --dry-run
 cargo publish -p miniproto
 ```
 
-Only publish the Rust crate when the crates.io package contents intentionally match the current release goal. For v1 planning, direct Rust API stability is not the priority; the Python extension remains the primary consumer.
+Only publish the Rust crate when the crates.io package contents intentionally match the current release goal. For the `0.1.x` Alpha line, direct Rust API stability is not promised; the Python extension remains the primary consumer.
 
 ## Full Local Verification
 

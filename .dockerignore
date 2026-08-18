@@ -1,0 +1,13 @@
+*
+!docs/
+!docs/**
+!docs-site/
+!docs-site/**
+
+docs/.env*
+docs-site/.env*
+docs/THOUGHTS.md
+docs-site/.astro/
+docs-site/.playwright-report/
+docs-site/node_modules/
+docs-site/test-results/

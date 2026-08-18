@@ -1,38 +1,145 @@
-/* Neutral, accessible foundations only; V1-DOCS-007/008 own final branding and theming. */
+@font-face {
+  font-family: "Miniproto Nunito";
+  src: url("../assets/brand/fonts/NunitoSans-ExtraBold-miniproto.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+}
+
 :root {
-  --sl-color-accent-low: #1f3044;
-  --sl-color-accent: #8eb8eb;
-  --sl-color-accent-high: #dbeafe;
-  --sl-color-white: #f8fafc;
-  --sl-color-gray-1: #e2e8f0;
-  --sl-color-gray-2: #cbd5e1;
-  --sl-color-gray-3: #94a3b8;
-  --sl-color-gray-4: #64748b;
-  --sl-color-gray-5: #475569;
-  --sl-color-gray-6: #334155;
-  --sl-color-black: #0f172a;
+  --mp-display-font: "Miniproto Nunito", ui-rounded, system-ui, sans-serif;
+  --mp-lime: #c7f406;
+  --mp-paper: #f4f0df;
+  --mp-teal-950: #031f20;
+  --mp-teal-900: #082e2c;
+  --mp-teal-800: #0a3b39;
+  --mp-teal-700: #10524e;
+  --mp-teal-500: #1f8179;
+  --mp-surface: #082e2c;
+  --mp-surface-raised: #0c3936;
+  --mp-seam: rgb(199 244 6 / 0.12);
+  --mp-seam-strong: rgb(199 244 6 / 0.28);
+  --mp-text-soft: #c1d6cf;
+  --mp-text-faint: #8ea9a2;
+  --sl-color-accent-low: #173d33;
+  --sl-color-accent: var(--mp-lime);
+  --sl-color-accent-high: #e6ff7b;
+  --sl-color-white: #f8fff5;
+  --sl-color-gray-1: #e0ece6;
+  --sl-color-gray-2: #c1d6cf;
+  --sl-color-gray-3: #8ea9a2;
+  --sl-color-gray-4: #64827c;
+  --sl-color-gray-5: #315852;
+  --sl-color-gray-6: #153f3b;
+  --sl-color-black: var(--mp-teal-950);
   --sl-color-text-accent: var(--sl-color-accent-high);
-  --sl-content-width: 52rem;
+  --sl-content-width: 56rem;
+  --sl-content-pad-x: clamp(1rem, 3vw, 2rem);
 }
 
-:root[data-theme='light'] {
-  --sl-color-accent-low: #dbeafe;
-  --sl-color-accent: #195ca8;
-  --sl-color-accent-high: #17365c;
-  --sl-color-white: #0f172a;
-  --sl-color-gray-1: #1e293b;
-  --sl-color-gray-2: #334155;
-  --sl-color-gray-3: #475569;
-  --sl-color-gray-4: #64748b;
-  --sl-color-gray-5: #94a3b8;
-  --sl-color-gray-6: #cbd5e1;
-  --sl-color-black: #f8fafc;
-  --sl-color-text-accent: var(--sl-color-accent-high);
+:root[data-theme="light"] {
+  --mp-surface: #faf8ed;
+  --mp-surface-raised: #f2eedc;
+  --mp-seam: rgb(3 31 32 / 0.11);
+  --mp-seam-strong: rgb(3 31 32 / 0.24);
+  --mp-text-soft: #315852;
+  --mp-text-faint: #58746e;
+  --sl-color-accent-low: #e1efb5;
+  --sl-color-accent: #416c00;
+  --sl-color-accent-high: #153f29;
+  --sl-color-white: #092c2c;
+  --sl-color-gray-1: #173f3c;
+  --sl-color-gray-2: #315852;
+  --sl-color-gray-3: #58746e;
+  --sl-color-gray-4: #819891;
+  --sl-color-gray-5: #bdc9c0;
+  --sl-color-gray-6: #e8e6d8;
+  --sl-color-black: #faf8ed;
+  --sl-color-text-accent: #315800;
 }
 
+html {
+  background: var(--sl-color-black);
+  color-scheme: dark;
+  scrollbar-color: var(--mp-teal-500) var(--sl-color-black);
+}
+html[data-theme="light"] {
+  color-scheme: light;
+}
+body {
+  background: var(--sl-color-black);
+}
+::selection {
+  background: var(--mp-lime);
+  color: var(--mp-teal-950);
+}
 :where(a, button, input, select, summary, textarea):focus-visible {
-  outline: 3px solid var(--sl-color-accent);
+  outline: 3px solid var(--mp-lime);
   outline-offset: 3px;
+}
+:where(h1, h2, h3, h4, .site-title) {
+  font-family: var(--mp-display-font);
+  letter-spacing: -0.018em;
+}
+.site-title {
+  font-weight: 800;
+}
+header.header {
+  border-bottom-color: var(--mp-seam);
+  background: color-mix(in srgb, var(--sl-color-black) 94%, transparent);
+  backdrop-filter: blur(0.9rem);
+}
+.sidebar-pane,
+.right-sidebar-panel {
+  border-color: var(--mp-seam);
+}
+.sidebar-content a[aria-current="page"] {
+  color: var(--sl-color-white);
+  font-weight: 700;
+}
+.sidebar-content a[aria-current="page"]::before {
+  background: var(--mp-lime);
+}
+.sl-markdown-content :where(code):not(:where(pre *)) {
+  border: 1px solid var(--mp-seam);
+  border-radius: 0.35rem;
+  background: var(--mp-surface-raised);
+  color: var(--sl-color-white);
+  padding: 0.12em 0.32em;
+  font-size: 0.86em;
+}
+.sl-markdown-content :where(pre, table) {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.sl-markdown-content :where(blockquote) {
+  border-inline-start-color: var(--mp-lime);
+  background: var(--mp-surface-raised);
+  padding-block: 0.75rem;
+}
+.sl-markdown-content :where(h2) {
+  border-top: 1px solid var(--mp-seam);
+  padding-top: 1.75rem;
+}
+.sl-markdown-content a {
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.19em;
+}
+.sl-link-card {
+  border-color: var(--mp-seam-strong) !important;
+  background: var(--mp-surface-raised) !important;
+}
+.sl-link-card:hover {
+  border-color: var(--mp-lime) !important;
+}
+
+@media (max-width: 50rem) {
+  :root {
+    --sl-content-pad-x: 1rem;
+  }
+  .sl-markdown-content :where(pre) {
+    border-radius: 0.5rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

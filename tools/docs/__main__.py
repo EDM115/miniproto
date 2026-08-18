@@ -14,12 +14,17 @@ import tomllib
 import uuid
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from html.parser import HTMLParser
 from pathlib import Path, PurePosixPath
 from typing import Any
+from urllib.parse import unquote, urljoin, urlsplit
 
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_CONFIGURATION = _REPOSITORY_ROOT / "docs/reference-surface.toml"
 _GENERATOR_VERSION = "1"
+_SURFACE_CONTRACT_MARKER = "miniproto-surface:user-pinned-packet-loom"
+_REQUIRED_SITE_ROUTES = ("/", "/start/", "/guides/", "/concepts/", "/recipes/", "/faq/", "/reference/", "/project/")
+_REQUIRED_PAGEFIND_FILTERS = {"crate", "kind", "language", "layer", "module", "namespace", "python_visible"}
 
 
 class DocumentationConfigurationError(ValueError):
@@ -99,6 +104,7 @@ class SiteDocumentationConfiguration:
         install_command: Frozen-lockfile dependency installation command.
         check_command: Static Astro content/type validation command.
         build_command: Static production-site build command.
+        test_command: Browser acceptance command against the built static artifact.
     """
 
     directory: Path
@@ -106,6 +112,7 @@ class SiteDocumentationConfiguration:
     install_command: tuple[str, ...]
     check_command: tuple[str, ...]
     build_command: tuple[str, ...]
+    test_command: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -131,6 +138,71 @@ class DocumentationConfiguration:
     telegram: TelegramDocumentationConfiguration
     rust: RustDocumentationConfiguration
     site: SiteDocumentationConfiguration
+
+
+@dataclass(frozen=True, slots=True)
+class StaticSiteValidationReport:
+    """Summarize deterministic validation of one built documentation artifact.
+
+    Attributes:
+        html_pages: Number of rendered HTML documents inspected.
+        internal_links: Number of local links and assets whose destinations were checked.
+        filter_names: Sorted Pagefind filter names discovered in rendered metadata.
+    """
+
+    html_pages: int
+    internal_links: int
+    filter_names: tuple[str, ...]
+
+
+class _BuiltPageParser(HTMLParser):
+    """Collect local references and Pagefind attributes from one rendered page.
+
+    Attributes:
+        local_references: Raw ``href`` and ``src`` values requiring destination validation.
+        filter_names: Pagefind filter keys declared by rendered metadata.
+        has_pagefind_body: Whether the page exposes an intentional indexable content region.
+        has_surface_contract: Whether the root artifact retained the Packet Loom design contract marker.
+    """
+
+    def __init__(self) -> None:
+        """Initialize empty parser state for one HTML document."""
+        super().__init__(convert_charrefs=True)
+        self.local_references: list[str] = []
+        self.filter_names: set[str] = set()
+        self.has_pagefind_body = False
+        self.has_surface_contract = False
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        """Collect relevant link, asset, and Pagefind attributes from an opening tag.
+
+        Args:
+            tag: Lowercase HTML element name supplied by ``HTMLParser``.
+            attrs: Attribute name/value pairs present on the element.
+        """
+        del tag
+        values = dict(attrs)
+        for name in ("href", "src"):
+            value = values.get(name)
+            if value:
+                self.local_references.append(value)
+        if "data-pagefind-body" in values:
+            self.has_pagefind_body = True
+        filter_expression = values.get("data-pagefind-filter")
+        if filter_expression:
+            for declaration in filter_expression.split(","):
+                name = declaration.strip().split("[", 1)[0].split(":", 1)[0].strip()
+                if name:
+                    self.filter_names.add(name)
+
+    def handle_comment(self, data: str) -> None:
+        """Record whether an emitted HTML comment carries the visual direction contract.
+
+        Args:
+            data: Comment contents without the surrounding delimiter.
+        """
+        if _SURFACE_CONTRACT_MARKER in data:
+            self.has_surface_contract = True
 
 
 def load_documentation_configuration(path: Path, *, repository_root: Path) -> DocumentationConfiguration:
@@ -211,11 +283,13 @@ def load_documentation_configuration(path: Path, *, repository_root: Path) -> Do
         install_command=_command(site, "install_command"),
         check_command=_command(site, "check_command"),
         build_command=_command(site, "build_command"),
+        test_command=_command(site, "test_command"),
     )
     for name, command in (
         ("site.install_command", site_configuration.install_command),
         ("site.check_command", site_configuration.check_command),
         ("site.build_command", site_configuration.build_command),
+        ("site.test_command", site_configuration.test_command),
     ):
         if command[0] != site_configuration.package_manager:
             raise DocumentationConfigurationError(f"{name} must invoke {site_configuration.package_manager!r}")
@@ -691,6 +765,26 @@ def _run_reference_pipeline(configuration: DocumentationConfiguration, *, check:
             _remove_owned_tree(scratch, owner=scratch_parent, prefix="run-")
 
 
+def _resolve_site_command(command: Sequence[str]) -> tuple[str, ...]:
+    """Resolve a configured site command to a directly executable process vector.
+
+    Args:
+        command: Reviewed executable name and arguments from the documentation configuration.
+
+    Returns:
+        The command with its executable replaced by the platform-resolved absolute path.
+
+    Raises:
+        DocumentationGenerationError: The command is empty or its executable is unavailable on ``PATH``.
+    """
+    if not command:
+        raise DocumentationGenerationError("documentation site command is empty")
+    executable = shutil.which(command[0])
+    if executable is None:
+        raise DocumentationGenerationError(f"documentation site executable is unavailable: {command[0]}")
+    return (executable, *command[1:])
+
+
 def _verify_site_tool_versions(configuration: SiteDocumentationConfiguration) -> None:
     """Require the exact Node and pnpm versions declared by the site package.
 
@@ -711,14 +805,164 @@ def _verify_site_tool_versions(configuration: SiteDocumentationConfiguration) ->
         (configuration.package_manager, (configuration.package_manager, "--version"), expected_package_manager),
     )
     for label, command, expected in checks:
+        resolved_command = _resolve_site_command(command)
         result = subprocess.run(  # noqa: S603 - executable names are fixed by reviewed repository configuration.
-            command, cwd=configuration.directory, capture_output=True, check=False, text=True
+            resolved_command, cwd=configuration.directory, capture_output=True, check=False, text=True
         )
         actual = result.stdout.strip().removeprefix("v")
         if result.returncode or not expected or actual != expected:
             raise DocumentationGenerationError(
                 f"{label} must be exactly {expected or '<missing pin>'}, reported {actual or '<unavailable>'}"
             )
+
+
+def _normalize_site_base(value: str) -> str:
+    """Normalize a configured deployment path for local artifact validation.
+
+    Args:
+        value: Root or project-path deployment prefix.
+
+    Returns:
+        A leading-slash path with no trailing slash, except for the root value itself.
+    """
+    stripped = value.strip().strip("/")
+    return "/" if not stripped else f"/{stripped}"
+
+
+def _route_destination(output: Path, route: str) -> Path:
+    """Map one base-free public route to its expected file in a static artifact.
+
+    Args:
+        output: Static-site output directory.
+        route: Decoded absolute route after removal of the configured deployment base.
+
+    Returns:
+        Expected HTML or asset path beneath ``output``.
+    """
+    relative = route.lstrip("/")
+    if not relative:
+        return output / "index.html"
+    candidate = output / Path(relative)
+    if route.endswith("/") or not candidate.suffix:
+        return candidate / "index.html"
+    return candidate
+
+
+def _local_route(reference: str, *, source_route: str, base: str) -> str | None:
+    """Resolve one rendered local reference to a decoded base-free route.
+
+    Args:
+        reference: Raw ``href`` or ``src`` value from rendered HTML.
+        source_route: Base-prefixed public route of the containing HTML page.
+        base: Normalized deployment base path.
+
+    Returns:
+        Base-free absolute route, or ``None`` for fragments and external protocols.
+
+    Raises:
+        RuntimeError: An absolute local path escapes a non-root deployment base.
+    """
+    parsed = urlsplit(reference)
+    if parsed.scheme or parsed.netloc or reference.startswith(("mailto:", "tel:", "data:", "javascript:")):
+        return None
+    if not parsed.path:
+        return None
+    resolved = unquote(urljoin(source_route, parsed.path))
+    if base != "/":
+        if resolved == base:
+            resolved = "/"
+        elif resolved.startswith(f"{base}/"):
+            resolved = resolved[len(base) :]
+        else:
+            raise RuntimeError(f"local reference escapes configured site base {base}: {reference}")
+    return resolved or "/"
+
+
+def _html_route(path: Path, *, output: Path, base: str) -> str:
+    """Return the base-prefixed browser route for one rendered HTML file.
+
+    Args:
+        path: HTML file beneath the static output directory.
+        output: Static-site output directory.
+        base: Normalized deployment base path.
+
+    Returns:
+        Absolute browser path suitable for resolving relative links.
+    """
+    relative = path.relative_to(output).as_posix()
+    if relative == "index.html":
+        route = "/"
+    elif relative.endswith("/index.html"):
+        route = f"/{relative.removesuffix('index.html')}"
+    else:
+        route = f"/{relative}"
+    if base == "/":
+        return route
+    return f"{base}/" if route == "/" else f"{base}{route}"
+
+
+def _validate_static_site(output: Path, *, base: str, required_routes: Sequence[str]) -> StaticSiteValidationReport:
+    """Validate routes, local references, search metadata, and internal-content boundaries in a built site.
+
+    Args:
+        output: Static Astro output directory to inspect without modification.
+        base: Configured public deployment prefix such as ``/miniproto`` or ``/``.
+        required_routes: Base-free public routes that must exist in the artifact.
+
+    Returns:
+        Counts and Pagefind filter names from the validated artifact.
+
+    Raises:
+        RuntimeError: The artifact is incomplete, leaks the internal scratchpad, loses its design contract, or contains a broken local reference.
+    """
+    output = output.resolve()
+    normalized_base = _normalize_site_base(base)
+    if not output.is_dir():
+        raise RuntimeError(f"documentation static output does not exist: {output}")
+    html_paths = tuple(sorted(output.rglob("*.html"), key=lambda path: path.as_posix()))
+    if not html_paths:
+        raise RuntimeError("documentation static output contains no HTML pages")
+    if not (output / "pagefind/pagefind.js").is_file():
+        raise RuntimeError("documentation static output lacks the Pagefind browser bundle")
+    for route in required_routes:
+        destination = _route_destination(output, route)
+        if not destination.is_file():
+            raise RuntimeError(f"documentation static output lacks required route {route}: {destination}")
+
+    filters: set[str] = set()
+    internal_links = 0
+    homepage_contract = False
+    has_pagefind_body = False
+    for path in html_paths:
+        relative_path = path.relative_to(output).as_posix()
+        if "thoughts" in relative_path.casefold():
+            raise RuntimeError(f"THOUGHTS scratchpad leaked into the public artifact: {relative_path}")
+        parser = _BuiltPageParser()
+        parser.feed(path.read_text(encoding="utf-8"))
+        parser.close()
+        filters.update(parser.filter_names)
+        has_pagefind_body = has_pagefind_body or parser.has_pagefind_body
+        if relative_path == "index.html":
+            homepage_contract = parser.has_surface_contract
+        source_route = _html_route(path, output=output, base=normalized_base)
+        for reference in parser.local_references:
+            if "thoughts" in reference.casefold():
+                raise RuntimeError(f"THOUGHTS scratchpad leaked through a public reference: {reference}")
+            route = _local_route(reference, source_route=source_route, base=normalized_base)
+            if route is None:
+                continue
+            internal_links += 1
+            destination = _route_destination(output, route)
+            if not destination.is_file():
+                raise RuntimeError(f"broken local reference in {relative_path}: {reference} -> {destination}")
+
+    if not homepage_contract:
+        raise RuntimeError(f"homepage lacks the {_SURFACE_CONTRACT_MARKER!r} design contract")
+    if not has_pagefind_body:
+        raise RuntimeError("documentation static output lacks any data-pagefind-body content region")
+    return StaticSiteValidationReport(
+        html_pages=len(html_paths), internal_links=internal_links, filter_names=tuple(sorted(filters))
+    )
 
 
 def _run_site_pipeline(configuration: SiteDocumentationConfiguration, *, skip_install: bool) -> None:
@@ -732,17 +976,33 @@ def _run_site_pipeline(configuration: SiteDocumentationConfiguration, *, skip_in
         DocumentationGenerationError: An exact tool version or configured frontend stage fails.
     """
     _verify_site_tool_versions(configuration)
-    commands = (configuration.check_command, configuration.build_command)
+    commands = (configuration.check_command, configuration.build_command, configuration.test_command)
     if not skip_install:
         commands = (configuration.install_command, *commands)
     for command in commands:
+        resolved_command = _resolve_site_command(command)
         result = subprocess.run(  # noqa: S603 - command vectors are fixed by reviewed repository configuration.
-            command, cwd=configuration.directory, check=False
+            resolved_command, cwd=configuration.directory, check=False
         )
         if result.returncode:
             raise DocumentationGenerationError(
                 f"documentation site command failed ({result.returncode}): {' '.join(command)}"
             )
+    report = _validate_static_site(
+        configuration.directory / "dist",
+        base=os.environ.get("MINIPROTO_DOCS_BASE", "/"),
+        required_routes=_REQUIRED_SITE_ROUTES,
+    )
+    missing_filters = sorted(_REQUIRED_PAGEFIND_FILTERS.difference(report.filter_names))
+    if missing_filters:
+        raise RuntimeError(
+            f"documentation Pagefind index metadata lacks required filters: {', '.join(missing_filters)}"
+        )
+    print(
+        "documentation static artifact is valid "
+        f"({report.html_pages} HTML pages, {report.internal_links} local references, "
+        f"{len(report.filter_names)} Pagefind filters)"
+    )
 
 
 def main(argv: Sequence[str] | None = None) -> int:

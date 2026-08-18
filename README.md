@@ -1,43 +1,137 @@
 # miniproto
 
-`miniproto` is the fast, reusable MTProto engine and SDK for Python. It is async-first, designed for server workloads, and backed by a bundled Rust/PyO3 native layer for crypto, TL, byte-buffer, and other protocol hot paths.
+<p align="center">
+  <img src="docs-site/src/assets/brand/mark.svg" width="176" height="176" alt="miniproto Packet Loom mark">
+</p>
 
-## Package Boundary
+`miniproto` is a fast, async-first Telegram MTProto client core for Python. It owns protocol correctness, authorization, encrypted sessions, raw Layer 228 bindings, updates, peers, messages, and bounded media transfers while a bundled Rust/PyO3 extension accelerates measured hot paths.
 
-`miniproto` owns MTProto correctness: authorization, sessions, DC migration, transports, encrypted message framing, raw API invocation, generated raw types/functions, update state recovery, peer/access-hash handling, media upload/download primitives, and a small set of core convenience methods such as `get_me()`, `resolve_peer()`, `send_message()`, `send_file()`, `download_media()`, and `iter_updates()`.  
-`mpgram` is the separate Telegram application framework package. It should depend on public `miniproto` APIs and own routers, filters, decorators, middleware, command handling, plugins, dependency/context helpers, conversation helpers, bound message methods, and broad high-level Telegram developer ergonomics.  
-The sibling `MPGram` repository already exists next to this repository in the same Git folder. The PyPI names `miniproto` and `mpgram`, plus the crates.io name `miniproto`, are already reserved with dummy low-version packages.
+The first public line is `0.1.x` Alpha: the implementation is substantial, but breaking changes remain possible while the API and operational defaults settle. Start with the [documentation website](https://edm115.github.io/miniproto/) or the [five-minute quickstart](https://edm115.github.io/miniproto/start/quickstart/).
 
-## Native Layer
+## Install
 
-The Rust crate lives in `rust/miniproto/` and is named `miniproto` for crates.io ownership. For Python users it is still imported as the private extension module `miniproto._native`; direct Rust reuse is not a v1 priority, though the crate layout should not block a future public Rust API.
-
-The wheel declares `cryptography` and the platform-appropriate `uvloop`/`winloop` backend as normal dependencies and is tested on normal CPython 3.13/3.14 plus free-threaded CPython 3.14t with the GIL actually disabled. CPython 3.13t is not supported because the project prioritizes the current PyO3 dependency line. Protected-session AES-256-GCM and Scrypt expose explicit Rust and cryptography implementations; the normal wrappers select Rust per available capability because the actual small, Scrypt-dominated session workload benchmarks faster there, then fall back to cryptography when that native capability cannot be loaded. Manual wheel automation covers Linux glibc and musl on x86_64 and aarch64/ARMv8 plus native Windows/macOS x86_64 and aarch64, installing every wheel with its declared dependencies before runtime acceptance. ARMv7 is not supported.
-
-## Event Loop
-
-Importing `miniproto` never installs or replaces the process-wide asyncio policy. Scripts that own their top-level coroutine can use `event_loop.run(main())`; embedded applications keep ownership of their running loop, and advanced callers can pass `event_loop.new_event_loop` to `asyncio.Runner(loop_factory=...)`. The legacy `event_loop.install()` helper is an explicit deprecated compatibility path for Python versions before 3.16.
-
-## Session Security
-
-`Client(ClientConfig(...))` persists an encrypted session by default. It uses `EncryptedSQLiteSessionStorage` at the relative path `miniproto.session.sqlite` and requires a constructor key or `MINIPROTO_SESSION_KEY`; without adequate key material, construction fails before connecting or creating a file. This quickstart deliberately uses explicit in-memory storage, so it is executable without creating or retaining credentials:
-
-```python
-from miniproto import Client, ClientConfig, InMemorySessionStorage
-
-client = Client(ClientConfig(api_id=12345, api_hash="...", session_storage=InMemorySessionStorage()))
+```console
+python -m pip install miniproto
 ```
 
-`InMemorySessionStorage()` intentionally does not persist credentials; use it only for tests or throwaway clients. For durable clients, provision a unique `MINIPROTO_SESSION_KEY` through your deployment secret manager (or pass constructor key material) before constructing the default client, and choose a distinct `session_path` for each account. `session_storage=` takes precedence over `session_path`. See [Session Security](docs/session-security.md) for key handling, envelope behavior, persisted session data, migration guidance, and redaction rules.
+The package requires Python 3.13 or newer. Release automation targets normal CPython 3.13 and 3.14 plus free-threaded CPython 3.14t, with native wheels for Linux glibc/musl, Windows, and macOS on x86-64 and ARM64. CPython 3.13t and ARMv7 are not supported. Until the first Alpha artifacts are published, contributors can install the checkout with `uv sync --extra dev,docs` and `uv run maturin develop`.
 
-## Raw API
+## Secure minimal quickstart
 
-The generated raw API is pinned to Telegram Schema Layer 228: TDLib is the canonical structural source, and Telegram Desktop supplies the validated layer after exact shared-declaration checks. See [Raw API](docs/raw-api.md) for source provenance and drift, the lazy facade/shard layout, RPC error database details, and current runtime scope.
+This deliberately uses in-memory storage, so it contacts Telegram but does not retain an authorization credential on disk:
 
-## Non-Goals For v1
+```python
+import os
 
-`miniproto` v1 will not implement a full Pyrogram-compatible framework API, smart plugins, complex filters, middleware, conversation FSM, broad admin helpers, stars/payments helpers, web app helpers, stories helpers, business helper layers, calls, or secret chats unless a later roadmap explicitly makes them protocol-core requirements. Raw schema compatibility is different from high-level helper ownership.
+from miniproto import Client, ClientConfig, InMemorySessionStorage, event_loop
 
-## References
 
-The project takes API ergonomics inspiration from Pyrogram and forks, Telethon, Grammers, TDLib, GramJS, mtcute, Telegram Web K/tweb, and Telegram's official MTProto docs, but it does not copy GPL/LGPL reference code. The focus is speed, low memory use, reliable reconnect/update behavior, type hints, documentation, and a clean split between protocol SDK and framework package.
+async def main() -> None:
+    config = ClientConfig(
+        api_id=int(os.environ["MINIPROTO_API_ID"]),
+        api_hash=os.environ["MINIPROTO_API_HASH"],
+        session_storage=InMemorySessionStorage(),
+    )
+    async with Client(config) as client:
+        await client.sign_in_bot(os.environ["MINIPROTO_BOT_TOKEN"])
+        me = await client.get_me()
+        print(f"authorized bot ID: {me.id}")
+
+
+event_loop.run(main())
+```
+
+For a durable client, omit `session_storage`, provide `MINIPROTO_SESSION_KEY` through a secret manager, and use a distinct `session_path` for each account. The default encrypted SQLite storage refuses to initialize without adequate key material; `InMemorySessionStorage` is intentionally ephemeral. See [Session Security](https://edm115.github.io/miniproto/guides/session-security/) before persisting or moving authorization state.
+
+## Authorization and identity
+
+Phone authorization accepts sync or async callbacks for the login code and optional two-step-verification password:
+
+```python
+import getpass
+
+await client.sign_in_phone(
+    "+12025550123",
+    code_callback=lambda: getpass.getpass("Telegram login code: "),
+    password_callback=lambda: getpass.getpass("Two-step password: "),
+)
+me = await client.get_me()
+```
+
+Bots use `await client.sign_in_bot(token)`. Neither flow grants permissions Telegram has not assigned to the account, and no credentialed example is part of the offline test suite.
+
+## Raw Layer 228 calls
+
+The generated raw API exposes every pinned Telegram function and constructor while `Client.invoke()` owns request wrapping, result validation, datacenter migration, eligible retries, flood-wait handling, and optional quick acknowledgements:
+
+```python
+from miniproto.raw import functions
+
+telegram_config = await client.invoke(functions.HelpGetConfig())
+print(telegram_config.this_dc)
+```
+
+The [generated Telegram reference](https://edm115.github.io/miniproto/reference/telegram/) cross-links functions, parameters, result families, constructors, known RPC errors, and Python import names. For a non-idempotent request, do not force `retry=True` unless the operation has an application-owned deduplication guarantee.
+
+## Messages and files
+
+The convenience surface stays intentionally small:
+
+```python
+message = await client.send_message("@your_test_chat", "Hello from miniproto")
+edited = await client.edit_message("@your_test_chat", message.id, "Updated text")
+await client.delete_messages("@your_test_chat", [edited.id], revoke=True)
+
+uploaded = await client.send_file("@your_test_chat", "report.pdf", caption="Nightly report")
+```
+
+`send_message()` and the final send step of `send_file()` can request a transport quick acknowledgement. That receipt means Telegram accepted the encrypted packet for processing; the awaited RPC result remains the operation's completion signal.
+
+## Ordered updates
+
+```python
+from miniproto import Update
+
+
+async def consume_updates() -> None:
+    async for update in client.iter_updates():
+        if isinstance(update, Update):
+            await process(update)
+```
+
+Update recovery persists MTProto state before public delivery, handles difference recovery, and preserves FIFO order for the normalized events it emits. It is not an application-level exactly-once guarantee: durable side effects still need application-owned idempotency, and a blocked iterator task must be cancelled during shutdown.
+
+## Bounded media transfers
+
+```python
+from pathlib import Path
+
+result = await client.download_media(message.media, Path("download.bin"), concurrency=4, verify_plain_hashes=True)
+
+with Path("stream.bin").open("wb") as output:
+    async for chunk in client.iter_download(message.media, concurrency=2, max_in_flight_bytes=4 * 1024 * 1024):
+        output.write(chunk)
+```
+
+Uploads and downloads use bounded request windows, shared byte-weighted per-DC schedulers, dedicated media lanes, migration-aware pools, file-reference refresh, cancellation cleanup, mandatory CDN integrity checks, and optional ordinary `upload.getFileHashes` verification. `iter_download()` yields ordered chunks without materializing the whole file; `download_media()` additionally supports memory, paths, caller-owned destinations, ranges, resuming, caching, and eligible bot multi-session downloads.
+
+## Sessions, native code, and fallbacks
+
+Native miniproto session strings can be exported as a checksummed bearer value or protected with Scrypt and AES-256-GCM. Telethon v1 and Pyrogram compatibility formats are supported with explicitly lossy field mappings. Every session string is a bearer credential, even when encrypted at rest.
+
+The private `miniproto._native` extension provides crypto, MTProto envelope, transport framing, TL, and session hot paths. Public wrappers select capabilities rather than assuming that one successful import implements everything; supported Python/`cryptography` paths remain available when a native capability cannot load. Reproducible benchmark commands and result interpretation are documented in [Performance and benchmarks](https://edm115.github.io/miniproto/guides/performance-and-benchmarks/); no local timing is presented as a universal Telegram throughput claim.
+
+## `miniproto` versus `mpgram`
+
+`miniproto` is the reusable protocol SDK: transports, authorization, sessions, DC migration, raw invocation, generated bindings, updates, peers, core message helpers, and media primitives. The future `mpgram` package is the application-framework boundary for routers, filters, decorators, middleware, commands, plugins, dependency/context helpers, conversations, bound message methods, and broad high-level Telegram ergonomics.
+
+## Documentation and project links
+
+- [Documentation](https://edm115.github.io/miniproto/) — authored guides plus searchable generated Python, Telegram, and Rust reference pages.
+- [Architecture](https://edm115.github.io/miniproto/concepts/architecture/) — ownership boundaries and the Python/schema/Rust execution model.
+- [Development commands](https://edm115.github.io/miniproto/project/development/) — schema, docs, quality, tests, benchmarks, builds, and release diagnostics.
+- [Contributing](CONTRIBUTING.md) — local setup and verification expectations.
+- [Security policy](SECURITY.md) — supported Alpha line, secret handling, and private vulnerability reporting.
+- [Changelog](CHANGELOG.md) — complete `0.1.0` Alpha capability and limitation summary.
+
+The project takes API-design inspiration from Telethon, Pyrogram and its forks, Grammers, TDLib, GramJS, mtcute, Telegram Web K/tweb, and Telegram's official MTProto documentation without copying copyleft implementation code. Telegram controls account permissions, limits, and service behavior; users remain responsible for Telegram's Terms of Service, API rules, account consent, and lawful data handling.

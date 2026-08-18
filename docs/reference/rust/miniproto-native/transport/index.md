@@ -27,7 +27,7 @@ python_visible: false
 
 ## cargo-docs-md rendering
 
-*[miniproto_native](../index.md) / [transport](index.md)*
+*miniproto_native / [transport](index.md)*
 
 ---
 

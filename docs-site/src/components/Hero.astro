@@ -1,0 +1,253 @@
+---
+import DefaultHero from '@astrojs/starlight/components/Hero.astro';
+import mark from '../assets/brand/mark.svg';
+
+interface HeroAction {
+  link: string;
+  text: string;
+  variant?: 'primary' | 'secondary' | 'minimal';
+}
+
+interface HeroRouteData {
+  hero?: {
+    actions?: HeroAction[];
+    tagline?: string;
+    title?: string;
+  };
+  title: string;
+  slug?: string;
+}
+
+const route = Astro.locals.starlightRoute;
+const data = (route.entry?.data ?? { title: '' }) as HeroRouteData;
+const id = route.entry?.id;
+const { title = data.title, tagline, actions = [] } = data.hero || {};
+const isHomepage = id === 'index' || data.slug === '/' || Astro.url.pathname === import.meta.env.BASE_URL;
+const isNotFound = id === '404';
+const resolvedActions = actions.map((action) => ({
+  ...action,
+  link: isNotFound && action.link === '/miniproto/' ? import.meta.env.BASE_URL : action.link,
+}));
+---
+
+{
+  isHomepage || isNotFound ? (
+    <section class="mp-hero" aria-labelledby="mp-hero-title">
+      <div class="mp-hero-copy">
+        <p class="mp-release-status"><span aria-hidden="true" />{isNotFound ? 'Route unavailable' : '0.1.0 Alpha'}</p>
+        <h1 id="mp-hero-title" data-page-title set:html={title} />
+        {tagline && <p class="mp-hero-tagline" set:html={tagline} />}
+        <div class="mp-hero-actions">
+          {resolvedActions.map(({ link, text, variant = 'primary' }) => (
+            <a class:list={['mp-hero-action', variant]} href={link}>{text}</a>
+          ))}
+        </div>
+        {!isNotFound && <p class="mp-hero-compatibility">Python 3.13–3.14 · CPython 3.14t · Linux, macOS, Windows · x86-64 and ARM64</p>}
+      </div>
+      <div class="mp-hero-stage">
+        {!isNotFound && <div class="mp-flow-label mp-flow-python">Python intent</div>}
+        {!isNotFound && <div class="mp-flow-label mp-flow-schema">Layer 228 schema</div>}
+        {!isNotFound && <div class="mp-flow-label mp-flow-rust">Rust fast paths</div>}
+        <div class="mp-mark-field">
+          <span class="mp-mark-halo" aria-hidden="true" />
+          <img src={mark.src} width={mark.width} height={mark.height} alt="Packet Loom mark" />
+        </div>
+        {!isNotFound && <div class="mp-output-label"><span aria-hidden="true" />MTProto</div>}
+      </div>
+    </section>
+  ) : (
+    <DefaultHero {...Astro.props} />
+  )
+}
+
+<style>
+  .mp-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.12fr) minmax(20rem, 0.88fr);
+    gap: clamp(3rem, 7vw, 8rem);
+    align-items: center;
+    min-height: calc(100vh - var(--sl-nav-height));
+    padding: clamp(4rem, 8vw, 8.5rem) 0 clamp(5rem, 10vw, 10rem);
+  }
+
+  .mp-hero-copy {
+    position: relative;
+    z-index: 2;
+  }
+
+  .mp-release-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    width: fit-content;
+    margin: 0 0 1.5rem;
+    color: var(--mp-text-soft);
+    font-size: 0.78rem;
+    font-weight: 750;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .mp-release-status span {
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 0.22rem;
+    background: var(--mp-lime);
+    box-shadow: 0 0.35rem 1rem color-mix(in srgb, var(--mp-lime) 42%, transparent);
+  }
+
+  h1 {
+    max-width: 11ch;
+    margin: 0;
+    color: var(--sl-color-white);
+    font-family: var(--mp-display-font);
+    font-size: clamp(3.4rem, 7.4vw, 6rem);
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 0.96;
+    text-wrap: balance;
+  }
+
+  .mp-hero-tagline {
+    max-width: 62ch;
+    margin: 1.75rem 0 0;
+    color: var(--mp-text-soft);
+    font-size: clamp(1.05rem, 1.65vw, 1.32rem);
+    line-height: 1.65;
+    text-wrap: pretty;
+  }
+
+  .mp-hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    margin-top: 2.25rem;
+  }
+
+  .mp-hero-action {
+    display: inline-flex;
+    align-items: center;
+    min-height: 3.25rem;
+    padding: 0.78rem 1.15rem;
+    border: 1px solid var(--mp-seam-strong);
+    border-radius: 0.82rem;
+    color: var(--sl-color-white);
+    font-weight: 750;
+    line-height: 1;
+    text-decoration: none;
+    transition: translate 180ms cubic-bezier(0.16, 1, 0.3, 1), background-color 180ms ease, color 180ms ease;
+  }
+
+  .mp-hero-action:hover {
+    translate: 0 -0.12rem;
+  }
+
+  .mp-hero-action.primary {
+    border-color: var(--mp-lime);
+    background: var(--mp-lime);
+    color: var(--mp-teal-950);
+  }
+
+  .mp-hero-action.secondary {
+    background: color-mix(in srgb, var(--mp-teal-700) 36%, transparent);
+  }
+
+  .mp-hero-compatibility {
+    margin: 1.3rem 0 0;
+    color: var(--mp-text-faint);
+    font-size: 0.78rem;
+    line-height: 1.5;
+  }
+
+  .mp-hero-stage {
+    position: relative;
+    min-height: 32rem;
+    isolation: isolate;
+  }
+
+  .mp-mark-field {
+    position: absolute;
+    inset: 10% 1% auto auto;
+    width: min(86%, 30rem);
+    aspect-ratio: 1;
+  }
+
+  .mp-mark-field img {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 2rem 3.2rem color-mix(in srgb, var(--mp-teal-950) 30%, transparent));
+  }
+
+  .mp-mark-halo {
+    position: absolute;
+    inset: 11%;
+    border-radius: 42% 58% 53% 47%;
+    background: color-mix(in srgb, var(--mp-lime) 15%, var(--mp-teal-500) 6%);
+    filter: blur(3.2rem);
+    opacity: 0.72;
+  }
+
+  .mp-flow-label,
+  .mp-output-label {
+    position: absolute;
+    z-index: 3;
+    padding: 0.55rem 0.68rem;
+    border: 1px solid var(--mp-seam-strong);
+    border-radius: 0.65rem;
+    background: var(--mp-surface-raised);
+    color: var(--mp-text-soft);
+    font-family: var(--__sl-font-mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    box-shadow: 0 0.7rem 1.8rem color-mix(in srgb, var(--mp-teal-950) 18%, transparent);
+  }
+
+  .mp-flow-python { inset: 10% auto auto -3%; }
+  .mp-flow-schema { inset: 42% auto auto -8%; }
+  .mp-flow-rust { inset: auto auto 13% 2%; }
+
+  .mp-output-label {
+    inset: 43% -3% auto auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    color: var(--mp-teal-950);
+    background: var(--mp-lime);
+    border-color: var(--mp-lime);
+  }
+
+  .mp-output-label span {
+    width: 0.52rem;
+    height: 0.52rem;
+    border-radius: 0.16rem;
+    background: var(--mp-teal-950);
+  }
+
+  @media (max-width: 62rem) {
+    .mp-hero {
+      grid-template-columns: 1fr;
+      min-height: auto;
+      gap: 1.5rem;
+      padding-top: 4.5rem;
+    }
+
+    .mp-hero-copy { text-align: center; }
+    .mp-release-status, .mp-hero-actions { margin-inline: auto; justify-content: center; }
+    h1, .mp-hero-tagline { margin-inline: auto; }
+    .mp-hero-stage { min-height: 24rem; }
+    .mp-mark-field { inset: 0 50% auto auto; width: min(88%, 23rem); translate: 50% 0; }
+    .mp-flow-python { inset: 9% auto auto 6%; }
+    .mp-flow-schema { inset: 44% auto auto 0; }
+    .mp-flow-rust { inset: auto auto 8% 8%; }
+    .mp-output-label { inset: 43% 1% auto auto; }
+  }
+
+  @media (max-width: 32rem) {
+    .mp-hero { padding-top: 3.6rem; }
+    h1 { font-size: clamp(3rem, 15vw, 4.5rem); }
+    .mp-hero-stage { min-height: 21rem; }
+    .mp-flow-label, .mp-output-label { font-size: 0.6rem; }
+  }
+</style>

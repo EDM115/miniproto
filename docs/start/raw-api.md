@@ -28,4 +28,4 @@ Replace the placeholder credentials before running it. The sample is syntactical
 
 `invoke()` applies the configured request timeout, retry policy, eligible flood-wait handling, and data-center migration behavior. It can raise `RpcError` variants, `FloodWait`, `TimeoutError`, or `ConnectionError`; forcing `retry=True` is appropriate only for an idempotent request or an operation Telegram will deduplicate. A transport quick acknowledgement, when requested, confirms packet receipt rather than the RPC result.
 
-For the complete Layer 228 provenance, lazy facade behavior, generated names, and current runtime boundaries, use [Raw API](../raw-api.md). Generated per-symbol reference pages will be added separately; this guide intentionally does not duplicate that reference surface.
+For the complete Layer 228 provenance, lazy facade behavior, generated names, and current runtime boundaries, use [Raw API](../raw-api.md). The generated [Telegram function reference](../reference/telegram/functions/index.md) contains every pinned per-symbol page; this guide intentionally does not duplicate that reference surface.
