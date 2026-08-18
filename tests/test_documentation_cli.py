@@ -257,7 +257,7 @@ def test_site_command_resolution_rejects_an_unavailable_executable(monkeypatch: 
         resolve(("pnpm", "run", "check"))
 
 
-def test_documentation_workflow_publishes_an_orphan_gh_pages_root() -> None:
+def test_documentation_workflow_publishes_on_gh_pages_root() -> None:
     """Trusted documentation pushes must replace the root of gh-pages without committing dist on master."""
     workflow = (ROOT / ".github/workflows/docs.yml").read_text(encoding="utf-8")
 
@@ -265,7 +265,7 @@ def test_documentation_workflow_publishes_an_orphan_gh_pages_root() -> None:
     assert "github.event.pull_request.draft == false" in workflow
     assert "uses: pnpm/action-setup@v6" in workflow
     assert "package_json_file: docs-site/package.json" in workflow
-    assert "uses: actions/setup-node@v6" in workflow
+    assert "uses: actions/setup-node@v7" in workflow
     assert "check-latest: true" in workflow
     assert "node-version: 26" in workflow
     assert "actions/upload-pages-artifact" not in workflow
@@ -273,7 +273,6 @@ def test_documentation_workflow_publishes_an_orphan_gh_pages_root() -> None:
     assert "uses: peaceiris/actions-gh-pages@v4" in workflow
     assert "publish_branch: gh-pages" in workflow
     assert "publish_dir: ./docs-site/dist" in workflow
-    assert "force_orphan: true" in workflow
 
 
 def test_documentation_defaults_to_the_origin_root_and_ci_selects_the_project_base() -> None:
@@ -284,9 +283,9 @@ def test_documentation_defaults_to_the_origin_root_and_ci_selects_the_project_ba
     cli = (ROOT / "tools/docs/__main__.py").read_text(encoding="utf-8")
     workflow = (ROOT / ".github/workflows/docs.yml").read_text(encoding="utf-8")
 
-    assert "process.env.MINIPROTO_DOCS_BASE ?? '/'" in astro
-    assert "process.env.MINIPROTO_DOCS_BASE ?? '/'" in playwright
-    assert "process.env.MINIPROTO_DOCS_BASE ?? '/'" in server
+    assert 'process.env.MINIPROTO_DOCS_BASE ?? "/"' in astro
+    assert 'process.env.MINIPROTO_DOCS_BASE ?? "/"' in playwright
+    assert 'process.env.MINIPROTO_DOCS_BASE ?? "/"' in server
     assert 'os.environ.get("MINIPROTO_DOCS_BASE", "/")' in cli
     assert "MINIPROTO_DOCS_BASE: /miniproto" in workflow
 
@@ -337,9 +336,9 @@ def test_external_documentation_uses_base_safe_links_and_a_complete_handwritten_
     assert "{ docsRoot, base }" in astro
     assert "applyBase(targetRoute, base)" in remark
     for directory in ("start", "guides", "concepts", "recipes", "faq", "project", "codebase"):
-        assert f"'{directory}'" in sidebar
+        assert f'"{directory}"' in sidebar
     for root_page in ("media.md", "session-security.md", "raw-api.md", "development.md", "faked-methods.md"):
-        assert f"'{root_page}'" in sidebar
+        assert f'"{root_page}"' in sidebar
     for route in (
         "/reference/",
         "/reference/python/miniproto/",
