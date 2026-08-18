@@ -112,7 +112,7 @@ jobs:
 
       - name: Sync locked environment
         shell: pwsh
-        run: uv sync --extra dev --frozen
+        run: uv sync --extra dev,docs --frozen
 
       - name: Restore optional encrypted sessions
         shell: pwsh

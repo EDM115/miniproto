@@ -5,6 +5,7 @@ on:
     branches: [master]
   pull_request:
     branches: [master]
+    types: [ready_for_review, synchronize]
   workflow_dispatch:
 
 permissions:
@@ -17,6 +18,7 @@ concurrency:
 jobs:
   python:
     name: Python ${{ matrix.python-version }} quality and tests
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     env:
       MINIPROTO_INTEGRATION: 0
@@ -37,7 +39,7 @@ jobs:
           cache-suffix: py${{ matrix.python-version }}
 
       - name: Sync locked development environment
-        run: uv sync --extra dev --frozen
+        run: uv sync --extra dev,docs --frozen
 
       - name: Ruff format check
         run: uv run ruff format --check .
@@ -58,6 +60,7 @@ jobs:
 
   free-threaded:
     name: Python ${{ matrix.python-version }} free-threaded runtime
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     env:
       PYTHON_GIL: "0"
@@ -80,7 +83,7 @@ jobs:
 
       - name: Sync dependencies and build native extension
         run: |
-          uv sync --python "${{ matrix.python-version }}" --extra dev --frozen
+          uv sync --python "${{ matrix.python-version }}" --extra dev,docs --frozen
           uv run maturin develop --release --locked
 
       - name: Exercise the runtime with the GIL disabled
@@ -112,6 +115,7 @@ jobs:
 
   rust:
     name: Rust 1.97 checks
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -204,7 +208,7 @@ jobs:
 
       - name: Sync and build native extension
         run: |
-          uv sync --python python --extra dev --frozen --no-install-project
+          uv sync --python python --extra dev,docs --frozen --no-install-project
           uv run --no-sync maturin develop --release --locked
 
       - name: Validate and record benchmark environment
@@ -324,7 +328,7 @@ jobs:
 
       - name: Build sdist
         run: |
-          uv sync --extra dev --frozen
+          uv sync --extra dev,docs --frozen
           uv run maturin sdist --out dist
 
       - name: Upload sdist

@@ -77,7 +77,7 @@ def test_benchmark_smoke_runs_on_every_native_platform_with_regular_and_free_thr
     assert "python-version" not in setup_uv["with"]
     build_step = next(step for step in job["steps"] if step.get("name") == "Sync and build native extension")
     build_commands = [line.strip() for line in build_step["run"].splitlines() if line.strip()]
-    assert "uv sync --python python --extra dev --frozen --no-install-project" in build_commands
+    assert "uv sync --python python --extra dev,docs --frozen --no-install-project" in build_commands
     assert "uv run --no-sync maturin develop --release --locked" in build_commands
 
     serialized_steps = "\n".join(str(step) for step in job["steps"])

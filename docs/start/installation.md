@@ -10,11 +10,11 @@ The current alpha workflow is source-first. The package metadata requires Python
 ```pwsh
 git clone https://github.com/EDM115/miniproto.git
 Set-Location miniproto
-uv sync --extra dev
+uv sync --extra dev,docs
 uv run python -c "from miniproto import Client, ClientConfig; print('miniproto import OK')"
 ```
 
-`uv sync --extra dev` prepares the development checkout and its deterministic test/tool dependencies. It does not authorize a Telegram account, create a default session, or make a network call. The import check only proves that the local package can be imported; it is not a native-wheel or live Telegram acceptance claim.
+`uv sync --extra dev,docs` prepares the development checkout and its deterministic test/tool dependencies. It does not authorize a Telegram account, create a default session, or make a network call. The import check only proves that the local package can be imported; it is not a native-wheel or live Telegram acceptance claim.
 
 ## Telegram application credentials
 

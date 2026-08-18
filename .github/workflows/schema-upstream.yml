@@ -20,7 +20,7 @@ jobs:
         run: uv python install 3.14
 
       - name: Sync locked development environment
-        run: uv sync --extra dev --frozen
+        run: uv sync --extra dev,docs --frozen
 
       - name: Compare all upstream schema sources with the pinned snapshot
         run: uv run miniproto-schema-update --check-upstream --report .tmp/schema-upstream/schema-upstream-report.json

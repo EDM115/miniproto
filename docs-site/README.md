@@ -20,7 +20,7 @@ pnpm build
 From the repository root, install the Python documentation group and run the single orchestrator:
 
 ```sh
-uv sync --extra dev --extra docs
+uv sync --extra dev,docs
 uv run miniproto-docs
 uv run miniproto-docs --check
 uv run miniproto-docs --check --build

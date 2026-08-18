@@ -44,17 +44,17 @@ Direct peer ingestion runs under the cache-lock-to-storage-lock order, merges th
 
 ```pwsh
 uv python install 3.14
-uv sync --extra dev --frozen
+uv sync --extra dev,docs --frozen
 uv lock
 cargo check
 ```
 
-Use `uv sync --extra dev` for normal development. Use `uv lock` after dependency metadata changes. Use `cargo check` after Rust crate metadata changes to refresh `Cargo.lock` and validate the workspace.
+Use `uv sync --extra dev,docs` for normal development. Use `uv lock` after dependency metadata changes. Use `cargo check` after Rust crate metadata changes to refresh `Cargo.lock` and validate the workspace.
 `cryptography` and the platform-selected `uvloop`/`winloop` distribution are base dependencies, so normal, development, clean-wheel, and free-threaded environments exercise the same declared runtime set. The `dev` extra contains only development tooling and does not duplicate those runtime packages.
 
 ## Tool CLI Contract
 
-Every executable Python tool is registered under `[project.scripts]`, works from an editable install and a built wheel, and exposes argparse's `--help` without starting its operation or contacting Telegram. `uv sync --extra dev` installs these launchers:
+Every executable Python tool is registered under `[project.scripts]`, works from an editable install and a built wheel, and exposes argparse's `--help` without starting its operation or contacting Telegram. `uv sync --extra dev,docs` installs these launchers:
 
 ```pwsh
 uv run miniproto-schema-generate --help
