@@ -258,7 +258,7 @@ def test_site_command_resolution_rejects_an_unavailable_executable(monkeypatch: 
 
 
 def test_documentation_workflow_publishes_on_gh_pages_root() -> None:
-    """Trusted documentation pushes must replace the root of gh-pages without committing dist on master."""
+    """Trusted documentation pushes must update the gh-pages root while preserving deployment history."""
     workflow = (ROOT / ".github/workflows/docs.yml").read_text(encoding="utf-8")
 
     assert "types: [ready_for_review, synchronize]" in workflow
@@ -273,13 +273,14 @@ def test_documentation_workflow_publishes_on_gh_pages_root() -> None:
     assert "uses: peaceiris/actions-gh-pages@v4" in workflow
     assert "publish_branch: gh-pages" in workflow
     assert "publish_dir: ./docs-site/dist" in workflow
+    assert "force_orphan" not in workflow
 
 
 def test_documentation_defaults_to_the_origin_root_and_ci_selects_the_project_base() -> None:
     """Local and VPS builds must use / while the GitHub project-site workflow explicitly selects /miniproto."""
-    astro = (ROOT / "docs-site/astro.config.mjs").read_text(encoding="utf-8")
+    astro = (ROOT / "docs-site/astro.config.ts").read_text(encoding="utf-8")
     playwright = (ROOT / "docs-site/playwright.config.ts").read_text(encoding="utf-8")
-    server = (ROOT / "docs-site/scripts/serve-static.mjs").read_text(encoding="utf-8")
+    server = (ROOT / "docs-site/scripts/serve-static.ts").read_text(encoding="utf-8")
     cli = (ROOT / "tools/docs/__main__.py").read_text(encoding="utf-8")
     workflow = (ROOT / ".github/workflows/docs.yml").read_text(encoding="utf-8")
 
@@ -288,6 +289,59 @@ def test_documentation_defaults_to_the_origin_root_and_ci_selects_the_project_ba
     assert 'process.env.MINIPROTO_DOCS_BASE ?? "/"' in server
     assert 'os.environ.get("MINIPROTO_DOCS_BASE", "/")' in cli
     assert "MINIPROTO_DOCS_BASE: /miniproto" in workflow
+
+
+def test_documentation_site_uses_oxide_formatting_and_type_aware_linting() -> None:
+    """The frontend quality gate must run Oxfmt and type-aware Oxlint before Astro diagnostics."""
+    package = json.loads((ROOT / "docs-site/package.json").read_text(encoding="utf-8"))
+    formatter = (ROOT / "docs-site/oxfmt.config.ts").read_text(encoding="utf-8")
+    linter = (ROOT / "docs-site/oxlint.config.ts").read_text(encoding="utf-8")
+
+    assert package["scripts"]["format"] == "oxfmt"
+    assert package["scripts"]["format:check"] == "oxfmt --check"
+    assert (
+        package["scripts"]["lint"]
+        == "oxlint astro.config.ts playwright.config.ts oxfmt.config.ts oxlint.config.ts scripts src tests"
+    )
+    assert package["scripts"]["check"] == "pnpm format:check && pnpm lint && astro check"
+    assert package["devDependencies"]["oxfmt"] == "~0.63.0"
+    assert package["devDependencies"]["oxlint"] == "~1.78.0"
+    assert package["devDependencies"]["oxlint-tsgolint"] == "~7.0.2001"
+    assert package["devDependencies"]["typescript"] == "~6.0.3"
+    assert "sortImports: true" in formatter
+    assert '"src/**/*.astro"' in formatter
+    assert "typeAware: true" in linter
+    assert "denyWarnings: true" in linter
+    assert 'plugins: ["typescript", "unicorn", "oxc", "eslint", "import", "node", "promise"]' in linter
+
+
+def test_documentation_site_uses_typed_jiti_clis_with_help_and_progress_contracts() -> None:
+    """Every maintained Node-side CLI must be typed, expose help, and announce long-running work."""
+    site = ROOT / "docs-site"
+    package = json.loads((site / "package.json").read_text(encoding="utf-8"))
+    maintained_mjs = [
+        path.relative_to(site).as_posix()
+        for path in site.rglob("*.mjs")
+        if not {".astro", "dist", "node_modules", "playwright-report", "test-results"}.intersection(path.parts)
+    ]
+
+    assert maintained_mjs == []
+    assert package["scripts"]["brand:build"] == "jiti scripts/build-brand.ts"
+    assert package["scripts"]["brand:check"] == "jiti scripts/build-brand.ts --check"
+    assert package["scripts"]["serve:static"] == "jiti scripts/serve-static.ts"
+    assert package["devDependencies"]["@types/node"] == "~26.2.0"
+    assert package["devDependencies"]["jiti"] == "~2.7.0"
+    assert (site / "astro.config.ts").is_file()
+    assert (site / "src/remark-local-markdown-links.ts").is_file()
+    assert (site / "src/sidebar.ts").is_file()
+
+    brand = (site / "scripts/build-brand.ts").read_text(encoding="utf-8")
+    server = (site / "scripts/serve-static.ts").read_text(encoding="utf-8")
+    assert "Usage: jiti scripts/build-brand.ts" in brand
+    assert "Packet Loom brand derivatives built" in brand
+    assert "Packet Loom brand derivatives are current" in brand
+    assert "Usage: jiti scripts/serve-static.ts" in server
+    assert "Serving ${root}" in server
 
 
 def test_documentation_container_is_a_root_based_unprivileged_static_image() -> None:
@@ -327,9 +381,9 @@ def test_documentation_container_is_a_root_based_unprivileged_static_image() -> 
 
 def test_external_documentation_uses_base_safe_links_and_a_complete_handwritten_sidebar() -> None:
     """External Markdown content must not depend on trailing-slash redirects or Starlight autogeneration."""
-    astro = (ROOT / "docs-site/astro.config.mjs").read_text(encoding="utf-8")
-    remark = (ROOT / "docs-site/src/remark-local-markdown-links.mjs").read_text(encoding="utf-8")
-    sidebar = (ROOT / "docs-site/src/sidebar.mjs").read_text(encoding="utf-8")
+    astro = (ROOT / "docs-site/astro.config.ts").read_text(encoding="utf-8")
+    remark = (ROOT / "docs-site/src/remark-local-markdown-links.ts").read_text(encoding="utf-8")
+    sidebar = (ROOT / "docs-site/src/sidebar.ts").read_text(encoding="utf-8")
 
     assert "buildDocumentationSidebar" in astro
     assert "autogenerate:" not in astro

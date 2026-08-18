@@ -69,6 +69,18 @@ def test_release_facing_documents_cover_the_alpha_contract() -> None:
         assert required in security
 
 
+def test_contribution_policy_requires_draft_first_pull_requests() -> None:
+    """Repository and site guidance must explain when pull-request automation begins."""
+    repository_policy = (REPOSITORY_ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
+    site_policy = (REPOSITORY_ROOT / "docs/project/contributing.md").read_text(encoding="utf-8")
+
+    for policy in (repository_policy, site_policy):
+        assert "Open every pull request as a draft" in policy
+        assert "Draft → Ready for review" in policy
+        assert "ready_for_review" in policy
+        assert "synchronize" in policy
+
+
 def test_readme_python_examples_are_syntactically_valid() -> None:
     """Compile every README Python fence, including intentionally contextual async fragments."""
     readme = (REPOSITORY_ROOT / "README.md").read_text(encoding="utf-8")
@@ -838,7 +850,7 @@ def test_reference_manifest_and_tree_are_deterministic(tmp_path: Path) -> None:
         crate="miniproto-native",
         python_visible=True,
     )
-    tools = {"griffe2md": "1.5.0", "griffe": "2.1.0"}
+    tools = {"griffe2md": "1.5.0", "griffe": "2.2.0"}
     sources = {"src/miniproto/client.py": "abc123"}
 
     forward = build_reference_manifest((first, second), tool_versions=tools, source_hashes=sources)

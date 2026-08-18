@@ -92,6 +92,8 @@ class PendingRequest:
         quick_ack_callback: Optional synchronous callback for the first receipt.
         quick_ack_received: Whether a non-stale receipt was already delivered.
         quick_ack_waiters: Registered receipt correlations awaiting removal.
+        expected_pong_ping_id: Ping identifier that a correlated Pong must echo,
+            or ``None`` when this is not a ping request.
     """
 
     body: bytes | object
@@ -105,6 +107,7 @@ class PendingRequest:
     quick_ack_callback: Callable[[QuickAckReceipt], None] | None = None
     quick_ack_received: bool = False
     quick_ack_waiters: list[QuickAckWaiter] = field(default_factory=list)
+    expected_pong_ping_id: int | None = None
 
 
 @dataclass(slots=True)
@@ -388,6 +391,7 @@ class MTProtoSender:
                 request_timeout=request_timeout,
                 quick_ack=quick_ack or quick_ack_callback is not None,
                 quick_ack_callback=quick_ack_callback,
+                expected_pong_ping_id=None,
             )
         except asyncio.CancelledError:
             outcome = "cancelled"
@@ -414,6 +418,7 @@ class MTProtoSender:
         content_related: bool = True,
         retry_safe: bool = False,
         request_timeout: float | None = None,
+        expected_pong_ping_id: int | None = None,
     ) -> object:
         """Issue an internal service request without quick-ACK registration.
 
@@ -425,6 +430,8 @@ class MTProtoSender:
                 defaults to ``False``.
             request_timeout: Optional caller wait limit in seconds, or ``None``
                 to wait until completion or lifecycle failure.
+            expected_pong_ping_id: Ping identifier a Pong must echo, or ``None``
+                when this service request does not expect a Pong.
         """
         return await self._request_core(
             body,
@@ -433,6 +440,7 @@ class MTProtoSender:
             request_timeout=request_timeout,
             quick_ack=False,
             quick_ack_callback=None,
+            expected_pong_ping_id=expected_pong_ping_id,
         )
 
     async def _request_core(
@@ -444,6 +452,7 @@ class MTProtoSender:
         request_timeout: float | None,
         quick_ack: bool,
         quick_ack_callback: Callable[[QuickAckReceipt], None] | None,
+        expected_pong_ping_id: int | None = None,
     ) -> object:
         """Connect, register a pending request, send it, and await its future.
 
@@ -455,6 +464,8 @@ class MTProtoSender:
             quick_ack: Whether the encrypted attempt should request a quick ACK.
             quick_ack_callback: Callback for the first valid quick-ACK receipt,
                 or ``None`` to observe no receipt callback.
+            expected_pong_ping_id: Ping identifier a Pong must echo, or ``None``
+                when this request is not a ping.
         """
         await self.connect()
         loop = asyncio.get_running_loop()
@@ -466,6 +477,7 @@ class MTProtoSender:
             retry_safe=retry_safe,
             quick_ack=quick_ack,
             quick_ack_callback=quick_ack_callback,
+            expected_pong_ping_id=expected_pong_ping_id,
         )
         await self._send_pending(pending)
         try:
@@ -535,6 +547,7 @@ class MTProtoSender:
             content_related=False,
             retry_safe=True,
             request_timeout=self.transport_config.read_timeout,
+            expected_pong_ping_id=ping_id,
         )
         if not isinstance(response, Pong):
             raise TransportError("ping returned a non-pong response")
@@ -812,19 +825,21 @@ class MTProtoSender:
             message: Outer encrypted message whose containers and gzip wrappers
                 are fully decoded before any incoming-state mutation commits.
         """
-        messages: list[tuple[DecodedEncryptedMessage, object]] = []
+        messages: list[tuple[DecodedEncryptedMessage, object, int | None]] = []
 
-        async def collect(candidate: DecodedEncryptedMessage) -> None:
+        async def collect(candidate: DecodedEncryptedMessage, parent_container_msg_id: int | None = None) -> None:
             """Recursively unpack gzip/container bodies into a validation batch.
 
             Args:
                 candidate: One outer or container-leaf message to decode and
                     append before recursively visiting its children.
+                parent_container_msg_id: Immediate enclosing container message
+                    ID, or ``None`` for the outer encrypted message.
             """
             body = decode_message_body(candidate.body)
             while isinstance(body, GzipPacked):
                 body = decode_message_body(await _unpack_gzip(body))
-            messages.append((candidate, body))
+            messages.append((candidate, body, parent_container_msg_id))
             if isinstance(body, MessageContainer):
                 for item in body.messages:
                     await collect(
@@ -836,18 +851,19 @@ class MTProtoSender:
                             seq_no=item.seq_no,
                             body=_message_body_bytes(item.body),
                             padding=b"",
-                        )
+                        ),
+                        candidate.msg_id,
                     )
 
         await collect(message)
         now = time.time()
         seen: set[int] = set()
-        outer, outer_body = messages[0]
+        outer, outer_body, _outer_parent = messages[0]
         self.state.validate_incoming(outer.msg_id, session_id=outer.session_id, now=now)
         self._validate_bad_message_correlation(outer_body)
         seen.add(outer.msg_id)
         provisional_time_offset = None if self.state.time_trusted else (outer.msg_id >> 32) - now
-        for candidate, body in messages[1:]:
+        for candidate, body, parent_container_msg_id in messages[1:]:
             if candidate.msg_id in seen:
                 raise ProtocolValidationError("duplicate_msg_id_in_container", context={"msg_id": candidate.msg_id})
             self.state.validate_incoming(
@@ -857,9 +873,14 @@ class MTProtoSender:
                 provisional_time_offset=provisional_time_offset,
                 provisional_seen_msg_ids=seen,
             )
+            if parent_container_msg_id is not None and candidate.msg_id >= parent_container_msg_id:
+                raise ProtocolValidationError(
+                    "container_child_msg_id_not_less",
+                    context={"msg_id": candidate.msg_id, "container_msg_id": parent_container_msg_id},
+                )
             self._validate_bad_message_correlation(body)
             seen.add(candidate.msg_id)
-        for candidate, _body in messages:
+        for candidate, _body, _parent_container_msg_id in messages:
             self.state.commit_incoming(candidate.msg_id, content_related=candidate.seq_no % 2 == 1, now=now)
 
     def _validate_bad_message_correlation(self, body: object) -> None:
@@ -939,7 +960,12 @@ class MTProtoSender:
             return
         if isinstance(body, Pong):
             pending = self._pending.get(body.msg_id)
-            if pending is not None and not pending.future.done():
+            if (
+                pending is not None
+                and not pending.future.done()
+                and pending.expected_pong_ping_id is not None
+                and body.ping_id == pending.expected_pong_ping_id
+            ):
                 self._remove_pending(pending, matched_msg_id=body.msg_id)
                 pending.future.set_result(body)
             return

@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "miniproto"
-version = "0.0.1"
+version = "0.1.0"
 description = "Async-first MTProto client core for Python with bundled Rust acceleration"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -12,7 +12,7 @@ license = { file = "LICENSE" }
 authors = [{ name = "EDM115", email = "miniproto@edm115.dev" }]
 keywords = ["telegram", "mtproto", "asyncio", "pyo3", "rust"]
 classifiers = [
-  "Development Status :: 2 - Pre-Alpha",
+  "Development Status :: 3 - Alpha",
   "Framework :: AsyncIO",
   "Intended Audience :: Developers",
   "License :: OSI Approved :: MIT License",
@@ -33,11 +33,11 @@ dev = [
   "maturin==1.14.1,<2.0",
   "pytest==9.1.1",
   "PyYAML==6.0.3",
-  "ruff==0.16.2",
-  "ty==0.0.70",
+  "ruff==0.16.3",
+  "ty==0.0.72",
 ]
 docs = [
-  "griffe==2.1.0",
+  "griffe==2.2.0",
   "griffe2md==1.5.0",
 ]
 

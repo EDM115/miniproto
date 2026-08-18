@@ -1,7 +1,7 @@
-import { defineCollection } from "astro:content";
+import { docsSchema } from "@astrojs/starlight/schema";
 import { glob } from "astro/loaders";
 import { z } from "astro/zod";
-import { docsSchema } from "@astrojs/starlight/schema";
+import { defineCollection } from "astro:content";
 
 const documentationLanguage = z.enum(["python", "telegram", "rust"]);
 const documentationKind = z.enum([
@@ -59,7 +59,9 @@ const generatedMetadata = z
     python_visible: z.boolean().optional(),
   })
   .superRefine((data, context) => {
-    if (!data.generated) return;
+    if (!data.generated) {
+      return;
+    }
 
     for (const field of [
       "language",

@@ -186,6 +186,41 @@ def test_scheduler_releases_a_grant_cancelled_before_the_waiter_resumes() -> Non
     asyncio.run(run())
 
 
+def test_scheduler_cancellation_after_rebind_removes_the_destination_waiter() -> None:
+    async def run() -> None:
+        registry = MediaSchedulerRegistry(
+            download_max_bytes=MEDIA_SCHEDULER_UNIT, upload_max_bytes=MEDIA_SCHEDULER_UNIT
+        )
+        transfer = registry.open_transfer(dc_id=2, direction="download", total_size=1024)
+        destination_blocker = registry.open_transfer(dc_id=4, direction="download", total_size=1024)
+        source_permit = await transfer.acquire(MEDIA_SCHEDULER_UNIT)
+        destination_permit = await destination_blocker.acquire(MEDIA_SCHEDULER_UNIT)
+        waiter = asyncio.create_task(transfer.acquire(MEDIA_SCHEDULER_UNIT))
+        await asyncio.sleep(0)
+        source_scheduler = cast(Any, transfer)._scheduler
+
+        await transfer.rebind(4)
+        destination_scheduler = cast(Any, transfer)._scheduler
+        assert source_scheduler.snapshot().queued_bytes == 0
+        assert destination_scheduler.snapshot().queued_bytes == MEDIA_SCHEDULER_UNIT
+
+        waiter.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await waiter
+        assert source_scheduler.snapshot().queued_bytes == 0
+        assert destination_scheduler.snapshot().queued_bytes == 0
+
+        source_permit.release()
+        destination_permit.release()
+        assert source_scheduler.snapshot().active_bytes == 0
+        assert destination_scheduler.snapshot().active_bytes == 0
+        await transfer.close()
+        await destination_blocker.close()
+        assert registry.scheduler_count == 0
+
+    asyncio.run(run())
+
+
 def test_scheduler_rejects_request_larger_than_configured_hard_cap() -> None:
     async def run() -> None:
         registry = MediaSchedulerRegistry(

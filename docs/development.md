@@ -129,11 +129,15 @@ For frontend-only iteration, use the exact package scripts directly:
 
 ```pwsh
 pnpm --dir docs-site install --frozen-lockfile
+pnpm --dir docs-site format:check
+pnpm --dir docs-site lint
 pnpm --dir docs-site check
 pnpm --dir docs-site build
 pnpm --dir docs-site test:site
 pnpm --dir docs-site dev
 ```
+
+Oxfmt checks the frontend formats it supports and deliberately excludes `.astro` plus generated/canonical SVG assets. Oxlint is scoped to maintained `.ts`; `astro check` remains authoritative for Astro templates and external Markdown content. Executable documentation helpers use typed TypeScript through Jiti and expose side-effect-free `--help`.
 
 Packet Loom is the provisional identity while the community poll remains open. `pnpm --dir docs-site brand:check` proves that every derived asset still matches the canonical concept-03 source without editing its inner SVG. If the poll selects another family, replace the canonical source and regenerate derivatives through the same isolated brand script instead of embedding concept geometry in unrelated components.
 
@@ -142,12 +146,14 @@ Packet Loom is the provisional identity while the community poll remains open. `
 ```pwsh
 uv run ruff format .
 cargo fmt
+pnpm --dir docs-site format
 ```
 
 ## Lint
 
 ```pwsh
 uv run ruff check .
+pnpm --dir docs-site lint
 cargo clippy --all-targets --all-features -- -D warnings
 ```
 

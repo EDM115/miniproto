@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.media.scheduler.MediaPermit"
 source_path: "src/miniproto/media/scheduler.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/scheduler.py#L89"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/scheduler.py#L93"
 module: "miniproto.media.scheduler"
 ---
 

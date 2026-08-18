@@ -1,10 +1,20 @@
 import { createReadStream } from "node:fs";
+import type { Stats } from "node:fs";
 import { stat } from "node:fs/promises";
 import { createServer } from "node:http";
+import type { ServerResponse } from "node:http";
 import path from "node:path";
 import process from "node:process";
 
-const MIME_TYPES = new Map([
+type CliArguments = {
+  help: boolean;
+  root?: string;
+  base?: string;
+  host?: string;
+  port?: string;
+};
+
+const MIME_TYPES = new Map<string, string>([
   [".css", "text/css; charset=utf-8"],
   [".html", "text/html; charset=utf-8"],
   [".ico", "image/x-icon"],
@@ -20,9 +30,16 @@ const MIME_TYPES = new Map([
 const args = parseArgs(process.argv.slice(2));
 if (args.help) {
   console.log(
-    "Usage: node scripts/serve-static.mjs [--root PATH] [--base PATH] [--host HOST] [--port PORT]",
+    "Usage: jiti scripts/serve-static.ts [--root PATH] [--base PATH] [--host HOST] [--port PORT]",
   );
   console.log("Serve the built documentation artifact under its configured base path.");
+  console.log("");
+  console.log("Options:");
+  console.log("  --root PATH  Static artifact directory (default: dist).");
+  console.log("  --base PATH  URL base path (default: MINIPROTO_DOCS_BASE or /).");
+  console.log("  --host HOST  Listening host (default: 127.0.0.1).");
+  console.log("  --port PORT  Listening port from 1 to 65535 (default: 4321).");
+  console.log("  -h, --help  Show this help message and exit.");
   process.exit(0);
 }
 
@@ -49,7 +66,7 @@ const server = createServer(async (request, response) => {
     }
 
     let filePath = candidate;
-    let fileStat;
+    let fileStat: Stats;
     try {
       fileStat = await stat(filePath);
       if (fileStat.isDirectory()) {
@@ -83,45 +100,60 @@ server.listen(port, host, () => {
   console.log(`Serving ${root} at http://${host}:${port}${base}`);
 });
 
-function parseArgs(values) {
-  const parsed = {};
+function parseArgs(values: string[]): CliArguments {
+  const parsed: CliArguments = { help: false };
   for (let index = 0; index < values.length; index += 1) {
     const argument = values[index];
     if (argument === "--help" || argument === "-h") {
       parsed.help = true;
       continue;
     }
-    if (!argument.startsWith("--")) throw new Error(`Unexpected argument: ${argument}`);
+    if (!argument.startsWith("--")) {
+      throw new Error(`Unexpected argument: ${argument}`);
+    }
     const name = argument.slice(2);
     const value = values[index + 1];
-    if (!value || value.startsWith("--")) throw new Error(`Missing value for ${argument}`);
-    parsed[name] = value;
+    if (!value || value.startsWith("--")) {
+      throw new Error(`Missing value for ${argument}`);
+    }
+    if (name === "root" || name === "base" || name === "host" || name === "port") {
+      parsed[name] = value;
+    } else {
+      throw new Error(`Unexpected option: ${argument}`);
+    }
     index += 1;
   }
   return parsed;
 }
 
-function normalizeBase(value) {
+function normalizeBase(value: string): string {
   const normalized = value.trim().replace(/^\/+|\/+$/g, "");
   return normalized === "" ? "/" : `/${normalized}/`;
 }
 
-function parsePort(value) {
+function parsePort(value: string): number {
   const portNumber = Number.parseInt(value, 10);
-  if (!Number.isInteger(portNumber) || portNumber < 1 || portNumber > 65535)
+  if (!Number.isInteger(portNumber) || portNumber < 1 || portNumber > 65535) {
     throw new Error(`Invalid port: ${value}`);
+  }
   return portNumber;
 }
 
-function stripBase(pathname, basePath) {
-  if (basePath === "/") return pathname;
+function stripBase(pathname: string, basePath: string): string | undefined {
+  if (basePath === "/") {
+    return pathname;
+  }
   const withoutTrailingSlash = basePath.slice(0, -1);
-  if (pathname === withoutTrailingSlash) return "/";
-  if (!pathname.startsWith(basePath)) return undefined;
+  if (pathname === withoutTrailingSlash) {
+    return "/";
+  }
+  if (!pathname.startsWith(basePath)) {
+    return undefined;
+  }
   return `/${pathname.slice(basePath.length)}`;
 }
 
-function sendNotFound(response) {
+function sendNotFound(response: ServerResponse): void {
   response.statusCode = 404;
   response.end("Not found");
 }

@@ -1,22 +1,24 @@
-import { defineConfig } from "astro/config";
+import { fileURLToPath } from "node:url";
+
 import { unified } from "@astrojs/markdown-remark";
 import starlight from "@astrojs/starlight";
-import { fileURLToPath } from "node:url";
-import remarkLocalMarkdownLinks from "./src/remark-local-markdown-links.mjs";
-import { buildDocumentationSidebar } from "./src/sidebar.mjs";
+import { defineConfig } from "astro/config";
+
+import remarkLocalMarkdownLinks from "./src/remark-local-markdown-links.ts";
+import { buildDocumentationSidebar } from "./src/sidebar.ts";
 
 const site = process.env.MINIPROTO_DOCS_SITE ?? "https://edm115.github.io";
 const base = normaliseBase(process.env.MINIPROTO_DOCS_BASE ?? "/");
 const docsRoot = fileURLToPath(new URL("../docs", import.meta.url));
-const assetPath = (path) => (base === "/" ? `/${path}` : `${base}/${path}`);
-const absoluteAssetUrl = (path) => new URL(assetPath(path), site).href;
+const assetPath = (asset: string): string => (base === "/" ? `/${asset}` : `${base}/${asset}`);
+const absoluteAssetUrl = (asset: string): string => new URL(assetPath(asset), site).href;
 
 /**
  * Convert the hosting path into Astro's leading-slash, no-trailing-slash form.
  *
  * An empty value and `/` both deliberately mean a site hosted at the origin.
  */
-function normaliseBase(value) {
+function normaliseBase(value: string): string {
   const trimmed = value.trim().replace(/^\/+|\/+$/g, "");
   return trimmed === "" ? "/" : `/${trimmed}`;
 }
@@ -81,8 +83,6 @@ export default defineConfig({
         },
       },
       pagefind: {
-        showEmptyFilters: false,
-        openFilters: ["language", "kind"],
         ranking: {
           pageLength: 0.18,
           termFrequency: 0.2,

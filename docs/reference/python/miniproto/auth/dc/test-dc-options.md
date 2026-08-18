@@ -15,5 +15,5 @@ module: "miniproto.auth.dc"
 ## `miniproto.auth.dc.TEST_DC_OPTIONS`
 
 ```python
-TEST_DC_OPTIONS: tuple[DCOption, ...] = tuple((DCOption(id=dc_id, ip_address=f'test-dc-{dc_id}.telegram.local', port=443, static=True)) for dc_id in (range(1, 6)))
+TEST_DC_OPTIONS: tuple[DCOption, ...] = tuple(DCOption(id=dc_id, ip_address=f'test-dc-{dc_id}.telegram.local', port=443, static=True) for dc_id in range(1, 6))
 ```

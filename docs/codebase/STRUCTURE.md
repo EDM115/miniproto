@@ -18,7 +18,7 @@ generated: false
 | `tools/bench/`       | Offline, live, matrix, compatibility, and reporting benchmarks                                          | `src/miniproto/_cli.py`, `docs/development.md`                   |
 | `tests/`             | Offline unit/fake-server/workflow/docs tests plus gated `integration/` and `stress/` suites             | `pyproject.toml`, `tests/integration/README.md`                  |
 | `docs/`              | Canonical authored Markdown, internal `THOUGHTS.md`, and committed generated reference pages            | `docs/reference-surface.toml`, `docs-site/src/content.config.ts` |
-| `docs-site/`         | Astro/Starlight presentation, Pagefind, assets, browser acceptance, and ignored static output           | `docs-site/package.json`, `docs-site/astro.config.mjs`           |
+| `docs-site/`         | Astro/Starlight presentation, Pagefind, assets, browser acceptance, and ignored static output           | `docs-site/package.json`, `docs-site/astro.config.ts`            |
 | `.github/workflows/` | CI, docs, schema-upstream, live-benchmark, and dispatch-only wheel automation                           | `.github/workflows/`                                             |
 | `plans/`             | Historical and active implementation plans; not proof of runtime behavior by themselves                 | `plans/README.md`, `PROGRESS.md`                                 |
 

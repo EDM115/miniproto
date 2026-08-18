@@ -15,6 +15,16 @@ const PUBLIC_SITE = process.env.MINIPROTO_DOCS_SITE ?? "https://edm115.github.io
 const sitePath = (route: string) => `${PUBLIC_BASE}${route.replace(/^\/+/, "")}`;
 const siteUrl = (route: string) => new URL(sitePath(route), PUBLIC_SITE).href;
 
+type PagefindData = {
+  meta?: { title?: string };
+  url?: string;
+  filters?: Record<string, string[]>;
+};
+
+type PagefindEntry = {
+  data: () => Promise<PagefindData>;
+};
+
 test("homepage explains the product and exposes the Packet Loom identity", async ({ page }) => {
   await page.goto("./");
 
@@ -37,17 +47,17 @@ test("homepage explains the product and exposes the Packet Loom identity", async
   );
   const pythonReferencePath = await page
     .getByRole("link", { name: /Python reference/i })
-    .evaluate((link) => new URL((link as HTMLAnchorElement).href).pathname);
+    .evaluate((link) => new URL(link.getAttribute("href") ?? "", document.baseURI).pathname);
   const rustReferencePath = await page
     .getByRole("link", { name: /Rust reference/i })
-    .evaluate((link) => new URL((link as HTMLAnchorElement).href).pathname);
+    .evaluate((link) => new URL(link.getAttribute("href") ?? "", document.baseURI).pathname);
   expect(pythonReferencePath).toBe(sitePath("reference/python/miniproto/"));
   expect(rustReferencePath).toBe(sitePath("reference/rust/miniproto-native/"));
 
   const escapingInternalLinks = await page.locator("a[href]").evaluateAll(
     (anchors, base) =>
       anchors.flatMap((anchor) => {
-        const url = new URL((anchor as HTMLAnchorElement).href);
+        const url = new URL(anchor.getAttribute("href") ?? "", document.baseURI);
         return url.origin === window.location.origin && !url.pathname.startsWith(base)
           ? [url.pathname]
           : [];
@@ -80,7 +90,7 @@ test("source-friendly Markdown links resolve to portable site routes", async ({ 
     .getByRole("main")
     .getByRole("link", { name: "Functions", exact: true });
   const telegramFunctionsPath = await telegramFunctions.evaluate(
-    (link) => new URL((link as HTMLAnchorElement).href).pathname,
+    (link) => new URL(link.getAttribute("href") ?? "", document.baseURI).pathname,
   );
   expect(telegramFunctionsPath).toBe(sitePath("reference/telegram/functions/"));
   await telegramFunctions.click();
@@ -131,11 +141,11 @@ test("Pagefind indexes every reference language, parameter terms, prose, and fil
     for (const term of terms) {
       const response = await pagefind.search(term);
       results[term] = await Promise.all(
-        response.results.slice(0, 12).map(async (entry: { data: () => Promise<any> }) => {
+        response.results.slice(0, 12).map(async (entry: PagefindEntry) => {
           const data = await entry.data();
           return {
-            title: String(data.meta?.title ?? ""),
-            url: String(data.url ?? ""),
+            title: data.meta?.title ?? "",
+            url: data.url ?? "",
             filters: data.filters ?? {},
           };
         }),
@@ -145,7 +155,7 @@ test("Pagefind indexes every reference language, parameter terms, prose, and fil
       filters: { language: "telegram" },
     });
     const telegramResults = await Promise.all(
-      telegramResponse.results.slice(0, 12).map(async (entry: { data: () => Promise<any> }) => {
+      telegramResponse.results.slice(0, 12).map(async (entry: PagefindEntry) => {
         const data = await entry.data();
         return data.filters?.language ?? [];
       }),

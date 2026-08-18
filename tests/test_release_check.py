@@ -116,6 +116,30 @@ def test_fail_fast_preserves_exit_code_and_keep_going_collects_later_failures(tm
     assert [result["status"] for result in complete["stages"]] == ["passed", "failed", "failed"]
 
 
+def test_release_stage_runner_prints_live_progress_for_running_pending_and_failed_stages(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The multi-minute release CLI must expose stage progress before its final JSON report."""
+    stages = (
+        Stage("first", ("first",)),
+        Stage("docs", None, pending_reason="not configured"),
+        Stage("last", ("last",)),
+    )
+
+    run_stages(
+        stages,
+        ReleaseConfig("offline", True, tmp_path),
+        runner=lambda stage, _environment: 0 if stage.name == "first" else 7,
+    )
+
+    output = capsys.readouterr().out
+    assert "[release-check 1/3] first: running" in output
+    assert "[release-check 1/3] first: passed in" in output
+    assert "[release-check 2/3] docs: pending - not configured" in output
+    assert "[release-check 3/3] last: running" in output
+    assert "[release-check 3/3] last: failed with exit code 7 in" in output
+
+
 def test_pending_stage_is_reported_without_invoking_runner(tmp_path: Path) -> None:
     stage = Stage("docs", None, pending_reason="Wave 5 documentation tooling is not present")
 

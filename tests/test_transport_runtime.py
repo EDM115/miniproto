@@ -456,7 +456,7 @@ def test_sender_prevalidates_container_before_committing_any_child() -> None:
             auth_key_id=state.auth_key_id,
             server_salt=SERVER_SALT,
             session_id=SESSION_ID,
-            msg_id=(1_000 << 32) | 1,
+            msg_id=(1_003 << 32) | 1,
             seq_no=1,
             body=encode_message_body(
                 MessageContainer(
@@ -473,6 +473,85 @@ def test_sender_prevalidates_container_before_committing_any_child() -> None:
         assert tuple(state._seen_msg_ids) == ()
         assert state.pending_ack_count == 0
         assert sender._incoming.empty()
+
+    event_loop.run(run())
+
+
+def test_sender_rejects_a_container_child_not_older_than_its_parent_without_mutation() -> None:
+    async def run() -> None:
+        timestamp = int(time.time())
+        state = MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID)
+        sender = MTProtoSender(ConnectionEndpoint("127.0.0.1", 443), TransportConfig(), state)
+        outer_msg_id = (timestamp << 32) | 1
+        message = DecodedEncryptedMessage(
+            auth_key_id=state.auth_key_id,
+            server_salt=SERVER_SALT,
+            session_id=SESSION_ID,
+            msg_id=outer_msg_id,
+            seq_no=1,
+            body=encode_message_body(
+                MessageContainer(
+                    messages=(MessageContainerItem(msg_id=(timestamp << 32) | 5, seq_no=1, body=MsgsAck(())),)
+                )
+            ),
+            padding=b"",
+        )
+
+        with pytest.raises(ValueError, match="container_child_msg_id_not_less"):
+            await sender._prevalidate_and_commit_incoming(message)
+
+        assert tuple(state._seen_msg_ids) == ()
+        assert state.pending_ack_count == 0
+        assert sender._incoming.empty()
+
+    event_loop.run(run())
+
+
+def test_sender_does_not_complete_ping_for_a_mismatched_pong_ping_id() -> None:
+    async def run() -> None:
+        state = MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID)
+        sender = MTProtoSender(ConnectionEndpoint("127.0.0.1", 443), TransportConfig(), state)
+        request_msg_id = 101
+        expected_ping_id = 202
+        future: asyncio.Future[object] = asyncio.get_running_loop().create_future()
+        pending = PendingRequest(
+            body=b"ping",
+            content_related=False,
+            future=future,
+            aliases={request_msg_id},
+            expected_pong_ping_id=expected_ping_id,
+        )
+        sender._pending[request_msg_id] = pending
+
+        mismatched = DecodedEncryptedMessage(
+            auth_key_id=state.auth_key_id,
+            server_salt=SERVER_SALT,
+            session_id=SESSION_ID,
+            msg_id=301,
+            seq_no=0,
+            body=encode_message_body(Pong(msg_id=request_msg_id, ping_id=expected_ping_id + 1)),
+            padding=b"",
+        )
+        await sender._handle_incoming(mismatched, committed=True)
+
+        assert not future.done()
+        assert sender._pending == {request_msg_id: pending}
+        assert pending.aliases == {request_msg_id}
+
+        matched = DecodedEncryptedMessage(
+            auth_key_id=state.auth_key_id,
+            server_salt=SERVER_SALT,
+            session_id=SESSION_ID,
+            msg_id=305,
+            seq_no=0,
+            body=encode_message_body(Pong(msg_id=request_msg_id, ping_id=expected_ping_id)),
+            padding=b"",
+        )
+        await sender._handle_incoming(matched, committed=True)
+
+        assert future.result() == Pong(msg_id=request_msg_id, ping_id=expected_ping_id)
+        assert sender._pending == {}
+        assert pending.aliases == set()
 
     event_loop.run(run())
 
@@ -502,7 +581,7 @@ def test_sender_rejects_first_container_child_outside_outer_provisional_time_wit
                 MessageContainer(
                     messages=(
                         MessageContainerItem(
-                            msg_id=(1_000 << 32) | 5,
+                            msg_id=(999 << 32) | 5,
                             seq_no=1,
                             body=NewSessionCreated(first_msg_id=111, unique_id=7, server_salt=new_salt),
                         ),

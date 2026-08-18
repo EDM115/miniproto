@@ -21,7 +21,7 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
   webServer: {
-    command: "node scripts/serve-static.mjs --host 127.0.0.1 --port 4321",
+    command: "pnpm exec jiti scripts/serve-static.ts --host 127.0.0.1 --port 4321",
     url: `${origin}${base}`,
     reuseExistingServer: false,
     timeout: 120_000,

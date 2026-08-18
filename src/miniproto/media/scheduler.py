@@ -55,12 +55,16 @@ class _Waiter:
         priority: Scheduling priority for this individual acquire.
         queued_at: Monotonic enqueue timestamp used for wait metrics.
         future: Future completed with the resulting permit or cancelled on close.
+        scheduler: Scheduler that currently owns this queued request.
+        state: Transfer state that currently contains this queued request.
     """
 
     charged_bytes: int
     priority: MediaPriority
     queued_at: float
     future: asyncio.Future[MediaPermit]
+    scheduler: _MediaScheduler
+    state: _TransferState
 
 
 @dataclass(slots=True)
@@ -239,6 +243,8 @@ class _MediaScheduler:
             priority=state.priority if priority is None else priority,
             queued_at=time.monotonic(),
             future=loop.create_future(),
+            scheduler=self,
+            state=state,
         )
         state.pending.append(waiter)
         self._queued_bytes += charged_bytes
@@ -258,12 +264,14 @@ class _MediaScheduler:
             else:
                 if not waiter.future.done():
                     waiter.future.cancel()
-                removed = self._remove_waiter(state, waiter)
+                removed = waiter.scheduler._remove_waiter(waiter.state, waiter)
             record_metric(
-                "media.scheduler.cancellations", 1, attributes={"dc_id": self.dc_id, "direction": self.direction}
+                "media.scheduler.cancellations",
+                1,
+                attributes={"dc_id": waiter.scheduler.dc_id, "direction": waiter.scheduler.direction},
             )
             if removed:
-                self._dispatch()
+                waiter.scheduler._dispatch()
             raise
 
     def move_pending(self, state: _TransferState, target: _MediaScheduler, target_state: _TransferState) -> None:
@@ -277,6 +285,8 @@ class _MediaScheduler:
         while state.pending:
             waiter = state.pending.popleft()
             self._queued_bytes -= waiter.charged_bytes
+            waiter.scheduler = target
+            waiter.state = target_state
             target_state.pending.append(waiter)
             target._queued_bytes += waiter.charged_bytes
         state.closing = True
@@ -343,6 +353,7 @@ class _MediaScheduler:
 
     def _dispatch(self) -> None:
         """Grant work until no eligible request fits current limits."""
+        self._discard_done_waiters()
         while self._states and self._queued_bytes > 0:
             priorities = self._priority_order()
             granted = False
@@ -352,6 +363,23 @@ class _MediaScheduler:
                     break
             if not granted:
                 return
+
+    def _discard_done_waiters(self) -> None:
+        """Remove cancelled or externally completed waiters before charging capacity."""
+        removed = False
+        for state in tuple(self._states):
+            retained: deque[_Waiter] = deque()
+            for waiter in state.pending:
+                if waiter.future.done():
+                    self._queued_bytes -= waiter.charged_bytes
+                    removed = True
+                else:
+                    retained.append(waiter)
+            if len(retained) != len(state.pending):
+                state.pending = retained
+                self._remove_if_drained(state)
+        if removed:
+            self._record_queue_state()
 
     def _priority_order(self) -> tuple[MediaPriority, ...]:
         """Prefer foreground work while forcing every eighth eligible grant background."""

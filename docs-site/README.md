@@ -9,6 +9,8 @@ Use the current Node.js 26 release from `.node-version` and the current pnpm 11 
 ```sh
 pnpm install --frozen-lockfile
 pnpm dev
+pnpm format:check
+pnpm lint
 pnpm check
 pnpm build
 pnpm test:site
@@ -16,6 +18,8 @@ pnpm brand:check
 ```
 
 `MINIPROTO_DOCS_SITE` sets the canonical site origin and `MINIPROTO_DOCS_BASE` sets its deploy path. The default base is `/`, which is suitable for local previews, the VPS container, and any origin-root static host. The GitHub workflow explicitly sets `MINIPROTO_DOCS_BASE=/miniproto` because a project Pages site is served below the repository name.
+
+Oxfmt covers the supported TypeScript, JSON, Markdown, and related frontend files while deliberately excluding `.astro` and SVG assets, which Oxfmt does not currently support. Oxlint is explicitly scoped to the site's maintained `.ts` sources; Astro templates and content remain the responsibility of `astro check`. Executable documentation helpers are typed TypeScript CLIs run through Jiti, and each supports `--help` without starting its operation.
 
 ## Alpine container
 
@@ -52,4 +56,8 @@ uv run miniproto-docs --check --build
 
 The default command generates and reconciles only `docs/reference/`. `--check` generates into an isolated task-owned tree and fails on committed drift without modifying the reference. `--build` additionally performs the frozen pnpm install, Astro content/type check, static Pagefind build, browser acceptance, and route/link/search/artifact validation. Generated Python, Telegram, and Rust Markdown stays committed; only dependency caches, intermediate extractors, and static build output are ignored.
 
-Packet Loom is the provisional identity while the community poll is open. `src/assets/brand/concepts/03-packet-loom/logo.svg` is the immutable inner mark used by `scripts/build-brand.mjs`; `pnpm brand:build` regenerates the complete derivative set and `pnpm brand:check` fails on drift. Promoting a different approved concept later should change that canonical input boundary and its generated assets, not site content structure.
+Packet Loom is the provisional identity while the community poll is open. `src/assets/brand/concepts/03-packet-loom/logo.svg` is the immutable inner mark used by `scripts/build-brand.ts`; `pnpm brand:build` regenerates the complete derivative set and `pnpm brand:check` fails on drift. Promoting a different approved concept later should change that canonical input boundary and its generated assets, not site content structure.
+
+## GitHub Pages publication
+
+Pull-request documentation automation starts only after the required draft pull request is marked ready for review, then reruns on later pushes. A trusted `master` push publishes the already validated `docs-site/dist/` bytes at the root of `gh-pages` while preserving the branch's deployment history. The static output remains ignored on `master`.

@@ -15,7 +15,7 @@ module: "miniproto.connection.sender"
 ## `miniproto.connection.sender.PendingRequest`
 
 ```python
-PendingRequest(body: bytes | object, content_related: bool, future: asyncio.Future[object], retry_safe: bool = False, attempts: int = 0, transport: Transport | None = None, aliases: set[int] = set(), quick_ack: bool = False, quick_ack_callback: Callable[[QuickAckReceipt], None] | None = None, quick_ack_received: bool = False, quick_ack_waiters: list[QuickAckWaiter] = list()) -> None
+PendingRequest(body: bytes | object, content_related: bool, future: asyncio.Future[object], retry_safe: bool = False, attempts: int = 0, transport: Transport | None = None, aliases: set[int] = set(), quick_ack: bool = False, quick_ack_callback: Callable[[QuickAckReceipt], None] | None = None, quick_ack_received: bool = False, quick_ack_waiters: list[QuickAckWaiter] = list(), expected_pong_ping_id: int | None = None) -> None
 ```
 
 Internal state retained for one unresolved request and its resend aliases.
@@ -33,3 +33,5 @@ Internal state retained for one unresolved request and its resend aliases.
 - **quick_ack_callback** (<code>[Callable](#collections.abc.Callable)[[[QuickAckReceipt](#miniproto.connection.sender.QuickAckReceipt)], None] | None</code>) – Optional synchronous callback for the first receipt.
 - **quick_ack_received** (<code>[bool](#bool)</code>) – Whether a non-stale receipt was already delivered.
 - **quick_ack_waiters** (<code>[list](#list)[[QuickAckWaiter](#miniproto.connection.sender.QuickAckWaiter)]</code>) – Registered receipt correlations awaiting removal.
+- **expected_pong_ping_id** (<code>[int](#int) | None</code>) – Ping identifier that a correlated Pong must echo,
+or ``None`` when this is not a ping request.

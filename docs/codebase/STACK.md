@@ -16,7 +16,7 @@ generated: false
 | Native runtime             | Rust 2024 edition, minimum Rust 1.97, compiled as the `miniproto_native` `cdylib`                                            | `rust/miniproto/Cargo.toml`                            |
 | Python build system        | Maturin/PyO3 mixed Python-Rust package                                                                                       | `pyproject.toml`, `rust/miniproto/Cargo.toml`          |
 | Package managers           | `uv` for Python, Cargo for Rust, the current pnpm 11 release for the site                                                    | `uv.lock`, `Cargo.lock`, `docs-site/package.json`      |
-| Documentation frontend     | Astro 7.2.2 and Starlight 0.41.7, statically prerendered with Pagefind 1.5.2                                                 | `docs-site/package.json`, `docs-site/astro.config.mjs` |
+| Documentation frontend     | Astro 7.2.2 and Starlight 0.41.7, statically prerendered with Pagefind 1.5.2                                                 | `docs-site/package.json`, `docs-site/astro.config.ts`  |
 | Documentation Node runtime | The current Node.js 26 release with strict Astro TypeScript configuration                                                    | `docs-site/.node-version`, `docs-site/tsconfig.json`   |
 | Documentation container    | Node.js 26.7.0 on Alpine 3.24 for the optional source build; unprivileged NGINX 1.31.3 on Alpine 3.24 for the static runtime | `docs-site/Dockerfile`, `docs-site/nginx.conf`         |
 
@@ -39,13 +39,15 @@ There is no application web framework, ORM, remote database client, telemetry ex
 
 | Tool                                      | Purpose                                                                                         | Evidence                                                                 |
 | ----------------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| Ruff 0.16.2                               | Python formatting, imports, linting, security/style rules                                       | `pyproject.toml`, `uv.lock`                                              |
-| ty 0.0.70                                 | Python static type checking against Python 3.13 semantics                                       | `pyproject.toml`, `uv.lock`                                              |
+| Ruff 0.16.3                               | Python formatting, imports, linting, security/style rules                                       | `pyproject.toml`, `uv.lock`                                              |
+| ty 0.0.72                                 | Python static type checking against Python 3.13 semantics                                       | `pyproject.toml`, `uv.lock`                                              |
 | pytest 9.1.1                              | Unit, fake-server, integration, stress, workflow, and documentation tests                       | `pyproject.toml`, `tests/`                                               |
 | Maturin 1.14.1                            | Editable native builds, wheels, and source distributions                                        | `pyproject.toml`, `.github/workflows/build-wheels.yml`                   |
-| Griffe 2.1.0 + griffe2md 1.5.0            | Static Python API extraction and Markdown rendering without importing the package               | `pyproject.toml`, `tools/docs/generate_python.py`                        |
+| Griffe 2.2.0 + griffe2md 1.5.0            | Static Python API extraction and Markdown rendering without importing the package               | `pyproject.toml`, `tools/docs/generate_python.py`                        |
 | nightly-2026-08-12 + cargo-docs-md 0.2.4  | Rustdoc JSON extraction and Markdown fragments for committed Rust reference pages               | `rust/miniproto/rust-toolchain-docs.toml`, `tools/docs/generate_rust.py` |
 | Astro/Starlight/Pagefind/Playwright/Sharp | Static docs, search, browser acceptance, and deterministic brand derivatives                    | `docs-site/package.json`, `docs-site/playwright.config.ts`               |
+| Oxfmt 0.63.0 + Oxlint 1.78.0              | Formatting for supported docs-site files and type-aware linting for maintained TypeScript        | `docs-site/package.json`, `docs-site/oxfmt.config.ts`, `docs-site/oxlint.config.ts` |
+| Jiti 2.7.0 + `@types/node` 26.2.0         | Direct execution and Node.js typing for the docs-site TypeScript helper CLIs                     | `docs-site/package.json`, `docs-site/scripts/`                                     |
 | GitHub Actions                            | Python/Rust quality, benchmarks, schema freshness, docs, live opt-ins, and dispatch-only wheels | `.github/workflows/`                                                     |
 
 ## Key commands
@@ -56,6 +58,9 @@ uv run ruff format --check .
 uv run ruff check .
 uv run ty check
 uv run pytest
+pnpm --dir docs-site format:check
+pnpm --dir docs-site lint
+pnpm --dir docs-site check
 cargo fmt --check
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo test --workspace --all-features

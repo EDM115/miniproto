@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.media.scheduler.MediaTransfer.acquire"
 source_path: "src/miniproto/media/scheduler.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/scheduler.py#L579"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/scheduler.py#L607"
 module: "miniproto.media.scheduler"
 ---
 

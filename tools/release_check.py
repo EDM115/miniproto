@@ -325,16 +325,24 @@ def run_stages(stages: Sequence[Stage], config: ReleaseConfig, *, runner: StageR
     environment = build_release_environment(config.mode, os.environ)
     results: list[dict[str, Any]] = []
     first_failure = 0
-    for stage in stages:
+    stage_count = len(stages)
+    for index, stage in enumerate(stages, start=1):
+        progress_label = f"[release-check {index}/{stage_count}] {stage.name}"
         if stage.command is None:
+            print(f"{progress_label}: pending - {stage.pending_reason}", flush=True)
             results.append(
                 {"name": stage.name, "status": "pending", "duration_seconds": 0.0, "reason": stage.pending_reason}
             )
             continue
+        print(f"{progress_label}: running", flush=True)
         started = time.perf_counter()
         exit_code = runner(stage, environment)
         duration = time.perf_counter() - started
         status = "passed" if exit_code == 0 else "failed"
+        if exit_code == 0:
+            print(f"{progress_label}: passed in {duration:.2f}s", flush=True)
+        else:
+            print(f"{progress_label}: failed with exit code {exit_code} in {duration:.2f}s", flush=True)
         result: dict[str, Any] = {
             "name": stage.name,
             "status": status,

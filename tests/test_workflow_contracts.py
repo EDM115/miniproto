@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tomllib
 from pathlib import Path
 from typing import Any
@@ -27,6 +28,22 @@ def load_workflow(name: str) -> dict[str, Any]:
     )
     assert isinstance(value, dict)
     return value
+
+
+def test_release_readiness_bridge_declares_0_1_0_alpha_without_claiming_wave_6() -> None:
+    """The bridge after Wave 5 must align package metadata while leaving Wave 6 unstarted."""
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    crate = tomllib.loads((ROOT / "rust/miniproto/Cargo.toml").read_text(encoding="utf-8"))
+    frontend = json.loads((ROOT / "docs-site/package.json").read_text(encoding="utf-8"))
+    progress = (ROOT / "PROGRESS.md").read_text(encoding="utf-8")
+
+    assert project["project"]["version"] == "0.1.0"
+    assert "Development Status :: 3 - Alpha" in project["project"]["classifiers"]
+    assert "Development Status :: 2 - Pre-Alpha" not in project["project"]["classifiers"]
+    assert crate["package"]["version"] == "0.1.0"
+    assert frontend["version"] == "0.1.0"
+    assert "intermediary release-readiness bridge between Waves 5 and 6" in progress
+    assert "Wave 6 has not started" in progress
 
 
 def test_ci_workflow_covers_python_rust_benchmarks_and_free_threaded_runtime_without_building_wheels() -> None:

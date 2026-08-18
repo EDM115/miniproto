@@ -1,6 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
+
 import sharp from "sharp";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -12,12 +13,18 @@ const FONT = path.join(BRAND, "fonts", "NunitoSans-ExtraBold-miniproto.woff2");
 const options = new Set(process.argv.slice(2));
 const checking = options.has("--check");
 if (options.has("--help") || options.has("-h")) {
-  console.log("Usage: node scripts/build-brand.mjs [--check]");
+  console.log("Usage: jiti scripts/build-brand.ts [--check]");
   console.log("Build or verify the Packet Loom production SVG and social-card derivatives.");
+  console.log("");
+  console.log("Options:");
+  console.log("  --check  Verify every committed derivative without writing files.");
+  console.log("  -h, --help  Show this help message and exit.");
   process.exit(0);
 }
 for (const option of options) {
-  if (option !== "--check") throw new Error(`Unexpected option: ${option}`);
+  if (option !== "--check") {
+    throw new Error(`Unexpected option: ${option}`);
+  }
 }
 
 const source = await readFile(SOURCE, "utf8");
@@ -25,8 +32,9 @@ const fontBase64 = (await readFile(FONT)).toString("base64");
 const geometry = source
   .slice(source.indexOf('<g fill="#04474C">'), source.lastIndexOf("</svg>"))
   .trim();
-if (!geometry.startsWith("<g") || !geometry.endsWith("/>"))
+if (!geometry.startsWith("<g") || !geometry.endsWith("/>")) {
   throw new Error("Could not isolate the canonical Packet Loom geometry.");
+}
 
 const darkMark = source.replaceAll("#04474C", "#F8FFF5");
 const monochromeMark = source
@@ -40,7 +48,7 @@ const wordmarkDark = buildWordmark({
 });
 const socialCard = buildSocialCard({ geometry, fontBase64 });
 
-const outputs = new Map([
+const outputs = new Map<string, Buffer>([
   [path.join(BRAND, "logo.svg"), Buffer.from(source)],
   [path.join(BRAND, "logo-dark.svg"), Buffer.from(darkMark)],
   [path.join(BRAND, "mark.svg"), Buffer.from(source)],
@@ -50,21 +58,24 @@ const outputs = new Map([
   [path.join(PUBLIC, "favicon.svg"), Buffer.from(source)],
   [path.join(PUBLIC, "social-card.svg"), Buffer.from(socialCard)],
 ]);
-if (!checking)
+if (!checking) {
   outputs.set(
     path.join(PUBLIC, "social-card.png"),
     await sharp(Buffer.from(socialCard)).png({ compressionLevel: 9, palette: true }).toBuffer(),
   );
+}
 
-const drift = [];
+const drift: string[] = [];
 for (const [target, expected] of outputs) {
-  let actual;
+  let actual: Buffer | undefined;
   try {
     actual = await readFile(target);
   } catch {
     actual = undefined;
   }
-  if (actual?.equals(expected)) continue;
+  if (actual?.equals(expected)) {
+    continue;
+  }
   if (checking) {
     drift.push(path.relative(ROOT, target).replaceAll("\\", "/"));
   } else {
@@ -73,15 +84,21 @@ for (const [target, expected] of outputs) {
   }
 }
 
-if (checking && !(await isExpectedPng(path.join(PUBLIC, "social-card.png"), 1200, 630)))
+if (checking && !(await isExpectedPng(path.join(PUBLIC, "social-card.png"), 1200, 630))) {
   drift.push("public/social-card.png");
-if (drift.length > 0)
+}
+if (drift.length > 0) {
   throw new Error(`Brand derivatives are stale:\n${drift.map((file) => `- ${file}`).join("\n")}`);
-if (checking) console.log(`Packet Loom brand derivatives are current (${outputs.size + 1} files).`);
+}
+if (checking) {
+  console.log(`Packet Loom brand derivatives are current (${outputs.size + 1} files).`);
+} else {
+  console.log(`Packet Loom brand derivatives built (${outputs.size} files).`);
+}
 
 /** Validate the committed raster portably without rerendering fonts through a platform-specific SVG engine. */
-async function isExpectedPng(filePath, width, height) {
-  let contents;
+async function isExpectedPng(filePath: string, width: number, height: number): Promise<boolean> {
+  let contents: Buffer;
   try {
     contents = await readFile(filePath);
   } catch {
@@ -95,7 +112,15 @@ async function isExpectedPng(filePath, width, height) {
   );
 }
 
-function buildWordmark({ geometry: markGeometry, fontBase64: font, dark }) {
+function buildWordmark({
+  geometry: markGeometry,
+  fontBase64: font,
+  dark,
+}: {
+  geometry: string;
+  fontBase64: string;
+  dark: boolean;
+}): string {
   const text = dark ? "#F8FFF5" : "#04474C";
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="440" viewBox="0 -6.5 1080 440" role="img" aria-labelledby="title description">
   <title id="title">miniproto Packet Loom wordmark</title>
@@ -107,7 +132,13 @@ function buildWordmark({ geometry: markGeometry, fontBase64: font, dark }) {
 `;
 }
 
-function buildSocialCard({ geometry: markGeometry, fontBase64: font }) {
+function buildSocialCard({
+  geometry: markGeometry,
+  fontBase64: font,
+}: {
+  geometry: string;
+  fontBase64: string;
+}): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title description">
   <title id="title">miniproto documentation</title>
   <desc id="description">Packet Loom branding with the miniproto product promise and Alpha status.</desc>
