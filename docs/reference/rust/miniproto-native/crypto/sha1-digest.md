@@ -39,7 +39,7 @@ fn sha1_digest(py: _, data: _) -> _
 fn sha1_digest(py: Python<'_>, data: Vec<u8>) -> Vec<u8>
 ```
 
-*Defined in `rust\miniproto\src\crypto.rs:101-103`*
+*Defined in `rust/miniproto/src/crypto.rs:101-103`*
 
 Computes Python `sha1_digest(data)` and returns the 20-byte SHA-1 digest.
 

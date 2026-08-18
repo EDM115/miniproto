@@ -38,7 +38,7 @@ fn tl_encode_double(value: f64) -> _
 fn tl_encode_double(value: f64) -> Vec<u8>
 ```
 
-*Defined in `rust\miniproto\src\tl.rs:624-626`*
+*Defined in `rust/miniproto/src/tl.rs:624-626`*
 
 Encodes Python `tl_encode_double(value)` as eight IEEE-754 little-endian bytes.
 

@@ -42,7 +42,7 @@ fn aes_256_gcm_encrypt(py: _, plaintext: _, key: _, nonce: _, associated_data: _
 fn aes_256_gcm_encrypt(py: Python<'_>, plaintext: Vec<u8>, key: Vec<u8>, nonce: Vec<u8>, associated_data: Vec<u8>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust\miniproto\src\crypto.rs:386-397`*
+*Defined in `rust/miniproto/src/crypto.rs:386-397`*
 
 Authenticated-encrypts Python `aes_256_gcm_encrypt` plaintext and associated data.
 

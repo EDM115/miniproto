@@ -42,7 +42,7 @@ fn mtproto_decrypt_payload(py: _, auth_key: _, msg_key: _, ciphertext: _, client
 fn mtproto_decrypt_payload(py: Python<'_>, auth_key: Vec<u8>, msg_key: Vec<u8>, ciphertext: Vec<u8>, client_to_server: bool) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust\miniproto\src\crypto.rs:227-238`*
+*Defined in `rust/miniproto/src/crypto.rs:227-238`*
 
 Decrypts and verifies Python `mtproto_decrypt_payload` ciphertext.
 

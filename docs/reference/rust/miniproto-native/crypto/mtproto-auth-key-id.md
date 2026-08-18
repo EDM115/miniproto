@@ -38,7 +38,7 @@ fn mtproto_auth_key_id(auth_key: &[u8]) -> _
 fn mtproto_auth_key_id(auth_key: &[u8]) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust\miniproto\src\crypto.rs:126-128`*
+*Defined in `rust/miniproto/src/crypto.rs:126-128`*
 
 Computes Python `mtproto_auth_key_id(auth_key)` from a validated 256-byte key.
 

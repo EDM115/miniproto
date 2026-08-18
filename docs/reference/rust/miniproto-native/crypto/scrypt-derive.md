@@ -44,7 +44,7 @@ fn scrypt_derive(py: _, password: _, salt: _, n: u32, r: u32, p: u32, length: us
 fn scrypt_derive(py: Python<'_>, password: Vec<u8>, salt: Vec<u8>, n: u32, r: u32, p: u32, length: usize) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust\miniproto\src\crypto.rs:441-456`*
+*Defined in `rust/miniproto/src/crypto.rs:441-456`*
 
 Derives Python `scrypt_derive` bytes from password, salt, and scrypt cost parameters.
 

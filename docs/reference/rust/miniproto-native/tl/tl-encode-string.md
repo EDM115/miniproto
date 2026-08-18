@@ -38,7 +38,7 @@ fn tl_encode_string(value: &str) -> _
 fn tl_encode_string(value: &str) -> Vec<u8>
 ```
 
-*Defined in `rust\miniproto\src\tl.rs:669-671`*
+*Defined in `rust/miniproto/src/tl.rs:669-671`*
 
 Encodes Python `tl_encode_string(value)` as UTF-8 TL bytes.
 

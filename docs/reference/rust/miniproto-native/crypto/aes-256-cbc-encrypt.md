@@ -41,7 +41,7 @@ fn aes_256_cbc_encrypt(py: _, plaintext: _, key: _, iv: _) -> _
 fn aes_256_cbc_encrypt(py: Python<'_>, plaintext: Vec<u8>, key: Vec<u8>, iv: Vec<u8>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust\miniproto\src\crypto.rs:313-323`*
+*Defined in `rust/miniproto/src/crypto.rs:313-323`*
 
 Encrypts block-aligned bytes with Python `aes_256_cbc_encrypt` without padding.
 

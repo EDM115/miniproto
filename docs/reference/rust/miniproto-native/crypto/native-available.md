@@ -34,7 +34,7 @@ fn native_available() -> bool
 fn native_available() -> bool
 ```
 
-*Defined in `rust\miniproto\src\crypto.rs:88-90`*
+*Defined in `rust/miniproto/src/crypto.rs:88-90`*
 
 Implements Python `native_available`, which always returns `true` while this compiled callable
 is importable. Python fallback selection happens before this function can be called.

@@ -40,7 +40,7 @@ fn tl_decode_int_vector(py: _, data: _, offset: i128) -> _
 fn tl_decode_int_vector(py: Python<'_>, data: Vec<u8>, offset: i128) -> PyResult<(Vec<i32>, usize)>
 ```
 
-*Defined in `rust\miniproto\src\tl.rs:714-722`*
+*Defined in `rust/miniproto/src/tl.rs:714-722`*
 
 Decodes Python `tl_decode_int_vector(data, offset)` into values and a next offset.
 

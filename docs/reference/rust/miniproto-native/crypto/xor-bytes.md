@@ -39,7 +39,7 @@ fn xor_bytes(left: &[u8], right: &[u8]) -> _
 fn xor_bytes(left: &[u8], right: &[u8]) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust\miniproto\src\crypto.rs:249-251`*
+*Defined in `rust/miniproto/src/crypto.rs:249-251`*
 
 Returns the bytewise exclusive-or of Python `xor_bytes(left, right)` inputs.
 

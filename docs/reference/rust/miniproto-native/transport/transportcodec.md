@@ -30,7 +30,7 @@ struct TransportCodec {
 }
 ```
 
-*Defined in `rust\miniproto\src\transport.rs:123-126`*
+*Defined in `rust/miniproto/src/transport.rs:123-126`*
 
 Python-visible incremental TCP framing codec, exported as `miniproto._native.TransportCodec`.
 

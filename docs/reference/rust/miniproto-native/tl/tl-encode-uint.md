@@ -38,7 +38,7 @@ fn tl_encode_uint(value: u32) -> _
 fn tl_encode_uint(value: u32) -> Vec<u8>
 ```
 
-*Defined in `rust\miniproto\src\tl.rs:526-528`*
+*Defined in `rust/miniproto/src/tl.rs:526-528`*
 
 Encodes Python `tl_encode_uint(value)` as a four-byte little-endian unsigned integer.
 

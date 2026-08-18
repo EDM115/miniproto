@@ -39,7 +39,7 @@ fn tl_decode_long(data: &[u8], offset: usize) -> _
 fn tl_decode_long(data: &[u8], offset: usize) -> PyResult<(i64, usize)>
 ```
 
-*Defined in `rust\miniproto\src\tl.rs:559-562`*
+*Defined in `rust/miniproto/src/tl.rs:559-562`*
 
 Decodes Python `tl_decode_long(data, offset)` and returns `(value, next_offset)` or `ValueError`.
 

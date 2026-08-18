@@ -39,7 +39,7 @@ fn tl_decode_uint(data: &[u8], offset: usize) -> _
 fn tl_decode_uint(data: &[u8], offset: usize) -> PyResult<(u32, usize)>
 ```
 
-*Defined in `rust\miniproto\src\tl.rs:537-540`*
+*Defined in `rust/miniproto/src/tl.rs:537-540`*
 
 Decodes Python `tl_decode_uint(data, offset)` and returns `(value, next_offset)` or `ValueError`.
 

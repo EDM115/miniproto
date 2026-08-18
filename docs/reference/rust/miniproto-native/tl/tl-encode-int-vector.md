@@ -39,7 +39,7 @@ fn tl_encode_int_vector(py: _, values: _) -> _
 fn tl_encode_int_vector(py: Python<'_>, values: Vec<i32>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust\miniproto\src\tl.rs:698-701`*
+*Defined in `rust/miniproto/src/tl.rs:698-701`*
 
 Encodes Python `tl_encode_int_vector(values)` as a generic TL vector of 32-bit integers.
 

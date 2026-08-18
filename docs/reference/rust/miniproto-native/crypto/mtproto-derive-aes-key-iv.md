@@ -41,7 +41,7 @@ fn mtproto_derive_aes_key_iv(py: _, auth_key: _, msg_key: _, client_to_server: b
 fn mtproto_derive_aes_key_iv(py: Python<'_>, auth_key: Vec<u8>, msg_key: Vec<u8>, client_to_server: bool) -> PyResult<(Vec<u8>, Vec<u8>)>
 ```
 
-*Defined in `rust\miniproto\src\crypto.rs:172-188`*
+*Defined in `rust/miniproto/src/crypto.rs:172-188`*
 
 Derives the AES-256 key and IV used by Python `mtproto_derive_aes_key_iv`.
 

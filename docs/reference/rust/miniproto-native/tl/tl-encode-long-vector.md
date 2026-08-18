@@ -39,7 +39,7 @@ fn tl_encode_long_vector(py: _, values: _) -> _
 fn tl_encode_long_vector(py: Python<'_>, values: Vec<i64>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust\miniproto\src\tl.rs:733-736`*
+*Defined in `rust/miniproto/src/tl.rs:733-736`*
 
 Encodes Python `tl_encode_long_vector(values)` as a generic TL vector of 64-bit integers.
 

@@ -39,7 +39,7 @@ fn quick_ack_token(auth_key: &[u8], encrypted_packet: &[u8]) -> _
 fn quick_ack_token(auth_key: &[u8], encrypted_packet: &[u8]) -> PyResult<u32>
 ```
 
-*Defined in `rust\miniproto\src\transport.rs:55-68`*
+*Defined in `rust/miniproto/src/transport.rs:55-68`*
 
 Computes the flagged quick-ACK token for Python `quick_ack_token`.
 

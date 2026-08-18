@@ -3,11 +3,51 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 from typing import Literal
 
 ReferenceLanguage = Literal["python", "telegram", "rust"]
+_GENERATED_SOURCE_LOCATION = re.compile(
+    r"^(?P<prefix>\s*\*Defined in `)(?P<path>[^`\r\n]+)(?P<suffix>`\*\s*)$", re.MULTILINE
+)
+
+
+def canonical_markdown_path(value: str) -> str:
+    """Return a generated Markdown path with platform-independent POSIX separators.
+
+    Args:
+        value: Structural page path or repository-relative source path produced by a generator.
+
+    Returns:
+        The path with every Windows separator replaced by ``/``.
+    """
+    return value.replace("\\", "/")
+
+
+def normalize_generated_markdown_paths(markdown: str) -> str:
+    """Canonicalize generated source-location paths without rewriting prose or code examples.
+
+    Args:
+        markdown: Generated Markdown that may contain renderer-owned ``Defined in`` records.
+
+    Returns:
+        Markdown whose generated source-location records use POSIX separators.
+    """
+    return _GENERATED_SOURCE_LOCATION.sub(_normalize_source_location_match, markdown)
+
+
+def _normalize_source_location_match(match: re.Match[str]) -> str:
+    """Render one generated source-location match with a canonical path.
+
+    Args:
+        match: Regex match containing the source-location prefix, path, and suffix.
+
+    Returns:
+        The reconstructed source-location record with POSIX separators.
+    """
+    return f"{match.group('prefix')}{canonical_markdown_path(match.group('path'))}{match.group('suffix')}"
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,6 +98,9 @@ class ReferencePage:
         Raises:
             ValueError: The route is unsafe, a required text field is absent or empty, or language-specific provenance is incomplete.
         """
+        object.__setattr__(self, "path", canonical_markdown_path(self.path))
+        object.__setattr__(self, "source_path", canonical_markdown_path(self.source_path))
+        object.__setattr__(self, "body", normalize_generated_markdown_paths(self.body))
         page_path = PurePosixPath(self.path)
         if page_path.is_absolute() or ".." in page_path.parts or page_path.suffix != ".md":
             raise ValueError(f"reference page path must be a relative Markdown path: {self.path!r}")

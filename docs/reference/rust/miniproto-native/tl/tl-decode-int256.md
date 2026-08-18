@@ -40,7 +40,7 @@ fn tl_decode_int256(py: _, data: &[u8], offset: usize) -> _
 fn tl_decode_int256(py: Python<'_>, data: &[u8], offset: usize) -> PyResult<(Py<PyAny>, usize)>
 ```
 
-*Defined in `rust\miniproto\src\tl.rs:613-616`*
+*Defined in `rust/miniproto/src/tl.rs:613-616`*
 
 Decodes Python `tl_decode_int256(data, offset)` to a Python integer and next offset.
 

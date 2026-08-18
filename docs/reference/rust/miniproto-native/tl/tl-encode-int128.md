@@ -38,7 +38,7 @@ fn tl_encode_int128(value: &_) -> _
 fn tl_encode_int128(value: &Bound<'_, PyAny>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust\miniproto\src\tl.rs:572-574`*
+*Defined in `rust/miniproto/src/tl.rs:572-574`*
 
 Encodes Python `tl_encode_int128(value)` to 16 little-endian bytes via `int.to_bytes`.
 

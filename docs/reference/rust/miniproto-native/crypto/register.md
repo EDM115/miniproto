@@ -37,7 +37,7 @@ fn register(m: &_) -> _
 fn register(m: &Bound<'_, pyo3::types::PyModule>) -> PyResult<()>
 ```
 
-*Defined in `rust\miniproto\src\crypto.rs:63-83`*
+*Defined in `rust/miniproto/src/crypto.rs:63-83`*
 
 Registers this module's fallback-compatible Python callables on `miniproto._native`.
 

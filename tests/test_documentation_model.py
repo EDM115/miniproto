@@ -25,6 +25,27 @@ def test_generated_reference_pages_disable_source_edit_links() -> None:
     assert "\neditUrl: false\n" in page.render()
 
 
+def test_generated_reference_page_paths_are_posix_on_every_host() -> None:
+    """Canonicalize structural Markdown and provenance paths instead of leaking host separators."""
+    page = ReferencePage(
+        path=r"python\miniproto\client.md",
+        title="miniproto.client.Client",
+        description="High-level Telegram client.",
+        language="python",
+        kind="class",
+        qualified_name="miniproto.client.Client",
+        source_path=r"src\miniproto\client.py",
+        source_url="https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L250",
+        body=r"A literal Windows example remains `C:\Users\developer\session`.",
+        module="miniproto.client",
+    )
+
+    assert page.path == "python/miniproto/client.md"
+    assert page.source_path == "src/miniproto/client.py"
+    assert 'source_path: "src/miniproto/client.py"' in page.render()
+    assert r"`C:\Users\developer\session`" in page.render()
+
+
 def test_reference_manifest_tracks_machine_readable_relationship_artifacts(tmp_path: Path) -> None:
     """Non-Markdown relationship data must be committed and hashed beside page records."""
     page = ReferencePage(

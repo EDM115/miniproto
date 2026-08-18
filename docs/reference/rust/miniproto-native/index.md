@@ -64,7 +64,7 @@ public fallback policy and must remain correct when this extension cannot be imp
 fn _native(m: &Bound<'_, pyo3::types::PyModule>) -> PyResult<()>
 ```
 
-*Defined in `rust\miniproto\src\lib.rs:34-40`*
+*Defined in `rust/miniproto/src/lib.rs:34-40`*
 
 Initializes Python module `miniproto._native`.
 

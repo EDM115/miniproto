@@ -37,7 +37,7 @@ fn register(m: &_) -> _
 fn register(m: &Bound<'_, pyo3::types::PyModule>) -> PyResult<()>
 ```
 
-*Defined in `rust\miniproto\src\transport.rs:39-43`*
+*Defined in `rust/miniproto/src/transport.rs:39-43`*
 
 Registers Python `TransportCodec` and `quick_ack_token` on `miniproto._native`.
 

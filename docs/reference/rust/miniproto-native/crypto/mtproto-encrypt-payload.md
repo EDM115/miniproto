@@ -41,7 +41,7 @@ fn mtproto_encrypt_payload(py: _, auth_key: _, plaintext_with_padding: _, client
 fn mtproto_encrypt_payload(py: Python<'_>, auth_key: Vec<u8>, plaintext_with_padding: Vec<u8>, client_to_server: bool) -> PyResult<(Vec<u8>, Vec<u8>, Vec<u8>)>
 ```
 
-*Defined in `rust\miniproto\src\crypto.rs:202-212`*
+*Defined in `rust/miniproto/src/crypto.rs:202-212`*
 
 Encrypts padded MTProto plaintext for Python `mtproto_encrypt_payload`.
 

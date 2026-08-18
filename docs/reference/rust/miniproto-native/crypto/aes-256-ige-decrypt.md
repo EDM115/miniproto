@@ -41,7 +41,7 @@ fn aes_256_ige_decrypt(py: _, ciphertext: _, key: _, iv: _) -> _
 fn aes_256_ige_decrypt(py: Python<'_>, ciphertext: Vec<u8>, key: Vec<u8>, iv: Vec<u8>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust\miniproto\src\crypto.rs:289-299`*
+*Defined in `rust/miniproto/src/crypto.rs:289-299`*
 
 Decrypts block-aligned bytes with Python `aes_256_ige_decrypt`.
 

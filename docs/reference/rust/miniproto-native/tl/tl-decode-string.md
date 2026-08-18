@@ -39,7 +39,7 @@ fn tl_decode_string(data: &[u8], offset: usize) -> _
 fn tl_decode_string(data: &[u8], offset: usize) -> PyResult<(String, usize)>
 ```
 
-*Defined in `rust\miniproto\src\tl.rs:682-687`*
+*Defined in `rust/miniproto/src/tl.rs:682-687`*
 
 Decodes Python `tl_decode_string(data, offset)` as UTF-8 and returns it with the next offset.
 

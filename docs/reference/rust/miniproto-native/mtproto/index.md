@@ -103,7 +103,7 @@ struct DecodedEncryptedMessage {
 }
 ```
 
-*Defined in `rust\miniproto\src\mtproto.rs:30-45`*
+*Defined in `rust/miniproto/src/mtproto.rs:30-45`*
 
 Decoded contents of a validated encrypted MTProto packet for Rust-internal callers.
 
@@ -172,7 +172,7 @@ struct EnvelopeEncodeInput<'a> {
 }
 ```
 
-*Defined in `rust\miniproto\src\mtproto.rs:48-65`*
+*Defined in `rust/miniproto/src/mtproto.rs:48-65`*
 
 Borrowed inputs used to build one encrypted MTProto envelope without Python interaction.
 
@@ -226,7 +226,7 @@ Borrowed inputs used to build one encrypted MTProto envelope without Python inte
 fn register(m: &Bound<'_, pyo3::types::PyModule>) -> PyResult<()>
 ```
 
-*Defined in `rust\miniproto\src\mtproto.rs:77-81`*
+*Defined in `rust/miniproto/src/mtproto.rs:77-81`*
 
 Adds the Python-visible MTProto envelope functions to `miniproto._native`.
 
@@ -242,7 +242,7 @@ Returns a Python exception when PyO3 cannot register either callable.
 fn mtproto_encode_message(py: Python<'_>, auth_key: Vec<u8>, server_salt: u64, session_id: u64, msg_id: i64, seq_no: i32, body: Vec<u8>, client_to_server: bool, padding: Option<Vec<u8>>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust\miniproto\src\mtproto.rs:114-138`*
+*Defined in `rust/miniproto/src/mtproto.rs:114-138`*
 
 Encodes one encrypted MTProto envelope as Python `mtproto_encode_message`.
 
@@ -271,7 +271,7 @@ the GIL while performing the native work.
 unsafe fn __pyfunction_mtproto_encode_message<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust\miniproto\src\mtproto.rs:103-112`*
+*Defined in `rust/miniproto/src/mtproto.rs:103-112`*
 
 ### `mtproto_decode_message`
 
@@ -279,7 +279,7 @@ unsafe fn __pyfunction_mtproto_encode_message<'py>(py: Python<'py>, _slf: *mut f
 fn mtproto_decode_message(py: Python<'_>, auth_key: Vec<u8>, packet: Vec<u8>, client_to_server: bool) -> PyResult<(Vec<u8>, u64, u64, i64, i32, Vec<u8>, Vec<u8>)>
 ```
 
-*Defined in `rust\miniproto\src\mtproto.rs:154-173`*
+*Defined in `rust/miniproto/src/mtproto.rs:154-173`*
 
 Decodes Python `mtproto_decode_message` packet bytes into its seven-element envelope tuple.
 
@@ -301,7 +301,7 @@ with the GIL released.
 unsafe fn __pyfunction_mtproto_decode_message<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust\miniproto\src\mtproto.rs:153`*
+*Defined in `rust/miniproto/src/mtproto.rs:153`*
 
 ### `mtproto_encode_message_raw`
 
@@ -309,7 +309,7 @@ unsafe fn __pyfunction_mtproto_decode_message<'py>(py: Python<'py>, _slf: *mut f
 fn mtproto_encode_message_raw(input: EnvelopeEncodeInput<'_>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust\miniproto\src\mtproto.rs:184-212`*
+*Defined in `rust/miniproto/src/mtproto.rs:184-212`*
 
 Builds and encrypts an MTProto envelope from already borrowed Rust inputs.
 
@@ -327,7 +327,7 @@ aligned; this function does not interact with the GIL.
 fn mtproto_decode_message_raw(auth_key: &[u8], packet: &[u8], client_to_server: bool) -> PyResult<DecodedEncryptedMessage>
 ```
 
-*Defined in `rust\miniproto\src\mtproto.rs:224-282`*
+*Defined in `rust/miniproto/src/mtproto.rs:224-282`*
 
 Verifies, decrypts, and parses an encrypted MTProto packet for Rust callers.
 
@@ -346,7 +346,7 @@ cryptographic check, length, or padding constraint fails.  It does not interact 
 fn random_padding(plaintext_len: usize) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust\miniproto\src\mtproto.rs:292-297`*
+*Defined in `rust/miniproto/src/mtproto.rs:292-297`*
 
 Generates random MTProto padding that completes `plaintext_len` to an AES block boundary.
 
@@ -363,7 +363,7 @@ Returns `ValueError` if the operating-system randomness source fails.
 fn padding_len(plaintext_len: usize) -> usize
 ```
 
-*Defined in `rust\miniproto\src\mtproto.rs:306-309`*
+*Defined in `rust/miniproto/src/mtproto.rs:306-309`*
 
 Computes the minimum valid padding length for an inner plaintext length.
 
@@ -379,7 +379,7 @@ Computes the minimum valid padding length for an inner plaintext length.
 fn validate_padding(plaintext_len: usize, padding: &[u8]) -> PyResult<()>
 ```
 
-*Defined in `rust\miniproto\src\mtproto.rs:321-333`*
+*Defined in `rust/miniproto/src/mtproto.rs:321-333`*
 
 Validates MTProto 2.0 padding bounds and the resulting AES block alignment.
 
@@ -400,7 +400,7 @@ the modulus check.
 type PyDecodedEnvelope = (Vec<u8>, u64, u64, i64, i32, Vec<u8>, Vec<u8>);
 ```
 
-*Defined in `rust\miniproto\src\mtproto.rs:68`*
+*Defined in `rust/miniproto/src/mtproto.rs:68`*
 
 Python tuple returned by `mtproto_decode_message` in envelope field order.
 
@@ -411,7 +411,7 @@ Python tuple returned by `mtproto_decode_message` in envelope field order.
 const ENCRYPTED_PACKET_HEADER_LEN: usize = 24usize;
 ```
 
-*Defined in `rust\miniproto\src\mtproto.rs:20`*
+*Defined in `rust/miniproto/src/mtproto.rs:20`*
 
 Bytes preceding ciphertext in an encrypted MTProto packet: auth-key id plus message key.
 
@@ -420,7 +420,7 @@ Bytes preceding ciphertext in an encrypted MTProto packet: auth-key id plus mess
 const ENVELOPE_HEADER_LEN: usize = 32usize;
 ```
 
-*Defined in `rust\miniproto\src\mtproto.rs:22`*
+*Defined in `rust/miniproto/src/mtproto.rs:22`*
 
 Bytes in an unencrypted inner envelope before its application body.
 
@@ -429,7 +429,7 @@ Bytes in an unencrypted inner envelope before its application body.
 const MIN_PADDING_LEN: usize = 12usize;
 ```
 
-*Defined in `rust\miniproto\src\mtproto.rs:24`*
+*Defined in `rust/miniproto/src/mtproto.rs:24`*
 
 Smallest MTProto 2.0 random-padding length, in bytes.
 
@@ -438,6 +438,6 @@ Smallest MTProto 2.0 random-padding length, in bytes.
 const MAX_PADDING_LEN: usize = 1_024usize;
 ```
 
-*Defined in `rust\miniproto\src\mtproto.rs:26`*
+*Defined in `rust/miniproto/src/mtproto.rs:26`*
 
 Largest accepted MTProto 2.0 random-padding length, in bytes.

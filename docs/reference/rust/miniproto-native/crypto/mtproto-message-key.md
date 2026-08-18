@@ -41,7 +41,7 @@ fn mtproto_message_key(py: _, auth_key: _, plaintext_with_padding: _, client_to_
 fn mtproto_message_key(py: Python<'_>, auth_key: Vec<u8>, plaintext_with_padding: Vec<u8>, client_to_server: bool) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust\miniproto\src\crypto.rs:142-157`*
+*Defined in `rust/miniproto/src/crypto.rs:142-157`*
 
 Computes Python `mtproto_message_key` for padded plaintext and one MTProto direction.
 

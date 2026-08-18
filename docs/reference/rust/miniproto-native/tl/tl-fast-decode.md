@@ -42,7 +42,7 @@ fn tl_fast_decode(py: _, constructor_id: u32, data: &[u8], offset: usize, boxed:
 fn tl_fast_decode(py: Python<'_>, constructor_id: u32, data: &[u8], offset: usize, boxed: bool) -> PyResult<Option<(Py<pyo3::types::PyTuple>, usize)>>
 ```
 
-*Defined in `rust\miniproto\src\tl.rs:210-266`*
+*Defined in `rust/miniproto/src/tl.rs:210-266`*
 
 Attempts Python `tl_fast_decode` for a generated constructor at `offset`.
 

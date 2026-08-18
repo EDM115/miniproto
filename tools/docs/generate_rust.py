@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from tools.docs.manifest import write_reference_tree
-from tools.docs.model import ReferencePage
+from tools.docs.model import ReferencePage, normalize_generated_markdown_paths
 
 DEFAULT_EXCLUDED_SOURCE_PATHS = ("rust/miniproto/src/generated_tl.rs",)
 """Generator-owned Rust files deliberately excluded from committed reference pages."""
@@ -283,7 +283,7 @@ def render_rustdoc_with_cargo_docs_md(
 
 
 def load_cargo_docs_md_fragments(*, rustdoc_json: Path, output_directory: Path, crate: str) -> dict[str, str]:
-    """Index unchanged item fragments from cargo-docs-md's per-module Markdown.
+    """Index canonical item fragments from cargo-docs-md's per-module Markdown.
 
     Args:
         rustdoc_json: Exact-nightly rustdoc JSON consumed by cargo-docs-md.
@@ -291,9 +291,7 @@ def load_cargo_docs_md_fragments(*, rustdoc_json: Path, output_directory: Path, 
         crate: Rust crate directory name emitted by cargo-docs-md.
 
     Returns:
-        Rustdoc identifier to converter-owned Markdown fragment mapping. Module
-        identifiers retain their complete converter files; top-level items and
-        associated methods retain their exact sections from those files.
+        Rustdoc identifier to converter-owned Markdown fragment mapping. Module identifiers retain their complete converter files; top-level items and associated methods retain their exact sections from those files. Renderer-owned source paths use POSIX separators on every host.
 
     Raises:
         RustDocumentationError: Rustdoc structure or a required module Markdown
@@ -327,7 +325,7 @@ def load_cargo_docs_md_fragments(*, rustdoc_json: Path, output_directory: Path, 
             markdown_path = output_directory / crate / Path(*relative_parts) / "index.md"
             if not markdown_path.is_file():
                 raise RustDocumentationError(f"cargo-docs-md module output is missing: {markdown_path}")
-            module_markdown[module_id] = markdown_path.read_text(encoding="utf-8")
+            module_markdown[module_id] = normalize_generated_markdown_paths(markdown_path.read_text(encoding="utf-8"))
         markdown = module_markdown[module_id]
         if item_id == module_id:
             fragments[item_id] = markdown.strip()

@@ -37,7 +37,7 @@ fn register(m: &_) -> _
 fn register(m: &Bound<'_, pyo3::types::PyModule>) -> PyResult<()>
 ```
 
-*Defined in `rust\miniproto\src\tl.rs:102-126`*
+*Defined in `rust/miniproto/src/tl.rs:102-126`*
 
 Registers the fallback-compatible `tl_*` Python functions on `miniproto._native`.
 

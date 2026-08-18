@@ -4670,7 +4670,7 @@
       "path": "rust/miniproto-native/crypto/aes-256-cbc-decrypt.md",
       "qualified_name": "miniproto_native::crypto::aes_256_cbc_decrypt",
       "route": "/reference/rust/miniproto-native/crypto/aes-256-cbc-decrypt/",
-      "sha256": "61e57d184e04825f60285ba8c55f7f2c3c4d7bbfdea2e21ccb5955d8bc9cc164",
+      "sha256": "2ecfa6ef621e6bdabe78edd32299c87e1caa1539e717376f5bb15830af89f608",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4679,7 +4679,7 @@
       "path": "rust/miniproto-native/crypto/aes-256-cbc-encrypt.md",
       "qualified_name": "miniproto_native::crypto::aes_256_cbc_encrypt",
       "route": "/reference/rust/miniproto-native/crypto/aes-256-cbc-encrypt/",
-      "sha256": "b864afdc183a2ec6d1ffcfeb2cbb35b74cc3d3c930b307eeb61d9256259a7ca0",
+      "sha256": "7128695b419445d4bf9a58f417fa370edfb4f3a32ef561438fada9d1b4334710",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4688,7 +4688,7 @@
       "path": "rust/miniproto-native/crypto/aes-256-ctr-crypt.md",
       "qualified_name": "miniproto_native::crypto::aes_256_ctr_crypt",
       "route": "/reference/rust/miniproto-native/crypto/aes-256-ctr-crypt/",
-      "sha256": "86dadbad97ef150e6381c22f06c3dae2f62997f1d38d105cc3f181da5f23f6a2",
+      "sha256": "6e7529afb7829961c97868fb7b2ef44e0b391aabd9ee6bb39ebde89a2ef63f2b",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4697,7 +4697,7 @@
       "path": "rust/miniproto-native/crypto/aes-256-gcm-decrypt.md",
       "qualified_name": "miniproto_native::crypto::aes_256_gcm_decrypt",
       "route": "/reference/rust/miniproto-native/crypto/aes-256-gcm-decrypt/",
-      "sha256": "23508d610544c7a3e573f53b7d023366ee3fb37cbbd5ea3399ad80b34304d629",
+      "sha256": "ee3109593650f21bf69c81d83b0137575ffdd243ad62efeaf5749fd15081479e",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4706,7 +4706,7 @@
       "path": "rust/miniproto-native/crypto/aes-256-gcm-encrypt.md",
       "qualified_name": "miniproto_native::crypto::aes_256_gcm_encrypt",
       "route": "/reference/rust/miniproto-native/crypto/aes-256-gcm-encrypt/",
-      "sha256": "e53bb1f8dec5be9697c21c896a0a997d302e5bcb31966b10431ce2c721320db2",
+      "sha256": "630d8107690efc498b90ac14f79af109b253b2e5ab97c83d314e6f23fd1b70ef",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4715,7 +4715,7 @@
       "path": "rust/miniproto-native/crypto/aes-256-ige-decrypt.md",
       "qualified_name": "miniproto_native::crypto::aes_256_ige_decrypt",
       "route": "/reference/rust/miniproto-native/crypto/aes-256-ige-decrypt/",
-      "sha256": "f406bc40bfbd101b259055f25ea66d3cfd7f8e45e96c22b47b63ade9c0124621",
+      "sha256": "557b6ffbcf92620ff4fe02ebbba0f44146e104f677e04ba44bd3c55ec96a0d47",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4724,7 +4724,7 @@
       "path": "rust/miniproto-native/crypto/aes-256-ige-encrypt.md",
       "qualified_name": "miniproto_native::crypto::aes_256_ige_encrypt",
       "route": "/reference/rust/miniproto-native/crypto/aes-256-ige-encrypt/",
-      "sha256": "bf5011f18b9eaa869aeaca993d44332d1df310c031675eb1ec43cc7435fc71d7",
+      "sha256": "fd3071ace6d0a3b1d95e649d37957d22b8512f4b7005cf6b9f2c0b4e188b2635",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4733,7 +4733,7 @@
       "path": "rust/miniproto-native/crypto/index.md",
       "qualified_name": "miniproto_native::crypto",
       "route": "/reference/rust/miniproto-native/crypto/",
-      "sha256": "39f771d1f280122ffb6d2902f3ef9a473d43b17b0c7e0f40454b56693dda7ade",
+      "sha256": "fc9b8142da5835dcf4834ff5a77e350bc62392b8b48cd17ddca2911c6db8d4eb",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4742,7 +4742,7 @@
       "path": "rust/miniproto-native/crypto/mtproto-auth-key-id.md",
       "qualified_name": "miniproto_native::crypto::mtproto_auth_key_id",
       "route": "/reference/rust/miniproto-native/crypto/mtproto-auth-key-id/",
-      "sha256": "459fdc6898b42c180635f1a7edf36f55a412275db89c623089f77a951f341dc0",
+      "sha256": "a39ae1491a17f29e7bfc89b3003b39398aa84945f3abbb0e2b1d43962ce1e545",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4751,7 +4751,7 @@
       "path": "rust/miniproto-native/crypto/mtproto-decrypt-payload.md",
       "qualified_name": "miniproto_native::crypto::mtproto_decrypt_payload",
       "route": "/reference/rust/miniproto-native/crypto/mtproto-decrypt-payload/",
-      "sha256": "62f043bee9e2492588786bd598b417a42e51c81ea84afba5530996386e9a81f9",
+      "sha256": "b5f65aa0462188543e3d9cd79c41fe6ebbbfb24692f94db1cf10f803a206263a",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4760,7 +4760,7 @@
       "path": "rust/miniproto-native/crypto/mtproto-derive-aes-key-iv.md",
       "qualified_name": "miniproto_native::crypto::mtproto_derive_aes_key_iv",
       "route": "/reference/rust/miniproto-native/crypto/mtproto-derive-aes-key-iv/",
-      "sha256": "ad7e5552674b6e85f2ebf2de04824929acaf94373d95d5848aa24dd5c374c7a0",
+      "sha256": "5baea60259353900bd7eaf3e471a1aefcf5045258c6e9b1e7831acfd11a3603d",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4769,7 +4769,7 @@
       "path": "rust/miniproto-native/crypto/mtproto-encrypt-payload.md",
       "qualified_name": "miniproto_native::crypto::mtproto_encrypt_payload",
       "route": "/reference/rust/miniproto-native/crypto/mtproto-encrypt-payload/",
-      "sha256": "797227ce1213cadb6f33267bce7660181b13d1c573498d9c485de92873ad4d9f",
+      "sha256": "c76e19e1adfcacc5de802c502ba9e075f893ba58c5c8f88b9168e540bf7cc449",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4778,7 +4778,7 @@
       "path": "rust/miniproto-native/crypto/mtproto-message-key.md",
       "qualified_name": "miniproto_native::crypto::mtproto_message_key",
       "route": "/reference/rust/miniproto-native/crypto/mtproto-message-key/",
-      "sha256": "b4e8e0a6206f854ca7a5376e6cf9c21eca616cc1d364f911ef1f9477f66c2419",
+      "sha256": "2ef1ef73cfe9506816cc4adbd979a98aafa965224407fff254bb920b2871a5b2",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4787,7 +4787,7 @@
       "path": "rust/miniproto-native/crypto/native-available.md",
       "qualified_name": "miniproto_native::crypto::native_available",
       "route": "/reference/rust/miniproto-native/crypto/native-available/",
-      "sha256": "dab1444c76fb5854ec1e7b6170785e52664111215dd48d673e234882d2b74e50",
+      "sha256": "62af341bde333c96816cb2684a858f137c83641a994554ef0135b1b11554bd06",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4796,7 +4796,7 @@
       "path": "rust/miniproto-native/crypto/pq-factorize.md",
       "qualified_name": "miniproto_native::crypto::pq_factorize",
       "route": "/reference/rust/miniproto-native/crypto/pq-factorize/",
-      "sha256": "177ffb00ff47905fb9044b9cf600953143d294590ad7164cbec78b0484a8f040",
+      "sha256": "fe739c3ba20b12ee50e939c409e8102c7ea511f6629bfa6401df96b501a956cb",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4805,7 +4805,7 @@
       "path": "rust/miniproto-native/crypto/register.md",
       "qualified_name": "miniproto_native::crypto::register",
       "route": "/reference/rust/miniproto-native/crypto/register/",
-      "sha256": "f0b8e40cc42ed4b72e0b73a8a342a19ca353c041f42a1f3371269fc3d1d68c40",
+      "sha256": "b008dedb1ae7e50e64dbd560034f5491159deba608048c9823bb5f1c151bceea",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4814,7 +4814,7 @@
       "path": "rust/miniproto-native/crypto/scrypt-derive.md",
       "qualified_name": "miniproto_native::crypto::scrypt_derive",
       "route": "/reference/rust/miniproto-native/crypto/scrypt-derive/",
-      "sha256": "c2b6e4fc6c6187dcaa2f4f21ff637f4be604a2a448d418fe3c69193f08198aa8",
+      "sha256": "d2e3b550067bd906569dad4f2e35bdb7077bd7ec678022c3b93391aa884a1dc3",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4823,7 +4823,7 @@
       "path": "rust/miniproto-native/crypto/sha1-digest.md",
       "qualified_name": "miniproto_native::crypto::sha1_digest",
       "route": "/reference/rust/miniproto-native/crypto/sha1-digest/",
-      "sha256": "d578f87af534eecdc21b4f9720043b44ae61983446d21309604a8fcf772bcb42",
+      "sha256": "57a871d90198c3080afea3c2103137630bbce98651c9d3eeacd577377373b203",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4832,7 +4832,7 @@
       "path": "rust/miniproto-native/crypto/sha256-digest.md",
       "qualified_name": "miniproto_native::crypto::sha256_digest",
       "route": "/reference/rust/miniproto-native/crypto/sha256-digest/",
-      "sha256": "f11b561a740bdf75c5837245fdc8b513e2a414e700f1410bcb1f5889b901ce9f",
+      "sha256": "30a52504bd2063756eb598d1be9ca87a297a4c82fed96bc0269a7a1369221b75",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4841,7 +4841,7 @@
       "path": "rust/miniproto-native/crypto/xor-bytes.md",
       "qualified_name": "miniproto_native::crypto::xor_bytes",
       "route": "/reference/rust/miniproto-native/crypto/xor-bytes/",
-      "sha256": "f7dc3c162964fd016302af8432a76f206f8d5aba08c613267f75c49914ec821c",
+      "sha256": "b9abfc513b5f0f36a767a198814325e97ba72250d735637290f029fe6784d5d4",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4895,7 +4895,7 @@
       "path": "rust/miniproto-native/index.md",
       "qualified_name": "miniproto_native",
       "route": "/reference/rust/miniproto-native/",
-      "sha256": "c4d14f428039be5f7eed1631978db42d2b078faf1ddbb3b73ee40e258a8af2b9",
+      "sha256": "cda9786bd76b80835780de16c7e47a1e01207475eeb638623fcfac1bcf88c4bd",
       "source_path": "rust/miniproto/src/lib.rs"
     },
     {
@@ -4904,7 +4904,7 @@
       "path": "rust/miniproto-native/mtproto/index.md",
       "qualified_name": "miniproto_native::mtproto",
       "route": "/reference/rust/miniproto-native/mtproto/",
-      "sha256": "71e80401df0cf98b50848d3a3825b04b218b36063079f7127c01ce8602365900",
+      "sha256": "fb15e24d419a94caecde6af13a99e167bf4d92b82715588577899a5ea5df1338",
       "source_path": "rust/miniproto/src/mtproto.rs"
     },
     {
@@ -4913,7 +4913,7 @@
       "path": "rust/miniproto-native/mtproto/mtproto-decode-message.md",
       "qualified_name": "miniproto_native::mtproto::mtproto_decode_message",
       "route": "/reference/rust/miniproto-native/mtproto/mtproto-decode-message/",
-      "sha256": "b32e69528a7d09b9eea7d2917ef58afccb8c14fbf0e829e1087e9d334b6dae67",
+      "sha256": "1e5eaed2098847ea49fb4653720476ddb9158fec7d0ceb144ca9209c15f483ed",
       "source_path": "rust/miniproto/src/mtproto.rs"
     },
     {
@@ -4922,7 +4922,7 @@
       "path": "rust/miniproto-native/mtproto/mtproto-encode-message.md",
       "qualified_name": "miniproto_native::mtproto::mtproto_encode_message",
       "route": "/reference/rust/miniproto-native/mtproto/mtproto-encode-message/",
-      "sha256": "a7aa202835d62dcf37ac529e837a54ade08304fbc52bceef013db1cb5e7a8406",
+      "sha256": "fd1c39a5b63cd6630a8f3524fd3df538fb234cd743bd3a05a87ec29bc4ec999c",
       "source_path": "rust/miniproto/src/mtproto.rs"
     },
     {
@@ -4931,7 +4931,7 @@
       "path": "rust/miniproto-native/mtproto/register.md",
       "qualified_name": "miniproto_native::mtproto::register",
       "route": "/reference/rust/miniproto-native/mtproto/register/",
-      "sha256": "21d0828c4565d497e5c4ee78d6a1b4c1b9ad7bd6b8562cc68b4cb9fe7a33b0da",
+      "sha256": "56a7b08b0775d17e64be774db786b56baa8815ff23685352fcb8eb9f2594fbb3",
       "source_path": "rust/miniproto/src/mtproto.rs"
     },
     {
@@ -4940,7 +4940,7 @@
       "path": "rust/miniproto-native/tl/index.md",
       "qualified_name": "miniproto_native::tl",
       "route": "/reference/rust/miniproto-native/tl/",
-      "sha256": "20d4f237d6e23b9693ac12a8f48521546e505d0ecf5b6b72fdfce551326f2a0d",
+      "sha256": "5b1a360c703b085748e12a1b755e3695cf252b5d70c0d903a1e186cb027781ec",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -4949,7 +4949,7 @@
       "path": "rust/miniproto-native/tl/register.md",
       "qualified_name": "miniproto_native::tl::register",
       "route": "/reference/rust/miniproto-native/tl/register/",
-      "sha256": "f33657b5d6ed2de5f899a3bef32334fdc1f08cc4c7cb9ba65deb3b269bb3c31f",
+      "sha256": "f5ac70c0d41f6443ad72b03227afd7807a32412156ddf6e3976163a089d4d068",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -4958,7 +4958,7 @@
       "path": "rust/miniproto-native/tl/tl-decode-bytes.md",
       "qualified_name": "miniproto_native::tl::tl_decode_bytes",
       "route": "/reference/rust/miniproto-native/tl/tl-decode-bytes/",
-      "sha256": "8e13bf5ad27512f343b6d431cfc59e0d7a9b993d81e1e65937c03cba0964f266",
+      "sha256": "356f6680a4fba1d5580db0ff41e59fce93524b2d4011416f21a153090a266ea4",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -4967,7 +4967,7 @@
       "path": "rust/miniproto-native/tl/tl-decode-double.md",
       "qualified_name": "miniproto_native::tl::tl_decode_double",
       "route": "/reference/rust/miniproto-native/tl/tl-decode-double/",
-      "sha256": "df6ae0f78059778d926f01e25c77ab149b381f10a6d142c7b404af90a74e669b",
+      "sha256": "18b7db457e6ae3c87156adeac71551589b3e9bfca998ed9d2c15d4b4f192841b",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -4976,7 +4976,7 @@
       "path": "rust/miniproto-native/tl/tl-decode-int-vector.md",
       "qualified_name": "miniproto_native::tl::tl_decode_int_vector",
       "route": "/reference/rust/miniproto-native/tl/tl-decode-int-vector/",
-      "sha256": "dd6ea5fafbcbfbe8a445935c0f62d7205cb3443a76817bb4756ea92869abbb4d",
+      "sha256": "f8c0a65145fd1885fb78def231ff3bda54ab9fe5b0cfa4cf384180ceaefdc034",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -4985,7 +4985,7 @@
       "path": "rust/miniproto-native/tl/tl-decode-int.md",
       "qualified_name": "miniproto_native::tl::tl_decode_int",
       "route": "/reference/rust/miniproto-native/tl/tl-decode-int/",
-      "sha256": "947cdb09c9af3d9c22cc3d0500c3e7da923a87d62468c7a5084e70041ab6f132",
+      "sha256": "fb6e1f1307f6873eb58e5f0e8db788ca66ed9b7dd91c14757eeee5b47801f434",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -4994,7 +4994,7 @@
       "path": "rust/miniproto-native/tl/tl-decode-int128.md",
       "qualified_name": "miniproto_native::tl::tl_decode_int128",
       "route": "/reference/rust/miniproto-native/tl/tl-decode-int128/",
-      "sha256": "90c1090c4c7fedfc1e447b4390d64c248b2b190afb1a973ea36095d7352c6401",
+      "sha256": "c1147046b9c03b8e3e160e6d3ac04fefd73b67df628ddf3bf1db69459bf4d937",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5003,7 +5003,7 @@
       "path": "rust/miniproto-native/tl/tl-decode-int256.md",
       "qualified_name": "miniproto_native::tl::tl_decode_int256",
       "route": "/reference/rust/miniproto-native/tl/tl-decode-int256/",
-      "sha256": "ee8630aa09f8af6b18922e44afd6a0f8831abc951c0e53a2d5c9529a09203c01",
+      "sha256": "aac82ca4dbf969c807ce54fd3a1648d9899469a5eed62fc74dc4f277e32850ae",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5012,7 +5012,7 @@
       "path": "rust/miniproto-native/tl/tl-decode-long-vector.md",
       "qualified_name": "miniproto_native::tl::tl_decode_long_vector",
       "route": "/reference/rust/miniproto-native/tl/tl-decode-long-vector/",
-      "sha256": "9d7363fb8822fe1a621a036871ba1ec97d825a8bf09cc42ed83a9fbcfa86cc3d",
+      "sha256": "79c6a1e06ea34935cbb7b39213c8648ffd72c56ef5b7dbea8e85f3416785f73a",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5021,7 +5021,7 @@
       "path": "rust/miniproto-native/tl/tl-decode-long.md",
       "qualified_name": "miniproto_native::tl::tl_decode_long",
       "route": "/reference/rust/miniproto-native/tl/tl-decode-long/",
-      "sha256": "cf707c670b9f4329ce88985d3475b0be4111dd3f850c732c49f6fd98dee66d73",
+      "sha256": "fdd364dd35ab73da4ee45b4a468b3939eadeedc0ee576be957ca21d0992d66b4",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5030,7 +5030,7 @@
       "path": "rust/miniproto-native/tl/tl-decode-string.md",
       "qualified_name": "miniproto_native::tl::tl_decode_string",
       "route": "/reference/rust/miniproto-native/tl/tl-decode-string/",
-      "sha256": "06b406ad5807c14c3726c86578c4691b3688512820d1eea2f8d581c3d177b87f",
+      "sha256": "9fa3fdb577d138d6b8f617932e9830005043a782aa8549d715d7e775dbc14ee2",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5039,7 +5039,7 @@
       "path": "rust/miniproto-native/tl/tl-decode-uint.md",
       "qualified_name": "miniproto_native::tl::tl_decode_uint",
       "route": "/reference/rust/miniproto-native/tl/tl-decode-uint/",
-      "sha256": "c4dee43dfc7ced25d7ccb2132d746b37356836e51dcb883096f85e64bfa49842",
+      "sha256": "fcba680c5662e6c2e0274a3bc09da6908ce60eaf67d795c3e9f74836a85b437a",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5048,7 +5048,7 @@
       "path": "rust/miniproto-native/tl/tl-encode-bytes.md",
       "qualified_name": "miniproto_native::tl::tl_encode_bytes",
       "route": "/reference/rust/miniproto-native/tl/tl-encode-bytes/",
-      "sha256": "e70c471d00c0f9ccc03cbdd73e07a90d98bdb9a6e0b7ecf59b6ef4e362d28805",
+      "sha256": "5de8b76cb44fe599465b9299bfcf65434ded34293ae32f199cfd44064f1b66c4",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5057,7 +5057,7 @@
       "path": "rust/miniproto-native/tl/tl-encode-double.md",
       "qualified_name": "miniproto_native::tl::tl_encode_double",
       "route": "/reference/rust/miniproto-native/tl/tl-encode-double/",
-      "sha256": "c93439f17c218d3e6beaf50549513b3b0fbbd7170c2c8845cf726b8c6164f178",
+      "sha256": "b751b8c7f2bdceb51d2b7db63e5f01a9df1d561a1169fd9fdd2da39cbfc4dd23",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5066,7 +5066,7 @@
       "path": "rust/miniproto-native/tl/tl-encode-int-vector.md",
       "qualified_name": "miniproto_native::tl::tl_encode_int_vector",
       "route": "/reference/rust/miniproto-native/tl/tl-encode-int-vector/",
-      "sha256": "80cf1aa788d6185702a6e78b8ab8d4c95a0f1077431f1ec56238be03471463ac",
+      "sha256": "0e7f6ea9736ed9b197c1d238969004f23773d89bc07f69c2b3a6f4d5d4f05125",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5075,7 +5075,7 @@
       "path": "rust/miniproto-native/tl/tl-encode-int.md",
       "qualified_name": "miniproto_native::tl::tl_encode_int",
       "route": "/reference/rust/miniproto-native/tl/tl-encode-int/",
-      "sha256": "fcbfd780f1747251899473b6cf898dd843f031bed7532c9ce8fd2d9002d9b55d",
+      "sha256": "6529769f5efb02fc1611fd7c326fd6724ba3a204b115bb497240f73bd3ab3833",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5084,7 +5084,7 @@
       "path": "rust/miniproto-native/tl/tl-encode-int128.md",
       "qualified_name": "miniproto_native::tl::tl_encode_int128",
       "route": "/reference/rust/miniproto-native/tl/tl-encode-int128/",
-      "sha256": "68df8df3d63e1fd5451d61f534016bb6e3cbe94ea3833c198a73d18b503f2227",
+      "sha256": "ed4f3e18b5b90f22ee9d67562fb466623bf18ccc41114ee7d550daec9f140afd",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5093,7 +5093,7 @@
       "path": "rust/miniproto-native/tl/tl-encode-int256.md",
       "qualified_name": "miniproto_native::tl::tl_encode_int256",
       "route": "/reference/rust/miniproto-native/tl/tl-encode-int256/",
-      "sha256": "511c382e422e2cc4a38cb5359d13d96b543f00d75809a9b45d7375c0f7600eab",
+      "sha256": "7f8f2f439a7d7965fbedb60d0c0aa2f6439ff38973ce63215fbe25c96c760d89",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5102,7 +5102,7 @@
       "path": "rust/miniproto-native/tl/tl-encode-long-vector.md",
       "qualified_name": "miniproto_native::tl::tl_encode_long_vector",
       "route": "/reference/rust/miniproto-native/tl/tl-encode-long-vector/",
-      "sha256": "c24394fc94194a89c958776c7be46be073e933e6379a8f41b381cbdab0a03bd4",
+      "sha256": "b59e9535f685cb7617c328e0ad822b8212d9a25385d7f666b63385f7b50979c2",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5111,7 +5111,7 @@
       "path": "rust/miniproto-native/tl/tl-encode-long.md",
       "qualified_name": "miniproto_native::tl::tl_encode_long",
       "route": "/reference/rust/miniproto-native/tl/tl-encode-long/",
-      "sha256": "4523a8ac3e08e9f3f81dcd06132b557ead89696087861bf4ea7026dd580866a2",
+      "sha256": "6f2780112cae53cf485c1bd0051b6cb4e95b719517d18f99602c131cab2b2aa3",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5120,7 +5120,7 @@
       "path": "rust/miniproto-native/tl/tl-encode-string.md",
       "qualified_name": "miniproto_native::tl::tl_encode_string",
       "route": "/reference/rust/miniproto-native/tl/tl-encode-string/",
-      "sha256": "3b96d7d323bf901f304031cc1b4ea0cbbd494be70201afdd6685536b427a791d",
+      "sha256": "bdbc057c8b971c968fb614c1606ac81d6439170b3fe5dbf0724fb5a051983570",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5129,7 +5129,7 @@
       "path": "rust/miniproto-native/tl/tl-encode-uint.md",
       "qualified_name": "miniproto_native::tl::tl_encode_uint",
       "route": "/reference/rust/miniproto-native/tl/tl-encode-uint/",
-      "sha256": "94dde293c5cb2fefd330010beb20006c4895260652d6816db56d8c5c5476bfb4",
+      "sha256": "ec0eae96535ac50e9ed975dbb2241f1fe8ff4ba44061c6c9bf2b13ba930fc153",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5138,7 +5138,7 @@
       "path": "rust/miniproto-native/tl/tl-fast-decode.md",
       "qualified_name": "miniproto_native::tl::tl_fast_decode",
       "route": "/reference/rust/miniproto-native/tl/tl-fast-decode/",
-      "sha256": "0f822bf580bd44dffbf88227cf80d5897381c2645dbe19e818700d9331335209",
+      "sha256": "727a8103e9011f42664978bb4122b3c9e0fee05f1fd57dc0abbc4556e5a156ba",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5147,7 +5147,7 @@
       "path": "rust/miniproto-native/tl/tl-fast-encode.md",
       "qualified_name": "miniproto_native::tl::tl_fast_encode",
       "route": "/reference/rust/miniproto-native/tl/tl-fast-encode/",
-      "sha256": "59c6c7c33b1b86df5e23467a12fae4fbdc87d9b9e11acf58e438df015d6ab157",
+      "sha256": "dd108e5545497fe0e2b40774b09485a84994a340c503605f086ee99321734d70",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5156,7 +5156,7 @@
       "path": "rust/miniproto-native/transport/index.md",
       "qualified_name": "miniproto_native::transport",
       "route": "/reference/rust/miniproto-native/transport/",
-      "sha256": "64f1a9a0bae36aaa996280041ec2e35b7a9bc980a4bc2741657b29665f5de3eb",
+      "sha256": "368f89513efe9f3a61fe985f3d20b40a302980e5195466cdaabc49c45391d63f",
       "source_path": "rust/miniproto/src/transport.rs"
     },
     {
@@ -5165,7 +5165,7 @@
       "path": "rust/miniproto-native/transport/quick-ack-token.md",
       "qualified_name": "miniproto_native::transport::quick_ack_token",
       "route": "/reference/rust/miniproto-native/transport/quick-ack-token/",
-      "sha256": "605d140c00eef0a548518455d96cb8f0b9874988131e834dc1a4f58838ca59a9",
+      "sha256": "6031b0778d1458aca8e2c1a8e82ce611e7763b34c0e7ad3ba125e6b85f398a8b",
       "source_path": "rust/miniproto/src/transport.rs"
     },
     {
@@ -5174,7 +5174,7 @@
       "path": "rust/miniproto-native/transport/register.md",
       "qualified_name": "miniproto_native::transport::register",
       "route": "/reference/rust/miniproto-native/transport/register/",
-      "sha256": "50b280f9f9fef25c8b438eb61d4d51a0cb3e1982b9b7b18c8a38351a5832bea3",
+      "sha256": "bfe1bdbf1ca59c6b6a56d027e73c167e67c8cdc778047238ac3d26ffc06cbf8c",
       "source_path": "rust/miniproto/src/transport.rs"
     },
     {
@@ -5183,7 +5183,7 @@
       "path": "rust/miniproto-native/transport/transportcodec.md",
       "qualified_name": "miniproto_native::transport::TransportCodec",
       "route": "/reference/rust/miniproto-native/transport/transportcodec/",
-      "sha256": "7eb99b74da38894a3f9e341a5211311dc8c82f3909dda198613f11c561fdd5ac",
+      "sha256": "a255e492813407dd17d0cbe2ea255bddc0fe1ec5df70efbe8b807322de9c5693",
       "source_path": "rust/miniproto/src/transport.rs"
     },
     {
@@ -40803,10 +40803,10 @@
     "tools/docs/__main__.py": "9cbfd2fb5e80ce7a57d943e354a757040c0f1ef8a9a1bf602fdac8de19855116",
     "tools/docs/audit.py": "0bdde1992e22076e2cf49f280c275ee69ca6ed42587353b7b34b74a104dbe9c1",
     "tools/docs/generate_python.py": "c6e296ee3e90a986d321277b81dc255f17ad290ae7f26f46624d23e8590af439",
-    "tools/docs/generate_rust.py": "10677a9032a69c7c46aa6b4c1b2dfec7c7e3a7c1a3795a0d534269810e81a29f",
+    "tools/docs/generate_rust.py": "1eabb9db820b102b86605980c0d7d7fb2c72fd91aff84e1d406b6a96c9ebbc45",
     "tools/docs/generate_telegram.py": "a0f389940b0e74cb4a9ee7e057a77e68a6b2e436afb2cae30c3c3800dd80ef0f",
     "tools/docs/manifest.py": "416a6ed447a3964c5c1cb1e1dfbc37c837cfc6973ffc05776d6024fe4aada5f0",
-    "tools/docs/model.py": "e4121b5921983233bab6280464f7726242c33cac3d283536911a90f417099408",
+    "tools/docs/model.py": "549c22ea791683b75d3f3c256534b83969b3f19b25aedc81ce9fb58270186f45",
     "tools/schema/rpc-errors.json": "fb7304a7f7e66a6750f9ca842dd1406ed3798eebd6f4f2d993924135848ee82e",
     "tools/schema/schema-metadata.json": "4aae90fe8fecea4a620a01f339b4496595d85c845291b59dc8e24ca32c0a1962",
     "tools/schema/schema.json": "1ca3f912010f05991a67367485396139e75efc47e6c2c62fcce56352867f9805",

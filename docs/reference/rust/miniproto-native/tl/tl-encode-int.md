@@ -38,7 +38,7 @@ fn tl_encode_int(value: i32) -> _
 fn tl_encode_int(value: i32) -> Vec<u8>
 ```
 
-*Defined in `rust\miniproto\src\tl.rs:504-506`*
+*Defined in `rust/miniproto/src/tl.rs:504-506`*
 
 Encodes Python `tl_encode_int(value)` as a four-byte little-endian signed integer.
 

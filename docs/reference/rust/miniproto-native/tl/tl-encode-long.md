@@ -38,7 +38,7 @@ fn tl_encode_long(value: i64) -> _
 fn tl_encode_long(value: i64) -> Vec<u8>
 ```
 
-*Defined in `rust\miniproto\src\tl.rs:548-550`*
+*Defined in `rust/miniproto/src/tl.rs:548-550`*
 
 Encodes Python `tl_encode_long(value)` as an eight-byte little-endian signed integer.
 

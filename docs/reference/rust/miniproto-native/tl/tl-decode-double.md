@@ -39,7 +39,7 @@ fn tl_decode_double(data: &[u8], offset: usize) -> _
 fn tl_decode_double(data: &[u8], offset: usize) -> PyResult<(f64, usize)>
 ```
 
-*Defined in `rust\miniproto\src\tl.rs:635-638`*
+*Defined in `rust/miniproto/src/tl.rs:635-638`*
 
 Decodes Python `tl_decode_double(data, offset)` and returns `(value, next_offset)` or `ValueError`.
 

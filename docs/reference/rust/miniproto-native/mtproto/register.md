@@ -37,7 +37,7 @@ fn register(m: &_) -> _
 fn register(m: &Bound<'_, pyo3::types::PyModule>) -> PyResult<()>
 ```
 
-*Defined in `rust\miniproto\src\mtproto.rs:77-81`*
+*Defined in `rust/miniproto/src/mtproto.rs:77-81`*
 
 Adds the Python-visible MTProto envelope functions to `miniproto._native`.
 

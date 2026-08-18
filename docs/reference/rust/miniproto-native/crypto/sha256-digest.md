@@ -39,7 +39,7 @@ fn sha256_digest(py: _, data: _) -> _
 fn sha256_digest(py: Python<'_>, data: Vec<u8>) -> Vec<u8>
 ```
 
-*Defined in `rust\miniproto\src\crypto.rs:114-116`*
+*Defined in `rust/miniproto/src/crypto.rs:114-116`*
 
 Computes Python `sha256_digest(data)` and returns the 32-byte SHA-256 digest.
 

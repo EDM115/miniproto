@@ -46,7 +46,7 @@ fn mtproto_encode_message(py: _, auth_key: _, server_salt: u64, session_id: u64,
 fn mtproto_encode_message(py: Python<'_>, auth_key: Vec<u8>, server_salt: u64, session_id: u64, msg_id: i64, seq_no: i32, body: Vec<u8>, client_to_server: bool, padding: Option<Vec<u8>>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust\miniproto\src\mtproto.rs:114-138`*
+*Defined in `rust/miniproto/src/mtproto.rs:114-138`*
 
 Encodes one encrypted MTProto envelope as Python `mtproto_encode_message`.
 

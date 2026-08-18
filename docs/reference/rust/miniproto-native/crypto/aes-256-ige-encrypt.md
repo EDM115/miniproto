@@ -41,7 +41,7 @@ fn aes_256_ige_encrypt(py: _, plaintext: _, key: _, iv: _) -> _
 fn aes_256_ige_encrypt(py: Python<'_>, plaintext: Vec<u8>, key: Vec<u8>, iv: Vec<u8>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust\miniproto\src\crypto.rs:265-275`*
+*Defined in `rust/miniproto/src/crypto.rs:265-275`*
 
 Encrypts block-aligned bytes with Python `aes_256_ige_encrypt`.
 

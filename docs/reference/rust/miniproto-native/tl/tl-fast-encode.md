@@ -40,7 +40,7 @@ fn tl_fast_encode(constructor_id: u32, values: &_, boxed: bool) -> _
 fn tl_fast_encode(constructor_id: u32, values: &Bound<'_, pyo3::types::PyTuple>, boxed: bool) -> PyResult<Option<Vec<u8>>>
 ```
 
-*Defined in `rust\miniproto\src\tl.rs:143-191`*
+*Defined in `rust/miniproto/src/tl.rs:143-191`*
 
 Attempts Python `tl_fast_encode` for a generated constructor.
 

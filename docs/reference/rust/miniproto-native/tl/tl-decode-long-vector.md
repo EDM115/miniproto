@@ -40,7 +40,7 @@ fn tl_decode_long_vector(py: _, data: _, offset: i128) -> _
 fn tl_decode_long_vector(py: Python<'_>, data: Vec<u8>, offset: i128) -> PyResult<(Vec<i64>, usize)>
 ```
 
-*Defined in `rust\miniproto\src\tl.rs:749-757`*
+*Defined in `rust/miniproto/src/tl.rs:749-757`*
 
 Decodes Python `tl_decode_long_vector(data, offset)` into values and a next offset.
 

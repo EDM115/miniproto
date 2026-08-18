@@ -39,7 +39,7 @@ fn tl_decode_bytes(data: &[u8], offset: usize) -> _
 fn tl_decode_bytes(data: &[u8], offset: usize) -> PyResult<(Vec<u8>, usize)>
 ```
 
-*Defined in `rust\miniproto\src\tl.rs:659-661`*
+*Defined in `rust/miniproto/src/tl.rs:659-661`*
 
 Decodes Python `tl_decode_bytes(data, offset)` and returns bytes plus the next aligned offset.
 

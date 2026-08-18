@@ -42,7 +42,7 @@ fn aes_256_gcm_decrypt(py: _, ciphertext_and_tag: _, key: _, nonce: _, associate
 fn aes_256_gcm_decrypt(py: Python<'_>, ciphertext_and_tag: Vec<u8>, key: Vec<u8>, nonce: Vec<u8>, associated_data: Vec<u8>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust\miniproto\src\crypto.rs:412-423`*
+*Defined in `rust/miniproto/src/crypto.rs:412-423`*
 
 Authenticated-decrypts Python `aes_256_gcm_decrypt` ciphertext-and-tag bytes.
 

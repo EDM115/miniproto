@@ -38,7 +38,7 @@ fn tl_encode_bytes(value: &[u8]) -> _
 fn tl_encode_bytes(value: &[u8]) -> Vec<u8>
 ```
 
-*Defined in `rust\miniproto\src\tl.rs:646-648`*
+*Defined in `rust/miniproto/src/tl.rs:646-648`*
 
 Encodes Python `tl_encode_bytes(value)` with TL's short/long length prefix and zero padding.
 

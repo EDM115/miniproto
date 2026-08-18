@@ -41,7 +41,7 @@ fn mtproto_decode_message(py: _, auth_key: _, packet: _, client_to_server: bool)
 fn mtproto_decode_message(py: Python<'_>, auth_key: Vec<u8>, packet: Vec<u8>, client_to_server: bool) -> PyResult<(Vec<u8>, u64, u64, i64, i32, Vec<u8>, Vec<u8>)>
 ```
 
-*Defined in `rust\miniproto\src\mtproto.rs:154-173`*
+*Defined in `rust/miniproto/src/mtproto.rs:154-173`*
 
 Decodes Python `mtproto_decode_message` packet bytes into its seven-element envelope tuple.
 

@@ -41,7 +41,7 @@ fn aes_256_ctr_crypt(py: _, data: _, key: _, iv: _) -> _
 fn aes_256_ctr_crypt(py: Python<'_>, data: Vec<u8>, key: Vec<u8>, iv: Vec<u8>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust\miniproto\src\crypto.rs:361-371`*
+*Defined in `rust/miniproto/src/crypto.rs:361-371`*
 
 Applies Python `aes_256_ctr_crypt` to data using AES-CTR keystream XOR.
 

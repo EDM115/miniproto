@@ -647,16 +647,23 @@ def test_cargo_docs_md_fragments_preserve_real_module_and_item_sections(tmp_path
     rustdoc_json.write_text(json.dumps(payload), encoding="utf-8")
     output = tmp_path / "rendered" / "miniproto_native"
     (output / "crypto").mkdir(parents=True)
-    (output / "index.md").write_text("# Crate `miniproto_native`\n\nNative crate body.\n", encoding="utf-8")
+    (output / "index.md").write_text(
+        "# Crate `miniproto_native`\n\nNative crate body.\n\n*Defined in `rust\\miniproto\\src\\lib.rs:1-20`*\n",
+        encoding="utf-8",
+    )
     (output / "crypto" / "index.md").write_text(
         "# Module `crypto`\n\nModule body.\n\n"
+        "*Defined in `rust\\miniproto\\src\\crypto.rs:1-200`*\n\n"
         "## Functions\n\n"
         "### `seal`\n\n```rust\nfn seal(secret: &[u8], nonce: u32)\n```\n\nSeal body.\n\n"
+        "*Defined in `rust\\miniproto\\src\\crypto.rs:10-20`*\n\n"
+        "A literal Windows example remains `C:\\Users\\developer\\secret.bin`.\n\n"
         "## Structs\n\n"
         "### `NativeCodec`\n\n```rust\nstruct NativeCodec;\n```\n\nCodec body.\n\n"
         "#### Implementations\n\n"
         '- <span id="nativecodec-feed"></span>`fn feed(&mut self, bytes: &[u8])`\n\n'
         "  Append rendered bytes.\n\n"
+        "  *Defined in `rust\\miniproto\\src\\crypto.rs:30-40`*\n\n"
         '- <span id="nativecodec-other"></span>`fn other(&self)`\n\n  Other body.\n',
         encoding="utf-8",
     )
@@ -673,6 +680,11 @@ def test_cargo_docs_md_fragments_preserve_real_module_and_item_sections(tmp_path
     assert fragments["4"].startswith('- <span id="nativecodec-feed"')
     assert "Append rendered bytes." in fragments["4"]
     assert "nativecodec-other" not in fragments["4"]
+    assert "*Defined in `rust/miniproto/src/lib.rs:1-20`*" in fragments["0"]
+    assert "*Defined in `rust/miniproto/src/crypto.rs:1-200`*" in fragments["1"]
+    assert "*Defined in `rust/miniproto/src/crypto.rs:10-20`*" in fragments["2"]
+    assert "*Defined in `rust/miniproto/src/crypto.rs:30-40`*" in fragments["4"]
+    assert r"`C:\Users\developer\secret.bin`" in fragments["2"]
 
 
 def test_live_rustdoc_generation_resolves_relative_paths_once(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

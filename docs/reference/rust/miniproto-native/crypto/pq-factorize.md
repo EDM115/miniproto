@@ -39,7 +39,7 @@ fn pq_factorize(py: _, pq: u64) -> _
 fn pq_factorize(py: Python<'_>, pq: u64) -> PyResult<(u64, u64)>
 ```
 
-*Defined in `rust\miniproto\src\crypto.rs:468-470`*
+*Defined in `rust/miniproto/src/crypto.rs:468-470`*
 
 Factorizes Python `pq_factorize(pq)` into ordered nontrivial `u64` factors.
 
