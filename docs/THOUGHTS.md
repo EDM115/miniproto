@@ -81,3 +81,8 @@ Status (verified 2026-08-18): Implemented as opt-in `Client.download_media(..., 
 ## 2026-08-14 — GPT-5.6 Sol Ultra — Codex — "Manual wheel builds"
 
 - Import-time binding of the selected session-crypto callables was implemented and remeasured with the same warmed, interleaved five-run Windows benchmark, then reverted: it did not improve the selected 1 KiB medians and was noisily worse in several larger/session cases. Keep the simple per-call capability selection unless representative cross-platform evidence demonstrates a real improvement.
+
+## 2026-08-19 — GPT-5.6 Sol — Codex — "CI failure diagnosis"
+
+- Starlight's default search shortcut can open its dialog before Pagefind has asynchronously inserted the search input: the upstream handler calls `querySelector('input')?.focus()` only once, so a sufficiently cold load leaves the later-created input unfocused. Browser acceptance should continue exercising the immediate `Ctrl+K` path; the component integration must focus an input that arrives after the dialog opens rather than hiding the race with a test-only wait.
+- The base wheel intentionally excludes documentation-only dependencies, so even `--help` for an installed documentation console script must not cross an eager import boundary into Griffe or another docs extra. Keep `tools.docs` package initialization dependency-free and verify installed entry-point help from an isolated wheel environment rather than only from the development environment.

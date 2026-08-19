@@ -40799,7 +40799,7 @@
     "src/miniproto/updates/__init__.py": "5149bcb19b53d98b247a62c4515b1fb2f8e6876ecb8558da3d47d5c5c1dd4ca1",
     "src/miniproto/updates/manager.py": "d29b07ddce978f6751bbc71d9fb9ccc32b0c10d9b4646e604ebfd7208c5c0f05",
     "src/miniproto/updates/state.py": "1b0386037aff8541bc81e1591bac8d20e3496a6df7928082554b698562b82f17",
-    "tools/docs/__init__.py": "41546a3bca0d1d0e1719ffb3737c27b8223f448783b8118a75f69046f6b55cb1",
+    "tools/docs/__init__.py": "0a9dc611f73faf52dee51e56eeee3b3f42a79a2399de0bba7f98a440188d63a2",
     "tools/docs/__main__.py": "9cbfd2fb5e80ce7a57d943e354a757040c0f1ef8a9a1bf602fdac8de19855116",
     "tools/docs/audit.py": "0bdde1992e22076e2cf49f280c275ee69ca6ed42587353b7b34b74a104dbe9c1",
     "tools/docs/generate_python.py": "c6e296ee3e90a986d321277b81dc255f17ad290ae7f26f46624d23e8590af439",

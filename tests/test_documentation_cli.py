@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -53,6 +55,26 @@ def test_docs_help_parses_before_generation_or_frontend_work() -> None:
         _parse_arguments(["--help"])
 
     assert exit_info.value.code == 0
+
+
+def test_docs_help_is_available_without_optional_documentation_dependencies() -> None:
+    """The installed help path must not require Griffe or another documentation extra."""
+    result = subprocess.run(
+        (
+            sys.executable,
+            "-S",
+            "-c",
+            "import sys; sys.argv = ['miniproto-docs', '--help']; from tools.docs.__main__ import main; raise SystemExit(main())",
+        ),
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "usage:" in result.stdout
+    assert "miniproto-docs" in result.stdout
 
 
 def test_reference_reconciliation_replaces_only_the_owned_tree(tmp_path: Path) -> None:

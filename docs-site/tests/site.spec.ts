@@ -25,6 +25,12 @@ type PagefindEntry = {
   data: () => Promise<PagefindData>;
 };
 
+declare global {
+  interface Window {
+    runMiniprotoDeferredIdleCallbacks: () => void;
+  }
+}
+
 test("homepage explains the product and exposes the Packet Loom identity", async ({ page }) => {
   await page.goto("./");
 
@@ -214,13 +220,46 @@ test("Pagefind indexes every reference language, parameter terms, prose, and fil
   expect(search.telegramResults.every((values) => values.includes("telegram"))).toBeTruthy();
 });
 
-test("search remains keyboard accessible and exposes reference facets", async ({ page }) => {
+test("search focuses a Pagefind input that initializes after keyboard opening", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const callbacks: IdleRequestCallback[] = [];
+    window.requestIdleCallback = (callback) => {
+      callbacks.push(callback);
+      return callbacks.length;
+    };
+    window.runMiniprotoDeferredIdleCallbacks = () => {
+      const deadline: IdleDeadline = { didTimeout: false, timeRemaining: () => 50 };
+      for (const callback of callbacks.splice(0)) {
+        callback(deadline);
+      }
+    };
+  });
   await page.goto("./");
 
   await page.keyboard.press("Control+k");
   const dialog = page.getByRole("dialog", { name: /search/i });
   await expect(dialog).toBeVisible();
   const searchbox = dialog.locator("input.pagefind-ui__search-input");
+  await expect(searchbox).toHaveCount(0);
+  await page.evaluate(() => {
+    window.runMiniprotoDeferredIdleCallbacks();
+  });
+  await expect(searchbox).toBeFocused();
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+});
+
+test("search remains keyboard accessible and exposes reference facets", async ({ page }) => {
+  await page.goto("./");
+
+  const searchbox = page.locator("input.pagefind-ui__search-input");
+  await expect(searchbox).toBeAttached();
+  await page.keyboard.press("Control+k");
+  const dialog = page.getByRole("dialog", { name: /search/i });
+  await expect(dialog).toBeVisible();
   await expect(searchbox).toBeFocused();
   await searchbox.fill("messages.sendMessage");
   await expect(dialog.getByRole("link", { name: /send.?message/i }).first()).toBeVisible();
