@@ -1,9 +1,8 @@
 [package]
-authors = ["EDM115 <miniproto@edm115.dev>"]
 description = "Rust acceleration layer for the miniproto Python MTProto SDK"
 documentation = "https://docs.rs/miniproto"
 edition = "2024"
-homepage = "https://github.com/EDM115/miniproto"
+homepage = "https://edm115.github.io/miniproto/"
 keywords = ["telegram", "mtproto", "pyo3", "python", "cryptography"]
 license = "MIT"
 name = "miniproto"

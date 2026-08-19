@@ -1,19 +1,100 @@
 from __future__ import annotations
 
+import io
 import json
+import tarfile
 import zipfile
 from pathlib import Path
 
 import pytest
+import tools.release_check as release_check
 from tools.release_check import (
     ReleaseConfig,
     Stage,
     build_release_environment,
     build_stages,
+    inspect_artifacts,
     inspect_wheel,
     parse_args,
     run_stages,
 )
+
+
+def _release_metadata() -> str:
+    return """Metadata-Version: 2.4
+Name: miniproto
+Version: 0.1.0
+Summary: Async-first MTProto client core for Python with bundled Rust acceleration
+Keywords: telegram,mtproto,asyncio,pyo3,rust
+Author-email: EDM115 <miniproto@edm115.dev>
+License-Expression: MIT
+License-File: LICENSE
+Requires-Python: >=3.13
+Description-Content-Type: text/markdown
+Classifier: Development Status :: 3 - Alpha
+Classifier: Framework :: AsyncIO
+Classifier: Intended Audience :: Developers
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Classifier: Programming Language :: Rust
+Classifier: Typing :: Typed
+Project-URL: Homepage, https://edm115.github.io/miniproto/
+Project-URL: Documentation, https://edm115.github.io/miniproto/
+Project-URL: Source, https://github.com/EDM115/miniproto
+Project-URL: Changelog, https://github.com/EDM115/miniproto/blob/master/CHANGELOG.md
+Project-URL: Issues, https://github.com/EDM115/miniproto/issues
+Project-URL: Funding, https://github.com/EDM115#support-me-
+Project-URL: Security, https://github.com/EDM115/miniproto/security/policy
+Requires-Dist: cryptography==50.0.0
+Requires-Dist: uvloop==0.22.1; sys_platform == 'linux' or sys_platform == 'darwin'
+Requires-Dist: winloop==0.6.3; sys_platform == 'win32'
+Requires-Dist: maturin==1.14.1; extra == 'dev'
+Requires-Dist: griffe==2.2.0; extra == 'docs'
+Provides-Extra: dev
+Provides-Extra: docs
+
+miniproto
+"""
+
+
+def _write_release_wheel(
+    path: Path, *, include_script_target: bool = True, extra_files: dict[str, str | bytes] | None = None
+) -> None:
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr("miniproto/__init__.py", "")
+        archive.writestr("miniproto/py.typed", "")
+        archive.writestr("miniproto/_native.cp314-win_amd64.pyd", b"native")
+        archive.writestr("miniproto/raw/functions.py", "")
+        archive.writestr("miniproto/raw/functions.pyi", "")
+        archive.writestr("miniproto/raw/types.py", "")
+        archive.writestr("miniproto/raw/types.pyi", "")
+        archive.writestr("miniproto/raw/_function_shards/bucket_00.py", "")
+        archive.writestr("miniproto/raw/_types_shards/bucket_00.py", "")
+        archive.writestr("miniproto-0.1.0.dist-info/METADATA", _release_metadata())
+        archive.writestr("miniproto-0.1.0.dist-info/licenses/LICENSE", "MIT License\n")
+        archive.writestr(
+            "miniproto-0.1.0.dist-info/entry_points.txt",
+            "[console_scripts]\nminiproto-release-check = tools.release_check:main\n",
+        )
+        if include_script_target:
+            archive.writestr("tools/release_check.py", "def main(): return 0\n")
+        for name, payload in (extra_files or {}).items():
+            archive.writestr(name, payload)
+
+
+def _write_release_sdist(path: Path, *, extra_files: dict[str, str | bytes] | None = None) -> None:
+    files: dict[str, str | bytes] = dict.fromkeys(release_check._REQUIRED_SDIST_PAYLOAD, "")
+    files["PKG-INFO"] = _release_metadata()
+    files["src/miniproto/raw/_function_shards/bucket_00.py"] = ""
+    files["src/miniproto/raw/_types_shards/bucket_00.py"] = ""
+    files.update(extra_files or {})
+    with tarfile.open(path, "w:gz") as archive:
+        for name, value in files.items():
+            payload = value.encode() if isinstance(value, str) else value
+            member = tarfile.TarInfo(f"miniproto-0.1.0/{name}")
+            member.size = len(payload)
+            archive.addfile(member, io.BytesIO(payload))
 
 
 def test_release_check_defaults_to_offline_and_cli_overrides_artifact_environment() -> None:
@@ -158,15 +239,7 @@ def test_pending_stage_is_reported_without_invoking_runner(tmp_path: Path) -> No
 
 def test_wheel_inspection_requires_python_sources_and_native_extension_without_pth(tmp_path: Path) -> None:
     good = tmp_path / "good.whl"
-    with zipfile.ZipFile(good, "w") as archive:
-        archive.writestr("miniproto/__init__.py", "")
-        archive.writestr("miniproto/_native.cp314-win_amd64.pyd", b"native")
-        archive.writestr("miniproto-0.1.0.dist-info/METADATA", "Name: miniproto\n")
-        archive.writestr(
-            "miniproto-0.1.0.dist-info/entry_points.txt",
-            "[console_scripts]\nminiproto-release-check = tools.release_check:main\n",
-        )
-        archive.writestr("tools/release_check.py", "def main(): return 0\n")
+    _write_release_wheel(good)
 
     result = inspect_wheel(good)
 
@@ -174,38 +247,93 @@ def test_wheel_inspection_requires_python_sources_and_native_extension_without_p
     assert result["native_extension"] is True
     assert result["pth_files"] == []
     assert result["console_scripts"] == ["miniproto-release-check"]
+    assert result["metadata"]["runtime_dependencies"] == ["cryptography", "uvloop", "winloop"]
 
     bad = tmp_path / "bad.whl"
-    with zipfile.ZipFile(bad, "w") as archive:
-        archive.writestr("miniproto.pth", "C:/checkout/src")
-        archive.writestr("miniproto-0.1.0.dist-info/METADATA", "Name: miniproto\n")
-    with pytest.raises(ValueError, match=r"Python sources|native extension|pth"):
+    _write_release_wheel(bad, extra_files={"miniproto.pth": "C:/checkout/src"})
+    with pytest.raises(ValueError, match="pth"):
         inspect_wheel(bad)
 
     missing_cli = tmp_path / "missing-cli.whl"
-    with zipfile.ZipFile(missing_cli, "w") as archive:
-        archive.writestr("miniproto/__init__.py", "")
-        archive.writestr("miniproto/_native.cp314-win_amd64.pyd", b"native")
-        archive.writestr(
-            "miniproto-0.1.0.dist-info/entry_points.txt",
-            "[console_scripts]\nminiproto-release-check = tools.release_check:main\n",
-        )
+    _write_release_wheel(missing_cli, include_script_target=False)
     with pytest.raises(ValueError, match="console script target"):
         inspect_wheel(missing_cli)
 
     cached = tmp_path / "cached.whl"
-    with zipfile.ZipFile(cached, "w") as archive:
+    _write_release_wheel(cached, extra_files={"tools/__pycache__/release_check.cpython-314.pyc": b"cached"})
+    with pytest.raises(ValueError, match="cache files"):
+        inspect_wheel(cached)
+
+
+def test_wheel_inspection_rejects_incomplete_release_metadata_and_public_payload(tmp_path: Path) -> None:
+    incomplete = tmp_path / "miniproto-0.1.0-cp314-cp314-win_amd64.whl"
+    with zipfile.ZipFile(incomplete, "w") as archive:
         archive.writestr("miniproto/__init__.py", "")
         archive.writestr("miniproto/_native.cp314-win_amd64.pyd", b"native")
-        archive.writestr("miniproto-0.1.0.dist-info/METADATA", "Name: miniproto\n")
+        archive.writestr(
+            "miniproto-0.1.0.dist-info/METADATA", "Metadata-Version: 2.4\nName: miniproto\nVersion: 0.1.0\n"
+        )
         archive.writestr(
             "miniproto-0.1.0.dist-info/entry_points.txt",
             "[console_scripts]\nminiproto-release-check = tools.release_check:main\n",
         )
         archive.writestr("tools/release_check.py", "def main(): return 0\n")
-        archive.writestr("tools/__pycache__/release_check.cpython-314.pyc", b"cached")
-    with pytest.raises(ValueError, match="cache files"):
-        inspect_wheel(cached)
+
+    with pytest.raises(ValueError, match=r"release metadata|public package payload"):
+        inspect_wheel(incomplete)
+
+
+def test_artifact_inspection_rejects_sdist_without_required_source_build_inputs(tmp_path: Path) -> None:
+    wheel = tmp_path / "miniproto-0.1.0-cp314-cp314-win_amd64.whl"
+    _write_release_wheel(wheel)
+    sdist = tmp_path / "miniproto-0.1.0.tar.gz"
+    with tarfile.open(sdist, "w:gz") as archive:
+        payload = _release_metadata().encode()
+        member = tarfile.TarInfo("miniproto-0.1.0/PKG-INFO")
+        member.size = len(payload)
+        archive.addfile(member, io.BytesIO(payload))
+
+    with pytest.raises(ValueError, match=r"source distribution.*required source/build inputs"):
+        inspect_artifacts(tmp_path)
+
+
+def test_artifact_inspection_rejects_forbidden_sdist_residue(tmp_path: Path) -> None:
+    wheel = tmp_path / "miniproto-0.1.0-cp314-cp314-win_amd64.whl"
+    _write_release_wheel(wheel)
+    _write_release_sdist(tmp_path / "miniproto-0.1.0.tar.gz", extra_files={".env": "EXAMPLE=value"})
+
+    with pytest.raises(ValueError, match="forbidden temporary/cache paths"):
+        inspect_artifacts(tmp_path)
+
+
+def test_clean_import_verifies_wheel_and_sdist_in_separate_environments(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    artifacts = tmp_path / "artifacts"
+    distributions = artifacts / "distributions"
+    distributions.mkdir(parents=True)
+    wheel = distributions / "miniproto-0.1.0-cp314-cp314-win_amd64.whl"
+    sdist = distributions / "miniproto-0.1.0.tar.gz"
+    wheel.touch()
+    sdist.touch()
+    calls: list[tuple[str, ...]] = []
+
+    monkeypatch.setattr(release_check.shutil, "which", lambda _name: "uv")
+
+    def record(command: tuple[str, ...], **_kwargs: object) -> None:
+        calls.append(tuple(str(part) for part in command))
+
+    monkeypatch.setattr(release_check.subprocess, "run", record)
+
+    release_check._clean_import(artifacts, env={})
+
+    venv_commands = [command for command in calls if command[:2] == ("uv", "venv")]
+    install_commands = [command for command in calls if command[:3] == ("uv", "pip", "install")]
+    smoke_commands = [command for command in calls if "-I" in command]
+    assert len(venv_commands) == 2
+    assert len({command[-1] for command in venv_commands}) == 2
+    assert {Path(command[-1]).name for command in install_commands} == {wheel.name, sdist.name}
+    assert len(smoke_commands) == 2
 
 
 def test_release_summary_is_machine_readable(tmp_path: Path) -> None:
