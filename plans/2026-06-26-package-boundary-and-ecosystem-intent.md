@@ -345,7 +345,7 @@ Existing MTProto libraries and frameworks:
 - https://github.com/eyMarv/pyroblack
 - https://github.com/Mayuri-Chan/pyrofork
 - https://github.com/KurimuzonAkuma/kurigram
-- https://github.com/Lonami/grammers
+- https://codeberg.org/Lonami/grammers
 - https://docs.rs/grammers-client/latest/grammers_client/
 - https://docs.rs/grammers-mtsender/latest/grammers_mtsender/
 - https://github.com/tdlib/td

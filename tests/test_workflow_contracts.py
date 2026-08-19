@@ -47,8 +47,8 @@ def test_github_actions_use_free_flowing_release_tags() -> None:
         assert reference.startswith(("v", "release/v")), f"{path} uses a non-release-tag action reference: {reference}"
 
 
-def test_release_readiness_bridge_declares_0_1_0_alpha_without_claiming_wave_6() -> None:
-    """The bridge after Wave 5 must align package metadata while leaving Wave 6 unstarted."""
+def test_release_reconciliation_declares_0_1_0_alpha_and_current_wave_state() -> None:
+    """Release metadata and the tracker must agree after Waves 6 and 7."""
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     crate = tomllib.loads((ROOT / "rust/miniproto/Cargo.toml").read_text(encoding="utf-8"))
     frontend = json.loads((ROOT / "docs-site/package.json").read_text(encoding="utf-8"))
@@ -60,7 +60,12 @@ def test_release_readiness_bridge_declares_0_1_0_alpha_without_claiming_wave_6()
     assert crate["package"]["version"] == "0.1.0"
     assert frontend["version"] == "0.1.0"
     assert "intermediary release-readiness bridge between Waves 5 and 6" in progress
-    assert "Wave 6 has not started" in progress
+    assert "At that intermediary checkpoint Wave 6 had not started" in progress
+    assert "Waves 0 through 7" in progress
+    task_082 = next(line for line in progress.splitlines() if "| TASK-082 |" in line)
+    task_094 = next(line for line in progress.splitlines() if "| TASK-094 |" in line)
+    assert "| yes | 2026-08-19 |" in task_082
+    assert "| ready / user action required | 2026-08-19 |" in task_094
 
 
 def test_ci_workflow_covers_python_rust_benchmarks_and_free_threaded_runtime_without_building_wheels() -> None:

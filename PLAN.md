@@ -1,9 +1,9 @@
-# miniproto v1 Implementation Plan
+# miniproto 0.1.0 Alpha Implementation Plan
 
 ## Summary
 
-- Start from clean `master`; create `codex/v1` only after plan approval. The first approved action is writing this plan to `PLAN.md`, not implementing code.
-- Build v1 as an async-first Python 3.13+ reusable MTProto engine and SDK with a mandatory bundled Rust/PyO3 extension for crypto and TL hot paths, plus pure Python fallbacks for source builds/tests. This directly answers Pyroblack/Hydrogram's speedup lesson: native acceleration must be built in, not an optional afterthought.
+- The approved implementation is now a locally accepted `0.1.0` Alpha candidate architecture. The historical “v1” milestone name referred to this first public Alpha, not semantic version `1.0.0`; breaking changes remain expected throughout `0.1.x`.
+- Ship `0.1.0` as an async-first Python 3.13+ reusable MTProto engine and SDK with a mandatory bundled Rust/PyO3 extension for crypto and TL hot paths, plus Python/cryptography fallbacks for source builds, tests, and unavailable native capabilities. This directly answers Pyroblack/Hydrogram's speedup lesson: native acceleration is built in, not an optional afterthought.
 - Use `uv`, `ruff`, and `ty` for Python; use Cargo, `cargo fmt`, `clippy`, and `maturin` for Rust/Python packaging.
 - Target production-grade core MTProto: authorization, encrypted sessions, generated raw API, TCP transports, retries/reconnects, ordered updates, text messages, media upload/download, docs, CI, and wheels.
 - Exclude stars, webapps, admin/business helpers, payments, secret chats, calls, stories helpers, and framework-level bot abstractions from v1 unless needed to keep raw API compatibility. Routers, filters, decorators, middleware, plugins, conversation helpers, and broad high-level Telegram framework behavior belong in `mpgram`, not `miniproto`.

@@ -22,7 +22,7 @@ generated: false
 | `.github/workflows/` | CI, docs, schema-upstream, live-benchmark, dispatch-only release construction, and protected OIDC publication | `.github/workflows/`                                             |
 | `plans/`             | Historical and active implementation plans; not proof of runtime behavior by themselves                 | `plans/README.md`, `PROGRESS.md`                                 |
 
-Root `PLAN.md`, `PROGRESS.md`, `README.md`, `CHANGELOG.md`, `SECURITY.md`, `CONTRIBUTING.md`, and `PRODUCT.md` describe intent, verified progress, public usage, release capabilities, security, contribution, and documentation-product direction respectively. Code and current test/config evidence take precedence when an older plan statement disagrees with implementation.
+Root `PLAN.md`, `PROGRESS.md`, `README.md`, `CHANGELOG.md`, `SECURITY.md`, and `CONTRIBUTING.md` describe implementation intent, verified progress, public usage, release capabilities, security, and contribution. Documentation-product direction and branding live under `docs/project/`, especially `docs/project/index.md` and `docs/project/brand.md`. Code and current test/config evidence take precedence when an older plan statement disagrees with implementation.
 
 ## Entry points
 

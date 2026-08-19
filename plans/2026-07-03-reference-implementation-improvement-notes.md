@@ -5,6 +5,7 @@ Scope: Preserve findings from read-only reference analysis of Pyroblack, Teletho
 Method: Pyroblack, Telethon, grammers, mtcute and Web K were cloned into temporary directories outside the `miniproto` workspace by dedicated read-only subagents. No reference source was copied into `miniproto`; these notes capture behavior and improvement ideas only.
 
 Current-status note (2026-07-08): the live P0/P1 follow-up in `plans/2026-07-06-performance-and-improvement-master-plan.md` supersedes this file's July 3/6 implementation-status bullets where they describe download defaults and adaptive throttling. Current defaults are download `concurrency=6`, `media_lanes=2`, fixed flood-held slots, no concurrency reduction on generic `FLOOD_WAIT`, bounded flood-aware launch pacing after generic floods, `FloodPremiumWait` fallback to one active request for the rest of the current adaptive transfer, plus per-flood-type and launch-pacing benchmark counters.
+Completion reconciliation (2026-08-19): the explicitly requested follow-up items in this report are implemented. The shared per-DC/direction byte-weighted scheduler, method-level flood-wait cache, optional native/Telethon/Pyrogram string sessions, tglib-compatible benchmark mode, resumable automated matrix, fixed-cadence loop-lag probe, and manual Linux/Windows benchmark automation have deterministic tests and are tracked as completed in `PROGRESS.md`. Credentialed live measurements remain separately gated evidence rather than an implementation prerequisite or universal performance claim.
 
 ## References Reviewed
 
@@ -77,7 +78,7 @@ Current-status note (2026-07-08): the live P0/P1 follow-up in `plans/2026-07-06-
 
 - Add connection-level metrics: pending RPCs, queued RPCs, reconnect cause, read timeout, ping timeout, DC recreation, auth export/import, per-pool load, and in-flight bytes.
 - Keep structured redacted logging. Do not copy verbose raw TL/bytes logging behavior from mtcute or Pyroblack.
-- Partial 2026-08-13: the deterministic shared-media-scheduler benchmark now emits aggregate/per-transfer scheduling throughput, peak/configured bytes, queue waits, grant fairness, cancellation cleanup, and DC/direction isolation. The broader automated live matrix, loop-lag probe, tglib-compatible mode, and Windows run remain tracked in the v0.1.0 completion plan.
+- Done 2026-08-14: the deterministic shared-media-scheduler benchmark emits aggregate/per-transfer scheduling throughput, peak/configured bytes, queue waits, grant fairness, cancellation cleanup, and DC/direction isolation. The normalized `miniproto.benchmark.v1` tooling also records environment/native state and transfer counters, provides exact tglib-compatible output, runs a resumable 576-cell full or bounded four-cell smoke matrix, samples fixed-cadence loop lag, and has manual Linux/Windows workflow automation that retains raw and normalized artifacts. Credentialed runs remain opt-in and their absence is reported as not run rather than silently passed.
 
 ## Boundary Notes
 

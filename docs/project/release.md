@@ -9,6 +9,18 @@ miniproto separates unprivileged artifact construction from privileged publicati
 
 The `0.1.x` crates.io package is the source and provenance record for the bundled PyO3 accelerator. It is versioned and released with the Python package, but it is not yet a supported standalone Rust library API. The direct Rust-consumer boundary is deliberately deferred until the crate exposes an `rlib`, documents its Rust-facing stability policy, and passes external-consumer tests.
 
+## Current `0.1.0` handoff state
+
+- [x] Python, Rust, lockfile, documentation-site, changelog, license, and Alpha metadata agree on exactly `0.1.0`.
+- [x] The post-reconciliation canonical local 22-stage offline gate passed on 2026-08-19, including the complete Python/Rust/docs/benchmark suites, strict wheel/sdist inspection, and independent dependency-resolving installs. The immediately preceding Wave 6 package proof also passed Twine validation and packaged the Cargo source archive from the exact extracted sdist.
+- [x] Corrected hosted CI, documentation, and all 24 wheel lanes passed at commit `c81533922ba63c89337f3959b881109c3b7e5dec` in runs `32228452630`, `32228472756`, and `32228463727` respectively.
+- [x] The complete build-once candidate workflow, release manifest/checksum verifier, per-distribution attestations, protected OIDC publisher, draft-first immutable GitHub release sequence, and failure recovery are implemented and contract-tested locally.
+- [ ] The maintainer must review and commit/push the final source tree, configure the protected `release` environment, both Trusted Publishers, and GitHub release immutability.
+- [ ] The complete **Build release artifacts** workflow must pass from that exact final SHA and produce one verified set of 24 wheels, one sdist, one crate, `SHA256SUMS`, and `release-manifest.json` with valid attestations.
+- [ ] The maintainer must approve the protected **Publish release** run, verify both registries, and allow it to publish the populated GitHub draft last.
+
+The local files under `.tmp/wave6-20260819-final2/` and `.tmp/wave7-20260819-final/` are implementation evidence from a dirty working tree. Their hashes are retained in `PROGRESS.md` for reproducibility, but those bytes must never be uploaded to PyPI, crates.io, or the GitHub release. Only the single final-SHA hosted build run is an authoritative release candidate.
+
 ## Release topology
 
 `.github/workflows/build-wheels.yml`, named **Build release artifacts**, runs only through `workflow_dispatch`. One successful run produces:
@@ -43,7 +55,15 @@ The publish workflow contains no long-lived registry secret. Each registry job r
 
 ## Build the release candidate remotely
 
-Commit every intended release change, verify that `pyproject.toml` and `rust/miniproto/Cargo.toml` contain the same exact version, and run the release gate locally before requesting artifacts:
+Review every intended release change, run the following read-only checks, then let the maintainer commit and push the exact tree. Agents do not stage, commit, tag, or push:
+
+```pwsh
+git status --short --branch
+git diff --stat
+git diff --name-only
+```
+
+Verify that `pyproject.toml` and `rust/miniproto/Cargo.toml` contain the same exact version and run the release gate locally before requesting artifacts:
 
 ```pwsh
 uv run miniproto-release-check --offline --artifacts-dir .tmp/release-offline
@@ -259,6 +279,30 @@ Never use `--allow-dirty` or `--no-verify` for a release. A crates.io version ca
 - If PyPI fails, crates.io and the public GitHub release remain untouched. Inspect whether PyPI accepted any files before retrying; published filenames are immutable. Use only byte-identical retry behavior and never rebuild the same version with different bytes.
 - If crates.io fails after PyPI succeeds, keep the GitHub release as a draft. GitHub's **Re-run failed jobs** can retry the failed crates job from the same publish run and verified artifacts after an external transient problem is corrected. The job first downloads any already-existing version: an exact byte match is accepted without a duplicate publish, while a mismatch fails closed. If a crate was accepted but its downloaded bytes differ from the attested candidate, keep the release draft and inspect or yank that crate.
 - If both registries succeed but the final GitHub publication fails, rerun only the failed final job. Do not recreate the tag or upload replacement assets.
+
+## Post-publication verification
+
+After the protected workflow reports success, verify all three public surfaces without rebuilding or mutating the release:
+
+```pwsh
+$repository = "EDM115/miniproto"
+$version = "0.1.0"
+$tag = "v$version"
+
+gh release view $tag `
+  --repo $repository `
+  --json tagName,targetCommitish,isDraft,isImmutable,url,assets
+
+$postRelease = ".tmp/post-release-$version"
+uv venv --python 3.14 $postRelease
+$python = Join-Path $postRelease "Scripts/python.exe"
+uv pip install --python $python "miniproto==$version"
+& $python -I -c 'import importlib.metadata as m; import miniproto; from miniproto import _native; assert m.version("miniproto") == "0.1.0"; assert _native.native_available(); print(m.version("miniproto"))'
+
+cargo info "miniproto@$version"
+```
+
+On Linux or macOS, use `$postRelease/bin/python` for the clean PyPI import. Download the public GitHub assets into a new directory, verify `SHA256SUMS` and `release-manifest.json` with `miniproto-release-artifacts verify`, and run `gh attestation verify` with `.github/workflows/build-wheels.yml` as the signer. Confirm that PyPI lists exactly the expected 24 wheels plus sdist, crates.io serves the same `.crate` bytes already checked by the publisher, the GitHub release is not a draft, the tag targets the verified build SHA, and all 28 assets are present. If any public surface disagrees, stop announcing the release; package versions and immutable release assets cannot be overwritten.
 
 ## Continuous versus authoritative artifacts
 

@@ -1,9 +1,10 @@
 # miniproto Performance And Improvement Master Plan
 
 Date: 2026-07-06  
-Status: Actionable backlog produced by a read-only audit.  
+Status: Historical implementation backlog; requested `0.1.0` items are reconciled below, while dated benchmark measurements remain historical evidence.  
 Scope: Everything found during a full read of the repository (docs, Python source, Rust crate, benchmark logs), plus reference analysis of mtcute, MTKruto, FastTelethon, gotd, grammers, the tglib-bench harness (https://github.com/rojvv/tglib-bench, results at https://libspeed.telegram.tools/), and fresh Telegram docs (`core.telegram.org/api/files`, `core.telegram.org/mtproto/mtproto-transports`).  
 Audience: agent swarm. Each task is self-contained with problem, evidence, fix direction, files, and acceptance criteria. Tasks are ordered so correctness lands before tuning. Update `PROGRESS.md` and this file as tasks complete.
+Completion reconciliation (2026-08-19): TASK-RUST-3 and TASK-RUST-4, transport quick ACK, the method-level flood-wait cache, string-session import/export, `iter_download()`, optional plain `upload.getFileHashes` verification, tglib-compatible reporting, the automated benchmark matrix, loop-lag probing, and manual Linux/Windows automation are implemented and evidence-backed. The original measurements and proposed ordering below are intentionally retained as dated context; `PROGRESS.md` and the 2026-08-12 completion plan are authoritative for the current release state.
 
 ---
 
@@ -347,7 +348,7 @@ These matter once the pipeline is unblocked (they are what keeps 16 MiB/s from c
 8. **Storage write amplification**: every peer remember / update-cursor persist re-loads, re-serializes, re-encrypts, and rewrites the ENTIRE session envelope (`EncryptedSQLiteSessionStorage` single-envelope design + `_persist_cursor` load/save per batch, `updates/manager.py:184-197`; `PeerCache._save_entries` same). Under live update traffic this is an fsync per update batch. Introduce debounced saves (e.g. 250 ms coalescing) and/or split envelope into per-domain rows (auth/peers/update_state) to cut rewrite size. Keep atomicity guarantees documented in `docs/session-security.md`.
 9. **`_seen_msg_ids`/dedup windows**: OrderedDict fine, but `duplicate_window=8192` per sender x N lanes — verify memory bounds and that lane senders even need dedup windows that large.
 10. **Transport error 429 (transport flood)**: not detected at transport level (4-byte error frames on abridged/intermediate before/instead of payload — e.g. `l = 0xfffffe6c`). Add transport-level error-code parsing so connection-ramp floods surface as `TransportFlood` instead of framing errors.
-11. **Quick-ack support** (optional): abridged/intermediate MSB flag; skip for v1 but leave framing hooks.
+11. **Quick-ack support** (original proposal): the July 6 recommendation was to defer it and leave framing hooks; the 2026-08-13 completion note below supersedes that proposal for `0.1.0`.
 12. **`msgs_state_req`/`msg_resend_req`/`msgs_state_info`**: unhandled service messages currently land in `_incoming` (post P0-5 they should be answered or at least acked + logged).
 13. **`_download_part` empty-payload semantics**: an empty payload breaks the sequential loop silently even when `remaining > 0` (`download.py:385-386`) — that's EOF-on-server; should raise or surface partial-download status when `limit` was explicit.
 14. **`TransportConfig.proxy` raises at connect time** (`transport.py:57-60`); implement SOCKS5/HTTP CONNECT or remove from config until Phase-supported (docs currently imply hooks exist).
@@ -384,11 +385,13 @@ Done 2026-08-13 for items 7 through 10: the bounded method flood cache and nativ
 4. Loop-lag probe option (`MINIPROTO_LIVE_BENCH_LOOP_LAG=1`): sample event-loop scheduling latency during transfers to catch GIL/blocking regressions (validates TASK-RUST-1, TASK-P1-10).
 5. Windows run of the same bench (winloop) to catch Proactor-specific issues (NODELAY, to_thread costs).
 
-Partial 2026-08-13: `tools/bench/benchmark_media_scheduler.py` adds the deterministic simultaneous-transfer slice with versioned JSON for aggregate/per-transfer scheduler throughput, wait time, fairness, peak byte accounting, queued cancellation, and DC/direction isolation. Wave 3 additionally adds raw-distribution/environment JSON for the native frame pump and generated hot-constructor mix. Items 1 through 5 remain open for the broader normalized release benchmark matrix except for this scheduler/framing/TL evidence.
+Done 2026-08-14: `tools/bench/benchmark_media_scheduler.py` provides deterministic simultaneous-transfer versioned JSON for aggregate/per-transfer throughput, wait time, fairness, peak byte accounting, queued cancellation, and DC/direction isolation. The broader normalized `miniproto.benchmark.v1` reports include environment/native state, per-transfer request/retry/flood/reconnect/pacing/memory data, exact tglib-compatible results, a resumable 576-cell full or bounded four-cell smoke matrix, and fixed-cadence loop-lag samples. `.github/workflows/live-media-bench.yml` automates guarded Linux and Windows smoke/matrix/tglib execution and preserves raw plus normalized artifacts even on failure. Credentialed measurements remain an explicit external gate.
 
 ---
 
-## 8. Suggested Execution Waves (if using the swarm)
+## 8. Historical Suggested Execution Waves
+
+This was the July 6 proposed ordering. It is retained to explain dependencies and old benchmark decisions, not as an active execution checklist; the requested `0.1.0` work is reconciled above and in the 2026-08-12 completion plan.
 
 - **Wave 1 (independent, high value)**: TASK-P0-1, TASK-P0-2, TASK-P0-3, TASK-P0-7, TASK-RUST-5, TASK-CPU-1, TASK-CPU-4. (Disjoint files except sender.py shared by P0-1/P0-2 — do them as one branch.)
 - **Wave 2 (needs wave 1)**: TASK-P0-4, TASK-P0-5, TASK-P0-6, TASK-P1-9, TASK-P1-10, TASK-CPU-5, TASK-CPU-6.

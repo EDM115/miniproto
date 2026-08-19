@@ -47,4 +47,4 @@ When `upload.getFile` returns `upload.fileCdnRedirect`, Phase 10 follows `upload
 
 ## Live Tests
 
-The live scaffold is `tests/integration/test_media_live.py`. It requires `MINIPROTO_INTEGRATION=1`, API credentials, a test phone or bot token, `MINIPROTO_TEST_UPLOAD_FILE`, and optionally `MINIPROTO_TEST_DOWNLOAD_PATH`; it intentionally skips until maintainers provide test-DC credentials and validate the real transport path.
+The implemented opt-in live check is `tests/integration/test_media_live.py`. It requires `MINIPROTO_INTEGRATION=1`, explicit production confirmation through `MINIPROTO_REAL_INTEGRATION=1`, API credentials, a phone session, `MINIPROTO_TEST_UPLOAD_FILE`, and optionally `MINIPROTO_TEST_DOWNLOAD_PATH`; it skips when those external prerequisites are absent. The upload/download byte-comparison check passed in the recorded 2026-08-19 local live run, but every future execution must remain separately labeled from deterministic fake-server and offline release evidence.
