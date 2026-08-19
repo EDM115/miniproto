@@ -86,3 +86,7 @@ Status (verified 2026-08-18): Implemented as opt-in `Client.download_media(..., 
 
 - Starlight's default search shortcut can open its dialog before Pagefind has asynchronously inserted the search input: the upstream handler calls `querySelector('input')?.focus()` only once, so a sufficiently cold load leaves the later-created input unfocused. Browser acceptance should continue exercising the immediate `Ctrl+K` path; the component integration must focus an input that arrives after the dialog opens rather than hiding the race with a test-only wait.
 - The base wheel intentionally excludes documentation-only dependencies, so even `--help` for an installed documentation console script must not cross an eager import boundary into Griffe or another docs extra. Keep `tools.docs` package initialization dependency-free and verify installed entry-point help from an isolated wheel environment rather than only from the development environment.
+
+## 2026-08-19 — GPT-5.6 Sol — Codex — "Release packaging boundary"
+
+- A release must build the Cargo source package exactly once, attest every wheel plus the Python sdist and `.crate`, and publish only from a separate run-ID-driven workflow after verifying the source run, commit, version, checksums, and attestations. For now the crates.io package is the PyO3 accelerator published for provenance and version parity; direct `use miniproto_native::...` consumption is explicitly deferred until its Rust API and packaging contract are designed.

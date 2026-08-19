@@ -19,7 +19,7 @@ generated: false
 | `tests/`             | Offline unit/fake-server/workflow/docs tests plus gated `integration/` and `stress/` suites             | `pyproject.toml`, `tests/integration/README.md`                  |
 | `docs/`              | Canonical authored Markdown, internal `THOUGHTS.md`, and committed generated reference pages            | `docs/reference-surface.toml`, `docs-site/src/content.config.ts` |
 | `docs-site/`         | Astro/Starlight presentation, Pagefind, assets, browser acceptance, and ignored static output           | `docs-site/package.json`, `docs-site/astro.config.ts`            |
-| `.github/workflows/` | CI, docs, schema-upstream, live-benchmark, and dispatch-only wheel automation                           | `.github/workflows/`                                             |
+| `.github/workflows/` | CI, docs, schema-upstream, live-benchmark, dispatch-only release construction, and protected OIDC publication | `.github/workflows/`                                             |
 | `plans/`             | Historical and active implementation plans; not proof of runtime behavior by themselves                 | `plans/README.md`, `PROGRESS.md`                                 |
 
 Root `PLAN.md`, `PROGRESS.md`, `README.md`, `CHANGELOG.md`, `SECURITY.md`, `CONTRIBUTING.md`, and `PRODUCT.md` describe intent, verified progress, public usage, release capabilities, security, contribution, and documentation-product direction respectively. Code and current test/config evidence take precedence when an older plan statement disagrees with implementation.
@@ -29,7 +29,7 @@ Root `PLAN.md`, `PROGRESS.md`, `README.md`, `CHANGELOG.md`, `SECURITY.md`, `CONT
 - The import surface is `src/miniproto/__init__.py`, which re-exports the reviewed client, config, storage, session, media, type, error, file-ID, event-loop, and observability APIs.
 - Application code constructs `Client(ClientConfig(...))`; there is no always-running package process or web-server main. Lifecycle starts through `connect()`, `async with Client(...)`, or caller-owned `event_loop.run()`.
 - Generated raw imports enter through `miniproto.raw.functions`, `miniproto.raw.types`, and their namespace facades. Implementation shards under `src/miniproto/raw/_function_shards/` and `_types_shards/` are generator-owned.
-- Operational tools enter through `[project.scripts]` in `pyproject.toml`; `src/miniproto/_cli.py` bridges installed launchers to `tools.schema`, `tools.docs`, `tools.bench`, and `tools.release_check` modules.
+- Operational tools enter through `[project.scripts]` in `pyproject.toml`; `src/miniproto/_cli.py` bridges installed launchers to `tools.schema`, `tools.docs`, `tools.bench`, `tools.release_check`, and `tools.release_artifacts` modules.
 - The native module is built from `rust/miniproto/src/lib.rs` and imported privately as `miniproto._native`; Python wrappers own capability selection and fallbacks.
 
 ## Python module boundaries

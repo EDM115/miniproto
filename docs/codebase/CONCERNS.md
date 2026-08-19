@@ -43,7 +43,7 @@ The maintained-source scan found no tracked `TODO`, `FIXME`, or `HACK` markers u
 | Malformed hostile network input         | Input validation           | `mtproto/codec.py`, `connection/framing.py`, `tl/codec.py`            | Bounded decoding, auth/padding checks, prevalidation before state mutation, fatal transport closure                  | New generated/native paths must retain exact validation parity and panic-free behavior                                                  |
 | Custom session-storage cryptography     | Cryptographic design       | `session/storage.py`                                                  | Fresh nonce, separate derived keys, HMAC authentication verified before plaintext decode                             | Independent cryptographic review and a standard versioned envelope migration are not recorded                                           |
 | Credentialed CI/live tests              | Secret-management boundary | `.env.example`, `live-media-bench.yml`, `tests/integration/README.md` | Manual/explicit gates, repository secrets, task-owned encrypted session paths, no ordinary-PR secrets                | Maintainer must still review logs/artifacts and prevent untrusted workflow execution                                                    |
-| Native supply/provenance                | Software supply chain      | `pyproject.toml`, `Cargo.lock`, wheel workflow                        | Exact/locked dependencies, clean wheel install, native import, artifact hashes                                       | Final public `0.1.0` artifacts and hosted matrix evidence are not yet produced                                                          |
+| Native supply/provenance                | Software supply chain      | `pyproject.toml`, `Cargo.lock`, release-artifact and publish workflows | Exact/locked dependencies, clean wheel install, native import, complete checksums, per-artifact GitHub attestations, protected PyPI/crates.io OIDC publication | Final public `0.1.0` artifacts, hosted matrix evidence, registry publication, and immutable GitHub release are not yet produced |
 
 ## Performance and scaling concerns
 
@@ -71,7 +71,7 @@ The repository scan used `git log --since=90.days --name-only` and found the hig
 | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | The original `PLAN.md` calls the milestone “v1”     | The approved release target is `0.1.0` Alpha and breaking changes remain expected                                                  | Current dated completion plan and release docs supersede the historical label                                     |
 | Wave 5 provides a strict documentation gate         | The site, generators, tests, and progress trackers are implemented and locally verified for origin-root and `/miniproto` artifacts | Preserve the local evidence boundary; hosted Pages publication remains unverified until the trusted workflow runs |
-| Release-facing docs describe `0.1.0` Alpha          | Python, Rust, lockfile, and documentation-site declarations now agree on `0.1.0` Alpha; no final `0.1.0` artifact is claimed       | The completed bridge aligns declarations; Wave 6 still owns clean metadata/artifact acceptance                  |
+| Release-facing docs describe `0.1.0` Alpha          | Python/Rust metadata agree on `0.1.0`; crate metadata/README and build-once attested candidate plus isolated run-ID publisher are implemented locally; no hosted artifact or publication is claimed | Wave 6 still owns the successful hosted build and clean artifact acceptance; Wave 7 owns approved publication |
 | One permanent identity should drive the final theme | The community poll is open; Packet Loom is the explicit temporary choice                                                           | Swap through the brand generator only if the maintainer reports a different winner                                |
 | Cross-platform/free-threaded support is a premise   | Workflows and local acceptance exist, but fresh hosted final runs are still outstanding                                            | User-controlled hosted CI and wheel dispatch are required evidence                                                |
 
@@ -91,4 +91,5 @@ No unresolved question blocks Wave 5. The permanent logo result is deliberately 
 - `src/miniproto/session/storage.py`
 - `tools/schema/schema-metadata.json`
 - `.github/workflows/build-wheels.yml`
+- `.github/workflows/publish-release.yml`
 - `SECURITY.md`

@@ -48,7 +48,7 @@ There is no application web framework, ORM, remote database client, telemetry ex
 | Astro/Starlight/Pagefind/Playwright/Sharp | Static docs, search, browser acceptance, and deterministic brand derivatives                    | `docs-site/package.json`, `docs-site/playwright.config.ts`               |
 | Oxfmt 0.63.0 + Oxlint 1.78.0              | Formatting for supported docs-site files and type-aware linting for maintained TypeScript        | `docs-site/package.json`, `docs-site/oxfmt.config.ts`, `docs-site/oxlint.config.ts` |
 | Jiti 2.7.0 + `@types/node` 26.2.0         | Direct execution and Node.js typing for the docs-site TypeScript helper CLIs                     | `docs-site/package.json`, `docs-site/scripts/`                                     |
-| GitHub Actions                            | Python/Rust quality, benchmarks, schema freshness, docs, live opt-ins, and dispatch-only wheels | `.github/workflows/`                                                     |
+| GitHub Actions                            | Python/Rust quality, benchmarks, schema freshness, docs, live opt-ins, attested dispatch-only release artifacts, and protected OIDC publication | `.github/workflows/`                                                     |
 
 ## Key commands
 
@@ -65,6 +65,7 @@ cargo fmt --check
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo test --workspace --all-features
 uv run miniproto-docs --check --build --skip-install
+uv run miniproto-release-artifacts --help
 uv run miniproto-release-check --offline --artifacts-dir .tmp/release-offline
 ```
 
@@ -90,4 +91,5 @@ Every executable Python tool is registered under `[project.scripts]` and must ex
 - `docs-site/nginx.conf`
 - `.github/workflows/ci.yml`
 - `.github/workflows/build-wheels.yml`
+- `.github/workflows/publish-release.yml`
 - `.env.example`

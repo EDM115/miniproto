@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import tomllib
 from pathlib import Path
 from typing import Any
@@ -28,6 +29,22 @@ def load_workflow(name: str) -> dict[str, Any]:
     )
     assert isinstance(value, dict)
     return value
+
+
+def test_github_actions_use_free_flowing_release_tags() -> None:
+    """External actions must follow the repository's release-tag update policy."""
+    workflows = ROOT / ".github" / "workflows"
+    action_references: list[tuple[Path, str]] = []
+    for path in sorted(workflows.glob("*.yml")):
+        for action, reference in re.findall(
+            r"^\s*-?\s*uses:\s+([^\s@]+)@([^\s#]+)", path.read_text(encoding="utf-8"), re.MULTILINE
+        ):
+            if not action.startswith("./"):
+                action_references.append((path, reference))
+
+    assert action_references
+    for path, reference in action_references:
+        assert reference.startswith(("v", "release/v")), f"{path} uses a non-release-tag action reference: {reference}"
 
 
 def test_release_readiness_bridge_declares_0_1_0_alpha_without_claiming_wave_6() -> None:
@@ -110,12 +127,13 @@ def test_benchmark_smoke_runs_on_every_native_platform_with_regular_and_free_thr
     )
 
 
-def test_manual_wheel_workflow_is_dispatch_only_and_covers_all_required_abis() -> None:
+def test_manual_release_artifact_workflow_is_dispatch_only_and_covers_all_required_abis() -> None:
     workflow = load_workflow("build-wheels.yml")
 
+    assert workflow["name"] == "Build release artifacts"
     assert set(workflow["on"]) == {"workflow_dispatch"}
     jobs = workflow["jobs"]
-    assert set(jobs) == {"linux-wheels", "native-wheels"}
+    assert set(jobs) == {"linux-wheels", "native-wheels", "python-sdist", "rust-crate", "release-manifest"}
 
     linux_matrix = jobs["linux-wheels"]["strategy"]["matrix"]
     assert {item["python-version"] for item in linux_matrix["python"]} == {"3.13", "3.14", "3.14t"}
@@ -139,10 +157,153 @@ def test_manual_wheel_workflow_is_dispatch_only_and_covers_all_required_abis() -
     assert (
         sum(
             len(job["strategy"]["matrix"]["python"]) * len(job["strategy"]["matrix"]["platform"])
-            for job in jobs.values()
+            for job_name, job in jobs.items()
+            if job_name in {"linux-wheels", "native-wheels"}
         )
         == 24
     )
+
+
+def test_release_artifact_workflow_attests_every_distribution_and_builds_the_crate_once() -> None:
+    workflow = load_workflow("build-wheels.yml")
+    jobs = workflow["jobs"]
+
+    for job_name in ("linux-wheels", "native-wheels", "python-sdist", "rust-crate", "release-manifest"):
+        permissions = jobs[job_name]["permissions"]
+        assert permissions["contents"] == "read"
+        assert permissions["id-token"] == "write"
+        assert permissions["attestations"] == "write"
+
+    for job_name, subject in (
+        ("linux-wheels", "dist/*.whl"),
+        ("native-wheels", "dist/*.whl"),
+        ("python-sdist", "dist/*.tar.gz"),
+        ("rust-crate", "${{ env.CARGO_TARGET_DIR }}/package/*.crate"),
+    ):
+        attestation = next(
+            step for step in jobs[job_name]["steps"] if step.get("uses", "").startswith("actions/attest@")
+        )
+        assert attestation["uses"] == "actions/attest@v4"
+        assert attestation["with"]["subject-path"] == subject
+        upload = next(
+            step for step in jobs[job_name]["steps"] if step.get("uses", "").startswith("actions/upload-artifact@")
+        )
+        assert upload["with"]["archive"] == "false"
+
+    crate_job = jobs["rust-crate"]
+    assert "strategy" not in crate_job
+    assert crate_job["env"]["CARGO_TARGET_DIR"] == "${{ github.workspace }}/.tmp/release-crate-target"
+    crate_commands = "\n".join(str(step.get("run", "")) for step in crate_job["steps"])
+    assert "cargo clean" not in crate_commands
+    assert "cargo build --locked --release --all-features -p miniproto" in crate_commands
+    assert "cargo package --locked -p miniproto --list" in crate_commands
+    assert "cargo package --locked -p miniproto" in crate_commands
+
+    manifest_job = jobs["release-manifest"]
+    assert set(manifest_job["needs"]) == {"linux-wheels", "native-wheels", "python-sdist", "rust-crate"}
+    manifest_steps = "\n".join(str(step) for step in manifest_job["steps"])
+    assert "actions/download-artifact@v8" in manifest_steps
+    assert "python -m tools.release_artifacts manifest" in manifest_steps
+    assert "release-manifest.json" in manifest_steps
+    assert "SHA256SUMS" in manifest_steps
+
+
+def test_publish_workflow_verifies_one_build_run_then_uses_isolated_oidc_jobs() -> None:
+    workflow = load_workflow("publish-release.yml")
+
+    assert workflow["on"] == {
+        "workflow_dispatch": {
+            "inputs": {
+                "build_run_id": {
+                    "description": "Successful Build release artifacts workflow run ID",
+                    "required": "true",
+                    "type": "string",
+                },
+                "version": {
+                    "description": "Exact release version without the v prefix",
+                    "required": "true",
+                    "type": "string",
+                },
+            }
+        }
+    }
+    assert workflow["permissions"] == {}
+    jobs = workflow["jobs"]
+    assert set(jobs) == {"verify", "draft-release", "pypi", "crates", "publish-release"}
+
+    verify = jobs["verify"]
+    assert verify["permissions"] == {"actions": "read", "attestations": "read", "contents": "read"}
+    verify_steps = "\n".join(str(step) for step in verify["steps"])
+    assert "actions/download-artifact@v8" in verify_steps
+    assert "run-id" in verify_steps
+    assert "run-attempt" in verify_steps
+    assert "digest-mismatch" in verify_steps
+    assert "gh attestation verify" in verify_steps
+    assert "--signer-workflow" in verify_steps
+    assert "python -m tools.release_artifacts verify" in verify_steps
+    assert ".github/workflows/build-wheels.yml" in verify_steps
+    assert "workflow_dispatch" in verify_steps
+    assert "conclusion" in verify_steps
+    assert "merge-base --is-ancestor" in verify_steps
+
+    draft_release = jobs["draft-release"]
+    assert draft_release["needs"] == ["verify"]
+    assert draft_release["environment"] == "release"
+    assert draft_release["permissions"] == {"contents": "write"}
+    draft_steps = "\n".join(str(step) for step in draft_release["steps"])
+    assert "gh release create" in draft_steps
+    assert "--draft" in draft_steps
+    assert "gh release upload" in draft_steps
+
+    pypi = jobs["pypi"]
+    assert set(pypi["needs"]) == {"verify", "draft-release"}
+    assert pypi["environment"]["name"] == "release"
+    assert pypi["permissions"] == {"id-token": "write"}
+    pypi_steps = "\n".join(str(step) for step in pypi["steps"])
+    assert "pypa/gh-action-pypi-publish@" in pypi_steps
+    assert "packages-dir" in pypi_steps
+    assert "attestations" in pypi_steps
+
+    crates = jobs["crates"]
+    assert set(crates["needs"]) == {"verify", "pypi"}
+    assert crates["environment"] == "release"
+    assert crates["permissions"] == {"contents": "read", "id-token": "write"}
+    crate_steps = "\n".join(str(step) for step in crates["steps"])
+    assert "rust-lang/crates-io-auth-action@" in crate_steps
+    assert "cargo publish --locked -p miniproto" in crate_steps
+    assert "CARGO_REGISTRY_TOKEN" in crate_steps
+    assert "crates.io already contains the attested Cargo package" in crate_steps
+    assert "existing crates.io archive differs from the attested build artifact" in crate_steps
+
+    publish_release = jobs["publish-release"]
+    assert set(publish_release["needs"]) == {"verify", "crates"}
+    assert publish_release["environment"] == "release"
+    assert publish_release["permissions"] == {"contents": "write"}
+    final_steps = "\n".join(str(step) for step in publish_release["steps"])
+    assert "gh release edit" in final_steps
+    assert "--draft=false" in final_steps
+
+    serialized = (ROOT / ".github" / "workflows" / "publish-release.yml").read_text(encoding="utf-8")
+    assert "secrets." not in serialized
+
+
+def test_crates_io_metadata_describes_the_provenance_only_accelerator_boundary() -> None:
+    manifest = tomllib.loads((ROOT / "rust" / "miniproto" / "Cargo.toml").read_text(encoding="utf-8"))
+    package = manifest["package"]
+
+    assert package["version"] == "0.1.0"
+    assert package["homepage"] == "https://github.com/EDM115/miniproto"
+    assert package["documentation"] == "https://docs.rs/miniproto"
+    assert package["readme"] == "README.md"
+    assert package["publish"] == ["crates-io"]
+    assert {"telegram", "mtproto", "pyo3", "python"} <= set(package["keywords"])
+    assert {"api-bindings", "cryptography", "network-programming"} <= set(package["categories"])
+    assert manifest["lib"] == {"name": "miniproto_native", "crate-type": ["cdylib"]}
+
+    crate_readme = (ROOT / "rust" / "miniproto" / "README.md").read_text(encoding="utf-8")
+    assert "Python accelerator" in crate_readme
+    assert "not yet a supported standalone Rust library API" in crate_readme
+    assert "miniproto_native" in crate_readme
 
 
 def test_windows_arm64_omits_unsupported_cryptography_dependency_and_requires_the_bundled_native_backend() -> None:

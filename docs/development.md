@@ -61,6 +61,7 @@ Every executable Python tool is registered under `[project.scripts]`, works from
 ```pwsh
 uv run miniproto-schema-generate --help
 uv run miniproto-schema-update --help
+uv run miniproto-release-artifacts --help
 uv run miniproto-release-check --help
 uv run miniproto-bench-acceptance --help
 uv run miniproto-bench-imports --help
@@ -285,13 +286,15 @@ uv run maturin build --release
 
 `maturin build` is the authoritative Python wheel build path. The Rust crate currently exists mainly as the Python extension source, even though the crates.io package name `miniproto` is reserved for this project.
 
-Ordinary `.github/workflows/ci.yml` deliberately does not build wheels. It runs Python 3.13/3.14 quality and tests, real 3.14t GIL-disabled source/native acceptance, Rust gates, benchmarks, schema checks, and the sdist job. Wheel production is isolated in `.github/workflows/build-wheels.yml` and starts only through `workflow_dispatch`, for example from the GitHub Actions UI or with:
+Ordinary `.github/workflows/ci.yml` deliberately does not build wheels. It runs Python 3.13/3.14 quality and tests, real 3.14t GIL-disabled source/native acceptance, Rust gates, benchmarks, schema checks, and a continuous sdist validation job. Authoritative release artifacts are isolated in `.github/workflows/build-wheels.yml`, named **Build release artifacts**, and start only through `workflow_dispatch`, for example from the GitHub Actions UI or with:
 
 ```pwsh
-gh workflow run build-wheels.yml
+gh workflow run build-wheels.yml --repo EDM115/miniproto --ref master
 ```
 
-The manual workflow builds 24 wheel lanes: normal CPython 3.13/3.14 and free-threaded CPython 3.14t across Linux glibc and musl on x86_64 and aarch64/ARMv8 plus native Windows and macOS on x86_64 and aarch64. Linux aarch64 lanes build and run under QEMU in pinned official PyPA images. Each wheel is installed normally with its declared dependencies in its target environment, then acceptance verifies `cryptography`, the platform event-loop backend, the ABI, actual GIL-disabled state where applicable, protected string-session round trips, concurrent native calls, and `--help` for every installed console script from the selected interpreter's scripts directory. The workflow does not set `PYTHON_GIL`: normal interpreters reject attempts to disable the GIL during preinitialization, while the 3.14t lanes must prove their default runtime remains GIL-disabled after importing the extension. CPython 3.13t is intentionally excluded because keeping the current PyO3 dependency is a higher priority than supporting that retired compatibility path. ARMv7 is excluded because the Rust musl target lacks published host tools and the required Python dependency wheels have materially weaker 32-bit ARM coverage.
+The manual workflow builds 24 wheel lanes: normal CPython 3.13/3.14 and free-threaded CPython 3.14t across Linux glibc and musl on x86_64 and aarch64/ARMv8 plus native Windows and macOS on x86_64 and aarch64. It also builds the authoritative Python sdist and exactly one platform-independent Cargo source package, then validates the complete candidate and emits `SHA256SUMS` plus `release-manifest.json`. Every distribution and both sidecars receive GitHub artifact attestations before raw artifact upload. The Cargo package uses an isolated target directory rather than `cargo clean`; the wheel matrix already compiles and exercises the native code on all eight platform targets.
+
+Linux aarch64 wheel lanes build and run under QEMU in pinned official PyPA images. Each wheel is installed normally with its declared dependencies in its target environment, then acceptance verifies `cryptography`, the platform event-loop backend, the ABI, actual GIL-disabled state where applicable, protected string-session round trips, concurrent native calls, and `--help` for every installed console script from the selected interpreter's scripts directory. The workflow does not set `PYTHON_GIL`: normal interpreters reject attempts to disable the GIL during preinitialization, while the 3.14t lanes must prove their default runtime remains GIL-disabled after importing the extension. CPython 3.13t is intentionally excluded because keeping the current PyO3 dependency is a higher priority than supporting that retired compatibility path. ARMv7 is excluded because the Rust musl target lacks published host tools and the required Python dependency wheels have materially weaker 32-bit ARM coverage.
 
 The bundled native extension remains the preferred hot path where benchmark evidence supports it, while `cryptography` and the supported platform event-loop backend are normal runtime dependencies. Protected-session AES-GCM/Scrypt wrappers fall back per missing native capability; explicit `*_native` and `*_cryptography` functions remain available for parity testing and direct measurement. Free-threaded source and wheel gates install the same dependency set and additionally prove the native path works with the GIL disabled.
 
@@ -326,22 +329,27 @@ Do not remove `.venv` unless you intentionally want to rebuild the local Python 
 ## Publish To PyPI
 
 ```pwsh
-uv run maturin build --release --out dist
-uv publish dist/*
+gh workflow run publish-release.yml `
+  --repo EDM115/miniproto `
+  --ref master `
+  -f build_run_id=<successful-build-run-id> `
+  -f version=0.1.0
 ```
 
-Use the configured PyPI token or trusted publishing flow. The PyPI `miniproto` name is already reserved with dummy low-version content.
+The supported publisher is the separate, protected `.github/workflows/publish-release.yml` workflow. It downloads one exact successful **Build release artifacts** run, verifies its source commit, shared version, complete file set, checksums, and every build attestation, then publishes the 25 Python distributions through PyPI OIDC Trusted Publishing. The build workflow never receives publication authority.
 
-The dispatch-only wheel workflow produces retained build artifacts but does not publish them. Publishing remains a separate user-owned action after artifact review and release approval.
+Do not select a build by recency, combine files from different runs, or locally rebuild one file under an existing release version. See the [release guide](project/release.md) for exact remote build/download/verification commands, required Trusted Publisher settings, immutable GitHub release handling, failure recovery, and the emergency local token path.
 
 ## Publish To crates.io
 
 ```pwsh
-cargo publish -p miniproto --dry-run
-cargo publish -p miniproto
+cargo package --locked -p miniproto
+cargo publish --dry-run --locked -p miniproto
 ```
 
-Only publish the Rust crate when the crates.io package contents intentionally match the current release goal. For the `0.1.x` Alpha line, direct Rust API stability is not promised; the Python extension remains the primary consumer.
+The same protected publish workflow obtains a short-lived crates.io token through OIDC, runs `cargo publish --locked -p miniproto` from the verified source commit, downloads the resulting registry archive, and requires it to match the attested build-run `.crate` byte-for-byte before the GitHub release may become public. Cargo cannot upload an arbitrary downloaded `.crate`; the [release guide](project/release.md) documents the exact local reproduction/hash comparison required for an emergency token publication.
+
+For the `0.1.x` Alpha line, the crate is published for accelerator source provenance and synchronized versioning. Its library target remains the `cdylib` named `miniproto_native`; direct Rust dependency use and API stability are explicitly deferred.
 
 ## Full Local Verification
 

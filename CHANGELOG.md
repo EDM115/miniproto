@@ -59,11 +59,13 @@
 ✅ tests : verify maintained documentation completeness statically without importing `miniproto`, and reject stale, duplicated, malformed, or nondeterministic generated reference pages
 
 👷 ci : run Python 3.13/3.14 quality and tests, genuine GIL-disabled CPython 3.14t acceptance, stable Rust checks, schema freshness, all non-live benchmark families, source distributions, and strict docs generation/build/search acceptance  
-👷 ci : isolate wheel production in a dispatch-only 24-lane matrix for Linux glibc/musl, Windows, and macOS across x86-64/ARM64 and supported normal/free-threaded interpreters  
+👷 ci : isolate authoritative release construction in a dispatch-only workflow that builds the 24-lane Linux glibc/musl, Windows, and macOS wheel matrix plus one Python sdist and one Cargo source package, then attests every distribution  
+👷 ci : publish only a run-ID-selected, checksum- and attestation-verified candidate through isolated PyPI/crates.io OIDC jobs before making the fully populated GitHub release public and immutable  
 👷 ci : build the static documentation once, validate its routes/links/search/branding, retain the exact artifact, and deploy those same bytes to GitHub Pages only from a trusted branch  
 📦️ build : package Python sources, generated raw bindings, typing metadata, installed tool entry points, and the private Rust extension through Maturin with declared crypto and platform event-loop dependencies  
-📦️ build : provide a non-mutating release checker that records environment, quality, benchmark, wheel/sdist, clean-install, script-help, native-import, and artifact-hash evidence without publishing or tagging
+📦️ build : provide a non-mutating release checker that records environment, quality, benchmark, wheel/sdist, clean-install, script-help, native-import, and artifact-hash evidence without publishing or tagging  
+📦️ build : emit a deterministic `SHA256SUMS` and provenance manifest only for the exact 24-wheel, one-sdist, one-crate release set with matching embedded `0.1.0` metadata and platform coverage  
 
-🔨🧑‍💻 scripts, dev : expose every operational Python CLI through `[project.scripts]` with side-effect-free `--help`, including schema, docs, release, benchmark, profiling, and session-provisioning commands  
+🔨🧑‍💻 scripts, dev : expose every operational Python CLI through `[project.scripts]` with side-effect-free `--help`, including schema, docs, release-artifact verification, aggregate release checks, benchmark, profiling, and session-provisioning commands  
 🔨🧑‍💻 scripts, dev : pin and reconcile independent Telegram schema/prose/error inputs, emit source-difference evidence, and provide offline generation plus network-dependent upstream freshness checks  
 🔨🧑‍💻 scripts, dev : keep formatting, linting, type checking, Rust verification, docs generation, benchmark smoke, artifact inspection, and clean-import diagnostics available as focused commands as well as aggregate gates

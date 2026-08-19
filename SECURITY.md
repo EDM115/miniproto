@@ -50,6 +50,8 @@ Do not enable live gates on untrusted pull requests or expose secrets to forked 
 
 Install release artifacts from the project's declared distribution channels and verify provenance/hashes when provided. A `miniproto` wheel contains native Rust code; an editable checkout, locally rebuilt extension, third-party mirror, or modified generated schema is a different trust boundary. Keep Python, Rust, Maturin, cryptography, event-loop backends, and operating-system dependencies current within the supported compatibility line.
 
+Official release candidates are constructed only by the manual **Build release artifacts** workflow, which attests each wheel, the Python sdist, the Cargo source package, and their checksum/provenance sidecars. The separate protected publisher verifies one exact build run and its attestations before exchanging GitHub OIDC identity for short-lived PyPI and crates.io credentials; the GitHub release stays a draft until both registries succeed. Never grant publication credentials to a build job, combine artifacts from different runs, or treat an unattested local rebuild as the same candidate.
+
 Public wrappers select available native capabilities and use supported fallbacks where defined. A missing native symbol is not by itself a vulnerability, and forcing an unverified native or fallback path can remove validation/performance assumptions. Report output or validation divergence privately with non-secret inputs.
 
 ## Scope and responsible use

@@ -40747,7 +40747,7 @@
     "rust/miniproto/src/tl.rs": "3337ab44d9404d027d62abe0005f072a2203570c8d87d503ac08a54096f5a946",
     "rust/miniproto/src/transport.rs": "f614fab28eac34cd95b536ab51aa20e4d4c49734a60828d32a819466085642f3",
     "src/miniproto/__init__.py": "c0eb831aca219c8c94cd1ae55eea58e8e90e2c055b39f3090f5571532d20a52a",
-    "src/miniproto/_cli.py": "a8bf0a7b07cccc60f249378e37888bb151b163daf314c7ff1f41e11149085ff7",
+    "src/miniproto/_cli.py": "93190ec4334993207278dabcc9ca2d3b842a722f6d514acdd88c917bceea75a0",
     "src/miniproto/_native_fallback.py": "f67dc4802b9cd53718737aa72ee2eec5a04c6c115ad8e3d9aa943fdb618d8347",
     "src/miniproto/auth/__init__.py": "61e80d8021ce2ea25683d31e610aa0589332b492d004eaf2f3f77882c60fe097",
     "src/miniproto/auth/bootstrap.py": "3336f5495f5bf001890e692f478a693f3942fbaef81d63fb94bda74f6e2de5e9",

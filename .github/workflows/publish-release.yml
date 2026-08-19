@@ -1,0 +1,363 @@
+name: Publish release
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: Successful Build release artifacts workflow run ID
+        required: true
+        type: string
+      version:
+        description: Exact release version without the v prefix
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: publish-release-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify build provenance and release candidate
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      attestations: read
+      contents: read
+    outputs:
+      run_attempt: ${{ steps.build-run.outputs.run_attempt }}
+      source_sha: ${{ steps.build-run.outputs.source_sha }}
+      tag: ${{ steps.build-run.outputs.tag }}
+    steps:
+      - name: Validate dispatch inputs and source build run
+        id: build-run
+        shell: bash
+        env:
+          BUILD_RUN_ID: ${{ inputs.build_run_id }}
+          RELEASE_VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REPOSITORY" != "EDM115/miniproto" ]]; then
+            printf 'publication is restricted to EDM115/miniproto, got %s\n' "$GITHUB_REPOSITORY" >&2
+            exit 1
+          fi
+          if [[ "$GITHUB_REF" != "refs/heads/master" ]]; then
+            printf 'dispatch Publish release from master, got %s\n' "$GITHUB_REF" >&2
+            exit 1
+          fi
+          if [[ ! "$BUILD_RUN_ID" =~ ^[1-9][0-9]*$ ]]; then
+            printf 'build_run_id must be a positive integer\n' >&2
+            exit 1
+          fi
+          if [[ ! "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([A-Za-z0-9.!+_-]*)?$ ]]; then
+            printf 'version must be an exact release version without a v prefix\n' >&2
+            exit 1
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$BUILD_RUN_ID" > build-run.json
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          run = json.loads(Path("build-run.json").read_text(encoding="utf-8"))
+          expected = {
+              "conclusion": "success",
+              "event": "workflow_dispatch",
+              "id": int(os.environ["BUILD_RUN_ID"]),
+              "path": ".github/workflows/build-wheels.yml",
+              "status": "completed",
+          }
+          for key, value in expected.items():
+              if run.get(key) != value:
+                  raise SystemExit(f"source build run {key} mismatch: expected {value!r}, found {run.get(key)!r}")
+          repository = run.get("repository")
+          if not isinstance(repository, dict) or repository.get("full_name") != os.environ["GITHUB_REPOSITORY"]:
+              raise SystemExit("source build run belongs to a different repository")
+          source_sha = run.get("head_sha")
+          run_attempt = run.get("run_attempt")
+          if not isinstance(source_sha, str) or len(source_sha) != 40:
+              raise SystemExit(f"source build run returned an invalid commit SHA: {source_sha!r}")
+          if not isinstance(run_attempt, int) or run_attempt <= 0:
+              raise SystemExit(f"source build run returned an invalid attempt: {run_attempt!r}")
+          output = Path(os.environ["GITHUB_OUTPUT"])
+          with output.open("a", encoding="utf-8", newline="\n") as handle:
+              handle.write(f"run_attempt={run_attempt}\n")
+              handle.write(f"source_sha={source_sha}\n")
+              handle.write(f"tag=v{os.environ['RELEASE_VERSION']}\n")
+          print(f"Verified successful build run {run['id']} attempt {run_attempt} at {source_sha}.")
+          PY
+
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.build-run.outputs.source_sha }}
+          fetch-depth: 0
+
+      - name: Verify release commit, versions, and unused tag
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+          SOURCE_SHA: ${{ steps.build-run.outputs.source_sha }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin master
+          git merge-base --is-ancestor "$SOURCE_SHA" origin/master
+          if git ls-remote --exit-code --tags origin "refs/tags/v$RELEASE_VERSION" >/dev/null 2>&1; then
+            printf 'release tag v%s already exists\n' "$RELEASE_VERSION" >&2
+            exit 1
+          fi
+          python - <<'PY'
+          import os
+          import tomllib
+
+          expected = os.environ["RELEASE_VERSION"]
+          with open("pyproject.toml", "rb") as handle:
+              python_version = tomllib.load(handle)["project"]["version"]
+          with open("rust/miniproto/Cargo.toml", "rb") as handle:
+              cargo_version = tomllib.load(handle)["package"]["version"]
+          if python_version != expected or cargo_version != expected:
+              raise SystemExit(
+                  f"version mismatch: input={expected!r}, Python={python_version!r}, Cargo={cargo_version!r}"
+              )
+          print(f"Verified Python and Cargo version {expected} at {os.environ['SOURCE_SHA']}.")
+          PY
+
+      - name: Download exact build-run artifacts
+        uses: actions/download-artifact@v8
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.build_run_id }}
+          path: release-artifacts
+          merge-multiple: true
+          digest-mismatch: error
+
+      - name: Verify manifest, checksums, and embedded package metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m tools.release_artifacts verify \
+            --artifacts-dir release-artifacts \
+            --manifest release-artifacts/release-manifest.json \
+            --checksums release-artifacts/SHA256SUMS \
+            --version "${{ inputs.version }}" \
+            --repository "${{ github.repository }}" \
+            --workflow .github/workflows/build-wheels.yml \
+            --run-id "${{ inputs.build_run_id }}" \
+            --run-attempt "${{ steps.build-run.outputs.run_attempt }}" \
+            --source-sha "${{ steps.build-run.outputs.source_sha }}" \
+            --event workflow_dispatch
+
+      - name: Verify every GitHub build attestation
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ steps.build-run.outputs.source_sha }}
+        run: |
+          set -euo pipefail
+          signer="$GITHUB_REPOSITORY/.github/workflows/build-wheels.yml"
+          while IFS= read -r -d '' artifact; do
+            gh attestation verify "$artifact" \
+              --repo "$GITHUB_REPOSITORY" \
+              --signer-workflow "$signer" \
+              --source-digest "$SOURCE_SHA" \
+              --deny-self-hosted-runners
+          done < <(find release-artifacts -maxdepth 1 -type f -print0 | sort -z)
+
+      - name: Stage verified publication inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p verified/python verified/crate verified/release
+          cp release-artifacts/*.whl release-artifacts/*.tar.gz verified/python/
+          cp release-artifacts/*.crate verified/crate/
+          cp release-artifacts/* verified/release/
+
+      - name: Preserve verified Python distributions for the isolated PyPI job
+        uses: actions/upload-artifact@v7
+        with:
+          name: verified-python-distributions
+          path: verified/python/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Preserve verified Cargo package for registry comparison
+        uses: actions/upload-artifact@v7
+        with:
+          name: verified-rust-crate
+          path: verified/crate/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Preserve verified GitHub release assets
+        uses: actions/upload-artifact@v7
+        with:
+          name: verified-release-assets
+          path: verified/release/
+          if-no-files-found: error
+          retention-days: 7
+
+  draft-release:
+    name: Create and populate draft GitHub release
+    needs: [verify]
+    runs-on: ubuntu-24.04
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.verify.outputs.source_sha }}
+
+      - name: Download verified release assets
+        uses: actions/download-artifact@v8
+        with:
+          name: verified-release-assets
+          path: release-assets
+          digest-mismatch: error
+
+      - name: Create draft and attach every immutable release asset
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.verify.outputs.tag }}
+          RELEASE_VERSION: ${{ inputs.version }}
+          SOURCE_SHA: ${{ needs.verify.outputs.source_sha }}
+        run: |
+          set -euo pipefail
+          gh release create "$RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --draft \
+            --target "$SOURCE_SHA" \
+            --title "miniproto $RELEASE_VERSION" \
+            --notes-file CHANGELOG.md
+          gh release upload "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" release-assets/*
+
+  pypi:
+    name: Publish verified Python distributions to PyPI
+    needs: [verify, draft-release]
+    runs-on: ubuntu-24.04
+    environment:
+      name: release
+      url: https://pypi.org/p/miniproto
+    permissions:
+      id-token: write
+    steps:
+      - name: Download verified Python distributions
+        uses: actions/download-artifact@v8
+        with:
+          name: verified-python-distributions
+          path: dist
+          digest-mismatch: error
+
+      - name: Publish to PyPI through Trusted Publishing
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
+          attestations: true
+          print-hash: true
+
+  crates:
+    name: Publish verified source to crates.io
+    needs: [verify, pypi]
+    runs-on: ubuntu-24.04
+    environment: release
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.verify.outputs.source_sha }}
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: "1.97"
+
+      - name: Download the attested Cargo package for registry comparison
+        uses: actions/download-artifact@v8
+        with:
+          name: verified-rust-crate
+          path: verified-crate
+          digest-mismatch: error
+
+      - name: Obtain short-lived crates.io token
+        id: crates-auth
+        uses: rust-lang/crates-io-auth-action@v1
+
+      - name: Publish or verify the attested crates.io package
+        shell: bash
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.crates-auth.outputs.token }}
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          expected="verified-crate/miniproto-$RELEASE_VERSION.crate"
+          registry="registry-miniproto-$RELEASE_VERSION.crate"
+          registry_url="https://crates.io/api/v1/crates/miniproto/$RELEASE_VERSION/download"
+
+          if ! existing_status="$(curl --location --silent --show-error --output "$registry" --write-out '%{http_code}' "$registry_url")"; then
+            printf 'could not determine whether crates.io already contains miniproto %s\n' "$RELEASE_VERSION" >&2
+            exit 1
+          fi
+          if [[ "$existing_status" == "200" ]]; then
+            cmp --silent "$expected" "$registry" || {
+              printf 'existing crates.io archive differs from the attested build artifact\n' >&2
+              exit 1
+            }
+            printf 'crates.io already contains the attested Cargo package; no duplicate publish is needed.\n'
+            exit 0
+          fi
+          if [[ "$existing_status" != "404" ]]; then
+            printf 'unexpected crates.io lookup status before publication: %s\n' "$existing_status" >&2
+            exit 1
+          fi
+
+          cargo publish --locked -p miniproto
+          for attempt in {1..12}; do
+            if curl --fail --location --silent --show-error \
+              "$registry_url" \
+              --output "$registry"; then
+              break
+            fi
+            if [[ $attempt -eq 12 ]]; then
+              printf 'crates.io package did not become downloadable after publication\n' >&2
+              exit 1
+            fi
+            sleep 10
+          done
+          cmp --silent "$expected" "$registry" || {
+            printf 'published crates.io archive differs from the attested build artifact; keep the GitHub release as a draft and inspect/yank the crate\n' >&2
+            exit 1
+          }
+          printf 'Published crates.io archive exactly matches the attested build artifact.\n'
+
+  publish-release:
+    name: Publish immutable GitHub release
+    needs: [verify, crates]
+    runs-on: ubuntu-24.04
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - name: Verify the populated release is still a draft
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.verify.outputs.tag }}
+        run: |
+          set -euo pipefail
+          gh release view "$RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --json isDraft,targetCommitish \
+            --jq 'select(.isDraft == true and .targetCommitish == "${{ needs.verify.outputs.source_sha }}")' \
+            | grep -q .
+
+      - name: Publish the draft as the immutable latest release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.verify.outputs.tag }}
+        run: gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest

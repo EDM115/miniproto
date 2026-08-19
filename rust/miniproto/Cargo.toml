@@ -1,9 +1,15 @@
 [package]
 authors = ["EDM115 <miniproto@edm115.dev>"]
 description = "Rust acceleration layer for the miniproto Python MTProto SDK"
+documentation = "https://docs.rs/miniproto"
 edition = "2024"
+homepage = "https://github.com/EDM115/miniproto"
+keywords = ["telegram", "mtproto", "pyo3", "python", "cryptography"]
 license = "MIT"
 name = "miniproto"
+categories = ["api-bindings", "cryptography", "network-programming"]
+publish = ["crates-io"]
+readme = "README.md"
 repository = "https://github.com/EDM115/miniproto"
 rust-version = "1.97"
 version = "0.1.0"

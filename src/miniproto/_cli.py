@@ -36,6 +36,7 @@ CLI_ENTRY_POINTS = {
     "miniproto-docs-rust": ("docs_rust", "tools.docs.generate_rust"),
     "miniproto-profile-lazy-raw-codec": ("profile_lazy_raw_codec", "tools.bench.profile_lazy_raw_codec"),
     "miniproto-provision-benchmark-session": ("provision_benchmark_session", "tools.bench.provision_session"),
+    "miniproto-release-artifacts": ("release_artifacts", "tools.release_artifacts"),
     "miniproto-release-check": ("release_check", "tools.release_check"),
     "miniproto-schema-generate": ("schema_generate", "tools.schema.generate"),
     "miniproto-schema-update": ("schema_update", "tools.schema.update"),
@@ -214,6 +215,15 @@ def release_check() -> int:
         Exit status reported by the release checker.
     """
     return _run("tools.release_check")
+
+
+def release_artifacts() -> int:
+    """Create or verify one complete release-artifact manifest.
+
+    Returns:
+        Exit status reported by the release-artifact tool.
+    """
+    return _run("tools.release_artifacts")
 
 
 def schema_generate() -> int:

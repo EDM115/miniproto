@@ -48,7 +48,7 @@ No global `tests/conftest.py` exists. Tests keep setup close to their scope or u
 | Browser acceptance              | Yes                               | homepage, authored guides, references, Pagefind queries/facets, keyboard, mobile themes | Runs against built static bytes                                  |
 | Live Telegram integration       | Gated                             | bot/user auth, `get_me`, Saved Messages, upload/download                                | Requires explicit integration/real-account gates and credentials |
 | Stress/benchmark                | Gated or deterministic by command | scheduling, throughput, loop lag, memory, reconnect soak, compatibility                 | Offline smoke is CI; large/live profiles are separate            |
-| Wheel/platform runtime          | Workflow-gated                    | supported Python/ABI/GIL/OS/architecture/native/dependencies/scripts                    | Dispatch-only 24-lane wheel workflow plus ordinary source CI     |
+| Release artifact/platform runtime | Workflow-gated                  | supported Python/ABI/GIL/OS/architecture/native/dependencies/scripts plus sdist/crate metadata, complete matrix, hashes, and attestations | Dispatch-only complete release-artifact workflow plus ordinary source CI |
 
 ## Mocking and isolation strategy
 
@@ -63,7 +63,7 @@ No global `tests/conftest.py` exists. Tests keep setup close to their scope or u
 - No coverage tool or numeric threshold is configured in `pyproject.toml` or CI, and the repository does not claim a current line/branch coverage percentage.
 - Stronger checked-in signals are schema/reference freshness, native/fallback parity, fake-server behavior, strict documentation/CLI-help audits, Ruff, ty, Clippy with warnings denied, Rust tests, deterministic benchmarks, clean artifact installation, and multi-platform/free-threaded workflows.
 - Host-dependent absolute benchmark speedups are diagnostic outside their designated acceptance platform; accounting, parity, caps, leaks, and cleanup invariants remain portable hard gates.
-- Known external gaps are tracked honestly: a hosted CI rerun, the final dispatch-only wheel matrix, live Telegram conditions, and large compatibility transfers are not implied by local offline success.
+- Known external gaps are tracked honestly: a hosted CI rerun, the final dispatch-only release-artifact workflow, the protected publish workflow, live Telegram conditions, and large compatibility transfers are not implied by local offline success.
 
 ## Common failure modes
 
@@ -85,3 +85,4 @@ No global `tests/conftest.py` exists. Tests keep setup close to their scope or u
 - `docs-site/tests/site.spec.ts`
 - `.github/workflows/ci.yml`
 - `.github/workflows/build-wheels.yml`
+- `.github/workflows/publish-release.yml`

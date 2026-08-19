@@ -130,6 +130,7 @@ The private `miniproto._native` extension provides crypto, MTProto envelope, tra
 - [Documentation](https://edm115.github.io/miniproto/) — authored guides plus searchable generated Python, Telegram, and Rust reference pages.
 - [Architecture](https://edm115.github.io/miniproto/concepts/architecture/) — ownership boundaries and the Python/schema/Rust execution model.
 - [Development commands](https://edm115.github.io/miniproto/project/development/) — schema, docs, quality, tests, benchmarks, builds, and release diagnostics.
+- [Release guide](https://edm115.github.io/miniproto/project/release/) — attested build artifacts, OIDC publishing, immutable releases, and recovery boundaries.
 - [Contributing](CONTRIBUTING.md) — local setup and verification expectations.
 - [Security policy](SECURITY.md) — supported Alpha line, secret handling, and private vulnerability reporting.
 - [Changelog](CHANGELOG.md) — complete `0.1.0` Alpha capability and limitation summary.
