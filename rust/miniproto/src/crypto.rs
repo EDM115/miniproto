@@ -19,6 +19,7 @@ use pyo3::wrap_pyfunction;
 use scrypt::{Params as ScryptParams, scrypt};
 use sha1::Sha1;
 use sha2::{Digest, Sha256};
+use subtle::ConstantTimeEq;
 
 /// AES's fixed block size in bytes.
 pub(crate) const AES_BLOCK_SIZE: usize = 16;
@@ -28,6 +29,10 @@ pub(crate) const MT_PROTO_AUTH_KEY_SIZE: usize = 256;
 pub(crate) const MT_PROTO_MSG_KEY_SIZE: usize = 16;
 /// Work-size threshold above which native wrappers detach from the Python GIL.
 pub(crate) const GIL_RELEASE_THRESHOLD_BYTES: usize = 4 * 1024;
+/// Maximum memory estimate accepted by the public scrypt primitive.
+const SCRYPT_MAX_MEMORY_BYTES: usize = 256 * 1024 * 1024;
+/// Maximum CPU-work estimate accepted by the public scrypt primitive.
+const SCRYPT_MAX_WORK_BYTES: usize = 1024 * 1024 * 1024;
 
 /// Runs `f` without the GIL when its input work estimate exceeds the native threshold.
 ///
@@ -425,8 +430,8 @@ fn aes_256_gcm_decrypt(
 /// Derives Python `scrypt_derive` bytes from password, salt, and scrypt cost parameters.
 ///
 /// `n` must be a power of two above one and `length` is limited to 1..=1024; invalid parameters
-/// return `ValueError`. The GIL is released only when `n * r > 4096`, the exact `work_bytes`
-/// condition supplied to `detach_if_large`; it remains held at or below that threshold.
+/// return `ValueError`. Estimated memory is capped at 256 MiB and aggregate work at 1 GiB. The
+/// GIL is released when the `128 * n * r * p` work estimate exceeds 4 KiB.
 ///
 /// # Arguments
 ///
@@ -449,7 +454,9 @@ fn scrypt_derive(
 ) -> PyResult<Vec<u8>> {
     let work_bytes = usize::try_from(n)
         .unwrap_or(usize::MAX)
-        .saturating_mul(r as usize);
+        .saturating_mul(r as usize)
+        .saturating_mul(p as usize)
+        .saturating_mul(128);
     detach_if_large(py, work_bytes, move || {
         scrypt_derive_raw(&password, &salt, n, r, p, length)
     })
@@ -606,7 +613,7 @@ pub(crate) fn mtproto_decrypt_payload_raw(
     let plaintext_with_padding = aes_256_ige_decrypt_raw(ciphertext, &aes_key, &aes_iv)?;
     let expected_msg_key =
         mtproto_message_key_raw(auth_key, &plaintext_with_padding, client_to_server);
-    if expected_msg_key.as_slice() != msg_key {
+    if expected_msg_key.as_slice().ct_eq(msg_key).unwrap_u8() != 1 {
         return Err(PyValueError::new_err("MTProto msg_key verification failed"));
     }
     Ok(plaintext_with_padding)
@@ -888,6 +895,16 @@ pub(crate) fn scrypt_derive_raw(
     if length == 0 || length > 1024 {
         return Err(PyValueError::new_err(
             "scrypt output length must be between 1 and 1024 bytes",
+        ));
+    }
+    let memory_bytes = usize::try_from(n)
+        .unwrap_or(usize::MAX)
+        .saturating_mul(r as usize)
+        .saturating_mul(128);
+    let work_bytes = memory_bytes.saturating_mul(p as usize);
+    if memory_bytes > SCRYPT_MAX_MEMORY_BYTES || work_bytes > SCRYPT_MAX_WORK_BYTES {
+        return Err(PyValueError::new_err(
+            "scrypt parameters exceed the resource limit",
         ));
     }
     let log_n = u8::try_from(n.trailing_zeros())
@@ -1261,6 +1278,14 @@ mod tests {
             b"payload"
         );
         assert!(aes_256_gcm_decrypt_raw(&encrypted, &key, &nonce, b"wrong").is_err());
+    }
+
+    #[test]
+    /// Rejects hostile scrypt work factors before allocating or deriving.
+    fn scrypt_rejects_excessive_resource_parameters() {
+        Python::initialize();
+        let error = scrypt_derive_raw(b"password", b"salt", 1 << 20, 8, 16, 32).unwrap_err();
+        assert!(error.to_string().contains("resource limit"));
     }
 
     #[test]

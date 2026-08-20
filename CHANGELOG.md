@@ -34,20 +34,29 @@
 ⚡️ perf : use a stateful Rust frame pump for fragmented/coalesced TCP input and generated Rust fast paths for a reviewed Layer 228 constructor set while leaving unsupported shapes on the canonical codec  
 ⚡️ perf : keep peer resolution warm through revision-aware indexes and incremental reconciliation rather than rescanning or copying the canonical peer collection on every lookup  
 ⚡️ perf : provide nine non-live benchmark families covering imports, runtime acceptance, media scheduling, native/fallback crypto, protected sessions, runtime paths, TL fast paths, transport framing, and lazy raw-codec behavior  
-⚡️ perf : provide resumable benchmark matrices, loop-lag and resource probes, tglib-compatible reporting, and separately guarded live media measurements without turning host-specific speedups into universal gates
+⚡️ perf : provide resumable benchmark matrices, loop-lag and resource probes, tglib-compatible reporting, and separately guarded live media measurements without turning host-specific speedups into universal gates  
+⚡️ perf : reuse prevalidated container and gzip bodies instead of decoding them twice, and release the GIL while hashing large quick-ack packets
 
 🔒️ security : fail closed on malformed or unauthenticated encrypted envelopes, unsafe DH/SRP parameters, stale/unknown protocol correlations, oversized payloads, and bounded-decoder violations  
 🔒️ security : encrypt durable session domains, authenticate stored envelopes, isolate atomic domain writes, omit credential-bearing fields from ordinary representations, and redact recognized secret keys from diagnostics  
 🔒️ security : protect optional native session strings with Scrypt plus AES-256-GCM while clearly labeling unprotected native and third-party formats as bearer encodings  
 🔒️ security : keep live Telegram tests, session provisioning, large transfer benchmarks, and credentialed release extensions behind explicit environment gates and separate automation  
-🔒️ security : preserve ambiguous non-idempotent RPC outcomes as `AmbiguousRpcResult` instead of silently replaying writes that may already have executed
+🔒️ security : preserve ambiguous non-idempotent RPC outcomes as `AmbiguousRpcResult` instead of silently replaying writes that may already have executed  
+🔒️ security : validate authorization-handshake nonce echoes and DH confirmation hashes, retry valid `dh_gen_retry` responses with fresh private exponents, and bound gzip expansion and wrapper nesting before TL decoding  
+🔒️ security : bind encrypted session rows to their logical domains, create durable SQLite session files with private POSIX permissions, redact token-suffixed fields, and keep CDN tokens and encryption material out of ordinary representations
 
 🐛 fix : retain pending-request capacity across retries and aliases, reserve slots before the first await, and release exactly once at the public request boundary  
 🐛 fix : prevalidate complete encrypted containers before mutating sender state so one invalid message cannot partially commit acknowledgements, salts, time, or results  
 🐛 fix : keep media completion exact across out-of-order parts, short responses, failed writers, resumed-path rollback, early iterator close, task cancellation, and auxiliary-session cleanup  
 🐛 fix : separate generic flood pacing, premium-flood contraction, transient retry budgets, shared byte permits, and per-transfer fixed slots so one delayed request does not leak scheduler capacity  
 🐛 fix : keep debug-mode event-loop cleanup on the stdlib loop for affected uvloop/winloop releases while retaining optimized loops for ordinary runs  
-🐛 fix : normalize free-threaded/native module initialization, GIL-disabled verification, CLI resolution, wheel dependency installation, and Python DLL discovery across supported CI and wheel environments
+🐛 fix : normalize free-threaded/native module initialization, GIL-disabled verification, CLI resolution, wheel dependency installation, and Python DLL discovery across supported CI and wheel environments  
+🐛 fix : accept both valid server message-ID classes, retain piggyback-container aliases, fail pending RPCs on fatal validation, bound acknowledgement history, and correlate public raw Pong requests by both request and ping IDs  
+🐛 fix : establish and import target-datacenter authorization before retrying account migrations while keeping non-idempotent authorization RPCs ineligible for ambiguous transport replay  
+🐛 fix : route CDN retrieval to the redirected CDN datacenter while keeping hash and reupload RPCs on the origin, derive AES-CTR counters from the documented IV prefix, and fetch complete hash intervals before returning precise slices  
+🐛 fix : recover global PTS/QTS/sequence and channel-too-long gaps without advancing unrecoverable channels, and let authoritative peer updates clear stale aliases while ignoring inactive usernames  
+🐛 fix : enforce Telegram upload-part divisors, strictly bound local file IDs, assemble multi-session paths atomically, refresh file references during cached hash verification, and recreate closed auxiliary in-memory sessions  
+🐛 fix : bracket IPv6 HTTP CONNECT authorities, clean up failed post-connect transports, preserve server RPC codes in generated fallback errors, and classify only pacing-specific wait errors as flood waits
 
 📝 docs : ship an Astro Starlight documentation site with a bespoke Packet Loom theme, secure onboarding, task guides, concepts, recipes, FAQ, project operations, and portable static deployment instructions  
 📝 docs : generate and commit searchable Python reference pages with Griffe/griffe2md, Rust pages from pinned-nightly rustdoc JSON/cargo-docs-md, and an in-house categorized Telegram raw reference  
@@ -61,6 +70,7 @@
 👷 ci : run Python 3.13/3.14 quality and tests, genuine GIL-disabled CPython 3.14t acceptance, stable Rust checks, schema freshness, all non-live benchmark families, source distributions, and strict docs generation/build/search acceptance  
 👷 ci : isolate authoritative release construction in a dispatch-only workflow that builds the 24-lane Linux glibc/musl, Windows, and macOS wheel matrix plus one Python sdist and one Cargo source package, then attests every distribution  
 👷 ci : publish only a run-ID-selected, checksum- and attestation-verified candidate through isolated PyPI/crates.io OIDC jobs before making the fully populated GitHub release public and immutable  
+👷 ci : make a partially accepted PyPI batch safely resumable by verifying every published candidate against PyPI metadata and downloaded bytes, rejecting unexpected files, and uploading only missing distributions  
 👷 ci : build the static documentation once, validate its routes/links/search/branding, retain the exact artifact, and deploy those same bytes to GitHub Pages only from a trusted branch  
 📦️ build : package Python sources, generated raw bindings, typing metadata, installed tool entry points, and the private Rust extension through Maturin with declared crypto and platform event-loop dependencies  
 📦️ build : provide a non-mutating release checker that records environment, quality, benchmark, wheel/sdist, clean-install, script-help, native-import, and artifact-hash evidence without publishing or tagging  

@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.crypto.native.mtproto_decode_message"
 source_path: "src/miniproto/crypto/native.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/native.py#L713"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/native.py#L736"
 aliases: ["miniproto.crypto.mtproto_decode_message"]
 module: "miniproto.crypto.native"
 ---

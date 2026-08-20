@@ -251,11 +251,11 @@ class UpdateManager:
             TypeError: If ``updates.getState`` does not return ``updates.State``.
             Exception: Propagates RPC and session-storage failures.
         """
-        result = await self._invoke(functions.UpdatesGetState())
-        if not isinstance(result, types.UpdatesState):
-            raise TypeError("updates.getState returned a non-updates.State result")
         async with self._state_lock:
             await self._ensure_loaded()
+            result = await self._invoke(functions.UpdatesGetState())
+            if not isinstance(result, types.UpdatesState):
+                raise TypeError("updates.getState returned a non-updates.State result")
             self._set_cursor(
                 self._current_cursor().with_state(pts=result.pts, qts=result.qts, seq=result.seq, date=result.date)
             )
@@ -320,16 +320,25 @@ class UpdateManager:
             return await self._recover_gap()
         events: list[Update] = []
         channel_gaps = self._channel_pts_gaps(raw_update)
-        if self._sequence_gap(raw_update) or self._pts_gap(raw_update):
+        if self._sequence_gap(raw_update) or self._pts_gap(raw_update) or self._qts_gap(raw_update):
             events.extend(await self._recover_gap())
         for channel_id in channel_gaps:
-            events.extend(await self._recover_channel_gap(channel_id))
+            recovered = await self._recover_channel_gap(channel_id)
+            if recovered is not None:
+                events.extend(recovered)
         for unit in _iter_update_units(raw_update):
             unit_channel_gaps = self._channel_pts_gaps(unit.raw)
             if unit_channel_gaps:
+                recovered_all = True
                 for channel_id in unit_channel_gaps:
-                    events.extend(await self._recover_channel_gap(channel_id))
-            elif self._pts_gap(unit.raw):
+                    recovered = await self._recover_channel_gap(channel_id)
+                    if recovered is None:
+                        recovered_all = False
+                    else:
+                        events.extend(recovered)
+                if not recovered_all:
+                    continue
+            elif self._pts_gap(unit.raw) or self._qts_gap(unit.raw):
                 events.extend(await self._recover_gap())
             events.extend(self._apply_update_unit(unit))
         self._apply_sequence(raw_update)
@@ -370,7 +379,7 @@ class UpdateManager:
         _emit_update_event("updates.recover_gap", started, outcome="error", error_type="NoConvergence")
         raise RuntimeError("updates.getDifference did not converge")
 
-    async def _recover_channel_gap(self, channel_id: int) -> list[Update]:
+    async def _recover_channel_gap(self, channel_id: int) -> list[Update] | None:
         """Recover one channel PTS gap when a cached access hash permits the RPC.
 
         The method waits the configured possible-gap grace interval before polling and returns no events when the channel access hash is unavailable. Recovery stops after ten non-final rounds.
@@ -392,7 +401,7 @@ class UpdateManager:
                 error_type="MissingChannelAccessHash",
                 channel_id=channel_id,
             )
-            return []
+            return None
         if POSSIBLE_GAP_GRACE_SECONDS > 0:
             await asyncio.sleep(POSSIBLE_GAP_GRACE_SECONDS)
         record_metric("updates.channel_gaps", 1)
@@ -484,6 +493,10 @@ class UpdateManager:
                 for message in difference.messages
                 for event in self._apply_update_unit(RawUpdateUnit(raw=message))
             ]
+            dialog_pts = _optional_int_attr(difference.dialog, "pts")
+            if dialog_pts is None:
+                raise TypeError("updates.channelDifferenceTooLong dialog has no PTS")
+            self._set_cursor(self._current_cursor().with_channel_state(channel_id, pts=dialog_pts))
             return _ordered_events(events)
         return []
 
@@ -500,12 +513,14 @@ class UpdateManager:
         channel_id = _channel_id_from_update(raw)
         comparison_pts = cursor.channel_cursor(channel_id).pts if channel_id is not None else cursor.pts
         if pts is not None and pts <= comparison_pts:
-            self._duplicates.add(key)
+            if key is not None:
+                self._duplicates.add(key)
             return []
-        if key in self._duplicates:
+        if key is not None and key in self._duplicates:
             return []
         events = _public_updates_from_raw(raw, unit.date)
-        self._duplicates.add(key)
+        if key is not None:
+            self._duplicates.add(key)
         qts = _optional_int_attr(raw, "qts")
         date = _raw_date(raw, unit.date)
         next_cursor = cursor
@@ -535,12 +550,31 @@ class UpdateManager:
             if pts is None or pts_count is None:
                 continue
             if expected_pts == 0:
+                if pts > pts_count:
+                    return True
                 expected_pts = max(expected_pts, pts)
                 continue
             if pts > expected_pts + pts_count:
                 return True
             if pts > expected_pts:
                 expected_pts = pts
+        return False
+
+    def _qts_gap(self, raw_update: object) -> bool:
+        """Return whether encrypted-update QTS values skip the next expected value.
+
+        Args:
+            raw_update: Raw update or container whose QTS values are inspected.
+        """
+        expected_qts = self._current_cursor().qts
+        for unit in _iter_update_units(raw_update):
+            qts = _optional_int_attr(unit.raw, "qts")
+            if qts is None:
+                continue
+            if qts > expected_qts + 1:
+                return True
+            if qts > expected_qts:
+                expected_qts = qts
         return False
 
     def _channel_pts_gaps(self, raw_update: object) -> tuple[int, ...]:
@@ -561,7 +595,9 @@ class UpdateManager:
                 continue
             expected_pts = expected_by_channel.get(channel_id, self._current_cursor().channel_cursor(channel_id).pts)
             if expected_pts == 0:
-                expected_by_channel[channel_id] = max(expected_pts, pts)
+                if pts > pts_count:
+                    gaps.append(channel_id)
+                expected_by_channel[channel_id] = pts
                 continue
             if pts > expected_pts + pts_count:
                 gaps.append(channel_id)
@@ -575,13 +611,11 @@ class UpdateManager:
         Args:
             raw_update: Raw update container whose sequence fields are inspected.
         """
-        cursor = self._current_cursor()
-        if cursor.seq == 0:
-            return False
         seq = _optional_int_attr(raw_update, "seq")
         if seq is None:
             return False
         seq_start = _optional_int_attr(raw_update, "seq_start") or seq
+        cursor = self._current_cursor()
         return seq_start > cursor.seq + 1
 
     def _apply_sequence(self, raw_update: object) -> None:
@@ -788,11 +822,12 @@ def _extract_entity_references(raw: object) -> tuple[EntityReference, ...]:
                     username=user.username,
                     phone=user.phone,
                     title=" ".join(part for part in (user.first_name, user.last_name) if part) or None,
+                    complete=not user.min,
                 )
             )
     for chat in _iter_attr_tuple(raw, "chats"):
         if isinstance(chat, types.Chat):
-            entities.append(EntityReference(id=chat.id, kind="chat", title=chat.title))
+            entities.append(EntityReference(id=chat.id, kind="chat", title=chat.title, complete=True))
         elif isinstance(chat, types.Channel):
             entities.append(
                 EntityReference(
@@ -801,6 +836,7 @@ def _extract_entity_references(raw: object) -> tuple[EntityReference, ...]:
                     access_hash=None if chat.min else chat.access_hash,
                     username=chat.username,
                     title=chat.title,
+                    complete=not chat.min,
                 )
             )
     if isinstance(raw, types.UpdatesDifference | types.UpdatesDifferenceSlice):
@@ -859,7 +895,7 @@ def _ordered_events(events: Iterable[Update]) -> list[Update]:
     return [event for _, event in sorted(enumerate(events), key=lambda item: (item[1].date, item[0]))]
 
 
-def _raw_update_key(raw: object) -> str:
+def _raw_update_key(raw: object) -> str | None:
     """Build a best-effort duplicate key from raw type and selected identity fields.
 
     Args:
@@ -875,7 +911,7 @@ def _raw_update_key(raw: object) -> str:
         nested_id = getattr(nested_message, "id", None)
         if isinstance(nested_id, int):
             parts.append(f"message:{nested_id}")
-    return "|".join(parts)
+    return "|".join(parts) if len(parts) > 1 else None
 
 
 def _optional_int_attr(raw: object, attr: str) -> int | None:

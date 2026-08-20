@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.crypto.native.sha256_digest"
 source_path: "src/miniproto/crypto/native.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/native.py#L543"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/native.py#L566"
 aliases: ["miniproto.crypto.sha256_digest"]
 module: "miniproto.crypto.native"
 ---

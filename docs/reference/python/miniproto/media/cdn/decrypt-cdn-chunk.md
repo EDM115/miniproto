@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.media.cdn.decrypt_cdn_chunk"
 source_path: "src/miniproto/media/cdn.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/cdn.py#L188"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/cdn.py#L238"
 aliases: ["miniproto.media.decrypt_cdn_chunk"]
 module: "miniproto.media.cdn"
 ---

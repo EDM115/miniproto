@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.crypto.native.pq_factorize"
 source_path: "src/miniproto/crypto/native.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/native.py#L1114"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/native.py#L1140"
 aliases: ["miniproto.crypto.pq_factorize"]
 module: "miniproto.crypto.native"
 ---

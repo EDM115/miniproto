@@ -21,6 +21,8 @@ _MT_PROTO_ENVELOPE_HEADER_SIZE = 32
 _MT_PROTO_MIN_PADDING = 12
 _MT_PROTO_MAX_PADDING = 1024
 _TL_VECTOR_CONSTRUCTOR_ID = 0x1CB5C415
+_SCRYPT_MAX_MEMORY_BYTES = 256 * 1024 * 1024
+_SCRYPT_MAX_WORK_BYTES = 1024 * 1024 * 1024
 
 
 def native_available() -> bool:
@@ -378,6 +380,17 @@ def scrypt_derive(password: bytes, salt: bytes, n: int, r: int, p: int, length: 
         p: Scrypt parallelization cost parameter.
         length: Number of derived bytes requested.
     """
+    if n < 2 or n & (n - 1):
+        raise ValueError("scrypt n must be a power of two greater than one")
+    if r < 1 or p < 1:
+        raise ValueError("scrypt r and p must be positive")
+    if not 1 <= length <= 1024:
+        raise ValueError("scrypt output length must be between 1 and 1024 bytes")
+    memory_bytes = 128 * n * r
+    work_bytes = memory_bytes * p
+    if memory_bytes > _SCRYPT_MAX_MEMORY_BYTES or work_bytes > _SCRYPT_MAX_WORK_BYTES:
+        raise ValueError("scrypt parameters exceed the resource limit")
+
     from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
 
     return Scrypt(salt=salt, length=length, n=n, r=r, p=p).derive(password)

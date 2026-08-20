@@ -35,14 +35,16 @@ def merge_peer_entry(current: PeerCacheEntry, incoming: PeerCacheEntry) -> PeerC
         current: Existing canonical peer cache entry.
         incoming: New entry whose populated fields take precedence.
     """
-    raw = dict(current.raw or {})
-    raw.update(dict(incoming.raw or {}))
+    incoming_raw = dict(incoming.raw or {})
+    complete = incoming_raw.get("_miniproto_complete") is True
+    raw = {} if complete else dict(current.raw or {})
+    raw.update(incoming_raw)
     return PeerCacheEntry(
         id=incoming.id,
         kind=incoming.kind,
         access_hash=incoming.access_hash if incoming.access_hash is not None else current.access_hash,
-        username=incoming.username or current.username,
-        phone=incoming.phone or current.phone,
+        username=incoming.username if complete else incoming.username or current.username,
+        phone=incoming.phone if complete else incoming.phone or current.phone,
         updated_at=incoming.updated_at,
         raw=raw or None,
     )

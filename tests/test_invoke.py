@@ -23,13 +23,14 @@ from miniproto import (
 )
 from miniproto.auth.bootstrap import ensure_auth_key
 from miniproto.auth.service import AuthService
-from miniproto.client import _CachedSessionStorage
+from miniproto.client import _CachedSessionStorage, _MediaInvokeContext
 from miniproto.connection.sender import MTProtoSender
 from miniproto.connection.transport import TransportClosed, TransportError
 from miniproto.errors import (
     AuthKeyNotFound,
     AuthKeyRegenerationRequired,
     ClientDisconnected,
+    DatacenterMigration,
     FloodPremiumWait,
     FloodWait,
     InvalidCode,
@@ -964,14 +965,21 @@ def test_invoke_does_not_drop_replacement_sender_from_stale_failure() -> None:
     run(scenario())
 
 
-def test_invoke_handles_dc_migration_and_retries_safe_request_with_new_sender() -> None:
+def test_invoke_handles_dc_migration_and_retries_safe_request_with_new_sender(monkeypatch: pytest.MonkeyPatch) -> None:
     async def scenario() -> None:
         storage = storage_with_auth(dc_id=2)
         first = FakeSender([rpc_error(303, "USER_MIGRATE_4")])
+        migration_sender = FakeSender([])
         second = FakeSender([nearest_dc().serialize()])
-        senders = [first, second]
+        senders = [first, migration_sender, second]
         client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage, max_request_retries=1))
         client._sender_factory = lambda _record: senders.pop(0)
+
+        async def ensure_target_auth(dc_id: int) -> tuple[bytes, int]:
+            assert dc_id == 4
+            return b"t" * 256, 456
+
+        monkeypatch.setattr(client, "_ensure_media_dc_auth", ensure_target_auth)
         await client.connect()
         result = await client.invoke(functions.HelpGetNearestDc())
         assert result == nearest_dc()
@@ -979,7 +987,78 @@ def test_invoke_handles_dc_migration_and_retries_safe_request_with_new_sender() 
         assert loaded is not None
         assert session_record_from_mapping(loaded).dc_id == 4
         assert first.disconnected == 1
+        assert migration_sender.disconnected == 1
         assert len(second.requests) == 1
+
+    run(scenario())
+
+
+def test_main_dc_migration_imports_authorization_and_activates_target_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def scenario() -> None:
+        user_identity = UserIdentity(id=42, access_hash=9000, username="alice")
+        raw_user = types.User(self_=True, id=42, access_hash=9000, username="alice")
+        storage = storage_with_auth(user=user_identity)
+        client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage))
+        old_sender = FakeSender([])
+        exported = types.AuthExportedAuthorization(id=55, bytes=b"exported")
+        target_key = b"t" * 256
+        target_salt = 456
+        temporary = FakeSender([types.AuthAuthorization(user=raw_user).serialize()])
+
+        async def invoke(request: object, **kwargs: object) -> object:
+            del kwargs
+            assert isinstance(request, functions.AuthExportAuthorization)
+            assert request.dc_id == 4
+            return exported
+
+        async def ensure_target_auth(dc_id: int) -> tuple[bytes, int]:
+            assert dc_id == 4
+            return target_key, target_salt
+
+        async def build_target(*args: object, **kwargs: object) -> RawSender:
+            del args
+            assert kwargs["dc_id_override"] == 4
+            assert kwargs["auth_key_override"] == target_key
+            return temporary
+
+        monkeypatch.setattr(client, "invoke", invoke)
+        monkeypatch.setattr(client, "_ensure_media_dc_auth", ensure_target_auth)
+        monkeypatch.setattr(client_module, "build_sender_from_session", build_target)
+
+        await client._migrate_main_session(old_sender, DatacenterMigration(4, kind="USER"))
+
+        loaded = await storage.load()
+        assert loaded is not None
+        record = session_record_from_mapping(loaded)
+        assert record.dc_id == 4
+        assert record.auth_key is not None
+        assert record.auth_key.dc_id == 4
+        assert record.auth_key.key == target_key
+        assert record.metadata["server_salt"] == target_salt
+        assert record.metadata["dc_auth"]["2"]["key"] == AUTH_KEY
+        assert temporary.disconnected == 1
+        assert temporary.requests
+
+    run(scenario())
+
+
+def test_auth_request_does_not_force_ambiguous_transport_replay(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def scenario() -> None:
+        client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=InMemorySessionStorage()))
+        observed: list[bool | None] = []
+
+        async def invoke(request: object, *, retry: bool | None = None, **kwargs: object) -> object:
+            del request, kwargs
+            observed.append(retry)
+            return types.AuthSentCode(type=types.AuthSentCodeTypeApp(length=5), phone_code_hash="hash")
+
+        monkeypatch.setattr(client, "invoke", invoke)
+
+        await client._invoke_auth_request(
+            functions.AuthSendCode(phone_number="+1", api_id=1, api_hash="hash", settings=types.CodeSettings())
+        )
+
+        assert observed == [False]
 
     run(scenario())
 
@@ -1099,6 +1178,90 @@ def test_media_dc_auth_persistence_uses_atomic_mutation(monkeypatch: pytest.Monk
         record = session_record_from_mapping(loaded)
         assert record.update_state.pts == 17
         assert record.metadata["dc_auth"]["4"] == {"key": b"m" * 256, "salt": 789}
+
+    run(scenario())
+
+
+def test_cdn_sender_uses_cdn_endpoint_and_cdn_public_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def scenario() -> None:
+        cdn_option = DCOption(id=4, ip_address="203.0.113.4", port=443, media_only=True, cdn=True)
+        storage = InMemorySessionStorage(
+            SessionRecord(
+                dc_id=2,
+                auth_key=AuthKey(dc_id=2, key=AUTH_KEY, key_id=123),
+                dc_options=(DCOption(id=2, ip_address="127.0.0.1", port=443), cdn_option),
+            )
+        )
+        client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage))
+        cdn_key = object()
+        sender = FakeSender([])
+        observed: dict[str, object] = {}
+
+        async def invoke(request: object, **kwargs: object) -> object:
+            del kwargs
+            assert isinstance(request, functions.HelpGetCdnConfig)
+            return types.CdnConfig(public_keys=(types.CdnPublicKey(dc_id=4, public_key="cdn-pem"),))
+
+        class FakeTransport:
+            def __init__(self, endpoint: object, config: ClientConfig) -> None:
+                del config
+                observed["endpoint"] = endpoint
+
+            async def close(self) -> None:
+                observed["transport_closed"] = True
+
+        class FakeExchange:
+            def __init__(self, transport: object, *, dc_id: int, rsa_keys: object, test_mode: bool) -> None:
+                del transport, test_mode
+                observed["exchange_dc_id"] = dc_id
+                observed["rsa_keys"] = rsa_keys
+
+            async def create_auth_key(self) -> object:
+                return SimpleNamespace(auth_key=b"c" * 256, server_salt=789)
+
+        async def build_target(*args: object, **kwargs: object) -> RawSender:
+            del args
+            observed["build_kwargs"] = kwargs
+            return sender
+
+        monkeypatch.setattr(client, "invoke", invoke)
+        monkeypatch.setattr(client_module, "rsa_key_from_pem", lambda pem: cdn_key if pem == "cdn-pem" else None)
+        monkeypatch.setattr(client_module, "UnencryptedAuthKeyTransport", FakeTransport)
+        monkeypatch.setattr(client_module, "AuthKeyExchange", FakeExchange)
+        monkeypatch.setattr(client_module, "build_sender_from_session", build_target)
+
+        assert await client._get_cdn_sender(4) is sender
+        endpoint = cast(Any, observed["endpoint"])
+        assert (endpoint.host, endpoint.port) == ("203.0.113.4", 443)
+        assert observed["exchange_dc_id"] == 4
+        assert observed["rsa_keys"] == (cdn_key,)
+        assert observed["transport_closed"] is True
+        assert cast(dict[str, object], observed["build_kwargs"])["dc_id_override"] == 4
+        assert cast(dict[str, object], observed["build_kwargs"])["auth_key_override"] == b"c" * 256
+
+    run(scenario())
+
+
+def test_media_invoke_context_routes_cdn_rpc_through_cdn_sender(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def scenario() -> None:
+        client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=InMemorySessionStorage()))
+        sender = FakeSender([types.UploadCdnFile(bytes=b"cdn").serialize()])
+        observed: list[int] = []
+
+        async def get_cdn_sender(dc_id: int) -> RawSender:
+            observed.append(dc_id)
+            return sender
+
+        monkeypatch.setattr(client, "_get_cdn_sender", get_cdn_sender)
+        await client.connect()
+        context = _MediaInvokeContext(client, 0, kind="download")
+        result = await context.invoke_cdn(
+            functions.UploadGetCdnFile(file_token=b"token", offset=0, limit=4096), dc_id=4
+        )
+
+        assert result == types.UploadCdnFile(bytes=b"cdn")
+        assert observed == [4]
+        assert sender.requests
 
     run(scenario())
 

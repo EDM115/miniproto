@@ -109,6 +109,14 @@ def test_upload_file_defaults_to_45s_part_timeout() -> None:
     run(scenario())
 
 
+def test_upload_file_rejects_part_size_that_does_not_divide_512_kib() -> None:
+    async def scenario() -> None:
+        with pytest.raises(ValueError, match="divide 512 KiB"):
+            await upload_file(FakeInvoker([]), b"payload", part_size=3 * 1024)
+
+    run(scenario())
+
+
 def test_upload_file_propagates_reader_errors_without_hanging() -> None:
     class ExplodingReader:
         # Reports a two-part file; the second read explodes.

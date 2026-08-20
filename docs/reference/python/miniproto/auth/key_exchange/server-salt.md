@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.auth.key_exchange.server_salt"
 source_path: "src/miniproto/auth/key_exchange.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/auth/key_exchange.py#L871"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/auth/key_exchange.py#L888"
 aliases: ["miniproto.auth.server_salt"]
 module: "miniproto.auth.key_exchange"
 ---

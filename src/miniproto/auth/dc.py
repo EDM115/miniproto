@@ -17,6 +17,7 @@ class RawDCOption(Protocol):
     port: int
     ipv6: bool
     media_only: bool
+    cdn: bool
     tcpo_only: bool
     static: bool
     secret: bytes | None
@@ -93,6 +94,7 @@ def dc_options_from_raw(raw_options: Iterable[RawDCOption]) -> tuple[DCOption, .
                 port=int(raw.port),
                 ipv6=bool(getattr(raw, "ipv6", False)),
                 media_only=bool(getattr(raw, "media_only", False)),
+                cdn=bool(getattr(raw, "cdn", False)),
                 tcpo_only=bool(getattr(raw, "tcpo_only", False)),
                 static=bool(getattr(raw, "static", False)),
                 secret=getattr(raw, "secret", None),
@@ -102,7 +104,12 @@ def dc_options_from_raw(raw_options: Iterable[RawDCOption]) -> tuple[DCOption, .
 
 
 def select_dc_option(
-    options: Iterable[DCOption], dc_id: int, *, prefer_ipv6: bool = False, allow_media_only: bool = False
+    options: Iterable[DCOption],
+    dc_id: int,
+    *,
+    prefer_ipv6: bool = False,
+    allow_media_only: bool = False,
+    require_cdn: bool = False,
 ) -> DCOption:
     """Choose the best endpoint for a data center.
 
@@ -111,6 +118,7 @@ def select_dc_option(
         dc_id: Required Telegram data-center identifier.
         prefer_ipv6: Prefer an IPv6 candidate when one is available.
         allow_media_only: Permit endpoints reserved for media traffic.
+        require_cdn: Restrict candidates to endpoints explicitly marked as CDN servers.
 
     Returns:
         A non-media endpoint when possible, otherwise the best available candidate.
@@ -119,8 +127,11 @@ def select_dc_option(
         ValueError: If ``options`` has no endpoint for ``dc_id``.
     """
     candidates = [option for option in options if option.id == dc_id]
+    if require_cdn:
+        candidates = [option for option in candidates if option.cdn]
     if not candidates:
-        raise ValueError(f"no DC option for dc_id={dc_id}")
+        kind = "CDN DC option" if require_cdn else "DC option"
+        raise ValueError(f"no {kind} for dc_id={dc_id}")
     filtered = [option for option in candidates if allow_media_only or not option.media_only]
     if not filtered:
         filtered = candidates

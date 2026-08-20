@@ -56,6 +56,8 @@ def is_sensitive_key(key: object) -> bool:
     normalized = _normalize_key(str(key))
     if normalized in _SENSITIVE_KEY_TOKENS:
         return True
+    if normalized.endswith("_token") or normalized.endswith("_secret"):
+        return True
     return any(token in normalized for token in _SENSITIVE_KEY_TOKENS if token not in {"token", "secret"})
 
 

@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::crypto::xor_bytes"
 source_path: "rust/miniproto/src/crypto.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L249"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L254"
 aliases: ["miniproto._native.xor_bytes"]
 crate: "miniproto_native"
 python_visible: true
@@ -17,7 +17,7 @@ python_visible: true
 
 - Crate: `miniproto_native`
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L249)
+- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L254)
 - Python exposure: `miniproto._native.xor_bytes` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -39,7 +39,7 @@ fn xor_bytes(left: &[u8], right: &[u8]) -> _
 fn xor_bytes(left: &[u8], right: &[u8]) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:249-251`*
+*Defined in `rust/miniproto/src/crypto.rs:254-256`*
 
 Returns the bytewise exclusive-or of Python `xor_bytes(left, right)` inputs.
 

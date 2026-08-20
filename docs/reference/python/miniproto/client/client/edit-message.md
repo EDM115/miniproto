@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.client.Client.edit_message"
 source_path: "src/miniproto/client.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L783"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L795"
 aliases: ["miniproto.Client.edit_message"]
 module: "miniproto.client"
 ---

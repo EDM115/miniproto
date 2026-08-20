@@ -159,6 +159,40 @@ def test_explicit_session_crypto_backends_are_cross_compatible() -> None:
     ) == public.scrypt_derive_cryptography(b"passphrase", b"0123456789abcdef", 2**10, 8, 1, 32)
 
 
+def test_all_scrypt_backends_reject_excessive_resource_parameters_before_derivation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class ForbiddenScrypt:
+        def __init__(self, **_kwargs: object) -> None:
+            raise AssertionError("cryptography backend reached before resource validation")
+
+    cryptography_scrypt = import_module("cryptography.hazmat.primitives.kdf.scrypt")
+    monkeypatch.setattr(cryptography_scrypt, "Scrypt", ForbiddenScrypt)
+    public = import_module("miniproto.crypto")
+    public_native = import_module("miniproto.crypto.native")
+
+    class ForbiddenNative:
+        @staticmethod
+        def native_available() -> bool:
+            return True
+
+        @staticmethod
+        def scrypt_derive(*_args: object) -> bytes:
+            raise AssertionError("native backend reached before resource validation")
+
+    monkeypatch.setattr(public_native, "_native_impl", ForbiddenNative())
+    implementations = (
+        public.scrypt_derive,
+        public.scrypt_derive_native,
+        public.scrypt_derive_cryptography,
+        fallback.scrypt_derive,
+    )
+
+    for implementation in implementations:
+        with pytest.raises(ValueError, match="resource limit"):
+            implementation(b"password", b"salt", 1 << 20, 8, 16, 32)
+
+
 def test_native_and_fallback_authenticate_msg_key_before_rejecting_auth_key_id() -> None:
     auth_key = bytes(range(256))
     packet = bytearray(

@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.auth.key_exchange.derive_tmp_aes_key_iv"
 source_path: "src/miniproto/auth/key_exchange.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/auth/key_exchange.py#L757"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/auth/key_exchange.py#L774"
 aliases: ["miniproto.auth.derive_tmp_aes_key_iv"]
 module: "miniproto.auth.key_exchange"
 ---

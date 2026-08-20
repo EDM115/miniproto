@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.client.Client.get_history"
 source_path: "src/miniproto/client.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L710"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L722"
 aliases: ["miniproto.Client.get_history"]
 module: "miniproto.client"
 ---

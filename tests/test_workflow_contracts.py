@@ -268,6 +268,11 @@ def test_publish_workflow_verifies_one_build_run_then_uses_isolated_oidc_jobs() 
     assert "pypa/gh-action-pypi-publish@" in pypi_steps
     assert "packages-dir" in pypi_steps
     assert "attestations" in pypi_steps
+    assert "https://pypi.org/pypi/miniproto/" in pypi_steps
+    assert "digests" in pypi_steps
+    assert "sha256" in pypi_steps
+    assert "publish-dist" in pypi_steps
+    assert "has_missing" in pypi_steps
 
     crates = jobs["crates"]
     assert set(crates["needs"]) == {"verify", "pypi"}

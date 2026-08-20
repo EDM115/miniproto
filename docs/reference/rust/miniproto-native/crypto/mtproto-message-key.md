@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::crypto::mtproto_message_key"
 source_path: "rust/miniproto/src/crypto.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L142"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L147"
 aliases: ["miniproto._native.mtproto_message_key"]
 crate: "miniproto_native"
 python_visible: true
@@ -17,7 +17,7 @@ python_visible: true
 
 - Crate: `miniproto_native`
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L142)
+- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L147)
 - Python exposure: `miniproto._native.mtproto_message_key` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -41,7 +41,7 @@ fn mtproto_message_key(py: _, auth_key: _, plaintext_with_padding: _, client_to_
 fn mtproto_message_key(py: Python<'_>, auth_key: Vec<u8>, plaintext_with_padding: Vec<u8>, client_to_server: bool) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:142-157`*
+*Defined in `rust/miniproto/src/crypto.rs:147-162`*
 
 Computes Python `mtproto_message_key` for padded plaintext and one MTProto direction.
 

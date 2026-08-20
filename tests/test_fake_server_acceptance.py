@@ -65,6 +65,18 @@ def fake_server_storage(
     )
 
 
+class FakeSplitCdnInvoker:
+    def __init__(self, client: Client) -> None:
+        self.client = client
+
+    async def __call__(self, request: object, **kwargs: Any) -> object:
+        return await self.client.invoke(request, **kwargs)
+
+    async def invoke_cdn(self, request: object, *, dc_id: int, **kwargs: Any) -> object:
+        assert dc_id == 4
+        return await self.client.invoke(request, **kwargs)
+
+
 def test_auth_key_handshake_persists_and_reconnect_reuses_it_for_initialized_rpc(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -161,6 +173,7 @@ def test_method_flood_cache_blocks_second_real_sender_send_and_preserves_request
                 ),
                 _updates_enabled=False,
             )
+
             await client.connect()
             first_request = functions.HelpGetNearestDc()
             second_request = functions.HelpGetNearestDc()
@@ -465,7 +478,7 @@ def test_small_big_upload_and_cdn_download_traverse_real_sender_transport() -> N
                 client.invoke, big_payload, file_name="big.bin", file_id=202, part_size=512 * 1024, concurrency=4
             )
             cdn = await download_file(
-                client.invoke,
+                FakeSplitCdnInvoker(client),
                 types.InputDocumentFileLocation(id=11, access_hash=22, file_reference=b"cdn-ref", thumb_size=""),
                 limit=len(cdn_plaintext),
                 part_size=4096,

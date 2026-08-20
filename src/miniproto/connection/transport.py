@@ -235,7 +235,8 @@ async def _handshake_http_connect(
         endpoint: Final host and port placed in the CONNECT target.
         proxy: Normalized scheme, host, port, and optional credentials.
     """
-    target = f"{endpoint.host}:{endpoint.port}"
+    authority_host = f"[{endpoint.host}]" if ":" in endpoint.host else endpoint.host
+    target = f"{authority_host}:{endpoint.port}"
     lines = [f"CONNECT {target} HTTP/1.1", f"Host: {target}", "Proxy-Connection: Keep-Alive"]
     if proxy.username is not None:
         password = proxy.password or ""
@@ -448,8 +449,20 @@ class StreamTransportBase:
         self._reads_waiting = 0
         self._last_activity = time.monotonic()
         self._watchdog_task = asyncio.create_task(self._watchdog_loop())
-        if self.handshake_tag:
-            await self._write_raw(self.handshake_tag)
+        try:
+            if self.handshake_tag:
+                await self._write_raw(self.handshake_tag)
+        except BaseException:
+            self._closed = True
+            await self._stop_watchdog()
+            writer = self._writer
+            self._reader = None
+            self._writer = None
+            if writer is not None:
+                writer.close()
+                with suppress(BaseException):
+                    await writer.wait_closed()
+            raise
         _emit_transport_event(
             "transport.open",
             started,

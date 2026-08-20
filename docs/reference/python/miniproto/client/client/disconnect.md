@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.client.Client.disconnect"
 source_path: "src/miniproto/client.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L434"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L442"
 aliases: ["miniproto.Client.disconnect"]
 module: "miniproto.client"
 ---

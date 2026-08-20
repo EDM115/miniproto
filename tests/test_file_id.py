@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+import base64
+import json
+
+import pytest
+
 from miniproto import decode_file_id, encode_file_id, input_media_from_file_id, media_from_file_id
 from miniproto.raw import types
 
@@ -60,3 +65,17 @@ def test_file_id_round_trips_photo_media() -> None:
     input_media = input_media_from_file_id(file_id)
     assert isinstance(input_media, types.InputMediaPhoto)
     assert isinstance(input_media.id, types.InputPhoto)
+
+
+@pytest.mark.parametrize("file_id", ("mpf1_%%%", "mpf1_" + "A" * (64 * 1024 + 1)), ids=("invalid-base64", "oversized"))
+def test_file_id_rejects_invalid_or_oversized_base64_payload(file_id: str) -> None:
+    with pytest.raises(ValueError):
+        decode_file_id(file_id)
+
+
+def test_file_id_rejects_out_of_range_integer_fields() -> None:
+    payload = {"k": "d", "id": 1 << 80, "ah": 2, "fr": "cmVm"}
+    encoded = base64.urlsafe_b64encode(json.dumps(payload).encode()).decode().rstrip("=")
+
+    with pytest.raises(ValueError, match="id"):
+        decode_file_id(f"mpf1_{encoded}")

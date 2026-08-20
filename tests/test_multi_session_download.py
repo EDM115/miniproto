@@ -50,3 +50,17 @@ def test_assemble_download_parts_writes_destination_path(tmp_path) -> None:
     assert destination == target
     assert data is None
     assert target.read_bytes() == b"abcdef"
+
+
+def test_assemble_download_parts_preserves_existing_path_on_size_mismatch(tmp_path) -> None:
+    first = tmp_path / "part-0.bin"
+    second = tmp_path / "part-1.bin"
+    first.write_bytes(b"abc")
+    second.write_bytes(b"def")
+    target = tmp_path / "result.bin"
+    target.write_bytes(b"previous-good-result")
+
+    with pytest.raises(RuntimeError, match="size mismatch"):
+        assemble_download_parts((first, second), target, expected_size=7)
+
+    assert target.read_bytes() == b"previous-good-result"

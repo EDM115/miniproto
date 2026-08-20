@@ -15,7 +15,7 @@ module: "miniproto.session.models"
 ## `miniproto.session.models.DCOption`
 
 ```python
-DCOption(id: int, ip_address: str, port: int, ipv6: bool = False, media_only: bool = False, tcpo_only: bool = False, static: bool = False, secret: bytes | None = None) -> None
+DCOption(id: int, ip_address: str, port: int, ipv6: bool = False, media_only: bool = False, cdn: bool = False, tcpo_only: bool = False, static: bool = False, secret: bytes | None = None) -> None
 ```
 
 One validated Telegram data-centre endpoint and optional transport secret.
@@ -27,6 +27,7 @@ One validated Telegram data-centre endpoint and optional transport secret.
 - [**port**](#miniproto.session.models.DCOption.port) (<code>[int](#int)</code>) – Endpoint TCP port from 1 through 65535.
 - [**ipv6**](#miniproto.session.models.DCOption.ipv6) (<code>[bool](#bool)</code>) – Whether the address is IPv6.
 - [**media_only**](#miniproto.session.models.DCOption.media_only) (<code>[bool](#bool)</code>) – Whether this endpoint serves only media requests.
+- [**cdn**](#miniproto.session.models.DCOption.cdn) (<code>[bool](#bool)</code>) – Whether this endpoint belongs to Telegram's CDN trust domain.
 - [**tcpo_only**](#miniproto.session.models.DCOption.tcpo_only) (<code>[bool](#bool)</code>) – Whether this endpoint is TCP-obfuscated-only.
 - [**static**](#miniproto.session.models.DCOption.static) (<code>[bool](#bool)</code>) – Whether Telegram marks this option static.
 - [**secret**](#miniproto.session.models.DCOption.secret) (<code>[bytes](#bytes) | None</code>) – Optional copied transport secret, hidden from ``repr``.

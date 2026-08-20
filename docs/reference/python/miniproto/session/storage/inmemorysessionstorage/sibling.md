@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.session.storage.InMemorySessionStorage.sibling"
 source_path: "src/miniproto/session/storage.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/storage.py#L118"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/storage.py#L119"
 aliases: ["miniproto.InMemorySessionStorage.sibling","miniproto.session.InMemorySessionStorage.sibling"]
 module: "miniproto.session.storage"
 ---

@@ -16,6 +16,7 @@ from miniproto import (
     event_loop,
 )
 from miniproto.errors import FloodWait
+from miniproto.messages import message_from_update_result
 from miniproto.mtproto.codec import RpcErrorBody, encode_message_body
 from miniproto.raw import functions, types
 from miniproto.session.models import PeerCacheEntry, UserIdentity, session_record_from_mapping
@@ -262,6 +263,19 @@ def test_edit_message_sends_generated_edit_request_and_normalizes_result() -> No
         assert message.entities == request.entities
 
     run(scenario())
+
+
+@pytest.mark.parametrize("update_type", [types.UpdateEditMessage, types.UpdateEditChannelMessage])
+def test_message_normalization_unwraps_edit_inside_update_short(
+    update_type: type[types.UpdateEditMessage] | type[types.UpdateEditChannelMessage],
+) -> None:
+    raw_message = types.Message(id=77, peer_id=types.PeerUser(user_id=7), date=1_700_000_002, message="edited")
+    result = types.UpdateShort(update=update_type(message=raw_message, pts=2, pts_count=1), date=1_700_000_002)
+
+    message = message_from_update_result(result, fallback_peer=Peer(id=7, kind="user"), fallback_text="fallback")
+
+    assert message.id == 77
+    assert message.text == "edited"
 
 
 def test_delete_messages_uses_messages_delete_for_non_channels() -> None:

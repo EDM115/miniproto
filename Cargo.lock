@@ -203,6 +203,7 @@ dependencies = [
  "scrypt",
  "sha1",
  "sha2",
+ "subtle",
 ]
 
 [[package]]

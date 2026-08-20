@@ -14,7 +14,12 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any, Literal, TypeVar, cast, overload
 
-from miniproto.auth.bootstrap import UnencryptedAuthKeyTransport, ensure_auth_key, telegram_rsa_public_keys
+from miniproto.auth.bootstrap import (
+    UnencryptedAuthKeyTransport,
+    ensure_auth_key,
+    rsa_key_from_pem,
+    telegram_rsa_public_keys,
+)
 from miniproto.auth.dc import select_dc_option
 from miniproto.auth.key_exchange import AuthKeyExchange
 from miniproto.auth.service import AuthService
@@ -86,7 +91,7 @@ from miniproto.mtproto.codec import GzipPacked, decode_message_body
 from miniproto.observability import emit_event, get_logger, record_metric
 from miniproto.peers import PeerCache, input_channel_from_peer, input_peer_from_peer
 from miniproto.raw import functions, types
-from miniproto.session.models import SessionRecord
+from miniproto.session.models import AuthKey, SessionRecord
 from miniproto.session.storage import (
     EncryptedSQLiteSessionStorage,
     SessionPayload,
@@ -306,6 +311,9 @@ class Client:
         # Exported-authorization auth keys per media DC (P1-5): key bytes + salt.
         self._dc_auth_cache: dict[int, tuple[bytes, int]] = {}
         self._dc_auth_lock = asyncio.Lock()
+        self._cdn_senders: dict[int, RawSender] = {}
+        self._cdn_auth_cache: dict[int, tuple[bytes, int]] = {}
+        self._cdn_sender_lock = asyncio.Lock()
         self._receive_dispatch_task: asyncio.Task[None] | None = None
         self._dispatch_sender: RawSender | None = None
         self._latest_server_salt: int | None = None
@@ -467,6 +475,10 @@ class Client:
                 errors.append(exc)
             try:
                 await self._close_media_pools()
+            except BaseException as exc:
+                errors.append(exc)
+            try:
+                await self._close_cdn_senders()
             except BaseException as exc:
                 errors.append(exc)
             try:
@@ -1353,7 +1365,11 @@ class Client:
         Args:
             clients: Auxiliary clients to close when they are currently connected.
         """
-        connected = tuple(client for client in clients if client.is_connected)
+        selected = tuple(clients)
+        for index, cached in tuple(self._auxiliary_download_clients.items()):
+            if any(cached is client for client in selected):
+                self._auxiliary_download_clients.pop(index, None)
+        connected = tuple(client for client in selected if client.is_connected)
         if connected:
             results = await asyncio.gather(*(client.disconnect() for client in connected), return_exceptions=True)
             for client, result in zip(connected, results, strict=True):
@@ -1520,6 +1536,7 @@ class Client:
         threshold = self.config.flood_sleep_threshold if flood_sleep_threshold is None else flood_sleep_threshold
         retryable = is_retryable_request(raw_request, retry)
         attempts = 0
+        migration_attempts = 0
         slept_so_far = 0.0
         request_name = _request_name(raw_request)
         quick_ack_delivered = False
@@ -1659,9 +1676,10 @@ class Client:
                         error_type=type(exc).__name__,
                     )
                     raise
-                await AuthService(self.config, self._storage, self.invoke).handle_dc_migration(exc)
+                await self._migrate_main_session(sender, exc)
                 await drop_sender(sender)
-                if self.is_connected and retryable and attempts < self.config.max_request_retries:
+                if self.is_connected and migration_attempts < max(1, self.config.max_request_retries):
+                    migration_attempts += 1
                     attempts += 1
                     continue
                 _emit_rpc_event(
@@ -1851,12 +1869,60 @@ class Client:
         await ensure_auth_key(self.config, self._storage)
 
     async def _invoke_auth_request(self, raw_request: object) -> object:
-        """Invoke an authentication request with retry eligibility forced on.
+        """Invoke an authentication request without ambiguous transport replay.
 
         Args:
             raw_request: Authentication-related generated TL request to send through the main client.
         """
-        return await self.invoke(raw_request, retry=True)
+        return await self.invoke(raw_request, retry=False)
+
+    async def _migrate_main_session(self, sender: RawSender, error: DatacenterMigration) -> None:
+        """Create and authorize a target-DC key before activating a migrated session.
+
+        Args:
+            sender: Current source-DC sender whose authorization remains usable for export.
+            error: Telegram migration response identifying the target datacenter.
+        """
+        del sender
+        before = load_session_record(await self._storage.load(), self.config.dc_id)
+        exported = await AuthService(self.config, self._storage, self.invoke).handle_dc_migration(error)
+        target_key, target_salt = await self._ensure_media_dc_auth(error.dc_id)
+        target_sender = await build_sender_from_session(
+            self.config,
+            self._storage,
+            self._sender_factory,
+            fresh_session_id=True,
+            server_salt_override=target_salt,
+            dc_id_override=error.dc_id,
+            auth_key_override=target_key,
+            allow_media_only=False,
+        )
+        try:
+            if exported is not None:
+                await self._import_exported_authorization(target_sender, exported, error.dc_id)
+        finally:
+            await target_sender.disconnect()
+
+        def activate(payload: Mapping[str, Any] | None) -> SessionPayload:
+            """Activate the target key while retaining the source key by DC.
+
+            Args:
+                payload: Latest session payload after target-key persistence.
+            """
+            current = load_session_record(payload, self.config.dc_id)
+            metadata = dict(current.metadata)
+            dc_auth = dict(cast(Mapping[str, Any], metadata.get("dc_auth") or {}))
+            if before.auth_key is not None:
+                source_salt = int(before.metadata.get("server_salt", self._latest_server_salt) or 0)
+                dc_auth[str(before.dc_id)] = {"key": before.auth_key.key, "salt": source_salt}
+            metadata["dc_auth"] = dc_auth
+            metadata["server_salt"] = target_salt
+            return replace(
+                current, dc_id=error.dc_id, auth_key=AuthKey(dc_id=error.dc_id, key=target_key), metadata=metadata
+            )
+
+        await self._storage.mutate(activate)
+        self._latest_server_salt = target_salt
 
     async def _drop_sender(self, expected: RawSender | None = None) -> None:
         """Disconnect the main sender unless ``expected`` has already been replaced.
@@ -2024,6 +2090,105 @@ class Client:
         if pools:
             await asyncio.gather(*(pool.close() for pool in pools))
 
+    async def _get_cdn_sender(self, dc_id: int) -> RawSender:
+        """Return a cached sender authenticated specifically for a Telegram CDN datacenter.
+
+        Args:
+            dc_id: CDN datacenter from an ``upload.fileCdnRedirect`` response.
+        """
+        async with self._cdn_sender_lock:
+            sender = self._cdn_senders.get(dc_id)
+            if sender is not None and _sender_is_usable(sender):
+                return sender
+            if sender is not None:
+                self._cdn_senders.pop(dc_id, None)
+                with suppress(BaseException):
+                    await sender.disconnect()
+            sender = await self._build_cdn_sender(dc_id)
+            self._cdn_senders[dc_id] = sender
+            return sender
+
+    async def _drop_cdn_sender(self, dc_id: int, expected: RawSender) -> None:
+        """Detach and close one failed CDN sender without removing a replacement.
+
+        Args:
+            dc_id: CDN datacenter whose sender may have failed.
+            expected: Exact failed sender instance eligible for removal.
+        """
+        async with self._cdn_sender_lock:
+            if self._cdn_senders.get(dc_id) is expected:
+                self._cdn_senders.pop(dc_id, None)
+        await expected.disconnect()
+
+    async def _close_cdn_senders(self) -> None:
+        """Detach and close every independently authenticated CDN sender."""
+        async with self._cdn_sender_lock:
+            senders = tuple(self._cdn_senders.values())
+            self._cdn_senders.clear()
+        if senders:
+            await asyncio.gather(*(sender.disconnect() for sender in senders))
+
+    async def _build_cdn_sender(self, dc_id: int) -> RawSender:
+        """Build a sender using Telegram's CDN endpoint and CDN-specific RSA key.
+
+        Args:
+            dc_id: CDN datacenter selected by the file redirect.
+        """
+        if self._sender_factory is not None:
+            return await build_sender_from_session(
+                self.config,
+                self._storage,
+                self._sender_factory,
+                fresh_session_id=True,
+                dc_id_override=dc_id,
+                allow_media_only=True,
+                require_cdn=True,
+            )
+        auth_key, server_salt = await self._ensure_cdn_dc_auth(dc_id)
+        return await build_sender_from_session(
+            self.config,
+            self._storage,
+            fresh_session_id=True,
+            server_salt_override=server_salt,
+            dc_id_override=dc_id,
+            auth_key_override=auth_key,
+            allow_media_only=True,
+            require_cdn=True,
+        )
+
+    async def _ensure_cdn_dc_auth(self, dc_id: int) -> tuple[bytes, int]:
+        """Exchange or reuse runtime-only auth material for one CDN datacenter.
+
+        Args:
+            dc_id: CDN datacenter whose public key and endpoint must be used.
+        """
+        cached = self._cdn_auth_cache.get(dc_id)
+        if cached is not None:
+            return cached
+        config = await self.invoke(functions.HelpGetCdnConfig(), retry=True)
+        if not isinstance(config, types.CdnConfig):
+            raise InvalidDatacenter(f"help.getCdnConfig returned {type(config).__name__}")
+        rsa_keys = tuple(
+            rsa_key_from_pem(item.public_key)
+            for item in config.public_keys
+            if isinstance(item, types.CdnPublicKey) and item.dc_id == dc_id
+        )
+        if not rsa_keys:
+            raise InvalidDatacenter(f"no CDN public key for dc_id={dc_id}")
+        record = load_session_record(await self._storage.load(), self.config.dc_id)
+        option = select_dc_option(record.dc_options, dc_id, allow_media_only=True, require_cdn=True)
+        transport = UnencryptedAuthKeyTransport(ConnectionEndpoint(option.ip_address, option.port), self.config)
+        try:
+            result = await AuthKeyExchange(
+                transport, dc_id=dc_id, rsa_keys=rsa_keys, test_mode=self.config.test_mode
+            ).create_auth_key()
+        finally:
+            await transport.close()
+        auth = (result.auth_key, result.server_salt)
+        self._cdn_auth_cache[dc_id] = auth
+        record_metric("client.cdn_dc_auth", 1, attributes={"dc_id": dc_id})
+        return auth
+
     async def _build_media_sender(self, dc_id: int) -> RawSender:
         """Build a media-lane sender for ``dc_id`` (same-DC or cross-DC).
 
@@ -2135,9 +2300,21 @@ class Client:
             sender: Fresh foreign-DC sender that receives the exported authorization.
             dc_id: Foreign datacenter for which main-session authorization is exported.
         """
-        started = time.perf_counter()
         exported = await AuthService(self.config, self._storage, self.invoke).export_authorization(dc_id)
         record_metric("client.media_auth_exports", 1, attributes={"target_dc_id": dc_id})
+        await self._import_exported_authorization(sender, exported, dc_id)
+
+    async def _import_exported_authorization(
+        self, sender: RawSender, exported: types.AuthExportedAuthorization, dc_id: int
+    ) -> None:
+        """Import one already-exported authorization into a target-DC sender.
+
+        Args:
+            sender: Target sender receiving the authorization.
+            exported: Source-DC authorization export to import.
+            dc_id: Target datacenter used for metrics and diagnostics.
+        """
+        started = time.perf_counter()
         request = functions.AuthImportAuthorization(id=exported.id, bytes=exported.bytes)
         wrapped = wrap_raw_request(request, self.config, needs_init=sender_needs_init(sender), without_updates=True)
         raw_result = await sender.request(
@@ -2318,6 +2495,39 @@ class _MediaInvokeContext:
         finally:
             if temporary_transfer:
                 await transfer.close()
+
+    async def invoke_cdn(self, raw_request: object, *, dc_id: int, **kwargs: Any) -> object:
+        """Invoke a CDN retrieval RPC through an independently authenticated CDN sender.
+
+        Args:
+            raw_request: CDN-only request, normally ``upload.getCdnFile``.
+            dc_id: CDN datacenter carried by the file redirect.
+            **kwargs: Request timeout, flood-wait, and retry options forwarded to the sender lifecycle.
+        """
+
+        async def ensure_sender() -> RawSender:
+            """Return the current cached sender for the redirected CDN datacenter."""
+            return await self._client._get_cdn_sender(dc_id)
+
+        async def drop_sender(expected: RawSender) -> None:
+            """Drop only the failed CDN sender instance.
+
+            Args:
+                expected: Failed CDN sender that must not evict a newer replacement.
+            """
+            await self._client._drop_cdn_sender(dc_id, expected)
+
+        return await self._client._invoke_via_sender(
+            raw_request,
+            ensure_sender=ensure_sender,
+            drop_sender=drop_sender,
+            request_timeout=kwargs.pop("request_timeout", None),
+            flood_sleep_threshold=kwargs.pop("flood_sleep_threshold", None),
+            retry=kwargs.pop("retry", None),
+            without_updates=True,
+            migrate_session=False,
+            **kwargs,
+        )
 
 
 def _media_request_weight(raw_request: object) -> int:

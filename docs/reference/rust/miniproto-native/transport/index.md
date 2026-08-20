@@ -57,6 +57,7 @@ exception; framing validation that runs after conversion intentionally returns `
   - [`register`](#register)
   - [`quick_ack_token`](#quick-ack-token)
   - [`__pyfunction_quick_ack_token`](#pyfunction-quick-ack-token)
+  - [`quick_ack_token_raw`](#quick-ack-token-raw)
   - [`encode_length_prefixed`](#encode-length-prefixed)
   - [`padded_packet_length`](#padded-packet-length)
   - [`to_fixed`](#to-fixed)
@@ -80,6 +81,7 @@ exception; framing validation that runs after conversion intentionally returns `
 | [`register`](#register) | fn | Registers Python `TransportCodec` and `quick_ack_token` on `miniproto._native`. |
 | [`quick_ack_token`](#quick-ack-token) | fn | Computes the flagged quick-ACK token for Python `quick_ack_token`. |
 | [`__pyfunction_quick_ack_token`](#pyfunction-quick-ack-token) | fn |  |
+| [`quick_ack_token_raw`](#quick-ack-token-raw) | fn | Computes a quick-ACK token without Python argument conversion or GIL interaction. |
 | [`encode_length_prefixed`](#encode-length-prefixed) | fn | Encodes a four-byte little-endian length prefix and payload, optionally setting quick-ACK bit. |
 | [`padded_packet_length`](#padded-packet-length) | fn | Determines the embedded MTProto packet length within a padded-intermediate payload. |
 | [`to_fixed`](#to-fixed) | fn | Converts a slice to an exact fixed-width array for frame header decoding. |
@@ -100,7 +102,7 @@ struct TransportCodec {
 }
 ```
 
-*Defined in `rust/miniproto/src/transport.rs:123-126`*
+*Defined in `rust/miniproto/src/transport.rs:139-142`*
 
 Python-visible incremental TCP framing codec, exported as `miniproto._native.TransportCodec`.
 
@@ -298,7 +300,7 @@ struct FramePump {
 }
 ```
 
-*Defined in `rust/miniproto/src/transport.rs:212-223`*
+*Defined in `rust/miniproto/src/transport.rs:228-239`*
 
 GIL-free incremental parser/encoder retaining incomplete receive data between calls.
 
@@ -568,7 +570,7 @@ enum TransportMode {
 }
 ```
 
-*Defined in `rust/miniproto/src/transport.rs:72-79`*
+*Defined in `rust/miniproto/src/transport.rs:88-95`*
 
 Supported Telegram TCP framing modes selected by their Python wire-name strings.
 
@@ -643,7 +645,7 @@ enum FrameEvent {
 }
 ```
 
-*Defined in `rust/miniproto/src/transport.rs:103-119`*
+*Defined in `rust/miniproto/src/transport.rs:119-135`*
 
 One native frame-pump result before it is converted to a Python return shape.
 
@@ -693,7 +695,7 @@ One native frame-pump result before it is converted to a Python return shape.
 fn register(m: &Bound<'_, pyo3::types::PyModule>) -> PyResult<()>
 ```
 
-*Defined in `rust/miniproto/src/transport.rs:39-43`*
+*Defined in `rust/miniproto/src/transport.rs:41-45`*
 
 Registers Python `TransportCodec` and `quick_ack_token` on `miniproto._native`.
 
@@ -706,10 +708,10 @@ Returns a PyO3 exception if either export cannot be installed.
 ### `quick_ack_token`
 
 ```rust
-fn quick_ack_token(auth_key: &[u8], encrypted_packet: &[u8]) -> PyResult<u32>
+fn quick_ack_token(py: Python<'_>, auth_key: Vec<u8>, encrypted_packet: Vec<u8>) -> PyResult<u32>
 ```
 
-*Defined in `rust/miniproto/src/transport.rs:55-68`*
+*Defined in `rust/miniproto/src/transport.rs:58-63`*
 
 Computes the flagged quick-ACK token for Python `quick_ack_token`.
 
@@ -718,6 +720,7 @@ Returns the token with the quick-ACK bit set or `ValueError` for invalid packet/
 
 # Arguments
 
+- `py`: Acquired Python token used to detach hashing for sufficiently large packets.
 - `auth_key`: 256-byte MTProto authorization key used by the quick-ACK hash schedule.
 - `encrypted_packet`: Full MTProto packet whose nonempty encrypted suffix is hashed.
 
@@ -727,7 +730,22 @@ Returns the token with the quick-ACK bit set or `ValueError` for invalid packet/
 unsafe fn __pyfunction_quick_ack_token<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/transport.rs:54`*
+*Defined in `rust/miniproto/src/transport.rs:57`*
+
+### `quick_ack_token_raw`
+
+```rust
+fn quick_ack_token_raw(auth_key: &[u8], encrypted_packet: &[u8]) -> PyResult<u32>
+```
+
+*Defined in `rust/miniproto/src/transport.rs:71-84`*
+
+Computes a quick-ACK token without Python argument conversion or GIL interaction.
+
+# Arguments
+
+- `auth_key`: 256-byte MTProto authorization key used by the quick-ACK hash schedule.
+- `encrypted_packet`: Full MTProto packet whose nonempty encrypted suffix is hashed.
 
 ### `encode_length_prefixed`
 
@@ -735,7 +753,7 @@ unsafe fn __pyfunction_quick_ack_token<'py>(py: Python<'py>, _slf: *mut ffi::PyO
 fn encode_length_prefixed(payload: &[u8], payload_length: u32, quick_ack: bool) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/transport.rs:628-641`*
+*Defined in `rust/miniproto/src/transport.rs:644-657`*
 
 Encodes a four-byte little-endian length prefix and payload, optionally setting quick-ACK bit.
 
@@ -753,7 +771,7 @@ Returns `ValueError` if header-plus-payload length overflows `usize`.
 fn padded_packet_length(payload: &[u8]) -> PyResult<usize>
 ```
 
-*Defined in `rust/miniproto/src/transport.rs:651-678`*
+*Defined in `rust/miniproto/src/transport.rs:667-694`*
 
 Determines the embedded MTProto packet length within a padded-intermediate payload.
 
@@ -770,7 +788,7 @@ does not treat arbitrary encrypted payload bytes as transport error indicators.
 fn to_fixed<const N: usize>(data: &[u8]) -> PyResult<[u8; N]>
 ```
 
-*Defined in `rust/miniproto/src/transport.rs:688-691`*
+*Defined in `rust/miniproto/src/transport.rs:704-707`*
 
 Converts a slice to an exact fixed-width array for frame header decoding.
 
@@ -789,7 +807,7 @@ Returns `ValueError` rather than panicking on an unexpected length.
 type PythonFrameEvent = (u8, Vec<u8>, i64, bool);
 ```
 
-*Defined in `rust/miniproto/src/transport.rs:30`*
+*Defined in `rust/miniproto/src/transport.rs:32`*
 
 Python `feed_data` event tuple: kind, payload, numeric detail, quick-ACK request flag.
 
@@ -800,7 +818,7 @@ Python `feed_data` event tuple: kind, payload, numeric detail, quick-ACK request
 const ABRIDGED_LONG_MARKER: u8 = 127u8;
 ```
 
-*Defined in `rust/miniproto/src/transport.rs:20`*
+*Defined in `rust/miniproto/src/transport.rs:22`*
 
 Abridged header byte that introduces its three-byte word-length form.
 
@@ -809,7 +827,7 @@ Abridged header byte that introduces its three-byte word-length form.
 const QUICK_ACK_MASK: u32 = 2_147_483_648u32;
 ```
 
-*Defined in `rust/miniproto/src/transport.rs:22`*
+*Defined in `rust/miniproto/src/transport.rs:24`*
 
 Wire bit that asks the peer to return a quick-ACK token.
 
@@ -818,7 +836,7 @@ Wire bit that asks the peer to return a quick-ACK token.
 const PADDED_QUICK_ACK_MARKER: [u8; 4];
 ```
 
-*Defined in `rust/miniproto/src/transport.rs:24`*
+*Defined in `rust/miniproto/src/transport.rs:26`*
 
 Padded-intermediate payload marker identifying a quick-ACK response.
 
@@ -827,7 +845,7 @@ Padded-intermediate payload marker identifying a quick-ACK response.
 const MAX_TRANSPORT_PADDING: usize = 15usize;
 ```
 
-*Defined in `rust/miniproto/src/transport.rs:26`*
+*Defined in `rust/miniproto/src/transport.rs:28`*
 
 Maximum random padding bytes allowed by padded-intermediate TCP framing.
 
@@ -836,6 +854,6 @@ Maximum random padding bytes allowed by padded-intermediate TCP framing.
 const RETAINED_BUFFER_LIMIT: usize = 1_048_576usize;
 ```
 
-*Defined in `rust/miniproto/src/transport.rs:28`*
+*Defined in `rust/miniproto/src/transport.rs:30`*
 
 Largest drained receive-buffer allocation retained for later chunks.

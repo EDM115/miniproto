@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.security.redaction.redact_mapping"
 source_path: "src/miniproto/security/redaction.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/security/redaction.py#L74"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/security/redaction.py#L76"
 aliases: ["miniproto.security.redact_mapping"]
 module: "miniproto.security.redaction"
 ---

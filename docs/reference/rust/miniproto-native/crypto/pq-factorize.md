@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::crypto::pq_factorize"
 source_path: "rust/miniproto/src/crypto.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L468"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L475"
 aliases: ["miniproto._native.pq_factorize"]
 crate: "miniproto_native"
 python_visible: true
@@ -17,7 +17,7 @@ python_visible: true
 
 - Crate: `miniproto_native`
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L468)
+- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L475)
 - Python exposure: `miniproto._native.pq_factorize` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -39,7 +39,7 @@ fn pq_factorize(py: _, pq: u64) -> _
 fn pq_factorize(py: Python<'_>, pq: u64) -> PyResult<(u64, u64)>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:468-470`*
+*Defined in `rust/miniproto/src/crypto.rs:475-477`*
 
 Factorizes Python `pq_factorize(pq)` into ordered nontrivial `u64` factors.
 

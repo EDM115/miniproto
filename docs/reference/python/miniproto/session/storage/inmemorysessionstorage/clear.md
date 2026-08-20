@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.session.storage.InMemorySessionStorage.clear"
 source_path: "src/miniproto/session/storage.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/storage.py#L191"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/storage.py#L192"
 aliases: ["miniproto.InMemorySessionStorage.clear","miniproto.session.InMemorySessionStorage.clear"]
 module: "miniproto.session.storage"
 ---

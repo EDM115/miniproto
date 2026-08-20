@@ -7,7 +7,7 @@ language: "rust"
 kind: "struct"
 qualified_name: "miniproto_native::transport::TransportCodec"
 source_path: "rust/miniproto/src/transport.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L123"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L139"
 aliases: ["miniproto._native.TransportCodec"]
 crate: "miniproto_native"
 python_visible: true
@@ -17,7 +17,7 @@ python_visible: true
 
 - Crate: `miniproto_native`
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/transport.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L123)
+- Source: [`rust/miniproto/src/transport.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L139)
 - Python exposure: `miniproto._native.TransportCodec` (confirmed from adjacent PyO3 attributes)
 
 ## cargo-docs-md rendering
@@ -30,7 +30,7 @@ struct TransportCodec {
 }
 ```
 
-*Defined in `rust/miniproto/src/transport.rs:123-126`*
+*Defined in `rust/miniproto/src/transport.rs:139-142`*
 
 Python-visible incremental TCP framing codec, exported as `miniproto._native.TransportCodec`.
 

@@ -177,12 +177,10 @@ def telegram_rsa_public_keys(*, test_mode: bool) -> tuple[RSAKey, ...]:
     Returns:
         Parsed public keys whose fingerprints may be advertised by Telegram.
     """
-    return tuple(
-        _rsa_key_from_pem(pem) for pem in (_TEST_RSA_PUBLIC_KEYS if test_mode else _PRODUCTION_RSA_PUBLIC_KEYS)
-    )
+    return tuple(rsa_key_from_pem(pem) for pem in (_TEST_RSA_PUBLIC_KEYS if test_mode else _PRODUCTION_RSA_PUBLIC_KEYS))
 
 
-def _rsa_key_from_pem(pem: str) -> RSAKey:
+def rsa_key_from_pem(pem: str) -> RSAKey:
     """Parse the minimal PKCS#1 RSA public-key DER payload embedded in ``pem``.
 
     Args:

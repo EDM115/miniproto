@@ -29,6 +29,7 @@ from miniproto import (
     event_loop,
     iter_download,
 )
+from miniproto.crypto.mtproto import media_ctr_crypt
 from miniproto.errors import (
     BadRequest,
     ClientDisconnected,
@@ -58,6 +59,7 @@ BOT_CREDENTIAL = "42:secret"
 class FakeInvoker:
     responses: list[object]
     requests: list[Any] = field(default_factory=list)
+    cdn_requests: list[Any] = field(default_factory=list)
     kwargs: list[dict[str, object]] = field(default_factory=list)
 
     async def __call__(self, request: object, **kwargs: object) -> object:
@@ -65,6 +67,17 @@ class FakeInvoker:
         self.kwargs.append(dict(kwargs))
         if not self.responses:
             raise AssertionError("fake invoker has no queued response")
+        response = self.responses.pop(0)
+        if isinstance(response, BaseException):
+            raise response
+        return response
+
+    async def invoke_cdn(self, request: object, *, dc_id: int, **kwargs: object) -> object:
+        assert dc_id == 4
+        self.cdn_requests.append(request)
+        self.kwargs.append(dict(kwargs))
+        if not self.responses:
+            raise AssertionError("fake CDN invoker has no queued response")
         response = self.responses.pop(0)
         if isinstance(response, BaseException):
             raise response
@@ -601,16 +614,22 @@ def test_plain_integrity_refreshes_an_expired_hash_request_location() -> None:
             return new_location
 
         invoker = ExpiringHashInvoker()
-        result = await download_file(
-            invoker,
-            old_location,
-            limit=len(payload),
-            part_size=1024,
-            concurrency=1,
-            adaptive_part_size=False,
-            verify_plain_hashes=True,
-            file_reference_refresher=refresh,
-        )
+        cache = DownloadRangeCache(max_bytes=4096)
+        try:
+            result = await download_file(
+                invoker,
+                old_location,
+                limit=len(payload),
+                part_size=1024,
+                concurrency=1,
+                adaptive_part_size=False,
+                range_cache=cache,
+                range_cache_key="expired-reference",
+                verify_plain_hashes=True,
+                file_reference_refresher=refresh,
+            )
+        finally:
+            await cache.clear()
         assert result.data == payload
         assert refreshes == [old_location]
         hash_requests = [request for request in invoker.requests if isinstance(request, functions.UploadGetFileHashes)]
@@ -1994,8 +2013,10 @@ def test_download_file_handles_cdn_redirect_reupload_and_decrypt() -> None:
         assert result.data == plaintext
         assert [getattr(type(request), "QUALNAME", "") for request in invoker.requests] == [
             "upload.getFile",
-            "upload.getCdnFile",
             "upload.reuploadCdnFile",
+        ]
+        assert [getattr(type(request), "QUALNAME", "") for request in invoker.cdn_requests] == [
+            "upload.getCdnFile",
             "upload.getCdnFile",
         ]
 
@@ -2013,17 +2034,17 @@ def test_download_file_fetches_missing_cdn_hashes_before_verifying() -> None:
                 types.UploadFileCdnRedirect(
                     dc_id=4, file_token=b"token", encryption_key=key, encryption_iv=iv, file_hashes=()
                 ),
-                types.UploadCdnFile(bytes=ciphertext),
                 (cdn_file_hash(plaintext),),
+                types.UploadCdnFile(bytes=ciphertext),
             ]
         )
         result = await download_file(invoker, document_location(), part_size=1024)
         assert result.data == plaintext
         assert [getattr(type(request), "QUALNAME", "") for request in invoker.requests] == [
             "upload.getFile",
-            "upload.getCdnFile",
             "upload.getCdnFileHashes",
         ]
+        assert [getattr(type(request), "QUALNAME", "") for request in invoker.cdn_requests] == ["upload.getCdnFile"]
 
     run(scenario())
 
@@ -2057,14 +2078,11 @@ def test_download_file_raises_cdn_integrity_error_when_no_hash_covers_data() -> 
     async def scenario() -> None:
         key = bytes(range(32))
         iv = bytes(range(16))
-        plaintext = b"cdn-data"
-        ciphertext = decrypt_cdn_chunk(plaintext, key=key, iv=iv, offset=0)
         invoker = FakeInvoker(
             [
                 types.UploadFileCdnRedirect(
                     dc_id=4, file_token=b"token", encryption_key=key, encryption_iv=iv, file_hashes=()
                 ),
-                types.UploadCdnFile(bytes=ciphertext),
                 (),
             ]
         )
@@ -2072,6 +2090,57 @@ def test_download_file_raises_cdn_integrity_error_when_no_hash_covers_data() -> 
             await download_file(invoker, document_location(), part_size=1024)
 
     run(scenario())
+
+
+def test_cdn_partial_download_fetches_and_verifies_complete_hash_interval() -> None:
+    async def scenario() -> None:
+        key = bytes(range(32))
+        iv = bytes(range(16))
+        plaintext = bytes(index % 251 for index in range(4096))
+        ciphertext = decrypt_cdn_chunk(plaintext, key=key, iv=iv, offset=0)
+        invoker = FakeInvoker(
+            [
+                types.UploadFileCdnRedirect(
+                    dc_id=4,
+                    file_token=b"token",
+                    encryption_key=key,
+                    encryption_iv=iv,
+                    file_hashes=(cdn_file_hash(plaintext),),
+                ),
+                types.UploadCdnFile(bytes=ciphertext),
+            ]
+        )
+
+        result = await download_file(invoker, document_location(), limit=1024, part_size=1024, precise=True)
+
+        assert result.data == plaintext[:1024]
+        assert [(request.offset, request.limit) for request in invoker.cdn_requests] == [(0, 4096)]
+
+    run(scenario())
+
+
+def test_cdn_redirect_repr_hides_bearer_and_encryption_material() -> None:
+    redirect = media_download.cdn_redirect_from_raw(
+        types.UploadFileCdnRedirect(
+            dc_id=4, file_token=b"sensitive-token", encryption_key=b"k" * 32, encryption_iv=b"i" * 16, file_hashes=()
+        )
+    )
+
+    assert redirect is not None
+    rendered = repr(redirect)
+    assert "sensitive-token" not in rendered
+    assert "kkkk" not in rendered
+    assert "iiii" not in rendered
+
+
+def test_cdn_counter_replaces_iv_tail_instead_of_adding_to_full_iv() -> None:
+    key = bytes(range(32))
+    iv = bytes.fromhex("00112233445566778899aabb01020304")
+    offset = 32
+    ciphertext = b"\x00" * 32
+    expected = media_ctr_crypt(ciphertext, key, iv[:12] + (offset // 16).to_bytes(4, "big"))
+
+    assert decrypt_cdn_chunk(ciphertext, key=key, iv=iv, offset=offset) == expected
 
 
 def test_download_media_resolves_public_media_location() -> None:
@@ -2596,7 +2665,7 @@ def test_client_small_bot_download_does_not_create_auxiliary_session() -> None:
     run(scenario())
 
 
-def test_client_lazily_creates_reuses_and_disconnects_auxiliary_bot_sessions(monkeypatch) -> None:
+def test_client_recreates_auxiliary_bot_sessions_after_disconnect_closes_storage(monkeypatch) -> None:
     async def scenario() -> None:
         storage = storage_with_identity(is_bot=True)
         client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage, bot_token=BOT_CREDENTIAL))
@@ -2627,7 +2696,7 @@ def test_client_lazily_creates_reuses_and_disconnects_auxiliary_bot_sessions(mon
         assert not first[0].is_connected
         auxiliaries = await client._ensure_auxiliary_download_clients(4)
         assert len(auxiliaries) == 3
-        assert auxiliaries[0] is first[0]
+        assert auxiliaries[0] is not first[0]
         assert len(sign_ins) == 3
         assert all(auxiliary.is_connected for auxiliary in auxiliaries)
         await client._disconnect_auxiliary_download_clients(auxiliaries)

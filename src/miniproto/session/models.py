@@ -79,6 +79,7 @@ class DCOption:
         port: Endpoint TCP port from 1 through 65535.
         ipv6: Whether the address is IPv6.
         media_only: Whether this endpoint serves only media requests.
+        cdn: Whether this endpoint belongs to Telegram's CDN trust domain.
         tcpo_only: Whether this endpoint is TCP-obfuscated-only.
         static: Whether Telegram marks this option static.
         secret: Optional copied transport secret, hidden from ``repr``.
@@ -92,6 +93,7 @@ class DCOption:
     port: int
     ipv6: bool = False
     media_only: bool = False
+    cdn: bool = False
     tcpo_only: bool = False
     static: bool = False
     secret: bytes | None = field(default=None, repr=False)
@@ -314,7 +316,7 @@ def _dc_option_to_mapping(option: DCOption) -> dict[str, Any]:
     Args:
         option: Validated Telegram data-center endpoint to serialize.
     """
-    return {
+    payload = {
         "id": option.id,
         "ip_address": option.ip_address,
         "port": option.port,
@@ -324,6 +326,9 @@ def _dc_option_to_mapping(option: DCOption) -> dict[str, Any]:
         "static": option.static,
         "secret": option.secret,
     }
+    if option.cdn:
+        payload["cdn"] = True
+    return payload
 
 
 def _user_identity_to_mapping(user: UserIdentity) -> dict[str, Any]:
@@ -400,6 +405,7 @@ def _dc_option_from_mapping(data: object) -> DCOption:
         port=int(mapping["port"]),
         ipv6=bool(mapping.get("ipv6", False)),
         media_only=bool(mapping.get("media_only", False)),
+        cdn=bool(mapping.get("cdn", False)),
         tcpo_only=bool(mapping.get("tcpo_only", False)),
         static=bool(mapping.get("static", False)),
         secret=None if mapping.get("secret") is None else _require_bytes(mapping["secret"], "dc_option.secret"),

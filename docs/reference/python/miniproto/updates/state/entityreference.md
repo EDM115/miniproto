@@ -15,7 +15,7 @@ module: "miniproto.updates.state"
 ## `miniproto.updates.state.EntityReference`
 
 ```python
-EntityReference(id: int, kind: PeerKind, access_hash: int | None = None, username: str | None = None, phone: str | None = None, title: str | None = None, updated_at: datetime = utc_now()) -> None
+EntityReference(id: int, kind: PeerKind, access_hash: int | None = None, username: str | None = None, phone: str | None = None, title: str | None = None, complete: bool = False, updated_at: datetime = utc_now()) -> None
 ```
 
 Persistent, normalized peer data learned while processing updates.
@@ -28,4 +28,5 @@ Persistent, normalized peer data learned while processing updates.
 - [**username**](#miniproto.updates.state.EntityReference.username) (<code>[str](#str) | None</code>) – Optional username observed in update entities.
 - [**phone**](#miniproto.updates.state.EntityReference.phone) (<code>[str](#str) | None</code>) – Optional phone number observed in a user entity.
 - [**title**](#miniproto.updates.state.EntityReference.title) (<code>[str](#str) | None</code>) – Optional display title or user full name.
+- [**complete**](#miniproto.updates.state.EntityReference.complete) (<code>[bool](#bool)</code>) – Whether the source was a full entity allowed to clear absent aliases.
 - [**updated_at**](#miniproto.updates.state.EntityReference.updated_at) (<code>[datetime](#datetime.datetime)</code>) – Observation timestamp; aware input retains its timezone and naive input assumes UTC.

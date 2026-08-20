@@ -7,7 +7,7 @@ language: "python"
 kind: "attribute"
 qualified_name: "miniproto.auth.dc.TEST_DC_OPTIONS"
 source_path: "src/miniproto/auth/dc.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/auth/dc.py#L25"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/auth/dc.py#L26"
 aliases: ["miniproto.auth.TEST_DC_OPTIONS"]
 module: "miniproto.auth.dc"
 ---

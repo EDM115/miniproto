@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.media.download.media_from_raw"
 source_path: "src/miniproto/media/download.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L1750"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L1762"
 aliases: ["miniproto.media.media_from_raw"]
 module: "miniproto.media.download"
 ---

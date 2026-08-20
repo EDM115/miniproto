@@ -373,7 +373,9 @@ def _upsert_self_peer(peers: tuple[PeerCacheEntry, ...], user: UserIdentity) -> 
         phone=user.phone,
         raw={"is_bot": user.is_bot},
     )
-    remaining = tuple(peer for peer in peers if not (peer.kind == "self" or peer.id == user.id))
+    remaining = tuple(
+        peer for peer in peers if not (peer.kind == "self" or (peer.kind == "user" and peer.id == user.id))
+    )
     return (entry, *remaining)
 
 

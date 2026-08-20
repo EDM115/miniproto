@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.session.models.UserIdentity"
 source_path: "src/miniproto/session/models.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/models.py#L111"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/models.py#L113"
 aliases: ["miniproto.UserIdentity","miniproto.session.UserIdentity"]
 module: "miniproto.session.models"
 ---

@@ -90,3 +90,8 @@ Status (verified 2026-08-18): Implemented as opt-in `Client.download_media(..., 
 ## 2026-08-19 — GPT-5.6 Sol — Codex — "Release packaging boundary"
 
 - A release must build the Cargo source package exactly once, attest every wheel plus the Python sdist and `.crate`, and publish only from a separate run-ID-driven workflow after verifying the source run, commit, version, checksums, and attestations. For now the crates.io package is the PyO3 accelerator published for provenance and version parity; direct `use miniproto_native::...` consumption is explicitly deferred until its Rust API and packaging contract are designed.
+
+## 2026-08-20 — GPT-5.6 Sol — Codex — "Independent protocol review triage"
+
+- Do not add a strict incoming-envelope salt equality check as an isolated hardening change: valid MTProto salt transitions require a current/previous-salt acceptance model, so comparing only against the current stored salt can reject legitimate traffic. Message-key authentication already protects the envelope; revisit this only with an explicit salt-history design.
+- Telegram CDN redirects cross two trust and routing boundaries: `upload.getCdnFile` goes to `redirect.dc_id`, while reupload and authoritative hash RPCs stay on the origin DC. Precise or finite ranges must be expanded to legal CDN/hash intervals, verified completely, then sliced for the caller; relaxing the hash check is not an acceptable fix.

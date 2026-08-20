@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.updates.state.UpdateCursor.with_entities"
 source_path: "src/miniproto/updates/state.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/updates/state.py#L215"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/updates/state.py#L220"
 aliases: ["miniproto.updates.UpdateCursor.with_entities"]
 module: "miniproto.updates.state"
 ---

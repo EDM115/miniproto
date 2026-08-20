@@ -548,6 +548,8 @@ class AuthKeyExchange:
             encrypted_data=rsa_pad(inner.serialize(), rsa_key, random_bytes=self._random_bytes),
         )
         server_params = decode_server_dh_params(await self.transport.send_unencrypted(req_dh.serialize()))
+        if server_params.nonce != nonce or server_params.server_nonce != res_pq.server_nonce:
+            raise ValueError("server_DH_params nonces do not match")
         if isinstance(server_params, ServerDHParamsFail):
             raise ValueError("server rejected req_DH_params")
         server_inner = decrypt_server_dh_answer(
@@ -556,28 +558,43 @@ class AuthKeyExchange:
         _validate_dh_inner(server_inner, nonce=nonce, server_nonce=res_pq.server_nonce)
         dh_prime = int.from_bytes(server_inner.dh_prime, "big", signed=False)
         g_a = int.from_bytes(server_inner.g_a, "big", signed=False)
-        b = _random_int(256, self._random_bytes)
-        g_b_value = pow(server_inner.g, b, dh_prime)
-        validate_public_value(g_b_value, dh_prime, "g_b")
-        auth_key = compute_auth_key(g_a=g_a, b=b, dh_prime=dh_prime)
-        g_b = g_b_value.to_bytes(len(server_inner.dh_prime), "big")
-        encrypted_client_data = encrypt_client_dh_inner_data(
-            ClientDHInnerData(nonce=nonce, server_nonce=res_pq.server_nonce, retry_id=0, g_b=g_b),
-            new_nonce=new_nonce,
-            server_nonce=res_pq.server_nonce,
-        )
-        answer = decode_dh_gen_answer(
-            await self.transport.send_unencrypted(
-                SetClientDHParams(
-                    nonce=nonce, server_nonce=res_pq.server_nonce, encrypted_data=encrypted_client_data
-                ).serialize()
+        retry_id = 0
+        auth_key: bytes | None = None
+        for attempt in range(6):
+            b = _random_int(256, self._random_bytes)
+            g_b_value = pow(server_inner.g, b, dh_prime)
+            validate_public_value(g_b_value, dh_prime, "g_b")
+            auth_key = compute_auth_key(g_a=g_a, b=b, dh_prime=dh_prime)
+            g_b = g_b_value.to_bytes(len(server_inner.dh_prime), "big")
+            encrypted_client_data = encrypt_client_dh_inner_data(
+                ClientDHInnerData(nonce=nonce, server_nonce=res_pq.server_nonce, retry_id=retry_id, g_b=g_b),
+                new_nonce=new_nonce,
+                server_nonce=res_pq.server_nonce,
             )
-        )
-        if not isinstance(answer, DHGenOk):
-            raise ValueError(f"server did not accept auth key generation: {type(answer).__name__}")
-        expected_hash = compute_new_nonce_hash(new_nonce, auth_key, 1)
-        if answer.new_nonce_hash1 != expected_hash:
-            raise ValueError("dh_gen_ok new_nonce_hash1 verification failed")
+            answer = decode_dh_gen_answer(
+                await self.transport.send_unencrypted(
+                    SetClientDHParams(
+                        nonce=nonce, server_nonce=res_pq.server_nonce, encrypted_data=encrypted_client_data
+                    ).serialize()
+                )
+            )
+            if answer.nonce != nonce or answer.server_nonce != res_pq.server_nonce:
+                raise ValueError(f"{type(answer).__name__} nonces do not match")
+            if isinstance(answer, DHGenOk):
+                if answer.new_nonce_hash1 != compute_new_nonce_hash(new_nonce, auth_key, 1):
+                    raise ValueError("dh_gen_ok new_nonce_hash1 verification failed")
+                break
+            if isinstance(answer, DHGenFail):
+                if answer.new_nonce_hash3 != compute_new_nonce_hash(new_nonce, auth_key, 3):
+                    raise ValueError("dh_gen_fail new_nonce_hash3 verification failed")
+                raise ValueError("server rejected auth key generation")
+            if answer.new_nonce_hash2 != compute_new_nonce_hash(new_nonce, auth_key, 2):
+                raise ValueError("dh_gen_retry new_nonce_hash2 verification failed")
+            if attempt == 5:
+                raise ValueError("server exceeded auth key generation retry limit")
+            retry_id = int.from_bytes(sha1_digest(auth_key)[:8], "little", signed=True)
+        if auth_key is None:
+            raise AssertionError("auth key generation loop did not run")
         return AuthKeyExchangeResult(
             auth_key=auth_key,
             auth_key_id=auth_key_id(auth_key),
@@ -788,7 +805,7 @@ def decrypt_server_dh_answer(encrypted_answer: bytes, *, new_nonce: int, server_
     if len(plaintext) < 20:
         raise ValueError("server_DH_inner_data payload is too short")
     answer_hash = plaintext[:20]
-    for end in range(len(plaintext), 19, -1):
+    for end in range(len(plaintext), max(19, len(plaintext) - 16), -1):
         candidate = plaintext[20:end]
         if sha1_digest(candidate) == answer_hash:
             return ServerDHInnerData.deserialize(candidate)

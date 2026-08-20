@@ -410,10 +410,22 @@ class _PlainFileHashVerifier:
         """
         if not payload:
             return
-        identity = _plain_location_identity(location)
-        await self._ensure_identity(identity)
         end = offset + len(payload)
-        intervals = await self._ensure_hash_coverage(location, offset, end)
+        for refresh_attempt in range(2):
+            identity = _plain_location_identity(location)
+            await self._ensure_identity(identity)
+            try:
+                intervals = await self._ensure_hash_coverage(location, offset, end)
+                break
+            except Exception as exc:
+                if self._file_reference_refresher is None or refresh_attempt > 0 or not _is_file_reference_error(exc):
+                    raise
+                record_metric("media.download.file_reference_refresh_attempts", 1)
+                location = await self._location_state.refresh(
+                    reference_deduper=self._reference_deduper, refresher=self._file_reference_refresher
+                )
+        else:
+            raise AssertionError("plain hash reference-refresh loop did not terminate")
         self._assert_identity(identity, offset=offset, limit=len(payload))
         for hash_offset, hash_limit, expected_hash in intervals:
             hash_end = hash_offset + hash_limit
@@ -1880,7 +1892,12 @@ async def _payload_from_get_file_result(
     """
     redirect = cdn_redirect_from_raw(result)
     if redirect is not None:
-        return await get_cdn_file_part(invoke, redirect, offset=offset, limit=limit, request_timeout=request_timeout)
+        cdn_invoke = getattr(invoke, "invoke_cdn", None)
+        if not callable(cdn_invoke):
+            raise MediaDownloadError("CDN redirect requires an invoker with dedicated CDN-DC routing")
+        return await get_cdn_file_part(
+            invoke, cdn_invoke, redirect, offset=offset, limit=limit, request_timeout=request_timeout
+        )
     if isinstance(result, types.UploadFile):
         payload = result.bytes
         if plain_verifier is not None:

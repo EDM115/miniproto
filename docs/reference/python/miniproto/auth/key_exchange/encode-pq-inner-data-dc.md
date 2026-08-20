@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.auth.key_exchange.encode_pq_inner_data_dc"
 source_path: "src/miniproto/auth/key_exchange.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/auth/key_exchange.py#L590"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/auth/key_exchange.py#L607"
 aliases: ["miniproto.auth.encode_pq_inner_data_dc"]
 module: "miniproto.auth.key_exchange"
 ---

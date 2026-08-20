@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.crypto.native.aes_256_gcm_decrypt_native"
 source_path: "src/miniproto/crypto/native.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/native.py#L975"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/native.py#L999"
 aliases: ["miniproto.crypto.aes_256_gcm_decrypt_native"]
 module: "miniproto.crypto.native"
 ---

@@ -221,7 +221,11 @@ def _find_message_result(result: object) -> types.Message | None:
     ):
         return result.message
     if isinstance(result, types.UpdateShort) and isinstance(
-        result.update, types.UpdateNewMessage | types.UpdateNewChannelMessage
+        result.update,
+        types.UpdateNewMessage
+        | types.UpdateNewChannelMessage
+        | types.UpdateEditMessage
+        | types.UpdateEditChannelMessage,
     ):
         return _find_message_result(result.update)
     if isinstance(result, types.Updates | types.UpdatesCombined):

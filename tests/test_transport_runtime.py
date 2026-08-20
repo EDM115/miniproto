@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import gzip
 import logging
 import socket
 import time
@@ -26,7 +27,7 @@ from miniproto.connection.transport import (
     default_stream_connector,
     open_transport,
 )
-from miniproto.errors import AmbiguousRpcResult, PendingRpcLimitExceeded, TransportFlood
+from miniproto.errors import AmbiguousRpcResult, PendingRpcLimitExceeded, ProtocolValidationError, TransportFlood
 from miniproto.mtproto.codec import (
     BadMsgNotification,
     BadServerSalt,
@@ -46,6 +47,7 @@ from miniproto.mtproto.codec import (
     decode_unencrypted_message,
     encode_encrypted_message,
     encode_message_body,
+    encode_ping_delay_disconnect,
     encode_unencrypted_message,
     gzip_pack,
 )
@@ -62,8 +64,88 @@ class _OpenWriter:
         return False
 
 
+class _HandshakeFailingWriter:
+    def __init__(self) -> None:
+        self.closed = False
+        self.waited_closed = False
+        self.transport = type("BufferedTransport", (), {"get_write_buffer_size": lambda self: 0})()
+
+    def get_extra_info(self, name: str) -> object | None:
+        del name
+        return None
+
+    def is_closing(self) -> bool:
+        return self.closed
+
+    def write(self, payload: bytes) -> None:
+        del payload
+        raise OSError("handshake write failed")
+
+    async def drain(self) -> None:
+        return None
+
+    def close(self) -> None:
+        self.closed = True
+
+    async def wait_closed(self) -> None:
+        self.waited_closed = True
+
+
 async def _wait_forever() -> None:
     await asyncio.Future()
+
+
+def test_transport_connect_cleans_writer_and_watchdog_when_handshake_fails() -> None:
+    async def scenario() -> None:
+        writer = _HandshakeFailingWriter()
+
+        async def connector(endpoint: object, config: object) -> tuple[asyncio.StreamReader, Any]:
+            del endpoint, config
+            return asyncio.StreamReader(), writer
+
+        transport = TcpAbridgedTransport(
+            ConnectionEndpoint("127.0.0.1", 443), TransportConfig(), connector=cast(Any, connector)
+        )
+        with pytest.raises(OSError, match="handshake write failed"):
+            await transport.connect()
+
+        assert writer.closed
+        assert writer.waited_closed
+        assert transport._writer is None
+        assert transport._reader is None
+        assert transport._watchdog_task is None
+
+    event_loop.run(scenario())
+
+
+def test_sender_bounds_ack_history_and_ignores_unknown_server_ids() -> None:
+    async def scenario() -> None:
+        sender = MTProtoSender(
+            ConnectionEndpoint("127.0.0.1", 443),
+            TransportConfig(),
+            MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID),
+        )
+        for msg_id in range(5000):
+            sender._remember_sent_message_id(msg_id)
+        known = 4999
+        message = DecodedEncryptedMessage(
+            auth_key_id=b"\x00" * 8,
+            server_salt=SERVER_SALT,
+            session_id=SESSION_ID,
+            msg_id=1,
+            seq_no=0,
+            body=encode_message_body(MsgsAck(msg_ids=(known, 9_999_999))),
+            padding=b"",
+        )
+
+        await sender._handle_incoming(message)
+
+        assert sender.acked(known)
+        assert not sender.acked(9_999_999)
+        assert len(sender._sent_message_ids) <= 4096
+        assert len(sender._acks_received) <= 4096
+
+    event_loop.run(scenario())
 
 
 class _ReadAbortingTransport(TcpIntermediateTransport):
@@ -422,6 +504,7 @@ def test_mtproto_state_prevalidates_session_parity_time_and_replay_floor_without
 
     with pytest.raises(ValueError, match="session_id"):
         state.validate_incoming(server_msg_id(1_001), session_id=SESSION_ID + 1, now=now)
+    state.validate_incoming(server_msg_id(1_001) + 2, session_id=SESSION_ID, now=now)
     with pytest.raises(ValueError, match="parity"):
         state.validate_incoming(server_msg_id(1_001) + 1, session_id=SESSION_ID, now=now)
     with pytest.raises(ValueError, match="future"):
@@ -552,6 +635,29 @@ def test_sender_does_not_complete_ping_for_a_mismatched_pong_ping_id() -> None:
         assert future.result() == Pong(msg_id=request_msg_id, ping_id=expected_ping_id)
         assert sender._pending == {}
         assert pending.aliases == set()
+
+    event_loop.run(run())
+
+
+def test_sender_public_raw_ping_delay_disconnect_correlates_pong_ping_id() -> None:
+    async def run() -> None:
+        expected_ping_id = 202
+
+        def handle(message):
+            body = decode_message_body(message.body)
+            assert body == ("ping_delay_disconnect", expected_ping_id, 30)
+            return Pong(msg_id=message.msg_id, ping_id=expected_ping_id)
+
+        config = TransportConfig(mode="tcp_intermediate", read_timeout=2.0)
+        state = MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID)
+        async with FakeMTProtoServer(AUTH_KEY, config, handle) as server:
+            sender = MTProtoSender(server.endpoint, config, state)
+            response = await sender.request(
+                encode_ping_delay_disconnect(expected_ping_id, 30), content_related=False, request_timeout=2.0
+            )
+            assert isinstance(response, Pong)
+            assert response.ping_id == expected_ping_id
+            await sender.disconnect()
 
     event_loop.run(run())
 
@@ -1274,6 +1380,30 @@ def test_sender_piggybacks_acks_in_container_with_next_request() -> None:
     event_loop.run(run())
 
 
+def test_sender_registers_piggyback_container_message_id_as_pending_alias() -> None:
+    async def run() -> None:
+        state = MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID)
+        state.commit_incoming(101, content_related=True)
+        sender = MTProtoSender(ConnectionEndpoint("127.0.0.1", 443), TransportConfig(), state)
+        transport = _RecordingSendTransport()
+        sender._transport = transport
+        future: asyncio.Future[object] = asyncio.get_running_loop().create_future()
+        pending = PendingRequest(body=b"request!", content_related=True, future=future)
+
+        request_msg_id = await sender._send_pending(pending)
+        assert len(pending.aliases) == 2
+        container_msg_id = next(alias for alias in pending.aliases if alias != request_msg_id)
+        assert transport.msg_ids == [container_msg_id]
+        sender._validate_bad_message_correlation(
+            BadServerSalt(bad_msg_id=container_msg_id, bad_msg_seq_no=0, error_code=48, new_server_salt=SERVER_SALT + 1)
+        )
+
+        sender._remove_pending(pending)
+        future.cancel()
+
+    event_loop.run(run())
+
+
 def test_sender_keepalive_pings_on_fixed_cadence_even_while_busy() -> None:
     async def run() -> None:
         pings = 0
@@ -1378,6 +1508,78 @@ def test_sender_handles_top_level_gzip_packed_rpc_result() -> None:
             sender = MTProtoSender(server.endpoint, config, state)
             assert await sender.request(b"request!", request_timeout=2.0) == b"zipped!!"
             await sender.disconnect()
+
+    event_loop.run(run())
+
+
+def test_sender_dispatches_prevalidated_gzip_without_decoding_it_twice(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def run() -> None:
+        sender = MTProtoSender(
+            ConnectionEndpoint("127.0.0.1", 443),
+            TransportConfig(max_payload_size=1024 * 1024),
+            MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID),
+        )
+        future = asyncio.get_running_loop().create_future()
+        sender._pending[99] = PendingRequest(body=b"request", content_related=True, future=future)
+        message = DecodedEncryptedMessage(
+            auth_key_id=b"\x00" * 8,
+            server_salt=SERVER_SALT,
+            session_id=SESSION_ID,
+            msg_id=(int(time.time()) << 32) | 1,
+            seq_no=1,
+            body=encode_message_body(gzip_pack(RpcResult(req_msg_id=99, result=b"okay"))),
+            padding=b"",
+        )
+        original_decode = sender_module.decode_message_body
+        decode_calls = 0
+
+        def count_decode(data: bytes | memoryview) -> object:
+            nonlocal decode_calls
+            decode_calls += 1
+            return original_decode(data)
+
+        monkeypatch.setattr(sender_module, "decode_message_body", count_decode)
+        dispatch = await sender._prevalidate_and_commit_incoming(message)
+        prevalidation_calls = decode_calls
+        for candidate, body in dispatch:
+            await sender._handle_incoming(candidate, committed=True, decoded_body=body)
+
+        assert future.result() == memoryview(b"okay")
+        assert decode_calls == prevalidation_calls
+
+    event_loop.run(run())
+
+
+def test_sender_rejects_gzip_payload_that_expands_past_transport_bound() -> None:
+    async def run() -> None:
+        packed = GzipPacked(packed_data=gzip.compress(b"x" * 1025))
+        with pytest.raises(ProtocolValidationError, match="gzip_payload_too_large"):
+            await sender_module._unpack_gzip(packed, max_output_size=1024)
+
+    event_loop.run(run())
+
+
+def test_sender_rejects_excessively_nested_gzip_wrappers() -> None:
+    async def run() -> None:
+        body: object = MsgsAck(msg_ids=())
+        for _ in range(sender_module._MAX_GZIP_WRAPPER_DEPTH + 1):
+            body = gzip_pack(body)
+        message = DecodedEncryptedMessage(
+            auth_key_id=b"\x00" * 8,
+            server_salt=SERVER_SALT,
+            session_id=SESSION_ID,
+            msg_id=(int(time.time()) << 32) | 1,
+            seq_no=1,
+            body=encode_message_body(body),
+            padding=b"",
+        )
+        sender = MTProtoSender(
+            ConnectionEndpoint("127.0.0.1", 443),
+            TransportConfig(max_payload_size=16 * 1024 * 1024),
+            MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID),
+        )
+        with pytest.raises(ProtocolValidationError, match="gzip_wrapper_depth"):
+            await sender._prevalidate_and_commit_incoming(message)
 
     event_loop.run(run())
 
@@ -2135,7 +2337,7 @@ def test_sender_protocol_validation_failure_closes_transport_and_sets_fatal(monk
     event_loop.run(run())
 
 
-def test_sender_protocol_validation_failure_preserves_pending_aliases() -> None:
+def test_sender_protocol_validation_failure_fails_and_detaches_pending_aliases() -> None:
     async def run() -> None:
         state = MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID)
         msg_id = (int(time.time()) << 32) | 1
@@ -2159,11 +2361,7 @@ def test_sender_protocol_validation_failure_preserves_pending_aliases() -> None:
             assert getattr(fatal, "reason", None) == "session_id"
             assert transport.closed
             assert sender._transport is None
-            assert not future.done()
-            assert sender._pending == {111: pending, 222: pending}
-            assert pending.aliases == {111, 222}
-            await sender.disconnect()
-            assert isinstance(future.exception(), TransportClosed)
+            assert isinstance(future.exception(), ProtocolValidationError)
             assert sender._pending == {}
             assert pending.aliases == set()
         finally:
@@ -2175,8 +2373,7 @@ def test_sender_protocol_validation_failure_preserves_pending_aliases() -> None:
     event_loop.run(run())
 
 
-@pytest.mark.parametrize("terminal", ["timeout", "cancel", "disconnect"])
-def test_sender_public_request_keeps_slot_after_protocol_validation_until_terminal(terminal: str) -> None:
+def test_sender_public_request_fails_and_releases_slot_after_protocol_validation() -> None:
     async def run() -> None:
         state = MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID)
         packet = encode_encrypted_message(
@@ -2193,32 +2390,14 @@ def test_sender_public_request_keeps_slot_after_protocol_validation_until_termin
         sender._transport = transport
         receive_task = asyncio.create_task(sender._receive_loop())
         sender._receive_task = receive_task
-        request_timeout = 0.1 if terminal == "timeout" else None
-        request = asyncio.create_task(sender.request(b"preserved-request", request_timeout=request_timeout))
+        request = asyncio.create_task(sender.request(b"preserved-request"))
         await transport.sent.wait()
         await receive_task
-        aliases = dict(sender._pending)
-        assert aliases
-        pending = next(iter(aliases.values()))
-        assert not pending.future.done()
-        assert pending.aliases == set(aliases)
-        assert sender.sender_state.pending_count == 1
-
-        if terminal == "timeout":
-            with pytest.raises(TimeoutError):
-                await request
-        elif terminal == "cancel":
-            request.cancel()
-            with pytest.raises(asyncio.CancelledError):
-                await request
-        else:
-            await sender.disconnect()
-            result = await asyncio.gather(request, return_exceptions=True)
-            assert isinstance(result[0], TransportClosed)
+        with pytest.raises(ProtocolValidationError):
+            await request
         assert sender.sender_state.pending_count == 0
         assert sender._pending == {}
-        if terminal != "disconnect":
-            await sender.disconnect()
+        await sender.disconnect()
 
     event_loop.run(run())
 
@@ -2288,6 +2467,33 @@ def test_default_stream_connector_supports_http_connect_proxy() -> None:
         assert seen
         assert seen[0].startswith(b"CONNECT 149.154.167.51:443 HTTP/1.1\r\n")
         assert b"Host: 149.154.167.51:443\r\n" in seen[0]
+
+    event_loop.run(run())
+
+
+def test_default_stream_connector_brackets_ipv6_http_connect_authority() -> None:
+    async def run() -> None:
+        seen: list[bytes] = []
+
+        async def handle(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+            seen.append(await reader.readuntil(b"\r\n\r\n"))
+            writer.write(b"HTTP/1.1 200 Connection Established\r\n\r\n")
+            await writer.drain()
+            writer.close()
+            await writer.wait_closed()
+
+        server = await asyncio.start_server(handle, "127.0.0.1", 0)
+        host, port = server.sockets[0].getsockname()[:2]
+        reader, writer = await default_stream_connector(
+            ConnectionEndpoint("2001:db8::1", 443), TransportConfig(proxy=f"http://{host}:{port}", connect_timeout=2.0)
+        )
+        del reader
+        writer.close()
+        await writer.wait_closed()
+        server.close()
+        await server.wait_closed()
+        assert seen[0].startswith(b"CONNECT [2001:db8::1]:443 HTTP/1.1\r\n")
+        assert b"Host: [2001:db8::1]:443\r\n" in seen[0]
 
     event_loop.run(run())
 

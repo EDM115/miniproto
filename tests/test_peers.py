@@ -18,7 +18,7 @@ from miniproto import (
     UserIdentity,
     event_loop,
 )
-from miniproto.peers import PeerCache, _merge_entries
+from miniproto.peers import PeerCache, _merge_entries, _raw_usernames
 from miniproto.raw import functions, types
 from miniproto.session.models import PeerCacheEntry, UpdateState, session_record_from_mapping
 from miniproto.session.storage import SessionPayload
@@ -439,6 +439,33 @@ def test_partial_same_key_merge_advances_updated_at_and_preserves_fields() -> No
             raw={"first_name": "Alice", "usernames": ["AliceAlt"], "last_name": "Example"},
         ),
     )
+
+
+def test_full_entity_merge_clears_removed_username_and_phone() -> None:
+    current = PeerCacheEntry(
+        id=7, kind="user", access_hash=77, username="Alice", phone="+1 555 0100", raw={"usernames": ["AliceAlt"]}
+    )
+    authoritative = PeerCacheEntry(
+        id=7, kind="user", access_hash=78, raw={"_miniproto_complete": True, "usernames": []}
+    )
+
+    merged = _merge_entries((current,), (authoritative,))[0]
+
+    assert merged.username is None
+    assert merged.phone is None
+    assert merged.raw == {"_miniproto_complete": True, "usernames": []}
+
+
+def test_raw_usernames_excludes_inactive_aliases() -> None:
+    user = types.User(
+        id=7,
+        usernames=(
+            types.Username(editable=False, active=False, username="old-name"),
+            types.Username(editable=False, active=True, username="current-name"),
+        ),
+    )
+
+    assert _raw_usernames(user) == ["current-name"]
 
 
 def test_username_conflict_skips_stale_first_owner_and_returns_later_fresh_without_network() -> None:

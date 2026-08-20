@@ -13,7 +13,7 @@ The public configuration and model representations omit many secret-bearing fiel
 
 ## Storage and migration boundaries
 
-The default durable backend requires explicit key material and uses authenticated encrypted SQLite domains. It fails closed when key material is absent or an envelope cannot be authenticated or decoded. Store `MINIPROTO_SESSION_KEY` in a deployment secret manager, use a distinct session path per account/deployment, and use explicit in-memory storage only for non-durable work.
+The default durable backend requires explicit key material and uses authenticated encrypted SQLite domains. Current envelopes authenticate the logical domain together with the ciphertext, preventing a valid row from being substituted into a different domain; POSIX session files are opened with owner-only permissions. The backend fails closed when key material is absent or an envelope cannot be authenticated or decoded. Store `MINIPROTO_SESSION_KEY` in a deployment secret manager, use a distinct session path per account/deployment, and use explicit in-memory storage only for non-durable work.
 
 Session-string import refuses to overwrite a nonempty target unless `replace=True` is explicit, and it requires a disconnected client. Compatibility formats preserve less state than a full miniproto record, so imported sessions may need an update-state bootstrap. Review [Session Security](../session-security.md) before moving sessions between tools or environments.
 

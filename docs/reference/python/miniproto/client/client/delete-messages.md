@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.client.Client.delete_messages"
 source_path: "src/miniproto/client.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L860"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L872"
 aliases: ["miniproto.Client.delete_messages"]
 module: "miniproto.client"
 ---

@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.client.Client.invoke"
 source_path: "src/miniproto/client.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L1445"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L1461"
 aliases: ["miniproto.Client.invoke"]
 module: "miniproto.client"
 ---

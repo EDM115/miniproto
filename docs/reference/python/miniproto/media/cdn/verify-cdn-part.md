@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.media.cdn.verify_cdn_part"
 source_path: "src/miniproto/media/cdn.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/cdn.py#L102"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/cdn.py#L152"
 module: "miniproto.media.cdn"
 ---
 

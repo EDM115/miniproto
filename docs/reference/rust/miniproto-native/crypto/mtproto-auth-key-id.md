@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::crypto::mtproto_auth_key_id"
 source_path: "rust/miniproto/src/crypto.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L126"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L131"
 aliases: ["miniproto._native.mtproto_auth_key_id"]
 crate: "miniproto_native"
 python_visible: true
@@ -17,7 +17,7 @@ python_visible: true
 
 - Crate: `miniproto_native`
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L126)
+- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L131)
 - Python exposure: `miniproto._native.mtproto_auth_key_id` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -38,7 +38,7 @@ fn mtproto_auth_key_id(auth_key: &[u8]) -> _
 fn mtproto_auth_key_id(auth_key: &[u8]) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:126-128`*
+*Defined in `rust/miniproto/src/crypto.rs:131-133`*
 
 Computes Python `mtproto_auth_key_id(auth_key)` from a validated 256-byte key.
 

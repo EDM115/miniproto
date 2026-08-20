@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.session.storage.EncryptedSQLiteSessionStorage.load"
 source_path: "src/miniproto/session/storage.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/storage.py#L276"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/storage.py#L277"
 aliases: ["miniproto.EncryptedSQLiteSessionStorage.load","miniproto.session.EncryptedSQLiteSessionStorage.load"]
 module: "miniproto.session.storage"
 ---

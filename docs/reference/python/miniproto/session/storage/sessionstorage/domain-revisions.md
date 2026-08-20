@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.session.storage.SessionStorage.domain_revisions"
 source_path: "src/miniproto/session/storage.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/storage.py#L86"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/storage.py#L87"
 aliases: ["miniproto.SessionStorage.domain_revisions","miniproto.session.SessionStorage.domain_revisions"]
 module: "miniproto.session.storage"
 ---

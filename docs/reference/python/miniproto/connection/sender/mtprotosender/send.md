@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.connection.sender.MTProtoSender.send"
 source_path: "src/miniproto/connection/sender.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/sender.py#L495"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/sender.py#L501"
 aliases: ["miniproto.connection.MTProtoSender.send"]
 module: "miniproto.connection.sender"
 ---

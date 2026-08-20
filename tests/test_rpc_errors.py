@@ -40,3 +40,18 @@ def test_exact_rpc_errors_keep_specific_public_class_and_legacy_base_type() -> N
     assert isinstance(error, PhoneCodeInvalid)
     assert isinstance(error, InvalidCode)
     assert error.request is request
+
+
+def test_non_pacing_wait_error_is_not_classified_as_flood_wait() -> None:
+    error = classify_rpc_error(RpcError("2FA_CONFIRM_WAIT_604800", code=420))
+
+    assert not isinstance(error, FloodWait)
+    assert type(error).__name__ == "TwoFaConfirmWait"
+    assert error.code == 420
+
+
+def test_takeout_initialization_delay_remains_a_typed_pacing_wait() -> None:
+    error = classify_rpc_error(RpcError("TAKEOUT_INIT_DELAY_60", code=420))
+
+    assert isinstance(error, FloodWait)
+    assert error.seconds == 60

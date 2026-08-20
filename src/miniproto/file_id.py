@@ -12,6 +12,10 @@ from miniproto.types import Media
 
 FileIdKind = Literal["document", "photo"]
 FILE_ID_PREFIX = "mpf1_"
+MAX_FILE_ID_LENGTH = 64 * 1024
+MAX_FILE_REFERENCE_LENGTH = 16 * 1024
+_SIGNED_INT64_MIN = -(1 << 63)
+_SIGNED_INT64_MAX = (1 << 63) - 1
 
 
 @dataclass(frozen=True, slots=True)
@@ -177,20 +181,22 @@ def decode_file_id(file_id: str) -> DecodedFileId:
     """
     if not is_file_id(file_id):
         raise ValueError("not a miniproto file id")
+    if len(file_id) > MAX_FILE_ID_LENGTH:
+        raise ValueError("miniproto file id exceeds the encoded size limit")
     try:
         payload = json.loads(_b64_decode(file_id.removeprefix(FILE_ID_PREFIX)).decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
         raise ValueError("invalid miniproto file id payload") from exc
     if not isinstance(payload, dict):
         raise ValueError("invalid miniproto file id payload")
     kind = _decode_kind(payload.get("k"))
     return DecodedFileId(
         kind=kind,
-        id=_required_int(payload, "id"),
-        access_hash=_required_int(payload, "ah"),
-        file_reference=_b64_decode(_required_str(payload, "fr")),
-        dc_id=_optional_int(payload.get("dc")),
-        size=_optional_int(payload.get("s")),
+        id=_required_int(payload, "id", minimum=1, maximum=_SIGNED_INT64_MAX),
+        access_hash=_required_int(payload, "ah", minimum=_SIGNED_INT64_MIN, maximum=_SIGNED_INT64_MAX),
+        file_reference=_decode_file_reference(_required_str(payload, "fr")),
+        dc_id=_optional_int(payload.get("dc"), name="dc", minimum=1, maximum=(1 << 31) - 1),
+        size=_optional_int(payload.get("s"), name="s", minimum=0, maximum=_SIGNED_INT64_MAX),
         file_name=_optional_str(payload.get("n")),
         mime_type=_optional_str(payload.get("mt")),
         thumb_size=_optional_str(payload.get("ts")) or "",
@@ -345,17 +351,21 @@ def _decode_kind(value: object) -> FileIdKind:
     raise ValueError("unsupported miniproto file id kind")
 
 
-def _required_int(payload: dict[str, Any], key: str) -> int:
+def _required_int(payload: dict[str, Any], key: str, *, minimum: int, maximum: int) -> int:
     """Read a required integer-like JSON payload field.
 
     Args:
         payload: Decoded file-ID JSON object.
         key: Required compact field name.
+        minimum: Smallest accepted integer value.
+        maximum: Largest accepted integer value.
     """
     value = payload.get(key)
-    if value is None:
+    if not isinstance(value, int) or isinstance(value, bool):
         raise ValueError(f"miniproto file id is missing {key}")
-    return int(value)
+    if not minimum <= value <= maximum:
+        raise ValueError(f"miniproto file id {key} is outside the accepted range")
+    return value
 
 
 def _required_str(payload: dict[str, Any], key: str) -> str:
@@ -371,19 +381,20 @@ def _required_str(payload: dict[str, Any], key: str) -> str:
     return value
 
 
-def _optional_int(value: object) -> int | None:
+def _optional_int(value: object, *, name: str, minimum: int, maximum: int) -> int | None:
     """Normalize an optional payload value to an integer.
 
     Args:
         value: Decoded optional JSON value.
+        name: Compact field name used in validation errors.
+        minimum: Smallest accepted integer value.
+        maximum: Largest accepted integer value.
     """
     if value is None:
         return None
-    if isinstance(value, int):
-        return value
-    if isinstance(value, str | bytes | bytearray):
-        return int(value)
-    return int(str(value))
+    if not isinstance(value, int) or isinstance(value, bool) or not minimum <= value <= maximum:
+        raise ValueError(f"miniproto file id {name} is outside the accepted range")
+    return value
 
 
 def _optional_str(value: object) -> str | None:
@@ -410,7 +421,26 @@ def _b64_decode(encoded: str) -> bytes:
     Args:
         encoded: URL-safe base64 text without required padding.
     """
-    return base64.urlsafe_b64decode(encoded + "=" * (-len(encoded) % 4))
+    try:
+        raw = encoded.encode("ascii")
+    except UnicodeEncodeError as exc:
+        raise ValueError("invalid URL-safe base64 text") from exc
+    try:
+        return base64.b64decode(raw + b"=" * (-len(raw) % 4), altchars=b"-_", validate=True)
+    except ValueError as exc:
+        raise ValueError("invalid URL-safe base64 text") from exc
+
+
+def _decode_file_reference(encoded: str) -> bytes:
+    """Decode and size-limit one file-reference bearer value.
+
+    Args:
+        encoded: Strict URL-safe base64 file-reference text.
+    """
+    value = _b64_decode(encoded)
+    if len(value) > MAX_FILE_REFERENCE_LENGTH:
+        raise ValueError("miniproto file id file reference exceeds the size limit")
+    return value
 
 
 def _document_file_name(attributes: tuple[object, ...]) -> str | None:

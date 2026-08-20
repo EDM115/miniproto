@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.session.models.session_record_to_mapping"
 source_path: "src/miniproto/session/models.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/models.py#L252"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/models.py#L254"
 aliases: ["miniproto.session.session_record_to_mapping"]
 module: "miniproto.session.models"
 ---

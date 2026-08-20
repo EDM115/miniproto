@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::crypto::sha256_digest"
 source_path: "rust/miniproto/src/crypto.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L114"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L119"
 aliases: ["miniproto._native.sha256_digest"]
 crate: "miniproto_native"
 python_visible: true
@@ -17,7 +17,7 @@ python_visible: true
 
 - Crate: `miniproto_native`
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L114)
+- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L119)
 - Python exposure: `miniproto._native.sha256_digest` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -39,7 +39,7 @@ fn sha256_digest(py: _, data: _) -> _
 fn sha256_digest(py: Python<'_>, data: Vec<u8>) -> Vec<u8>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:114-116`*
+*Defined in `rust/miniproto/src/crypto.rs:119-121`*
 
 Computes Python `sha256_digest(data)` and returns the 32-byte SHA-256 digest.
 

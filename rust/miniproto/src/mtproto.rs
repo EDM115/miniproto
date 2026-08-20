@@ -183,6 +183,11 @@ fn mtproto_decode_message(
 /// - `input`: Borrowed authorization key and envelope fields to serialize and encrypt.
 pub(crate) fn mtproto_encode_message_raw(input: EnvelopeEncodeInput<'_>) -> PyResult<Vec<u8>> {
     validate_auth_key(input.auth_key)?;
+    if !input.body.len().is_multiple_of(4) {
+        return Err(PyValueError::new_err(
+            "MTProto message body length must be divisible by 4",
+        ));
+    }
     let body_len = i32::try_from(input.body.len())
         .map_err(|_| PyValueError::new_err("MTProto message body is too large"))?;
     let padding = match input.padding {
@@ -425,6 +430,25 @@ mod tests {
         })
         .unwrap_err();
         assert!(error.to_string().contains("padding"));
+    }
+
+    #[test]
+    /// Rejects message bodies that the decoder cannot accept because they are not TL-word aligned.
+    fn envelope_rejects_unaligned_body_before_encryption() {
+        Python::initialize();
+        let auth_key = auth_key();
+        let error = mtproto_encode_message_raw(EnvelopeEncodeInput {
+            auth_key: &auth_key,
+            server_salt: SERVER_SALT,
+            session_id: SESSION_ID,
+            msg_id: MSG_ID,
+            seq_no: SEQ_NO,
+            body: b"abc",
+            client_to_server: true,
+            padding: None,
+        })
+        .unwrap_err();
+        assert!(error.to_string().contains("divisible by 4"));
     }
 
     #[test]

@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.session.models.UpdateState"
 source_path: "src/miniproto/session/models.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/models.py#L145"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/models.py#L147"
 aliases: ["miniproto.UpdateState","miniproto.session.UpdateState"]
 module: "miniproto.session.models"
 ---

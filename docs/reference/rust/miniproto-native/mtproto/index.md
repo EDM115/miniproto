@@ -309,7 +309,7 @@ unsafe fn __pyfunction_mtproto_decode_message<'py>(py: Python<'py>, _slf: *mut f
 fn mtproto_encode_message_raw(input: EnvelopeEncodeInput<'_>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/mtproto.rs:184-212`*
+*Defined in `rust/miniproto/src/mtproto.rs:184-217`*
 
 Builds and encrypts an MTProto envelope from already borrowed Rust inputs.
 
@@ -327,7 +327,7 @@ aligned; this function does not interact with the GIL.
 fn mtproto_decode_message_raw(auth_key: &[u8], packet: &[u8], client_to_server: bool) -> PyResult<DecodedEncryptedMessage>
 ```
 
-*Defined in `rust/miniproto/src/mtproto.rs:224-282`*
+*Defined in `rust/miniproto/src/mtproto.rs:229-287`*
 
 Verifies, decrypts, and parses an encrypted MTProto packet for Rust callers.
 
@@ -346,7 +346,7 @@ cryptographic check, length, or padding constraint fails.  It does not interact 
 fn random_padding(plaintext_len: usize) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/mtproto.rs:292-297`*
+*Defined in `rust/miniproto/src/mtproto.rs:297-302`*
 
 Generates random MTProto padding that completes `plaintext_len` to an AES block boundary.
 
@@ -363,7 +363,7 @@ Returns `ValueError` if the operating-system randomness source fails.
 fn padding_len(plaintext_len: usize) -> usize
 ```
 
-*Defined in `rust/miniproto/src/mtproto.rs:306-309`*
+*Defined in `rust/miniproto/src/mtproto.rs:311-314`*
 
 Computes the minimum valid padding length for an inner plaintext length.
 
@@ -379,7 +379,7 @@ Computes the minimum valid padding length for an inner plaintext length.
 fn validate_padding(plaintext_len: usize, padding: &[u8]) -> PyResult<()>
 ```
 
-*Defined in `rust/miniproto/src/mtproto.rs:321-333`*
+*Defined in `rust/miniproto/src/mtproto.rs:326-338`*
 
 Validates MTProto 2.0 padding bounds and the resulting AES block alignment.
 

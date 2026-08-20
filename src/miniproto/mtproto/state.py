@@ -127,7 +127,7 @@ class MTProtoState:
         """
         if session_id != self.session_id:
             raise ProtocolValidationError("session_id", context={"msg_id": msg_id})
-        if msg_id % 4 != _SERVER_MSG_ID_PARITY:
+        if msg_id & 1 != _SERVER_MSG_ID_PARITY:
             raise ProtocolValidationError("msg_id_parity", context={"msg_id": msg_id})
         if msg_id in self._seen_msg_ids or msg_id in provisional_seen_msg_ids:
             raise ProtocolValidationError("duplicate_msg_id", context={"msg_id": msg_id})

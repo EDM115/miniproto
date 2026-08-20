@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::crypto::native_available"
 source_path: "rust/miniproto/src/crypto.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L88"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L93"
 aliases: ["miniproto._native.native_available"]
 crate: "miniproto_native"
 python_visible: true
@@ -17,7 +17,7 @@ python_visible: true
 
 - Crate: `miniproto_native`
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L88)
+- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L93)
 - Python exposure: `miniproto._native.native_available` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -34,7 +34,7 @@ fn native_available() -> bool
 fn native_available() -> bool
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:88-90`*
+*Defined in `rust/miniproto/src/crypto.rs:93-95`*
 
 Implements Python `native_available`, which always returns `true` while this compiled callable
 is importable. Python fallback selection happens before this function can be called.

@@ -485,6 +485,7 @@ async def build_sender_from_session(
     dc_id_override: int | None = None,
     auth_key_override: bytes | None = None,
     allow_media_only: bool = False,
+    require_cdn: bool = False,
 ) -> RawSender:
     """Build a sender for the session DC, or -- with overrides -- a media DC.
 
@@ -502,6 +503,7 @@ async def build_sender_from_session(
         dc_id_override: Target DC for a cross-DC sender.
         auth_key_override: Key for the target DC; never persists over the main session key.
         allow_media_only: Permit a media-only DC endpoint for a dedicated media sender.
+        require_cdn: Require an endpoint explicitly marked as a CDN server.
 
     Returns:
         The optional factory result or a configured :class:`MTProtoSender`.
@@ -528,7 +530,7 @@ async def build_sender_from_session(
         dc_id = record.dc_id or auth_key.dc_id or config.dc_id
     if not record.dc_options:
         raise InvalidDatacenter(f"no DC options stored for dc_id={dc_id}")
-    option = select_dc_option(record.dc_options, dc_id, allow_media_only=allow_media_only)
+    option = select_dc_option(record.dc_options, dc_id, allow_media_only=allow_media_only, require_cdn=require_cdn)
     metadata = dict(record.metadata)
     server_salt = (
         server_salt_override

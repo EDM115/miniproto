@@ -252,10 +252,67 @@ jobs:
           path: dist
           digest-mismatch: error
 
+      - name: Select only missing byte-identical PyPI files
+        id: prepare-pypi
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          import shutil
+          import urllib.error
+          import urllib.request
+          from pathlib import Path
+
+          version = os.environ["RELEASE_VERSION"]
+          output = Path(os.environ["GITHUB_OUTPUT"])
+          candidates = sorted(path for path in Path("dist").iterdir() if path.suffix == ".whl" or path.name.endswith(".tar.gz"))
+          if not candidates:
+              raise SystemExit("no verified Python distributions were downloaded")
+
+          endpoint = f"https://pypi.org/pypi/miniproto/{version}/json"
+          try:
+              with urllib.request.urlopen(endpoint, timeout=30) as response:
+                  metadata = json.load(response)
+          except urllib.error.HTTPError as error:
+              if error.code != 404:
+                  raise
+              metadata = {"urls": []}
+
+          published = {item["filename"]: item for item in metadata.get("urls", [])}
+          unknown = sorted(set(published) - {path.name for path in candidates})
+          if unknown:
+              raise SystemExit(f"PyPI already contains unexpected files for {version}: {', '.join(unknown)}")
+
+          publish_dir = Path("publish-dist")
+          publish_dir.mkdir()
+          for candidate in candidates:
+              remote = published.get(candidate.name)
+              if remote is None:
+                  shutil.copy2(candidate, publish_dir / candidate.name)
+                  continue
+              candidate_sha256 = hashlib.sha256(candidate.read_bytes()).hexdigest()
+              advertised_sha256 = remote.get("digests", {}).get("sha256")
+              if advertised_sha256 != candidate_sha256:
+                  raise SystemExit(f"PyPI digest differs from the attested candidate: {candidate.name}")
+              with urllib.request.urlopen(remote["url"], timeout=60) as response:
+                  downloaded_sha256 = hashlib.sha256(response.read()).hexdigest()
+              if downloaded_sha256 != candidate_sha256:
+                  raise SystemExit(f"downloaded PyPI file differs from the attested candidate: {candidate.name}")
+
+          has_missing = any(publish_dir.iterdir())
+          with output.open("a", encoding="utf-8") as handle:
+              handle.write(f"has_missing={'true' if has_missing else 'false'}\n")
+          print(f"PyPI already has {len(published)} verified files; {sum(1 for _ in publish_dir.iterdir())} remain to publish")
+          PY
+
       - name: Publish to PyPI through Trusted Publishing
+        if: steps.prepare-pypi.outputs.has_missing == 'true'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: dist
+          packages-dir: publish-dist
           attestations: true
           print-hash: true
 

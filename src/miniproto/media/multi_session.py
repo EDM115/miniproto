@@ -1,14 +1,15 @@
 """Deterministic multi-session range planning and ordered download-part assembly.
 
 Assembly consumes local completed part paths in caller-supplied order. It does
-not schedule sessions, delete parts, roll back partial destination writes, or
-zeroize in-memory assembled bytes.
+not schedule sessions, delete parts, restore caller-owned streams, or zeroize
+in-memory assembled bytes. Path outputs are replaced atomically after validation.
 """
 
 from __future__ import annotations
 
 import io
 import os
+import tempfile
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -106,20 +107,25 @@ def assemble_download_parts(
         The resolved output destination and bytes only when ``destination`` is ``None``.
 
     Destination Effects:
-        A path destination has parents created and is opened with ``wb`` (truncating
-        any existing file) then closed before return. A caller binary stream stays
-        open at its post-write position. ``None`` creates an internal ``BytesIO``
-        whose immutable returned bytes are not zeroized. If source read or output
-        write fails, this helper does not restore or remove a partially written
-        destination.
+        A path destination has parents created, is assembled into a temporary
+        sibling, flushed, and atomically replaced only after exact-size validation;
+        an existing path therefore survives assembly failure. A caller binary stream
+        stays open at its post-write position and cannot be rolled back after a write
+        failure. ``None`` creates an internal ``BytesIO`` whose immutable returned
+        bytes are not zeroized. Completed range-part files remain caller-owned.
 
     Raises:
         OSError: A part or path destination cannot be read, created, or written.
-        RuntimeError: Concatenated data does not contain exactly ``expected_size`` bytes;
-            a destination may already contain partial or complete assembled bytes.
+        RuntimeError: Part metadata or copied data does not contain exactly
+            ``expected_size`` bytes. Path destinations are not replaced on this error.
     """
+    source_size = sum(part_path.stat().st_size for part_path in part_paths)
+    if source_size != expected_size:
+        raise RuntimeError(f"assembled download size mismatch: expected {expected_size}, found {source_size}")
     data_buffer: io.BytesIO | None = None
     should_close = False
+    temporary_path: Path | None = None
+    final_path: Path | None = None
     if destination is None:
         data_buffer = io.BytesIO()
         output: BinaryIO = data_buffer
@@ -127,7 +133,10 @@ def assemble_download_parts(
     elif isinstance(destination, str | os.PathLike):
         path = Path(cast(str | os.PathLike[str], destination))
         path.parent.mkdir(parents=True, exist_ok=True)
-        output = path.open("wb")
+        descriptor, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+        output = os.fdopen(descriptor, "wb")
+        temporary_path = Path(temporary_name)
+        final_path = path
         resolved_destination = path
         should_close = True
     else:
@@ -140,9 +149,19 @@ def assemble_download_parts(
                 while chunk := part.read(4 * MIB):
                     output.write(chunk)
                     written += len(chunk)
-    finally:
+        if written != expected_size:
+            raise RuntimeError(f"assembled download size mismatch: expected {expected_size}, wrote {written}")
         if should_close:
+            output.flush()
+            os.fsync(output.fileno())
             output.close()
-    if written != expected_size:
-        raise RuntimeError(f"assembled download size mismatch: expected {expected_size}, wrote {written}")
+        if final_path is not None and temporary_path is not None:
+            os.replace(temporary_path, final_path)
+            temporary_path = None
+    except BaseException:
+        if should_close and not output.closed:
+            output.close()
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
+        raise
     return resolved_destination, data_buffer.getvalue() if data_buffer is not None else None

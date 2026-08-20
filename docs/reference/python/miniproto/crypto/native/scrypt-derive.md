@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.crypto.native.scrypt_derive"
 source_path: "src/miniproto/crypto/native.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/native.py#L925"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/native.py#L948"
 aliases: ["miniproto.crypto.scrypt_derive"]
 module: "miniproto.crypto.native"
 ---
@@ -38,5 +38,5 @@ Derive key material with Scrypt through the available session backend.
 - <code>[ValueError](#ValueError)</code> – If Scrypt parameters or output length are rejected.
 
 Uses native Scrypt only when the optional symbol exists, otherwise
-``cryptography``.  Parameter selection and resource limits are caller-owned;
-the backends may report validation failures differently at their edges.
+``cryptography``. Every route enforces the same 256 MiB memory estimate and
+1 GiB aggregate work estimate before entering either backend.

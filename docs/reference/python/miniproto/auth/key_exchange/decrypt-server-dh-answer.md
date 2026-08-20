@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.auth.key_exchange.decrypt_server_dh_answer"
 source_path: "src/miniproto/auth/key_exchange.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/auth/key_exchange.py#L774"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/auth/key_exchange.py#L791"
 aliases: ["miniproto.auth.decrypt_server_dh_answer"]
 module: "miniproto.auth.key_exchange"
 ---

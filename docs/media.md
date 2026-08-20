@@ -43,7 +43,9 @@ Ordinary non-CDN downloads can opt into Telegram's `upload.getFileHashes` verifi
 
 ## CDN
 
-When `upload.getFile` returns `upload.fileCdnRedirect`, Phase 10 follows `upload.getCdnFile`, handles `upload.cdnFileReuploadNeeded` with `upload.reuploadCdnFile`, and decrypts returned CDN chunks with AES-CTR using the redirect key and IV. Real CDN DC authorization and live edge cases still need gated integration coverage.
+When `upload.getFile` returns `upload.fileCdnRedirect`, miniproto keeps the trusted origin-media invoker for `upload.getCdnFileHashes` and `upload.reuploadCdnFile`, establishes a separate auth-key-only sender for the redirect's CDN datacenter, and sends only `upload.getCdnFile` through that CDN sender. CDN senders use the RSA keys from `help.getCdnConfig`; user authorization is never imported into the CDN datacenter.
+
+CDN request boundaries are stricter than precise origin-file requests. Miniproto therefore over-fetches a legal 4 KiB-aligned range whose limit divides 1 MiB, decrypts it with the redirect IV prefix plus the requested block counter, verifies every complete Telegram-declared SHA-256 interval through the trusted origin metadata, and only then returns the caller's requested slice. A finite 1 KiB or 4 KiB range is never accepted merely because its partial bytes look plausible. Real CDN authorization, routing, and edge behavior still need separately gated live integration coverage.
 
 ## Live Tests
 

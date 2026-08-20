@@ -665,13 +665,19 @@ def _entry_from_user(user: types.User, *, force_self: bool = False) -> PeerCache
     """
     usernames = _raw_usernames(user)
     primary_username = user.username or (usernames[0] if usernames else None)
+    raw = dict(
+        _compact_raw(is_bot=user.bot, first_name=user.first_name, last_name=user.last_name, usernames=usernames) or {}
+    )
+    raw["_miniproto_complete"] = not user.min
+    if not user.min:
+        raw["usernames"] = usernames
     return PeerCacheEntry(
         id=user.id,
         kind="self" if force_self or user.self_ else "user",
         access_hash=None if user.min else user.access_hash,
         username=primary_username,
         phone=user.phone,
-        raw=_compact_raw(is_bot=user.bot, first_name=user.first_name, last_name=user.last_name, usernames=usernames),
+        raw=raw,
     )
 
 
@@ -690,12 +696,18 @@ def _entry_from_channel(channel: types.Channel | types.ChannelForbidden) -> Peer
     Args:
         channel: Raw channel or forbidden channel to cache.
     """
+    is_min = bool(getattr(channel, "min", False))
+    usernames = _raw_usernames(channel)
+    raw = dict(_compact_raw(title=channel.title, usernames=usernames) or {})
+    raw["_miniproto_complete"] = not is_min
+    if not is_min:
+        raw["usernames"] = usernames
     return PeerCacheEntry(
         id=channel.id,
         kind="channel",
-        access_hash=None if getattr(channel, "min", False) else channel.access_hash,
+        access_hash=None if is_min else channel.access_hash,
         username=getattr(channel, "username", None),
-        raw=_compact_raw(title=channel.title, usernames=_raw_usernames(channel)),
+        raw=raw,
     )
 
 
@@ -710,6 +722,8 @@ def _raw_usernames(raw: object) -> list[str]:
     if isinstance(primary, str) and primary:
         values.append(primary)
     for item in _iter_attr(raw, "usernames"):
+        if not bool(getattr(item, "active", False)):
+            continue
         username = getattr(item, "username", None)
         if isinstance(username, str) and username and username not in values:
             values.append(username)

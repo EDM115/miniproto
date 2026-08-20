@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.connection.sender.MTProtoSender.take_fatal_error"
 source_path: "src/miniproto/connection/sender.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/sender.py#L330"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/sender.py#L336"
 aliases: ["miniproto.connection.MTProtoSender.take_fatal_error"]
 module: "miniproto.connection.sender"
 ---

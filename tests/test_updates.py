@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -245,6 +246,110 @@ def test_channel_gap_recovery_uses_channel_difference_and_persists_channel_curso
         assert loaded is not None
         channels = loaded["metadata"]["updates"]["channels"]
         assert channels[str(channel_id)]["pts"] == 13
+        await client.disconnect()
+
+    run(scenario())
+
+
+def test_channel_difference_too_long_persists_dialog_pts_between_rounds(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def scenario() -> None:
+        monkeypatch.setattr("miniproto.updates.manager.POSSIBLE_GAP_GRACE_SECONDS", 0.0)
+        channel_id = 123
+        storage = storage_with_channel_state(channel_id=channel_id, pts=10)
+        responses: list[object] = [
+            types.UpdatesChannelDifferenceTooLong(
+                final=False, dialog=SimpleNamespace(pts=40), messages=(), chats=(), users=()
+            ),
+            types.UpdatesChannelDifferenceEmpty(final=True, pts=41),
+        ]
+        client = FakeUpdateClient(ClientConfig(api_id=1, api_hash="hash", session_storage=storage), responses)
+        await client.connect()
+
+        await client._update_manager._recover_channel_gap(channel_id)
+
+        requests = [
+            request for request in client.update_requests if isinstance(request, functions.UpdatesGetChannelDifference)
+        ]
+        assert [request.pts for request in requests] == [10, 40]
+        assert client._update_manager._current_cursor().channel_cursor(channel_id).pts == 41
+        await client.disconnect()
+
+    run(scenario())
+
+
+def test_channel_gap_without_access_hash_does_not_apply_or_advance_gapped_update(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def scenario() -> None:
+        monkeypatch.setattr("miniproto.updates.manager.POSSIBLE_GAP_GRACE_SECONDS", 0.0)
+        channel_id = 123
+        storage = storage_with_state()
+        client = FakeUpdateClient(ClientConfig(api_id=1, api_hash="hash", session_storage=storage))
+        await client.connect()
+
+        events = await client._update_manager._process_raw_update(
+            types.UpdateNewChannelMessage(
+                message=raw_channel_message(112, "current", channel_id=channel_id, date=101), pts=13, pts_count=1
+            )
+        )
+
+        assert events == []
+        assert client._update_manager._current_cursor().channel_cursor(channel_id).pts == 0
+        assert client.update_requests == []
+        await client.disconnect()
+
+    run(scenario())
+
+
+def test_qts_gap_triggers_global_difference_recovery() -> None:
+    async def scenario() -> None:
+        storage = storage_with_state(pts=10, qts=3, date=50)
+        difference = types.UpdatesDifference(
+            new_messages=(),
+            new_encrypted_messages=(),
+            other_updates=(),
+            chats=(),
+            users=(),
+            state=types.UpdatesState(pts=10, qts=5, date=100, seq=0, unread_count=0),
+        )
+        client = FakeUpdateClient(ClientConfig(api_id=1, api_hash="hash", session_storage=storage), [difference])
+        await client.connect()
+
+        await client._update_manager.handle_raw_update(SimpleNamespace(qts=6))
+
+        assert isinstance(client.update_requests[0], functions.UpdatesGetDifference)
+        assert client.update_requests[0].qts == 3
+        assert client._update_manager._current_cursor().qts == 6
+        await client.disconnect()
+
+    run(scenario())
+
+
+def test_identityless_updates_are_not_collapsed_by_type_name() -> None:
+    async def scenario() -> None:
+        client = FakeUpdateClient(ClientConfig(api_id=1, api_hash="hash", session_storage=storage_with_state()))
+        await client.connect()
+
+        first = await client._update_manager._process_raw_update(SimpleNamespace(value="first"))
+        second = await client._update_manager._process_raw_update(SimpleNamespace(value="second"))
+
+        assert len(first) == 1
+        assert len(second) == 1
+        await client.disconnect()
+
+    run(scenario())
+
+
+def test_zero_global_cursors_detect_missing_initial_ranges() -> None:
+    async def scenario() -> None:
+        client = FakeUpdateClient(ClientConfig(api_id=1, api_hash="hash", session_storage=storage_with_state()))
+        await client.connect()
+        manager = client._update_manager
+
+        assert manager._pts_gap(short_message(100, "late", pts=2, date=100))
+        assert manager._qts_gap(SimpleNamespace(qts=2))
+        assert manager._sequence_gap(SimpleNamespace(seq=2, seq_start=2))
+
         await client.disconnect()
 
     run(scenario())

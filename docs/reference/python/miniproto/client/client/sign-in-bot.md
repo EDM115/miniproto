@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.client.Client.sign_in_bot"
 source_path: "src/miniproto/client.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L553"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L565"
 aliases: ["miniproto.Client.sign_in_bot"]
 module: "miniproto.client"
 ---

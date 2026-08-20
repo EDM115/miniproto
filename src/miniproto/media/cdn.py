@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import hashlib
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from miniproto.crypto.mtproto import media_ctr_crypt
 from miniproto.observability import record_metric
@@ -50,20 +50,27 @@ class CdnRedirect:
     """
 
     dc_id: int
-    file_token: bytes
-    encryption_key: bytes
-    encryption_iv: bytes
+    file_token: bytes = field(repr=False)
+    encryption_key: bytes = field(repr=False)
+    encryption_iv: bytes = field(repr=False)
     file_hashes: tuple[object, ...]
-    raw: types.UploadFileCdnRedirect
+    raw: types.UploadFileCdnRedirect = field(repr=False)
 
 
 async def get_cdn_file_part(
-    invoke: RawInvoker, redirect: CdnRedirect, *, offset: int, limit: int, request_timeout: float | None = None
+    origin_invoke: RawInvoker,
+    cdn_invoke: RawInvoker,
+    redirect: CdnRedirect,
+    *,
+    offset: int,
+    limit: int,
+    request_timeout: float | None = None,
 ) -> bytes:
     """Fetch, decrypt, and hash-verify one CDN file range.
 
     Args:
-        invoke: Async raw-RPC invoker bound to the appropriate data center.
+        origin_invoke: Async master-DC invoker used for hashes and reupload authorization.
+        cdn_invoke: Async CDN-DC invoker used only for ``upload.getCdnFile``.
         redirect: CDN credentials and encryption metadata returned by Telegram.
         offset: Byte offset of the requested range and CTR stream.
         limit: Maximum ciphertext/plaintext bytes to retrieve.
@@ -78,25 +85,68 @@ async def get_cdn_file_part(
         CdnError: Telegram returns an unsupported CDN response.
         asyncio.CancelledError: The caller cancels the awaited transfer.
     """
-    while True:
-        result = await invoke(
-            functions.UploadGetCdnFile(file_token=redirect.file_token, offset=offset, limit=limit),
-            request_timeout=request_timeout,
-        )
-        if isinstance(result, types.UploadCdnFileReuploadNeeded):
-            await invoke(
-                functions.UploadReuploadCdnFile(file_token=redirect.file_token, request_token=result.request_token),
+    if offset < 0 or limit <= 0:
+        raise ValueError("CDN offset must be non-negative and limit must be positive")
+    requested_end = offset + limit
+    hashes = _file_hash_map(redirect.file_hashes)
+    cursor = offset
+    chunks: list[bytes] = []
+    while cursor < requested_end:
+        file_hash = _covering_file_hash(hashes, cursor)
+        if file_hash is None:
+            fetched = await origin_invoke(
+                functions.UploadGetCdnFileHashes(file_token=redirect.file_token, offset=cursor),
                 request_timeout=request_timeout,
                 retry=True,
             )
-            continue
-        if isinstance(result, types.UploadCdnFile):
-            payload = decrypt_cdn_chunk(
-                result.bytes, key=redirect.encryption_key, iv=redirect.encryption_iv, offset=offset
+            record_metric("media.cdn.hash_fetches", 1)
+            for item in _iter_file_hashes(fetched):
+                hashes.setdefault(int(item.offset), item)
+            file_hash = _covering_file_hash(hashes, cursor)
+        if file_hash is None:
+            raise CdnIntegrityError(f"no CDN file hash covers offset {cursor}")
+        hash_offset = int(file_hash.offset)
+        hash_limit = int(file_hash.limit)
+        if hash_limit <= 0:
+            raise CdnIntegrityError(f"invalid CDN file hash limit at offset {hash_offset}")
+        wire_offset, wire_limit = _cdn_wire_range(hash_offset, hash_limit)
+        while True:
+            result = await cdn_invoke(
+                functions.UploadGetCdnFile(file_token=redirect.file_token, offset=wire_offset, limit=wire_limit),
+                request_timeout=request_timeout,
+                dc_id=redirect.dc_id,
             )
-            await verify_cdn_part(invoke, redirect, offset=offset, data=payload, request_timeout=request_timeout)
-            return payload
-        raise CdnError(f"unsupported CDN file response: {type(result).__name__}")
+            if isinstance(result, types.UploadCdnFileReuploadNeeded):
+                await origin_invoke(
+                    functions.UploadReuploadCdnFile(file_token=redirect.file_token, request_token=result.request_token),
+                    request_timeout=request_timeout,
+                    retry=True,
+                )
+                continue
+            if not isinstance(result, types.UploadCdnFile):
+                raise CdnError(f"unsupported CDN file response: {type(result).__name__}")
+            plaintext = decrypt_cdn_chunk(
+                result.bytes, key=redirect.encryption_key, iv=redirect.encryption_iv, offset=wire_offset
+            )
+            short_read_end = wire_offset + len(plaintext) if len(result.bytes) < wire_limit else None
+            break
+        block_start = hash_offset - wire_offset
+        block = plaintext[block_start : block_start + hash_limit]
+        if len(block) != hash_limit:
+            raise CdnIntegrityError(
+                f"CDN chunk at offset {hash_offset} is not verifiable: got {len(block)} of {hash_limit} hashed bytes"
+            )
+        if hashlib.sha256(block).digest() != bytes(file_hash.hash):
+            record_metric("media.cdn.hash_mismatches", 1)
+            raise CdnIntegrityError(f"CDN block SHA-256 mismatch at offset {hash_offset}")
+        record_metric("media.cdn.blocks_verified", 1)
+        slice_start = cursor - hash_offset
+        slice_end = min(hash_limit, requested_end - hash_offset)
+        chunks.append(block[slice_start:slice_end])
+        cursor = hash_offset + slice_end
+        if short_read_end is not None and cursor >= short_read_end:
+            break
+    return b"".join(chunks)
 
 
 async def verify_cdn_part(
@@ -207,8 +257,9 @@ def decrypt_cdn_chunk(data: bytes, *, key: bytes, iv: bytes, offset: int = 0) ->
     if offset < 0:
         raise ValueError("CDN offset must not be negative")
     block_offset, byte_offset = divmod(offset, 16)
-    counter = (int.from_bytes(iv, "big") + block_offset) % (1 << 128)
-    counter_iv = counter.to_bytes(16, "big")
+    if block_offset > 0xFFFFFFFF:
+        raise ValueError("CDN offset exceeds the 32-bit counter range")
+    counter_iv = iv[:12] + block_offset.to_bytes(4, "big")
     if byte_offset:
         return media_ctr_crypt(b"\x00" * byte_offset + data, key, counter_iv)[byte_offset:]
     return media_ctr_crypt(data, key, counter_iv)
@@ -224,6 +275,35 @@ def _file_hash_map(file_hashes: tuple[object, ...]) -> dict[int, types.FileHash]
     for item in _iter_file_hashes(file_hashes):
         hashes.setdefault(int(item.offset), item)
     return hashes
+
+
+def _covering_file_hash(hashes: dict[int, types.FileHash], offset: int) -> types.FileHash | None:
+    """Return the declared hash interval containing one file offset.
+
+    Args:
+        hashes: Known file hashes indexed by their starting offsets.
+        offset: File position that must be covered.
+    """
+    for start in sorted(hashes, reverse=True):
+        item = hashes[start]
+        if start <= offset < start + int(item.limit):
+            return item
+    return None
+
+
+def _cdn_wire_range(hash_offset: int, hash_limit: int) -> tuple[int, int]:
+    """Return a legal CDN request range covering one complete hash interval.
+
+    Args:
+        hash_offset: Start of the Telegram hash interval.
+        hash_limit: Complete byte length authenticated by that hash.
+    """
+    wire_offset = hash_offset - (hash_offset % 4096)
+    required = hash_offset + hash_limit - wire_offset
+    for candidate in (4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576):
+        if candidate >= required and wire_offset // 1048576 == (wire_offset + candidate - 1) // 1048576:
+            return wire_offset, candidate
+    raise CdnIntegrityError(f"CDN hash interval at offset {hash_offset} crosses a 1 MiB request boundary")
 
 
 def _iter_file_hashes(value: object) -> tuple[types.FileHash, ...]:

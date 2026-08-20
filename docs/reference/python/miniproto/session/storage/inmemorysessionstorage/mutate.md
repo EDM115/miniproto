@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.session.storage.InMemorySessionStorage.mutate"
 source_path: "src/miniproto/session/storage.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/storage.py#L161"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/storage.py#L162"
 aliases: ["miniproto.InMemorySessionStorage.mutate","miniproto.session.InMemorySessionStorage.mutate"]
 module: "miniproto.session.storage"
 ---

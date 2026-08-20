@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.media.download.iter_download"
 source_path: "src/miniproto/media/download.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L975"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L987"
 aliases: ["miniproto.iter_download","miniproto.media.iter_download"]
 module: "miniproto.media.download"
 ---

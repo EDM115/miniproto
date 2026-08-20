@@ -16,6 +16,8 @@ use pyo3::types::{PyBytes, PyModule};
 use pyo3::wrap_pyfunction;
 use sha2::{Digest, Sha256};
 
+use crate::crypto::detach_if_large;
+
 /// Abridged header byte that introduces its three-byte word-length form.
 const ABRIDGED_LONG_MARKER: u8 = 0x7f;
 /// Wire bit that asks the peer to return a quick-ACK token.
@@ -49,10 +51,24 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
 ///
 /// # Arguments
 ///
+/// - `py`: Acquired Python token used to detach hashing for sufficiently large packets.
 /// - `auth_key`: 256-byte MTProto authorization key used by the quick-ACK hash schedule.
 /// - `encrypted_packet`: Full MTProto packet whose nonempty encrypted suffix is hashed.
 #[pyfunction]
-fn quick_ack_token(auth_key: &[u8], encrypted_packet: &[u8]) -> PyResult<u32> {
+fn quick_ack_token(py: Python<'_>, auth_key: Vec<u8>, encrypted_packet: Vec<u8>) -> PyResult<u32> {
+    let work_bytes = auth_key.len().saturating_add(encrypted_packet.len());
+    detach_if_large(py, work_bytes, move || {
+        quick_ack_token_raw(&auth_key, &encrypted_packet)
+    })
+}
+
+/// Computes a quick-ACK token without Python argument conversion or GIL interaction.
+///
+/// # Arguments
+///
+/// - `auth_key`: 256-byte MTProto authorization key used by the quick-ACK hash schedule.
+/// - `encrypted_packet`: Full MTProto packet whose nonempty encrypted suffix is hashed.
+fn quick_ack_token_raw(auth_key: &[u8], encrypted_packet: &[u8]) -> PyResult<u32> {
     if auth_key.len() != 256 {
         return Err(PyValueError::new_err("MTProto auth_key must be 256 bytes"));
     }
@@ -820,6 +836,9 @@ mod tests {
         let mut packet = vec![0x11; 8];
         packet.extend_from_slice(&[0x22; 16]);
         packet.extend(0_u8..64);
-        assert_eq!(quick_ack_token(&auth_key, &packet).unwrap(), 0xd796_fd18);
+        assert_eq!(
+            quick_ack_token_raw(&auth_key, &packet).unwrap(),
+            0xd796_fd18
+        );
     }
 }

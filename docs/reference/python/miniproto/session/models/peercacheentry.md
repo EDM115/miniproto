@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.session.models.PeerCacheEntry"
 source_path: "src/miniproto/session/models.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/models.py#L173"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/models.py#L175"
 aliases: ["miniproto.PeerCacheEntry","miniproto.session.PeerCacheEntry"]
 module: "miniproto.session.models"
 ---

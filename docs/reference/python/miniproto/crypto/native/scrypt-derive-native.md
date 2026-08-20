@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.crypto.native.scrypt_derive_native"
 source_path: "src/miniproto/crypto/native.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/native.py#L998"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/native.py#L1022"
 aliases: ["miniproto.crypto.scrypt_derive_native"]
 module: "miniproto.crypto.native"
 ---
@@ -38,5 +38,5 @@ Derive Scrypt key material through explicit compiled Rust support.
 - <code>[RuntimeError](#RuntimeError)</code> – If native Scrypt is unavailable.
 - <code>[ValueError](#ValueError)</code> – If Scrypt parameters are invalid.
 
-This no-fallback variant does not choose safe parameter values or limit the
-resource cost requested by the caller.
+This no-fallback variant enforces the public resource limits before requiring
+the compiled capability.

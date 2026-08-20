@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::crypto::scrypt_derive"
 source_path: "rust/miniproto/src/crypto.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L441"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L446"
 aliases: ["miniproto._native.scrypt_derive"]
 crate: "miniproto_native"
 python_visible: true
@@ -17,7 +17,7 @@ python_visible: true
 
 - Crate: `miniproto_native`
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L441)
+- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L446)
 - Python exposure: `miniproto._native.scrypt_derive` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -44,13 +44,13 @@ fn scrypt_derive(py: _, password: _, salt: _, n: u32, r: u32, p: u32, length: us
 fn scrypt_derive(py: Python<'_>, password: Vec<u8>, salt: Vec<u8>, n: u32, r: u32, p: u32, length: usize) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:441-456`*
+*Defined in `rust/miniproto/src/crypto.rs:446-463`*
 
 Derives Python `scrypt_derive` bytes from password, salt, and scrypt cost parameters.
 
 `n` must be a power of two above one and `length` is limited to 1..=1024; invalid parameters
-return `ValueError`. The GIL is released only when `n * r > 4096`, the exact `work_bytes`
-condition supplied to `detach_if_large`; it remains held at or below that threshold.
+return `ValueError`. Estimated memory is capped at 256 MiB and aggregate work at 1 GiB. The
+GIL is released when the `128 * n * r * p` work estimate exceeds 4 KiB.
 
 # Arguments
 

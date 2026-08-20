@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.auth.dc.dc_options_from_env"
 source_path: "src/miniproto/auth/dc.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/auth/dc.py#L40"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/auth/dc.py#L41"
 aliases: ["miniproto.auth.dc_options_from_env"]
 module: "miniproto.auth.dc"
 ---

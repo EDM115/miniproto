@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.session.storage.SessionStorage"
 source_path: "src/miniproto/session/storage.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/storage.py#L60"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/storage.py#L61"
 aliases: ["miniproto.SessionStorage","miniproto.session.SessionStorage"]
 module: "miniproto.session.storage"
 ---

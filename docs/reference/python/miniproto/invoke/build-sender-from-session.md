@@ -14,7 +14,7 @@ module: "miniproto.invoke"
 ## `miniproto.invoke.build_sender_from_session`
 
 ```python
-build_sender_from_session(config: ClientConfig, storage: SessionStorage, factory: SenderFactory | None = None, *, fresh_session_id: bool = False, server_salt_override: int | None = None, on_salt_change: Callable[[int], None] | None = None, dc_id_override: int | None = None, auth_key_override: bytes | None = None, allow_media_only: bool = False) -> RawSender
+build_sender_from_session(config: ClientConfig, storage: SessionStorage, factory: SenderFactory | None = None, *, fresh_session_id: bool = False, server_salt_override: int | None = None, on_salt_change: Callable[[int], None] | None = None, dc_id_override: int | None = None, auth_key_override: bytes | None = None, allow_media_only: bool = False, require_cdn: bool = False) -> RawSender
 ```
 
 Build a sender for the session DC, or -- with overrides -- a media DC.
@@ -34,6 +34,7 @@ target DC) without ever touching the main session's DC or key.
 - **dc_id_override** (<code>[int](#int) | None</code>) – Target DC for a cross-DC sender.
 - **auth_key_override** (<code>[bytes](#bytes) | None</code>) – Key for the target DC; never persists over the main session key.
 - **allow_media_only** (<code>[bool](#bool)</code>) – Permit a media-only DC endpoint for a dedicated media sender.
+- **require_cdn** (<code>[bool](#bool)</code>) – Require an endpoint explicitly marked as a CDN server.
 
 **Returns:**
 

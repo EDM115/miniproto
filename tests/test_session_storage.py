@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import sqlite3
 import threading
 from dataclasses import replace
@@ -289,6 +290,34 @@ def test_encrypted_sqlite_storage_rejects_corrupted_envelope(tmp_path) -> None:
     run(scenario())
 
 
+def test_encrypted_sqlite_storage_binds_envelopes_to_their_domain(tmp_path) -> None:
+    async def scenario() -> None:
+        path = tmp_path / "session.sqlite"
+        storage = EncryptedSQLiteSessionStorage(path, key="a" * 32)
+        await storage.save(sample_record())
+        with sqlite3.connect(path) as connection:
+            auth = connection.execute("SELECT envelope FROM session_domains WHERE domain = 'auth'").fetchone()[0]
+            peers = connection.execute("SELECT envelope FROM session_domains WHERE domain = 'peers'").fetchone()[0]
+            connection.execute("UPDATE session_domains SET envelope = ? WHERE domain = 'auth'", (peers,))
+            connection.execute("UPDATE session_domains SET envelope = ? WHERE domain = 'peers'", (auth,))
+
+        with pytest.raises(SessionEnvelopeError, match=r"domain|authentication"):
+            await storage.load()
+
+    run(scenario())
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX permission bits are not enforced on Windows")
+def test_encrypted_sqlite_storage_creates_private_database_file(tmp_path) -> None:
+    async def scenario() -> None:
+        path = tmp_path / "session.sqlite"
+        storage = EncryptedSQLiteSessionStorage(path, key="a" * 32)
+        await storage.save(sample_record())
+        assert path.stat().st_mode & 0o777 == 0o600
+
+    run(scenario())
+
+
 def test_encrypted_sqlite_storage_atomic_overwrite(tmp_path) -> None:
     async def scenario() -> None:
         path = tmp_path / "session.sqlite"
@@ -343,12 +372,12 @@ def test_encrypted_sqlite_mutate_rolls_back_all_domains_when_encryption_fails(tm
         encrypt = storage._encrypt
         calls = 0
 
-        def fail_second_encryption(plaintext: bytes) -> bytes:
+        def fail_second_encryption(plaintext: bytes, *, domain: str | None = None) -> bytes:
             nonlocal calls
             calls += 1
             if calls == 2:
                 raise RuntimeError("encryption failed")
-            return encrypt(plaintext)
+            return encrypt(plaintext, domain=domain)
 
         monkeypatch.setattr(storage, "_encrypt", fail_second_encryption)
 

@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.updates.state.UpdateCursor.with_duplicate_keys"
 source_path: "src/miniproto/updates/state.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/updates/state.py#L232"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/updates/state.py#L237"
 aliases: ["miniproto.updates.UpdateCursor.with_duplicate_keys"]
 module: "miniproto.updates.state"
 ---

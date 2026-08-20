@@ -509,6 +509,9 @@ class SessionEnvelopeError(SessionStorageError):
 
 _MIGRATION_RE = re.compile(r"^(?P<kind>NETWORK|PHONE|STATS|USER|FILE)_MIGRATE_(?P<dc_id>\d+)$", re.IGNORECASE)
 _FLOOD_RE = re.compile(r"^(?P<kind>[A-Z0-9_]*WAIT)_(?P<seconds>\d+)$", re.IGNORECASE)
+_PACING_WAIT_TEMPLATES = frozenset(
+    {"FLOOD_WAIT_%d", "FLOOD_PREMIUM_WAIT_%d", "SLOWMODE_WAIT_%d", "TAKEOUT_INIT_DELAY_%d"}
+)
 _TRAILING_INT_RE = re.compile(r"^(?P<prefix>.+)_(?P<value>\d+)$")
 _TEMPLATE_INT_RE = re.compile(r"%d", re.IGNORECASE)
 _AUTH_KEY_NOT_FOUND = {"AUTH_KEY_INVALID", "AUTH_KEY_PERM_EMPTY", "AUTH_KEY_UNREGISTERED"}
@@ -546,8 +549,9 @@ def classify_rpc_error(error: RpcError) -> RpcError:
         return _instantiate_migration_error(cls, migration_match, error)
     if flood_match := _FLOOD_RE.match(upper_message):
         template = f"{flood_match.group('kind')}_%d"
-        cls = _ERROR_CLASS_BY_TEMPLATE.get(template, FloodWait)
-        return _instantiate_flood_error(cls, flood_match, error)
+        if template in _PACING_WAIT_TEMPLATES:
+            cls = _ERROR_CLASS_BY_TEMPLATE.get(template, FloodWait)
+            return _instantiate_flood_error(cls, flood_match, error)
     template, _values = _template_from_message(raw_message)
     cls = _ERROR_CLASS_BY_TEMPLATE.get(template) or _ERROR_CLASS_BY_TEMPLATE.get(upper_message)
     if cls is not None:
@@ -627,6 +631,8 @@ def _instantiate_error_class(cls: type[RpcError], error: RpcError) -> RpcError:
         return cast(RpcError, cls(error.message, code=error.code, request=error.request, context=error.context))
     if issubclass(cls, InternalServerError):
         return cast(RpcError, cls(error.message, code=error.code, request=error.request, context=error.context))
+    if cls.__bases__ == (RpcError,):
+        return cls(error.message, code=error.code, request=error.request, context=error.context)
     return cls(error.message, request=error.request, context=error.context)
 
 
@@ -676,7 +682,7 @@ def _base_for_error(name: str, code: int) -> type[RpcError]:
     upper_name = _canonical_error_template(name)
     if _TEMPLATE_INT_RE.search(upper_name) and "_MIGRATE_" in upper_name:
         return DatacenterMigration
-    if _TEMPLATE_INT_RE.search(upper_name) and upper_name.endswith("WAIT_%d"):
+    if upper_name in _PACING_WAIT_TEMPLATES:
         return FloodWait
     if upper_name in _COMMON_EXACT_BASES:
         return _COMMON_EXACT_BASES[upper_name]

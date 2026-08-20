@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.session.storage.EncryptedSQLiteSessionStorage"
 source_path: "src/miniproto/session/storage.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/storage.py#L213"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/storage.py#L214"
 aliases: ["miniproto.EncryptedSQLiteSessionStorage","miniproto.session.EncryptedSQLiteSessionStorage"]
 module: "miniproto.session.storage"
 ---

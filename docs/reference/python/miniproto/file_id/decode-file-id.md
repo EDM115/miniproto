@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.file_id.decode_file_id"
 source_path: "src/miniproto/file_id.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/file_id.py#L166"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/file_id.py#L170"
 aliases: ["miniproto.decode_file_id"]
 module: "miniproto.file_id"
 ---

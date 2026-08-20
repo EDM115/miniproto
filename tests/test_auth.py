@@ -5,6 +5,7 @@ from collections.abc import Awaitable, Callable
 
 import pytest
 
+import miniproto.auth.key_exchange as key_exchange_module
 from miniproto import (
     AuthKey,
     Client,
@@ -40,11 +41,13 @@ from miniproto.auth import (
     rsa_pad,
     server_salt,
 )
-from miniproto.auth.key_exchange import encode_server_dh_answer
+from miniproto.auth.key_exchange import encode_server_dh_answer, serialize_dh_gen_ok
+from miniproto.auth.service import _upsert_self_peer
 from miniproto.errors import AuthKeyNotFound, RpcError, classify_rpc_error
 from miniproto.invoke import clear_invalid_auth_key
 from miniproto.raw import functions, types
-from miniproto.session.models import session_record_from_mapping
+from miniproto.session.models import PeerCacheEntry, session_record_from_mapping
+from miniproto.tl.codec import encode_constructor_id, encode_int128
 
 _TELEGRAM_DH_PRIME_BYTES = bytes.fromhex(
     "C71CAEB9C6B1C9048E6C522F70F13F73980D40238E3E21C14934D037563D930F48198A0AA7C14058229493D22530F4DBFA336F6E0AC925139543AED44CCE7C3720FD51F69458705AC68CD4FE6B6B13ABDC9746512969328454F18FAF8C595F642477FE96BB2A941D5BCD1D4AC8CC49880708FA9B378E3C4F3A9060BEE67CF9A4A4A695811051907E162753B56B0F6B410DBA74D8A84B2A14B3144E0EF1284754FD17ED950D5965B4B9DD46582DB1178D169C6BC465B0D6FF9CA3928FEF5B9AE4E418FC15E83EBEA0F87FA9FF5EED70050DED2849F47BF959D956850CE929851F0D8115F635B105EE2E4E15D04B2454BF6F4FADF034B10403119CD8E3B92FCC5B"
@@ -55,6 +58,26 @@ _DH_PUBLIC_VALUE_BOUNDARY = 1 << (2048 - 64)
 
 def run(coro):
     return event_loop.run(coro)
+
+
+def test_decrypt_server_dh_answer_checks_only_possible_padding_lengths(monkeypatch: pytest.MonkeyPatch) -> None:
+    plaintext = b"x" * 4096
+    calls = 0
+
+    monkeypatch.setattr(key_exchange_module, "aes_256_ige_decrypt", lambda encrypted, key, iv: plaintext)
+
+    def sha1(value: bytes) -> bytes:
+        nonlocal calls
+        del value
+        calls += 1
+        return b"y" * 20
+
+    monkeypatch.setattr(key_exchange_module, "sha1_digest", sha1)
+
+    with pytest.raises(ValueError, match="SHA1"):
+        decrypt_server_dh_answer(b"ciphertext", new_nonce=1, server_nonce=2)
+
+    assert calls == 3 + 16  # Three temporary-key hashes plus sixteen possible AES padding lengths.
 
 
 class FakeAuthClient(Client):
@@ -267,6 +290,91 @@ def test_auth_key_exchange_validates_generated_public_value_before_send() -> Non
     with pytest.raises(ValueError, match="g_b"):
         run(exchange.create_auth_key())
     assert transport.calls == 2
+
+
+def test_auth_key_exchange_retries_valid_dh_gen_retry_with_fresh_exponent(monkeypatch: pytest.MonkeyPatch) -> None:
+    nonce = int.from_bytes(b"\x01" * 16, "little")
+    server_nonce = int.from_bytes(b"\x02" * 16, "little")
+    new_nonce = int.from_bytes(b"\x03" * 32, "little")
+    rsa_key = RSAKey(modulus=(1 << 2048) - 159, exponent=1)
+    server_inner = ServerDHInnerData(
+        nonce=nonce,
+        server_nonce=server_nonce,
+        g=3,
+        dh_prime=_TELEGRAM_DH_PRIME_BYTES,
+        g_a=(_DH_PUBLIC_VALUE_BOUNDARY + 1).to_bytes(256, "big"),
+        server_time=1_771_000_000,
+    )
+    client_inners: list[ClientDHInnerData] = []
+
+    class RetryTransport:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        async def send_unencrypted(self, body: bytes) -> bytes:
+            del body
+            self.calls += 1
+            if self.calls == 1:
+                return ResPQ(
+                    nonce=nonce,
+                    server_nonce=server_nonce,
+                    pq=(17 * 23).to_bytes(2, "big"),
+                    server_public_key_fingerprints=(rsa_key.fingerprint,),
+                ).serialize()
+            if self.calls == 2:
+                padding = b"\x00" * (-(20 + len(server_inner.serialize())) % 16)
+                return ServerDHParamsOk(
+                    nonce=nonce,
+                    server_nonce=server_nonce,
+                    encrypted_answer=encode_server_dh_answer(
+                        server_inner, new_nonce=new_nonce, server_nonce=server_nonce, padding=padding
+                    ),
+                ).serialize()
+            if self.calls == 3:
+                return (
+                    encode_constructor_id(0x46DC1FB9)
+                    + encode_int128(nonce)
+                    + encode_int128(server_nonce)
+                    + encode_int128(2)
+                )
+            if self.calls == 4:
+                return serialize_dh_gen_ok(nonce, server_nonce, 1)
+            raise AssertionError("unexpected exchange request")
+
+    random_values = {16: iter((b"\x01" * 16,)), 32: iter((b"\x03" * 32,)), 256: iter((b"\x04" * 256, b"\x05" * 256))}
+
+    def random_bytes(size: int) -> bytes:
+        return next(random_values[size])
+
+    monkeypatch.setattr("miniproto.auth.key_exchange.rsa_pad", lambda *args, **kwargs: b"encrypted-pq")
+    monkeypatch.setattr(
+        "miniproto.auth.key_exchange.encrypt_client_dh_inner_data",
+        lambda inner, **kwargs: client_inners.append(inner) or b"encrypted-client-dh",
+    )
+    monkeypatch.setattr("miniproto.auth.key_exchange.compute_new_nonce_hash", lambda _nonce, _key, number: number)
+
+    result = run(
+        AuthKeyExchange(RetryTransport(), dc_id=2, rsa_keys=(rsa_key,), random_bytes=random_bytes).create_auth_key()
+    )
+
+    assert result.dc_id == 2
+    assert len(client_inners) == 2
+    assert client_inners[0].retry_id == 0
+    assert client_inners[1].retry_id != 0
+    assert client_inners[0].g_b != client_inners[1].g_b
+
+
+def test_upsert_self_peer_preserves_chat_and_channel_with_same_numeric_id() -> None:
+    peers = (
+        PeerCacheEntry(id=42, kind="self", access_hash=1),
+        PeerCacheEntry(id=42, kind="user", access_hash=2),
+        PeerCacheEntry(id=42, kind="chat", access_hash=3),
+        PeerCacheEntry(id=42, kind="channel", access_hash=4),
+    )
+
+    updated = _upsert_self_peer(peers, UserIdentity(id=42, access_hash=99))
+
+    assert [(peer.kind, peer.access_hash) for peer in updated] == [("self", 99), ("chat", 3), ("channel", 4)]
 
 
 def test_password_srp_rejects_weak_group_before_secret_derivation(monkeypatch: pytest.MonkeyPatch) -> None:

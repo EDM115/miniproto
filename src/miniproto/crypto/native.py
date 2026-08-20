@@ -26,6 +26,29 @@ from miniproto.observability import emit_event, get_logger
 
 type BytesLike = bytes | bytearray | memoryview
 _LOGGER = get_logger("crypto.native")
+_SCRYPT_MAX_MEMORY_BYTES = 256 * 1024 * 1024
+_SCRYPT_MAX_WORK_BYTES = 1024 * 1024 * 1024
+
+
+def _validate_scrypt_parameters(n: int, r: int, p: int, length: int) -> None:
+    """Reject invalid or excessive Scrypt parameters before backend dispatch.
+
+    Args:
+        n: CPU and memory cost required to be a power of two above one.
+        r: Positive block-size cost parameter.
+        p: Positive parallelization cost parameter.
+        length: Requested derived-key length in the inclusive range 1 through 1024.
+    """
+    if n < 2 or n & (n - 1):
+        raise ValueError("scrypt n must be a power of two greater than one")
+    if r < 1 or p < 1:
+        raise ValueError("scrypt r and p must be positive")
+    if not 1 <= length <= 1024:
+        raise ValueError("scrypt output length must be between 1 and 1024 bytes")
+    memory_bytes = 128 * n * r
+    work_bytes = memory_bytes * p
+    if memory_bytes > _SCRYPT_MAX_MEMORY_BYTES or work_bytes > _SCRYPT_MAX_WORK_BYTES:
+        raise ValueError("scrypt parameters exceed the resource limit")
 
 
 class _NativeModule(Protocol):
@@ -940,9 +963,10 @@ def scrypt_derive(password: bytes, salt: bytes, n: int, r: int, p: int, length: 
         ValueError: If Scrypt parameters or output length are rejected.
 
     Uses native Scrypt only when the optional symbol exists, otherwise
-    ``cryptography``.  Parameter selection and resource limits are caller-owned;
-    the backends may report validation failures differently at their edges.
+    ``cryptography``. Every route enforces the same 256 MiB memory estimate and
+    1 GiB aggregate work estimate before entering either backend.
     """
+    _validate_scrypt_parameters(n, r, p, length)
     implementation = _native_session_crypto_function("scrypt_derive")
     if implementation is None:
         return scrypt_derive_cryptography(password, salt, n, r, p, length)
@@ -1013,9 +1037,10 @@ def scrypt_derive_native(password: bytes, salt: bytes, n: int, r: int, p: int, l
         RuntimeError: If native Scrypt is unavailable.
         ValueError: If Scrypt parameters are invalid.
 
-    This no-fallback variant does not choose safe parameter values or limit the
-    resource cost requested by the caller.
+    This no-fallback variant enforces the public resource limits before requiring
+    the compiled capability.
     """
+    _validate_scrypt_parameters(n, r, p, length)
     implementation = _require_native_session_crypto_function("scrypt_derive")
     return bytes(implementation(password, salt, n, r, p, length))
 
@@ -1081,9 +1106,10 @@ def scrypt_derive_cryptography(password: bytes, salt: bytes, n: int, r: int, p: 
     Raises:
         ValueError: If the backend rejects the Scrypt parameters.
 
-    This bypasses Rust and leaves salt generation, resource budgeting, and secret
-    lifetime to the caller.
+    This bypasses Rust while retaining the public parameter and resource limits;
+    salt generation and secret lifetime remain caller-owned.
     """
+    _validate_scrypt_parameters(n, r, p, length)
     return bytes(_fallback_impl.scrypt_derive(password, salt, n, r, p, length))
 
 

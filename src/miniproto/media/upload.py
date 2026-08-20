@@ -347,6 +347,8 @@ def _validate_upload_options(
         raise ValueError("part_size must be a multiple of 1024 bytes")
     if part_size > DEFAULT_CHUNK_SIZE:
         raise ValueError("part_size must not exceed 512 KiB")
+    if DEFAULT_CHUNK_SIZE % part_size:
+        raise ValueError("part_size must divide 512 KiB exactly")
     if concurrency <= 0:
         raise ValueError("concurrency must be positive")
     if max_retries < 0:
@@ -374,10 +376,17 @@ def _part_size_for_part_limit(size: int, part_size: int, max_file_parts: int | N
     if total_parts <= max_file_parts:
         return part_size
     required = math.ceil(size / max_file_parts)
-    adjusted = math.ceil(required / 1024) * 1024
-    if adjusted > DEFAULT_CHUNK_SIZE:
+    adjusted = next(
+        (
+            candidate
+            for candidate in (1024 << power for power in range(10))
+            if candidate >= max(part_size, required) and candidate <= DEFAULT_CHUNK_SIZE
+        ),
+        None,
+    )
+    if adjusted is None:
         raise MediaUploadError(f"file requires more than {max_file_parts} upload parts at the maximum part size")
-    return max(part_size, adjusted)
+    return adjusted
 
 
 async def _prepare_upload_source(source: FileSource, *, file_name: str | None, chunk_size: int) -> _PreparedUpload:

@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.file_id.input_media_from_file_id"
 source_path: "src/miniproto/file_id.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/file_id.py#L212"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/file_id.py#L218"
 aliases: ["miniproto.input_media_from_file_id"]
 module: "miniproto.file_id"
 ---

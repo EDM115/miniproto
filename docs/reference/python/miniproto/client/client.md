@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.client.Client"
 source_path: "src/miniproto/client.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L266"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L271"
 aliases: ["miniproto.Client"]
 module: "miniproto.client"
 ---

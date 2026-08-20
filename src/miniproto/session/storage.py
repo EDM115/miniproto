@@ -28,7 +28,8 @@ from miniproto.session.models import SessionRecord, session_record_to_mapping
 type SessionPayload = Mapping[str, Any] | SessionRecord
 
 _SERIALIZATION_VERSION = 1
-_ENVELOPE_VERSION = 1
+_LEGACY_ENVELOPE_VERSION = 1
+_ENVELOPE_VERSION = 2
 _DEFAULT_RECORD_NAME = "default"
 _JSON_TYPE_KEY = "__miniproto_type__"
 _KDF_SALT = b"miniproto-session-storage-v1"
@@ -127,8 +128,8 @@ class InMemorySessionStorage:
         _validate_sibling_name(name)
         with self._lock:
             storage = self._siblings.get(name)
-            if storage is None:
-                storage = InMemorySessionStorage()
+            if storage is None or storage._closed:
+                storage = InMemorySessionStorage(storage._data if storage is not None else None)
                 self._siblings[name] = storage
             return storage
 
@@ -455,11 +456,14 @@ class EncryptedSQLiteSessionStorage:
         if domain_rows:
             merged: dict[str, Any] = {}
             domains: dict[str, bytes] = {}
+            requires_migration = False
             for domain, envelope in domain_rows:
-                payload = self._decrypt(bytes(envelope))
+                envelope_bytes = bytes(envelope)
+                payload = self._decrypt(envelope_bytes, domain=str(domain))
                 merged.update(payload)
                 domains[str(domain)] = serialize_session_data(payload)
-            return merged, domains, False
+                requires_migration |= _envelope_version(envelope_bytes) == _LEGACY_ENVELOPE_VERSION
+            return merged, domains, requires_migration
         row = connection.execute(
             "SELECT envelope FROM session_records WHERE name = ?", (_DEFAULT_RECORD_NAME,)
         ).fetchone()
@@ -485,7 +489,7 @@ class EncryptedSQLiteSessionStorage:
             if plaintext is None:
                 connection.execute("DELETE FROM session_domains WHERE domain = ?", (domain,))
                 continue
-            envelope = self._encrypt(plaintext)
+            envelope = self._encrypt(plaintext, domain=domain)
             connection.execute(
                 """
                 INSERT INTO session_domains (domain, envelope, updated_at)
@@ -527,22 +531,30 @@ class EncryptedSQLiteSessionStorage:
             raise SessionStorageError("session storage is closed")
 
     def _connect(self) -> sqlite3.Connection:
-        """Open a SQLite connection with foreign-key enforcement enabled."""
+        """Open a SQLite connection with private POSIX permissions and foreign keys enabled."""
+        if os.name != "nt":
+            descriptor = os.open(self.path, os.O_WRONLY | os.O_CREAT, 0o600)
+            os.close(descriptor)
+            os.chmod(self.path, 0o600)
         connection = sqlite3.connect(self.path)
         connection.execute("PRAGMA foreign_keys = ON")
         return connection
 
-    def _encrypt(self, plaintext: bytes) -> bytes:
+    def _encrypt(self, plaintext: bytes, *, domain: str | None = None) -> bytes:
         """Encrypt and authenticate one domain plaintext in a versioned JSON envelope.
 
         Args:
             plaintext: Serialized domain bytes to protect with fresh nonce and MAC.
+            domain: Logical row name to authenticate, or ``None`` only for a version-1 legacy fixture.
         """
+        version = _ENVELOPE_VERSION if domain is not None else _LEGACY_ENVELOPE_VERSION
         nonce = secrets.token_bytes(_NONCE_SIZE)
         ciphertext = _xor_bytes(plaintext, _keystream(self._encryption_key, nonce, len(plaintext)))
-        tag = hmac.new(self._mac_key, _mac_input(nonce, ciphertext), hashlib.sha256).digest()
+        tag = hmac.new(
+            self._mac_key, _mac_input(nonce, ciphertext, version=version, domain=domain), hashlib.sha256
+        ).digest()
         envelope = {
-            "version": _ENVELOPE_VERSION,
+            "version": version,
             "cipher": "hmac-sha256-ctr",
             "mac": "hmac-sha256",
             "kdf": "pbkdf2-hmac-sha256",
@@ -550,19 +562,32 @@ class EncryptedSQLiteSessionStorage:
             "payload": _b64encode(ciphertext),
             "tag": _b64encode(tag),
         }
+        if domain is not None:
+            envelope["domain"] = domain
         return json.dumps(envelope, sort_keys=True, separators=(",", ":")).encode()
 
-    def _decrypt(self, envelope_bytes: bytes) -> Mapping[str, Any]:
+    def _decrypt(self, envelope_bytes: bytes, *, domain: str | None = None) -> Mapping[str, Any]:
         """Authenticate, decrypt, and deserialize one versioned domain envelope.
 
         Args:
             envelope_bytes: Versioned JSON envelope bytes read from SQLite.
+            domain: Expected logical domain for a version-2 row, or ``None`` for the legacy record.
         """
         envelope = _decode_envelope(envelope_bytes)
+        version = int(envelope["version"])
+        envelope_domain = envelope.get("domain")
+        if version == _ENVELOPE_VERSION and envelope_domain != domain:
+            raise SessionEnvelopeError("session envelope domain does not match its database row")
         nonce = _b64decode(str(envelope["nonce"]), "nonce")
         ciphertext = _b64decode(str(envelope["payload"]), "payload")
         tag = _b64decode(str(envelope["tag"]), "tag")
-        expected_tag = hmac.new(self._mac_key, _mac_input(nonce, ciphertext), hashlib.sha256).digest()
+        expected_tag = hmac.new(
+            self._mac_key,
+            _mac_input(
+                nonce, ciphertext, version=version, domain=str(envelope_domain) if envelope_domain is not None else None
+            ),
+            hashlib.sha256,
+        ).digest()
         if not hmac.compare_digest(tag, expected_tag):
             raise SessionEnvelopeError("session envelope authentication failed")
         plaintext = _xor_bytes(ciphertext, _keystream(self._encryption_key, nonce, len(ciphertext)))
@@ -807,14 +832,25 @@ def _decode_envelope(envelope_bytes: bytes) -> Mapping[str, Any]:
         raise SessionEnvelopeError("session envelope is not valid JSON") from exc
     if not isinstance(envelope, Mapping):
         raise SessionEnvelopeError("session envelope must be a mapping")
-    if envelope.get("version") != _ENVELOPE_VERSION:
+    if envelope.get("version") not in {_LEGACY_ENVELOPE_VERSION, _ENVELOPE_VERSION}:
         raise SessionEnvelopeError("unsupported session envelope version")
     if envelope.get("cipher") != "hmac-sha256-ctr" or envelope.get("mac") != "hmac-sha256":
         raise SessionEnvelopeError("unsupported session envelope algorithms")
     for field_name in ("nonce", "payload", "tag"):
         if field_name not in envelope:
             raise SessionEnvelopeError(f"session envelope missing {field_name}")
+    if envelope.get("version") == _ENVELOPE_VERSION and not isinstance(envelope.get("domain"), str):
+        raise SessionEnvelopeError("session envelope missing domain")
     return envelope
+
+
+def _envelope_version(envelope_bytes: bytes) -> int:
+    """Return the validated version number from one encrypted envelope.
+
+    Args:
+        envelope_bytes: Raw JSON envelope bytes read from SQLite.
+    """
+    return int(_decode_envelope(envelope_bytes)["version"])
 
 
 def _ensure_schema(connection: sqlite3.Connection) -> None:
@@ -837,14 +873,22 @@ def _derive_keys(key_material: bytes) -> tuple[bytes, bytes]:
     return derived[:32], derived[32:]
 
 
-def _mac_input(nonce: bytes, ciphertext: bytes) -> bytes:
-    """Bind envelope version, nonce, and ciphertext into the authenticated input.
+def _mac_input(nonce: bytes, ciphertext: bytes, *, version: int, domain: str | None) -> bytes:
+    """Bind envelope version, optional domain, nonce, and ciphertext into the authenticated input.
 
     Args:
         nonce: Fresh envelope nonce.
         ciphertext: Encrypted domain bytes authenticated by the MAC.
+        version: Envelope format version selecting legacy or domain-bound input.
+        domain: Logical domain authenticated by version 2, or ``None`` for version 1.
     """
-    return _MAC_CONTEXT + _ENVELOPE_VERSION.to_bytes(2, "big") + nonce + ciphertext
+    prefix = _MAC_CONTEXT + version.to_bytes(2, "big")
+    if version == _ENVELOPE_VERSION:
+        if domain is None:
+            raise ValueError("version-2 session envelopes require a domain")
+        encoded_domain = domain.encode("utf-8")
+        prefix += len(encoded_domain).to_bytes(2, "big") + encoded_domain
+    return prefix + nonce + ciphertext
 
 
 def _keystream(key: bytes, nonce: bytes, length: int) -> bytes:

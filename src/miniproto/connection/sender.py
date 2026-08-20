@@ -6,10 +6,12 @@ import asyncio
 import logging
 import secrets
 import time
+import zlib
 from collections import OrderedDict, deque
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass, field
+from functools import partial
 
 from miniproto.config import TransportConfig
 from miniproto.connection.framing import QuickAckFrame
@@ -54,6 +56,9 @@ DEFAULT_INCOMING_QUEUE_SIZE = 256
 DEFAULT_RECONNECT_COOLDOWN = 1.0
 RECONNECT_FLAP_WINDOW = 10.0
 _GZIP_THREAD_THRESHOLD_BYTES = 64 * 1024
+_MAX_GZIP_WRAPPER_DEPTH = 16
+_ACK_HISTORY_LIMIT = 4096
+_UNDECODED_BODY = object()
 
 _LOGGER = get_logger("connection.sender")
 _QUICK_ACK_HISTORY_LIMIT = 1024
@@ -230,7 +235,8 @@ class MTProtoSender:
         self._fatal_error: BaseException | None = None
         self._pending: dict[int, PendingRequest] = {}
         self._pending_slots_used = 0
-        self._acks_received: set[int] = set()
+        self._sent_message_ids: OrderedDict[int, None] = OrderedDict()
+        self._acks_received: OrderedDict[int, None] = OrderedDict()
         self._quick_acks: dict[int, deque[QuickAckWaiter]] = {}
         self._quick_ack_count = 0
         self._quick_ack_history: OrderedDict[int, str] = OrderedDict()
@@ -391,7 +397,7 @@ class MTProtoSender:
                 request_timeout=request_timeout,
                 quick_ack=quick_ack or quick_ack_callback is not None,
                 quick_ack_callback=quick_ack_callback,
-                expected_pong_ping_id=None,
+                expected_pong_ping_id=_expected_pong_ping_id(body),
             )
         except asyncio.CancelledError:
             outcome = "cancelled"
@@ -525,6 +531,7 @@ class MTProtoSender:
                 client_to_server=True,
             )
             await self._send_payload(payload)
+            self._remember_sent_message_id(msg_id)
             return msg_id
 
     async def ping(self) -> Pong:
@@ -618,11 +625,14 @@ class MTProtoSender:
                         if not pending.future.done():
                             pending.future.cancel()
                     raise
-                msg_id, payload, ack_ids = self._encode_pending_attempt(pending)
+                msg_id, envelope_msg_id, payload, ack_ids = self._encode_pending_attempt(pending)
                 pending.attempts += 1
                 if not pending.future.done():
                     self._pending[msg_id] = pending
                     pending.aliases.add(msg_id)
+                    if envelope_msg_id != msg_id:
+                        self._pending[envelope_msg_id] = pending
+                        pending.aliases.add(envelope_msg_id)
                 pending.transport = transport
                 self._remove_quick_acks(pending)
                 if pending.quick_ack:
@@ -674,9 +684,12 @@ class MTProtoSender:
                     continue
                 if ack_ids:
                     record_metric("sender.acks_piggybacked", len(ack_ids))
+                self._remember_sent_message_id(msg_id)
+                if envelope_msg_id != msg_id:
+                    self._remember_sent_message_id(envelope_msg_id)
                 return msg_id
 
-    def _encode_pending_attempt(self, pending: PendingRequest) -> tuple[int, bytes, tuple[int, ...]]:
+    def _encode_pending_attempt(self, pending: PendingRequest) -> tuple[int, int, bytes, tuple[int, ...]]:
         """Encrypt one request attempt, bundling queued acknowledgements when present.
 
         Args:
@@ -713,7 +726,7 @@ class MTProtoSender:
             body,
             client_to_server=True,
         )
-        return msg_id, payload, ack_ids
+        return msg_id, envelope_msg_id, payload, ack_ids
 
     async def _send_payload(self, payload: bytes, *, retry_transport_error: bool = True) -> Transport:
         """Send raw encrypted bytes and retry once through transport recovery.
@@ -773,12 +786,13 @@ class MTProtoSender:
                     continue
                 try:
                     message = decode_encrypted_message(self.state.auth_key, packet, client_to_server=False)
-                    await self._prevalidate_and_commit_incoming(message)
+                    dispatch = await self._prevalidate_and_commit_incoming(message)
                 except ProtocolValidationError:
                     raise
                 except ValueError as exc:
                     raise _normalize_protocol_validation_error(exc) from exc
-                await self._handle_incoming(message, committed=True)
+                for candidate, body in dispatch:
+                    await self._handle_incoming(candidate, committed=True, decoded_body=body)
                 if self.state.pending_ack_count >= self._ack_flush_threshold:
                     await self._flush_acks_safely()
             except asyncio.CancelledError:
@@ -813,17 +827,22 @@ class MTProtoSender:
                     **({"validation_reason": validation_reason} if validation_reason is not None else {}),
                 )
                 self._fatal_error = exc
-                if validation_reason is None:
-                    self._fail_pending(exc)
+                self._fail_pending(exc)
                 await self._close_transport()
                 return
 
-    async def _prevalidate_and_commit_incoming(self, message: DecodedEncryptedMessage) -> None:
+    async def _prevalidate_and_commit_incoming(
+        self, message: DecodedEncryptedMessage
+    ) -> tuple[tuple[DecodedEncryptedMessage, object], ...]:
         """Decode nested bodies, validate all IDs, then atomically commit receipt state.
 
         Args:
             message: Outer encrypted message whose containers and gzip wrappers
                 are fully decoded before any incoming-state mutation commits.
+
+        Returns:
+            Decoded non-container messages ready for routing without another TL
+            decode or gzip decompression pass.
         """
         messages: list[tuple[DecodedEncryptedMessage, object, int | None]] = []
 
@@ -837,8 +856,14 @@ class MTProtoSender:
                     ID, or ``None`` for the outer encrypted message.
             """
             body = decode_message_body(candidate.body)
+            gzip_depth = 0
             while isinstance(body, GzipPacked):
-                body = decode_message_body(await _unpack_gzip(body))
+                gzip_depth += 1
+                if gzip_depth > _MAX_GZIP_WRAPPER_DEPTH:
+                    raise ProtocolValidationError("gzip_wrapper_depth", context={"maximum": _MAX_GZIP_WRAPPER_DEPTH})
+                body = decode_message_body(
+                    await _unpack_gzip(body, max_output_size=self.transport_config.max_payload_size)
+                )
             messages.append((candidate, body, parent_container_msg_id))
             if isinstance(body, MessageContainer):
                 for item in body.messages:
@@ -882,6 +907,9 @@ class MTProtoSender:
             seen.add(candidate.msg_id)
         for candidate, _body, _parent_container_msg_id in messages:
             self.state.commit_incoming(candidate.msg_id, content_related=candidate.seq_no % 2 == 1, now=now)
+        return tuple(
+            (candidate, body) for candidate, body, _parent in messages if not isinstance(body, MessageContainer)
+        )
 
     def _validate_bad_message_correlation(self, body: object) -> None:
         """Reject bad-message service replies that do not reference a pending RPC.
@@ -897,17 +925,29 @@ class MTProtoSender:
                 "unknown_bad_msg_id", context={"bad_msg_id": body.bad_msg_id, "service": type(body).__name__}
             )
 
-    async def _handle_incoming(self, message: DecodedEncryptedMessage, *, committed: bool = False) -> None:
+    async def _handle_incoming(
+        self, message: DecodedEncryptedMessage, *, committed: bool = False, decoded_body: object = _UNDECODED_BODY
+    ) -> None:
         """Route a validated message to RPC completion, service handling, or the queue.
 
         Args:
             message: Decrypted inbound message, possibly a nested container leaf.
             committed: Whether incoming state was already validated and committed
                 by the outer-message prevalidation pass.
+            decoded_body: Body already decoded by the transactional prevalidation
+                pass, or the internal sentinel when this method owns decoding.
         """
-        body = decode_message_body(message.body)
-        while isinstance(body, GzipPacked):
-            body = decode_message_body(await _unpack_gzip(body))
+        body = decoded_body
+        if body is _UNDECODED_BODY:
+            body = decode_message_body(message.body)
+            gzip_depth = 0
+            while isinstance(body, GzipPacked):
+                gzip_depth += 1
+                if gzip_depth > _MAX_GZIP_WRAPPER_DEPTH:
+                    raise ProtocolValidationError("gzip_wrapper_depth", context={"maximum": _MAX_GZIP_WRAPPER_DEPTH})
+                body = decode_message_body(
+                    await _unpack_gzip(body, max_output_size=self.transport_config.max_payload_size)
+                )
         if isinstance(body, MessageContainer):
             for item in body.messages:
                 nested = DecodedEncryptedMessage(
@@ -922,7 +962,12 @@ class MTProtoSender:
                 await self._handle_incoming(nested, committed=True)
             return
         if isinstance(body, MsgsAck):
-            self._acks_received.update(body.msg_ids)
+            for msg_id in body.msg_ids:
+                if msg_id in self._sent_message_ids:
+                    self._acks_received[msg_id] = None
+                    self._acks_received.move_to_end(msg_id)
+                    while len(self._acks_received) > _ACK_HISTORY_LIMIT:
+                        self._acks_received.popitem(last=False)
             return
         if isinstance(body, MsgsStateReq):
             await self.send(
@@ -1050,6 +1095,18 @@ class MTProtoSender:
         keepalive_task.cancel()
         with suppress(asyncio.CancelledError):
             await keepalive_task
+
+    def _remember_sent_message_id(self, msg_id: int) -> None:
+        """Retain one locally written message ID in a bounded acknowledgement filter.
+
+        Args:
+            msg_id: Outgoing message ID accepted by the transport write path.
+        """
+        self._sent_message_ids[msg_id] = None
+        self._sent_message_ids.move_to_end(msg_id)
+        while len(self._sent_message_ids) > _ACK_HISTORY_LIMIT:
+            expired, _value = self._sent_message_ids.popitem(last=False)
+            self._acks_received.pop(expired, None)
 
     async def _resend_pending(self) -> None:
         """Re-send in-flight requests that were sent on a now-dead transport.
@@ -1403,15 +1460,65 @@ def _emit_sender_event(event: str, started: float, *, outcome: str, **fields: ob
     )
 
 
-async def _unpack_gzip(body: GzipPacked) -> bytes:
+async def _unpack_gzip(body: GzipPacked, *, max_output_size: int) -> bytes:
     """Unpack a gzip body inline or in a worker thread above the size threshold.
 
     Args:
         body: Decoded gzip wrapper whose packed bytes determine thread offload.
+        max_output_size: Maximum accepted decompressed byte count.
     """
+    unpack = partial(_unpack_gzip_bounded, bytes(body.packed_data), max_output_size=max_output_size)
     if len(body.packed_data) >= _GZIP_THREAD_THRESHOLD_BYTES:
-        return await asyncio.to_thread(body.unpack)
-    return body.unpack()
+        return await asyncio.to_thread(unpack)
+    return unpack()
+
+
+def _unpack_gzip_bounded(packed_data: bytes, *, max_output_size: int) -> bytes:
+    """Decompress one gzip member without allocating beyond the configured bound.
+
+    Args:
+        packed_data: Complete gzip member bytes.
+        max_output_size: Maximum accepted decompressed byte count.
+
+    Raises:
+        ProtocolValidationError: The member is malformed, truncated, or expands beyond the bound.
+    """
+    try:
+        decompressor = zlib.decompressobj(16 + zlib.MAX_WBITS)
+        output = decompressor.decompress(packed_data, max_output_size + 1)
+        if len(output) > max_output_size or decompressor.unconsumed_tail:
+            raise ProtocolValidationError("gzip_payload_too_large", context={"maximum": max_output_size})
+        output += decompressor.flush(max_output_size + 1 - len(output))
+    except zlib.error as exc:
+        raise ProtocolValidationError("gzip_payload_invalid") from exc
+    if len(output) > max_output_size:
+        raise ProtocolValidationError("gzip_payload_too_large", context={"maximum": max_output_size})
+    if not decompressor.eof:
+        raise ProtocolValidationError("gzip_payload_invalid")
+    return output
+
+
+def _expected_pong_ping_id(body: bytes | object) -> int | None:
+    """Extract a raw supported ping request's correlation identifier.
+
+    Args:
+        body: Public request body, either encoded service bytes or an already decoded object.
+
+    Returns:
+        The ping identifier for ``ping`` and ``ping_delay_disconnect`` bodies, otherwise ``None``.
+    """
+    try:
+        decoded = (
+            decode_message_body(bytes(body) if isinstance(body, bytearray) else body)
+            if isinstance(body, bytes | bytearray | memoryview)
+            else body
+        )
+    except ValueError:
+        return None
+    if isinstance(decoded, tuple) and len(decoded) >= 2 and decoded[0] in {"ping", "ping_delay_disconnect"}:
+        ping_id = decoded[1]
+        return ping_id if isinstance(ping_id, int) else None
+    return None
 
 
 def _message_body_bytes(body: bytes | bytearray | memoryview | object) -> bytes | memoryview:

@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.client.Client.import_session_string"
 source_path: "src/miniproto/client.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L366"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L374"
 aliases: ["miniproto.Client.import_session_string"]
 module: "miniproto.client"
 ---

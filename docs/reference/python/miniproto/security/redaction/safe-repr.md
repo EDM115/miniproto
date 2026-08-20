@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.security.redaction.safe_repr"
 source_path: "src/miniproto/security/redaction.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/security/redaction.py#L118"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/security/redaction.py#L120"
 aliases: ["miniproto.security.safe_repr"]
 module: "miniproto.security.redaction"
 ---

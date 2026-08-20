@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::transport::register"
 source_path: "rust/miniproto/src/transport.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L39"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L41"
 crate: "miniproto_native"
 python_visible: false
 ---
@@ -16,7 +16,7 @@ python_visible: false
 
 - Crate: `miniproto_native`
 - Rust visibility: `public`
-- Source: [`rust/miniproto/src/transport.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L39)
+- Source: [`rust/miniproto/src/transport.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L41)
 - Python exposure: Not evidenced by static PyO3 attributes.
 
 ## Signature
@@ -37,7 +37,7 @@ fn register(m: &_) -> _
 fn register(m: &Bound<'_, pyo3::types::PyModule>) -> PyResult<()>
 ```
 
-*Defined in `rust/miniproto/src/transport.rs:39-43`*
+*Defined in `rust/miniproto/src/transport.rs:41-45`*
 
 Registers Python `TransportCodec` and `quick_ack_token` on `miniproto._native`.
 

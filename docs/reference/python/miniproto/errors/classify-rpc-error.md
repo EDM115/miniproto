@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.errors.classify_rpc_error"
 source_path: "src/miniproto/errors.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L528"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L531"
 module: "miniproto.errors"
 ---
 

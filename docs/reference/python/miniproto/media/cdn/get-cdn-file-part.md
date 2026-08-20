@@ -14,14 +14,15 @@ module: "miniproto.media.cdn"
 ## `miniproto.media.cdn.get_cdn_file_part`
 
 ```python
-get_cdn_file_part(invoke: RawInvoker, redirect: CdnRedirect, *, offset: int, limit: int, request_timeout: float | None = None) -> bytes
+get_cdn_file_part(origin_invoke: RawInvoker, cdn_invoke: RawInvoker, redirect: CdnRedirect, *, offset: int, limit: int, request_timeout: float | None = None) -> bytes
 ```
 
 Fetch, decrypt, and hash-verify one CDN file range.
 
 **Parameters:**
 
-- **invoke** (<code>[RawInvoker](#miniproto.media.cdn.RawInvoker)</code>) – Async raw-RPC invoker bound to the appropriate data center.
+- **origin_invoke** (<code>[RawInvoker](#miniproto.media.cdn.RawInvoker)</code>) – Async master-DC invoker used for hashes and reupload authorization.
+- **cdn_invoke** (<code>[RawInvoker](#miniproto.media.cdn.RawInvoker)</code>) – Async CDN-DC invoker used only for ``upload.getCdnFile``.
 - **redirect** (<code>[CdnRedirect](#miniproto.media.cdn.CdnRedirect)</code>) – CDN credentials and encryption metadata returned by Telegram.
 - **offset** (<code>[int](#int)</code>) – Byte offset of the requested range and CTR stream.
 - **limit** (<code>[int](#int)</code>) – Maximum ciphertext/plaintext bytes to retrieve.

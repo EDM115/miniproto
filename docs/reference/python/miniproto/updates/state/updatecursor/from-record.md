@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.updates.state.UpdateCursor.from_record"
 source_path: "src/miniproto/updates/state.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/updates/state.py#L123"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/updates/state.py#L128"
 aliases: ["miniproto.updates.UpdateCursor.from_record"]
 module: "miniproto.updates.state"
 ---

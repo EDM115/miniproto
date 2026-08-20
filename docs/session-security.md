@@ -45,7 +45,9 @@ $env:MINIPROTO_SESSION_KEY = "use-a-long-random-secret-value"
 
 ## Encrypted Envelope
 
-Each changed domain is serialized into a deterministic versioned JSON document, receives a fresh nonce, is encrypted, and is stored in an HMAC-authenticated envelope. Loads verify each HMAC with a constant-time comparison before decrypting or decoding payload data. Wrong keys, malformed envelopes, unsupported envelope versions, and corrupted payloads raise `SessionEnvelopeError`. SQLite mutation compares canonical plaintext before encryption, so unchanged domain ciphertext remains untouched despite randomized nonces.
+Each changed domain is serialized into a deterministic versioned JSON document, receives a fresh nonce, is encrypted, and is stored in an HMAC-authenticated envelope. The current envelope authenticates the logical domain name together with the nonce and ciphertext, so a valid row cannot be replayed under another session domain. Loads verify each HMAC with a constant-time comparison before decrypting or decoding payload data. Existing version-1 envelopes remain readable and are rewritten as domain-bound version-2 envelopes on the next logical write. Wrong keys, malformed envelopes, unsupported envelope versions, corrupted payloads, and domain substitution raise `SessionEnvelopeError`. SQLite mutation compares canonical plaintext before encryption, so unchanged domain ciphertext remains untouched despite randomized nonces.
+
+On POSIX systems the backend creates the main SQLite file with owner-only `0600` permissions and reapplies that mode before opening an existing file. Filesystem permissions are an additional local boundary, not a substitute for encryption, key protection, secure backups, or platform-specific access controls.
 
 ## Atomic Mutations
 

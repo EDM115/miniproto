@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.crypto.native.scrypt_derive_cryptography"
 source_path: "src/miniproto/crypto/native.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/native.py#L1067"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/native.py#L1092"
 aliases: ["miniproto.crypto.scrypt_derive_cryptography"]
 module: "miniproto.crypto.native"
 ---
@@ -37,5 +37,5 @@ Derive Scrypt key material with the explicit ``cryptography`` backend.
 
 - <code>[ValueError](#ValueError)</code> – If the backend rejects the Scrypt parameters.
 
-This bypasses Rust and leaves salt generation, resource budgeting, and secret
-lifetime to the caller.
+This bypasses Rust while retaining the public parameter and resource limits;
+salt generation and secret lifetime remain caller-owned.

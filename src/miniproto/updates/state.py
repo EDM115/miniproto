@@ -57,6 +57,7 @@ class EntityReference:
         username: Optional username observed in update entities.
         phone: Optional phone number observed in a user entity.
         title: Optional display title or user full name.
+        complete: Whether the source was a full entity allowed to clear absent aliases.
         updated_at: Observation timestamp; aware input retains its timezone and naive input assumes UTC.
     """
 
@@ -66,10 +67,14 @@ class EntityReference:
     username: str | None = None
     phone: str | None = None
     title: str | None = None
+    complete: bool = False
     updated_at: datetime = field(default_factory=utc_now)
 
     def to_peer_cache_entry(self) -> PeerCacheEntry:
         """Convert this reference to the session peer-cache representation."""
+        raw: dict[str, object] = {"title": self.title} if self.title else {}
+        if self.complete:
+            raw["_miniproto_complete"] = True
         return PeerCacheEntry(
             id=self.id,
             kind=self.kind,
@@ -77,7 +82,7 @@ class EntityReference:
             username=self.username,
             phone=self.phone,
             updated_at=self.updated_at,
-            raw={"title": self.title} if self.title else None,
+            raw=raw or None,
         )
 
 
