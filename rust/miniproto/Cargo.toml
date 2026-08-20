@@ -2,7 +2,7 @@
 description = "Rust acceleration layer for the miniproto Python MTProto SDK"
 documentation = "https://docs.rs/miniproto"
 edition = "2024"
-homepage = "https://edm115.github.io/miniproto/"
+homepage = "https://miniproto.edm115.dev/"
 keywords = ["telegram", "mtproto", "pyo3", "python", "cryptography"]
 license = "MIT"
 name = "miniproto"

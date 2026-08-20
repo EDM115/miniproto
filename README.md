@@ -6,7 +6,7 @@
 
 `miniproto` is a fast, async-first Telegram MTProto client core for Python. It owns protocol correctness, authorization, encrypted sessions, raw Layer 228 bindings, updates, peers, messages, and bounded media transfers while a bundled Rust/PyO3 extension accelerates measured hot paths.
 
-The first public line is `0.1.x` Alpha: the implementation is substantial, but breaking changes remain possible while the API and operational defaults settle. Start with the [documentation website](https://edm115.github.io/miniproto/) or the [five-minute quickstart](https://edm115.github.io/miniproto/start/quickstart/).
+The first public line is `0.1.x` Alpha: the implementation is substantial, but breaking changes remain possible while the API and operational defaults settle. Start with the [documentation website](https://miniproto.edm115.dev/) or the [five-minute quickstart](https://miniproto.edm115.dev/start/quickstart/).
 
 ## Install
 
@@ -41,7 +41,7 @@ async def main() -> None:
 event_loop.run(main())
 ```
 
-For a durable client, omit `session_storage`, provide `MINIPROTO_SESSION_KEY` through a secret manager, and use a distinct `session_path` for each account. The default encrypted SQLite storage refuses to initialize without adequate key material; `InMemorySessionStorage` is intentionally ephemeral. See [Session Security](https://edm115.github.io/miniproto/guides/session-security/) before persisting or moving authorization state.
+For a durable client, omit `session_storage`, provide `MINIPROTO_SESSION_KEY` through a secret manager, and use a distinct `session_path` for each account. The default encrypted SQLite storage refuses to initialize without adequate key material; `InMemorySessionStorage` is intentionally ephemeral. See [Session Security](https://miniproto.edm115.dev/guides/session-security/) before persisting or moving authorization state.
 
 ## Authorization and identity
 
@@ -71,7 +71,7 @@ telegram_config = await client.invoke(functions.HelpGetConfig())
 print(telegram_config.this_dc)
 ```
 
-The [generated Telegram reference](https://edm115.github.io/miniproto/reference/telegram/) cross-links functions, parameters, result families, constructors, known RPC errors, and Python import names. For a non-idempotent request, do not force `retry=True` unless the operation has an application-owned deduplication guarantee.
+The [generated Telegram reference](https://miniproto.edm115.dev/reference/telegram/) cross-links functions, parameters, result families, constructors, known RPC errors, and Python import names. For a non-idempotent request, do not force `retry=True` unless the operation has an application-owned deduplication guarantee.
 
 ## Messages and files
 
@@ -119,7 +119,7 @@ Uploads and downloads use bounded request windows, shared byte-weighted per-DC s
 
 Native miniproto session strings can be exported as a checksummed bearer value or protected with Scrypt and AES-256-GCM. Telethon v1 and Pyrogram compatibility formats are supported with explicitly lossy field mappings. Every session string is a bearer credential, even when encrypted at rest.
 
-The private `miniproto._native` extension provides crypto, MTProto envelope, transport framing, TL, and session hot paths. Public wrappers select capabilities rather than assuming that one successful import implements everything; supported Python/`cryptography` paths remain available when a native capability cannot load. Reproducible benchmark commands and result interpretation are documented in [Performance and benchmarks](https://edm115.github.io/miniproto/guides/performance-and-benchmarks/); no local timing is presented as a universal Telegram throughput claim.
+The private `miniproto._native` extension provides crypto, MTProto envelope, transport framing, TL, and session hot paths. Public wrappers select capabilities rather than assuming that one successful import implements everything; supported Python/`cryptography` paths remain available when a native capability cannot load. Reproducible benchmark commands and result interpretation are documented in [Performance and benchmarks](https://miniproto.edm115.dev/guides/performance-and-benchmarks/); no local timing is presented as a universal Telegram throughput claim.
 
 ## `miniproto` versus `mpgram`
 
@@ -127,10 +127,11 @@ The private `miniproto._native` extension provides crypto, MTProto envelope, tra
 
 ## Documentation and project links
 
-- [Documentation](https://edm115.github.io/miniproto/) — authored guides plus searchable generated Python, Telegram, and Rust reference pages.
-- [Architecture](https://edm115.github.io/miniproto/concepts/architecture/) — ownership boundaries and the Python/schema/Rust execution model.
-- [Development commands](https://edm115.github.io/miniproto/project/development/) — schema, docs, quality, tests, benchmarks, builds, and release diagnostics.
-- [Release guide](https://edm115.github.io/miniproto/project/release/) — attested build artifacts, OIDC publishing, immutable releases, and recovery boundaries.
+- [Documentation](https://miniproto.edm115.dev/) — authored guides plus searchable generated Python, Telegram, and Rust reference pages.
+- [Documentation backup](https://edm115.github.io/miniproto/) — in case the main site is down, always reflect the latest changes on the `master` branch.
+- [Architecture](https://miniproto.edm115.dev/concepts/architecture/) — ownership boundaries and the Python/schema/Rust execution model.
+- [Development commands](https://miniproto.edm115.dev/project/development/) — schema, docs, quality, tests, benchmarks, builds, and release diagnostics.
+- [Release guide](https://miniproto.edm115.dev/project/release/) — attested build artifacts, OIDC publishing, immutable releases, and recovery boundaries.
 - [Contributing](CONTRIBUTING.md) — local setup and verification expectations.
 - [Security policy](SECURITY.md) — supported Alpha line, secret handling, and private vulnerability reporting.
 - [Changelog](CHANGELOG.md) — complete `0.1.0` Alpha capability and limitation summary.

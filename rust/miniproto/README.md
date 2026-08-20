@@ -14,7 +14,7 @@ Install the supported Python package with:
 python -m pip install miniproto
 ```
 
-See the [documentation website](https://edm115.github.io/miniproto/) for the Python SDK and generated native reference, or the [repository release guide](https://github.com/EDM115/miniproto/blob/master/docs/project/release.md) for the synchronized PyPI/crates.io provenance model.
+See the [documentation website](https://miniproto.edm115.dev/) for the Python SDK and generated native reference, or the [repository release guide](https://github.com/EDM115/miniproto/blob/master/docs/project/release.md) for the synchronized PyPI/crates.io provenance model.
 
 ## License
 

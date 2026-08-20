@@ -43,8 +43,8 @@ docs = [
 ]
 
 [project.urls]
-Homepage = "https://edm115.github.io/miniproto/"
-Documentation = "https://edm115.github.io/miniproto/"
+Homepage = "https://miniproto.edm115.dev/"
+Documentation = "https://miniproto.edm115.dev/"
 Source = "https://github.com/EDM115/miniproto"
 Changelog = "https://github.com/EDM115/miniproto/blob/master/CHANGELOG.md"
 Issues = "https://github.com/EDM115/miniproto/issues"

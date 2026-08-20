@@ -297,7 +297,7 @@ def test_crates_io_metadata_describes_the_provenance_only_accelerator_boundary()
     package = manifest["package"]
 
     assert package["version"] == "0.1.0"
-    assert package["homepage"] == "https://edm115.github.io/miniproto/"
+    assert package["homepage"] == "https://miniproto.edm115.dev/"
     assert package["documentation"] == "https://docs.rs/miniproto"
     assert "authors" not in package
     assert package["readme"] == "README.md"

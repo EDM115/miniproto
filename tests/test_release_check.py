@@ -39,8 +39,8 @@ Classifier: Programming Language :: Python :: 3.13
 Classifier: Programming Language :: Python :: 3.14
 Classifier: Programming Language :: Rust
 Classifier: Typing :: Typed
-Project-URL: Homepage, https://edm115.github.io/miniproto/
-Project-URL: Documentation, https://edm115.github.io/miniproto/
+Project-URL: Homepage, https://miniproto.edm115.dev/
+Project-URL: Documentation, https://miniproto.edm115.dev/
 Project-URL: Source, https://github.com/EDM115/miniproto
 Project-URL: Changelog, https://github.com/EDM115/miniproto/blob/master/CHANGELOG.md
 Project-URL: Issues, https://github.com/EDM115/miniproto/issues

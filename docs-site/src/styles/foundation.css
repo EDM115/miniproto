@@ -1,13 +1,13 @@
 @font-face {
-  font-family: "Miniproto Nunito";
-  src: url("../assets/brand/fonts/NunitoSans-ExtraBold-miniproto.woff2") format("woff2");
+  font-family: "Nunito";
+  src: url("../assets/brand/fonts/NunitoSans-ExtraBold.woff2") format("woff2");
   font-style: normal;
   font-weight: 800;
   font-display: swap;
 }
 
 :root {
-  --mp-display-font: "Miniproto Nunito", ui-rounded, system-ui, sans-serif;
+  --mp-display-font: "Nunito", ui-rounded, system-ui, sans-serif;
   --mp-lime: #c7f406;
   --mp-paper: #f4f0df;
   --mp-teal-950: #031f20;

@@ -32,14 +32,14 @@ RUN test -f index.html && test -f start/installation/index.html && test -f pagef
 FROM nginxinc/nginx-unprivileged:1.31.3-alpine3.24 AS runtime-base
 
 LABEL org.opencontainers.image.source="https://github.com/EDM115/miniproto"
-LABEL org.opencontainers.image.description="Root-hosted miniproto documentation"
+LABEL org.opencontainers.image.description="Miniproto documentation"
 
 COPY docs-site/nginx.conf /etc/nginx/conf.d/default.conf
 
 USER 101
-EXPOSE 8080
+EXPOSE 6743
 STOPSIGNAL SIGQUIT
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 CMD wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 CMD wget -q -O /dev/null http://127.0.0.1:6743/ || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
 

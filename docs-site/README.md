@@ -26,17 +26,17 @@ Oxfmt covers the supported TypeScript, JSON, Markdown, and related frontend file
 Build and validate the root-hosted static artifact, then package it in the unprivileged NGINX runtime from the repository root:
 
 ```sh
-MINIPROTO_DOCS_SITE=https://docs.example.com MINIPROTO_DOCS_BASE=/ pnpm --dir docs-site build
+MINIPROTO_DOCS_SITE=https://miniproto.edm115.dev MINIPROTO_DOCS_BASE=/ pnpm --dir docs-site build
 docker build --file docs-site/Dockerfile --tag miniproto-docs .
-docker run --rm --publish 8080:8080 miniproto-docs
+docker run --rm --publish 6743:6743 miniproto-docs
 ```
 
-The default Docker target validates the prepared root-base artifact in Alpine 3.24 and copies it into unprivileged NGINX on Alpine 3.24. This keeps image packaging reliable on small builders; the full reference site can exceed a 768 MiB Node heap while Astro ingests it. The final image contains only the generated site and NGINX listening on port 8080. `MINIPROTO_DOCS_SITE` is set during the preceding Astro build because canonical and social metadata is prerendered. Mount the container at the origin root or place it behind a reverse proxy that preserves root paths. The image health check requests `/` locally.
+The default Docker target validates the prepared root-base artifact in Alpine 3.24 and copies it into unprivileged NGINX on Alpine 3.24. This keeps image packaging reliable on small builders; the full reference site can exceed a 768 MiB Node heap while Astro ingests it. The final image contains only the generated site and NGINX listening on port 6743. `MINIPROTO_DOCS_SITE` is set during the preceding Astro build because canonical and social metadata is prerendered. Mount the container at the origin root or place it behind a reverse proxy that preserves root paths. The image health check requests `/` locally.
 
 Builders with at least 2 GiB available can instead compile and package from canonical source in one Docker invocation:
 
 ```sh
-docker build --file docs-site/Dockerfile --target source-runtime --build-arg MINIPROTO_DOCS_SITE=https://docs.example.com --tag miniproto-docs .
+docker build --file docs-site/Dockerfile --target source-runtime --build-arg MINIPROTO_DOCS_SITE=https://miniproto.edm115.dev --tag miniproto-docs .
 ```
 
 That optional target uses Node.js 26.7.0 and pnpm 11.22.0 on Alpine 3.24 and keeps the pnpm dependency store in BuildKit. Production builds force a fresh Astro content layer so imported Markdown-transform changes cannot reuse stale rendered pages. Both targets produce the same root-base NGINX runtime.

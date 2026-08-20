@@ -387,9 +387,9 @@ def test_documentation_container_is_a_root_based_unprivileged_static_image() -> 
     assert "FROM runtime-base AS runtime" in dockerfile
     assert "COPY --from=artifact --chown=101:101 /site/ /usr/share/nginx/html/" in dockerfile
     assert "USER 101" in dockerfile
-    assert "EXPOSE 8080" in dockerfile
+    assert "EXPOSE 6743" in dockerfile
     assert "HEALTHCHECK" in dockerfile
-    assert "listen 8080 default_server;" in nginx
+    assert "listen 6743 default_server;" in nginx
     assert "root /usr/share/nginx/html;" in nginx
     assert "try_files $uri $uri/ =404;" in nginx
     assert "location ^~ /pagefind/" in nginx

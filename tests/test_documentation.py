@@ -41,7 +41,7 @@ def test_release_facing_documents_cover_the_alpha_contract() -> None:
         "iter_download",
         "verify_plain_hashes",
         "`miniproto` versus `mpgram`",
-        "https://edm115.github.io/miniproto/",
+        "https://miniproto.edm115.dev/",
         "SECURITY.md",
         "CONTRIBUTING.md",
     ):
