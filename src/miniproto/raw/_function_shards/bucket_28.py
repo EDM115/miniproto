@@ -349,6 +349,7 @@ class MessagesForwardMessages(TLRequest):
     drop_media_captions: bool = False
     noforwards: bool = False
     allow_paid_floodskip: bool = False
+    from_ephemeral: bool = False
     from_peer: Any
     id: tuple[int, ...]
     random_id: tuple[int, ...]
@@ -439,6 +440,17 @@ class MessagesForwardMessages(TLRequest):
             type="true",
             flag="flags",
             flag_index=19,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="from_ephemeral",
+            python_name="from_ephemeral",
+            type="true",
+            flag="flags",
+            flag_index=25,
             is_optional=True,
             is_true_flag=True,
             is_vector=False,
@@ -625,6 +637,8 @@ class MessagesForwardMessages(TLRequest):
             flags |= 16384
         if self.allow_paid_floodskip:
             flags |= 524288
+        if self.from_ephemeral:
+            flags |= 33554432
         if self.top_msg_id is not None:
             flags |= 512
         if self.reply_to is not None:
@@ -696,6 +710,7 @@ class MessagesForwardMessages(TLRequest):
         _value_drop_media_captions = bool(flags & 4096)
         _value_noforwards = bool(flags & 16384)
         _value_allow_paid_floodskip = bool(flags & 524288)
+        _value_from_ephemeral = bool(flags & 33554432)
         _value_from_peer, cursor = decode_value("InputPeer", raw_data, cursor)
         _value_id, cursor = decode_vector(raw_data, cursor, "int")
         _value_random_id, cursor = decode_vector(raw_data, cursor, "long")
@@ -748,6 +763,7 @@ class MessagesForwardMessages(TLRequest):
             drop_media_captions=_value_drop_media_captions,
             noforwards=_value_noforwards,
             allow_paid_floodskip=_value_allow_paid_floodskip,
+            from_ephemeral=_value_from_ephemeral,
             from_peer=_value_from_peer,
             id=_value_id,
             random_id=_value_random_id,

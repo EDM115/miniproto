@@ -522,6 +522,439 @@ class MessageActionGiftCode(TLConstructor):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class MessageActionStarGiftUnique(TLConstructor):
+    upgrade: bool = False
+    transferred: bool = False
+    saved: bool = False
+    refunded: bool = False
+    prepaid_upgrade: bool = False
+    assigned: bool = False
+    from_offer: bool = False
+    craft: bool = False
+    name_hidden: bool = False
+    gift: Any
+    can_export_at: int | None = None
+    transfer_stars: int | None = None
+    from_id: Any | None = None
+    peer: Any | None = None
+    saved_id: int | None = None
+    resale_amount: Any | None = None
+    can_transfer_at: int | None = None
+    can_resell_at: int | None = None
+    drop_original_details_stars: int | None = None
+    can_craft_at: int | None = None
+    message: Any | None = None
+    CONSTRUCTOR_ID: ClassVar[int] = 0x7E1C1187
+    QUALNAME: ClassVar[str] = "messageActionStarGiftUnique"
+    RESULT_TYPE: ClassVar[str] = "MessageAction"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="upgrade",
+            python_name="upgrade",
+            type="true",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="transferred",
+            python_name="transferred",
+            type="true",
+            flag="flags",
+            flag_index=1,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="saved",
+            python_name="saved",
+            type="true",
+            flag="flags",
+            flag_index=2,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="refunded",
+            python_name="refunded",
+            type="true",
+            flag="flags",
+            flag_index=5,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="prepaid_upgrade",
+            python_name="prepaid_upgrade",
+            type="true",
+            flag="flags",
+            flag_index=11,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="assigned",
+            python_name="assigned",
+            type="true",
+            flag="flags",
+            flag_index=13,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="from_offer",
+            python_name="from_offer",
+            type="true",
+            flag="flags",
+            flag_index=14,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="craft",
+            python_name="craft",
+            type="true",
+            flag="flags",
+            flag_index=16,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="name_hidden",
+            python_name="name_hidden",
+            type="true",
+            flag="flags",
+            flag_index=17,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="gift",
+            python_name="gift",
+            type="StarGift",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="can_export_at",
+            python_name="can_export_at",
+            type="int",
+            flag="flags",
+            flag_index=3,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="transfer_stars",
+            python_name="transfer_stars",
+            type="long",
+            flag="flags",
+            flag_index=4,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="from_id",
+            python_name="from_id",
+            type="Peer",
+            flag="flags",
+            flag_index=6,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="peer",
+            python_name="peer",
+            type="Peer",
+            flag="flags",
+            flag_index=7,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="saved_id",
+            python_name="saved_id",
+            type="long",
+            flag="flags",
+            flag_index=7,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="resale_amount",
+            python_name="resale_amount",
+            type="StarsAmount",
+            flag="flags",
+            flag_index=8,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="can_transfer_at",
+            python_name="can_transfer_at",
+            type="int",
+            flag="flags",
+            flag_index=9,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="can_resell_at",
+            python_name="can_resell_at",
+            type="int",
+            flag="flags",
+            flag_index=10,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="drop_original_details_stars",
+            python_name="drop_original_details_stars",
+            type="long",
+            flag="flags",
+            flag_index=12,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="can_craft_at",
+            python_name="can_craft_at",
+            type="int",
+            flag="flags",
+            flag_index=15,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="message",
+            python_name="message",
+            type="TextWithEntities",
+            flag="flags",
+            flag_index=18,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.upgrade:
+            flags |= 1
+        if self.transferred:
+            flags |= 2
+        if self.saved:
+            flags |= 4
+        if self.refunded:
+            flags |= 32
+        if self.prepaid_upgrade:
+            flags |= 2048
+        if self.assigned:
+            flags |= 8192
+        if self.from_offer:
+            flags |= 16384
+        if self.craft:
+            flags |= 65536
+        if self.name_hidden:
+            flags |= 131072
+        if self.can_export_at is not None:
+            flags |= 8
+        if self.transfer_stars is not None:
+            flags |= 16
+        if self.from_id is not None:
+            flags |= 64
+        if self.peer is not None:
+            flags |= 128
+        if self.saved_id is not None:
+            flags |= 128
+        if self.resale_amount is not None:
+            flags |= 256
+        if self.can_transfer_at is not None:
+            flags |= 512
+        if self.can_resell_at is not None:
+            flags |= 1024
+        if self.drop_original_details_stars is not None:
+            flags |= 4096
+        if self.can_craft_at is not None:
+            flags |= 32768
+        if self.message is not None:
+            flags |= 262144
+        output.extend(encode_int(flags))
+        output.extend(encode_value("StarGift", self.gift))
+        if self.can_export_at is not None:
+            output.extend(encode_int(self.can_export_at))
+        if self.transfer_stars is not None:
+            output.extend(encode_long(self.transfer_stars))
+        if self.from_id is not None:
+            output.extend(encode_value("Peer", self.from_id))
+        if self.peer is not None:
+            output.extend(encode_value("Peer", self.peer))
+        if self.saved_id is not None:
+            output.extend(encode_long(self.saved_id))
+        if self.resale_amount is not None:
+            output.extend(encode_value("StarsAmount", self.resale_amount))
+        if self.can_transfer_at is not None:
+            output.extend(encode_int(self.can_transfer_at))
+        if self.can_resell_at is not None:
+            output.extend(encode_int(self.can_resell_at))
+        if self.drop_original_details_stars is not None:
+            output.extend(encode_long(self.drop_original_details_stars))
+        if self.can_craft_at is not None:
+            output.extend(encode_int(self.can_craft_at))
+        if self.message is not None:
+            output.extend(encode_value("TextWithEntities", self.message))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_upgrade = bool(flags & 1)
+        _value_transferred = bool(flags & 2)
+        _value_saved = bool(flags & 4)
+        _value_refunded = bool(flags & 32)
+        _value_prepaid_upgrade = bool(flags & 2048)
+        _value_assigned = bool(flags & 8192)
+        _value_from_offer = bool(flags & 16384)
+        _value_craft = bool(flags & 65536)
+        _value_name_hidden = bool(flags & 131072)
+        _value_gift, cursor = decode_value("StarGift", raw_data, cursor)
+        if bool(flags & 8):
+            _value_can_export_at, cursor = decode_int(raw_data, cursor)
+        else:
+            _value_can_export_at = None
+        if bool(flags & 16):
+            _value_transfer_stars, cursor = decode_long(raw_data, cursor)
+        else:
+            _value_transfer_stars = None
+        if bool(flags & 64):
+            _value_from_id, cursor = decode_value("Peer", raw_data, cursor)
+        else:
+            _value_from_id = None
+        if bool(flags & 128):
+            _value_peer, cursor = decode_value("Peer", raw_data, cursor)
+        else:
+            _value_peer = None
+        if bool(flags & 128):
+            _value_saved_id, cursor = decode_long(raw_data, cursor)
+        else:
+            _value_saved_id = None
+        if bool(flags & 256):
+            _value_resale_amount, cursor = decode_value("StarsAmount", raw_data, cursor)
+        else:
+            _value_resale_amount = None
+        if bool(flags & 512):
+            _value_can_transfer_at, cursor = decode_int(raw_data, cursor)
+        else:
+            _value_can_transfer_at = None
+        if bool(flags & 1024):
+            _value_can_resell_at, cursor = decode_int(raw_data, cursor)
+        else:
+            _value_can_resell_at = None
+        if bool(flags & 4096):
+            _value_drop_original_details_stars, cursor = decode_long(raw_data, cursor)
+        else:
+            _value_drop_original_details_stars = None
+        if bool(flags & 32768):
+            _value_can_craft_at, cursor = decode_int(raw_data, cursor)
+        else:
+            _value_can_craft_at = None
+        if bool(flags & 262144):
+            _value_message, cursor = decode_value("TextWithEntities", raw_data, cursor)
+        else:
+            _value_message = None
+        return cls(
+            upgrade=_value_upgrade,
+            transferred=_value_transferred,
+            saved=_value_saved,
+            refunded=_value_refunded,
+            prepaid_upgrade=_value_prepaid_upgrade,
+            assigned=_value_assigned,
+            from_offer=_value_from_offer,
+            craft=_value_craft,
+            name_hidden=_value_name_hidden,
+            gift=_value_gift,
+            can_export_at=_value_can_export_at,
+            transfer_stars=_value_transfer_stars,
+            from_id=_value_from_id,
+            peer=_value_peer,
+            saved_id=_value_saved_id,
+            resale_amount=_value_resale_amount,
+            can_transfer_at=_value_can_transfer_at,
+            can_resell_at=_value_can_resell_at,
+            drop_original_details_stars=_value_drop_original_details_stars,
+            can_craft_at=_value_can_craft_at,
+            message=_value_message,
+        ), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class InputMessagesFilterUrl(TLConstructor):
     pass
     CONSTRUCTOR_ID: ClassVar[int] = 0x7EF0DD87
@@ -985,96 +1418,6 @@ class WebPagePending(TLConstructor):
             _value_url = None
         _value_date, cursor = decode_int(raw_data, cursor)
         return cls(id=_value_id, url=_value_url, date=_value_date), cursor
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
-class InputKeyboardButtonUserProfile(TLConstructor):
-    style: Any | None = None
-    text: str
-    user_id: Any
-    CONSTRUCTOR_ID: ClassVar[int] = 0x7D5E07C7
-    QUALNAME: ClassVar[str] = "inputKeyboardButtonUserProfile"
-    RESULT_TYPE: ClassVar[str] = "KeyboardButton"
-    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
-        TLField(
-            name="style",
-            python_name="style",
-            type="KeyboardButtonStyle",
-            flag="flags",
-            flag_index=10,
-            is_optional=True,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="text",
-            python_name="text",
-            type="string",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="user_id",
-            python_name="user_id",
-            type="InputUser",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-    )
-    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
-        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
-    )
-
-    def serialize(self) -> bytes:
-        return self._serialize(boxed=True)
-
-    def _serialize(self, *, boxed: bool = True) -> bytes:
-        output = bytearray()
-        if boxed:
-            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
-        flags = 0
-        if self.style is not None:
-            flags |= 1024
-        output.extend(encode_int(flags))
-        if self.style is not None:
-            output.extend(encode_value("KeyboardButtonStyle", self.style))
-        output.extend(encode_string(self.text))
-        output.extend(encode_value("InputUser", self.user_id))
-        return bytes(output)
-
-    @classmethod
-    def deserialize(cls, data: bytes | memoryview) -> Self:
-        obj, offset = cls._deserialize(data)
-        if offset != len(data):
-            raise TLCodecError("TL object payload has trailing bytes")
-        return obj
-
-    @classmethod
-    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
-        raw_data = data
-        cursor = offset
-        if boxed:
-            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
-            if constructor_id != cls.CONSTRUCTOR_ID:
-                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
-        flags = 0
-        flags, cursor = decode_int(raw_data, cursor)
-        if bool(flags & 1024):
-            _value_style, cursor = decode_value("KeyboardButtonStyle", raw_data, cursor)
-        else:
-            _value_style = None
-        _value_text, cursor = decode_string(raw_data, cursor)
-        _value_user_id, cursor = decode_value("InputUser", raw_data, cursor)
-        return cls(style=_value_style, text=_value_text, user_id=_value_user_id), cursor
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -3034,13 +3377,13 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     CommunityFull,
     MessageMediaDice,
     MessageActionGiftCode,
+    MessageActionStarGiftUnique,
     InputMessagesFilterUrl,
     InputMessagesFilterGif,
     UpdateBotInlineSend,
     EncryptedChat,
     InputPrivacyValueDisallowContacts,
     WebPagePending,
-    InputKeyboardButtonUserProfile,
     MessageEntityBotCommand,
     MessageEntityFormattedDate,
     InputBotInlineMessageText,
@@ -3065,13 +3408,13 @@ __all__ = (
     "CommunityFull",
     "MessageMediaDice",
     "MessageActionGiftCode",
+    "MessageActionStarGiftUnique",
     "InputMessagesFilterUrl",
     "InputMessagesFilterGif",
     "UpdateBotInlineSend",
     "EncryptedChat",
     "InputPrivacyValueDisallowContacts",
     "WebPagePending",
-    "InputKeyboardButtonUserProfile",
     "MessageEntityBotCommand",
     "MessageEntityFormattedDate",
     "InputBotInlineMessageText",

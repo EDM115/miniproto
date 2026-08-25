@@ -760,6 +760,112 @@ class PrivacyKeyBirthday(TLConstructor):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class PageBlockButtonRow(TLConstructor):
+    align_left: bool = False
+    align_center: bool = False
+    align_right: bool = False
+    buttons: tuple[Any, ...]
+    CONSTRUCTOR_ID: ClassVar[int] = 0x6D640318
+    QUALNAME: ClassVar[str] = "pageBlockButtonRow"
+    RESULT_TYPE: ClassVar[str] = "PageBlock"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="align_left",
+            python_name="align_left",
+            type="true",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="align_center",
+            python_name="align_center",
+            type="true",
+            flag="flags",
+            flag_index=1,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="align_right",
+            python_name="align_right",
+            type="true",
+            flag="flags",
+            flag_index=2,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="buttons",
+            python_name="buttons",
+            type="Vector<PageButton>",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=True,
+            vector_item_type="PageButton",
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.align_left:
+            flags |= 1
+        if self.align_center:
+            flags |= 2
+        if self.align_right:
+            flags |= 4
+        output.extend(encode_int(flags))
+        output.extend(encode_vector(self.buttons, "PageButton"))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_align_left = bool(flags & 1)
+        _value_align_center = bool(flags & 2)
+        _value_align_right = bool(flags & 4)
+        _value_buttons, cursor = decode_vector(raw_data, cursor, "PageButton")
+        return cls(
+            align_left=_value_align_left,
+            align_center=_value_align_center,
+            align_right=_value_align_right,
+            buttons=_value_buttons,
+        ), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class ChannelAdminLogEventActionUpdatePinned(TLConstructor):
     message: Any
     CONSTRUCTOR_ID: ClassVar[int] = 0xE9E82C18
@@ -1950,6 +2056,128 @@ class WebViewResultUrl(TLConstructor):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class InputInvoiceStarGiftResale(TLConstructor):
+    ton: bool = False
+    show_name: bool = False
+    slug: str
+    to_id: Any
+    message: Any | None = None
+    CONSTRUCTOR_ID: ClassVar[int] = 0xE9B0C658
+    QUALNAME: ClassVar[str] = "inputInvoiceStarGiftResale"
+    RESULT_TYPE: ClassVar[str] = "InputInvoice"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="ton",
+            python_name="ton",
+            type="true",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="show_name",
+            python_name="show_name",
+            type="true",
+            flag="flags",
+            flag_index=2,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="slug",
+            python_name="slug",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="to_id",
+            python_name="to_id",
+            type="InputPeer",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="message",
+            python_name="message",
+            type="TextWithEntities",
+            flag="flags",
+            flag_index=1,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.ton:
+            flags |= 1
+        if self.show_name:
+            flags |= 4
+        if self.message is not None:
+            flags |= 2
+        output.extend(encode_int(flags))
+        output.extend(encode_string(self.slug))
+        output.extend(encode_value("InputPeer", self.to_id))
+        if self.message is not None:
+            output.extend(encode_value("TextWithEntities", self.message))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_ton = bool(flags & 1)
+        _value_show_name = bool(flags & 4)
+        _value_slug, cursor = decode_string(raw_data, cursor)
+        _value_to_id, cursor = decode_value("InputPeer", raw_data, cursor)
+        if bool(flags & 2):
+            _value_message, cursor = decode_value("TextWithEntities", raw_data, cursor)
+        else:
+            _value_message = None
+        return cls(
+            ton=_value_ton, show_name=_value_show_name, slug=_value_slug, to_id=_value_to_id, message=_value_message
+        ), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class HelpPeerColorSet(TLConstructor):
     colors: tuple[int, ...]
     CONSTRUCTOR_ID: ClassVar[int] = 0x26219A58
@@ -2499,6 +2727,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     NotifyPeer,
     InputPrivacyKeyStatusTimestamp,
     PrivacyKeyBirthday,
+    PageBlockButtonRow,
     ChannelAdminLogEventActionUpdatePinned,
     ChannelAdminLogEventActionParticipantInvite,
     ChannelAdminLogEventActionParticipantJoinByInvite,
@@ -2511,6 +2740,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     PhoneExportedGroupCallInvite,
     BotCommandScopeUsers,
     WebViewResultUrl,
+    InputInvoiceStarGiftResale,
     HelpPeerColorSet,
     BusinessWorkHours,
     ReactionsNotifySettings,
@@ -2531,6 +2761,7 @@ __all__ = (
     "NotifyPeer",
     "InputPrivacyKeyStatusTimestamp",
     "PrivacyKeyBirthday",
+    "PageBlockButtonRow",
     "ChannelAdminLogEventActionUpdatePinned",
     "ChannelAdminLogEventActionParticipantInvite",
     "ChannelAdminLogEventActionParticipantJoinByInvite",
@@ -2543,6 +2774,7 @@ __all__ = (
     "PhoneExportedGroupCallInvite",
     "BotCommandScopeUsers",
     "WebViewResultUrl",
+    "InputInvoiceStarGiftResale",
     "HelpPeerColorSet",
     "BusinessWorkHours",
     "ReactionsNotifySettings",

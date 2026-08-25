@@ -1491,178 +1491,6 @@ class ChatlistsExportChatlistInvite(TLRequest):
         return cls(chatlist=_value_chatlist, title=_value_title, peers=_value_peers), cursor
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class EphemeralEditMessage(TLRequest):
-    peer: Any
-    receiver_id: Any
-    id: int
-    message: str | None = None
-    media: Any | None = None
-    entities: tuple[Any, ...] | None = None
-    reply_markup: Any | None = None
-    CONSTRUCTOR_ID: ClassVar[int] = 0x13F250EE
-    QUALNAME: ClassVar[str] = "ephemeral.editMessage"
-    RESULT_TYPE: ClassVar[str] = "Updates"
-    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
-        TLField(
-            name="peer",
-            python_name="peer",
-            type="InputPeer",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="receiver_id",
-            python_name="receiver_id",
-            type="InputUser",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="id",
-            python_name="id",
-            type="int",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="message",
-            python_name="message",
-            type="string",
-            flag="flags",
-            flag_index=0,
-            is_optional=True,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="media",
-            python_name="media",
-            type="InputMedia",
-            flag="flags",
-            flag_index=3,
-            is_optional=True,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="entities",
-            python_name="entities",
-            type="Vector<MessageEntity>",
-            flag="flags",
-            flag_index=1,
-            is_optional=True,
-            is_true_flag=False,
-            is_vector=True,
-            vector_item_type="MessageEntity",
-        ),
-        TLField(
-            name="reply_markup",
-            python_name="reply_markup",
-            type="ReplyMarkup",
-            flag="flags",
-            flag_index=2,
-            is_optional=True,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-    )
-    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
-        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
-    )
-
-    def serialize(self) -> bytes:
-        return self._serialize(boxed=True)
-
-    def _serialize(self, *, boxed: bool = True) -> bytes:
-        output = bytearray()
-        if boxed:
-            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
-        flags = 0
-        if self.message is not None:
-            flags |= 1
-        if self.media is not None:
-            flags |= 8
-        if self.entities is not None:
-            flags |= 2
-        if self.reply_markup is not None:
-            flags |= 4
-        output.extend(encode_int(flags))
-        output.extend(encode_value("InputPeer", self.peer))
-        output.extend(encode_value("InputUser", self.receiver_id))
-        output.extend(encode_int(self.id))
-        if self.message is not None:
-            output.extend(encode_string(self.message))
-        if self.media is not None:
-            output.extend(encode_value("InputMedia", self.media))
-        if self.entities is not None:
-            output.extend(encode_vector(self.entities, "MessageEntity"))
-        if self.reply_markup is not None:
-            output.extend(encode_value("ReplyMarkup", self.reply_markup))
-        return bytes(output)
-
-    @classmethod
-    def deserialize(cls, data: bytes | memoryview) -> Self:
-        obj, offset = cls._deserialize(data)
-        if offset != len(data):
-            raise TLCodecError("TL object payload has trailing bytes")
-        return obj
-
-    @classmethod
-    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
-        raw_data = data
-        cursor = offset
-        if boxed:
-            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
-            if constructor_id != cls.CONSTRUCTOR_ID:
-                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
-        flags = 0
-        flags, cursor = decode_int(raw_data, cursor)
-        _value_peer, cursor = decode_value("InputPeer", raw_data, cursor)
-        _value_receiver_id, cursor = decode_value("InputUser", raw_data, cursor)
-        _value_id, cursor = decode_int(raw_data, cursor)
-        if bool(flags & 1):
-            _value_message, cursor = decode_string(raw_data, cursor)
-        else:
-            _value_message = None
-        if bool(flags & 8):
-            _value_media, cursor = decode_value("InputMedia", raw_data, cursor)
-        else:
-            _value_media = None
-        if bool(flags & 2):
-            _value_entities, cursor = decode_vector(raw_data, cursor, "MessageEntity")
-        else:
-            _value_entities = None
-        if bool(flags & 4):
-            _value_reply_markup, cursor = decode_value("ReplyMarkup", raw_data, cursor)
-        else:
-            _value_reply_markup = None
-        return cls(
-            peer=_value_peer,
-            receiver_id=_value_receiver_id,
-            id=_value_id,
-            message=_value_message,
-            media=_value_media,
-            entities=_value_entities,
-            reply_markup=_value_reply_markup,
-        ), cursor
-
-
 class account:
     ClearRecentEmojiStatuses = AccountClearRecentEmojiStatuses
     CreateBusinessChatLink = AccountCreateBusinessChatLink
@@ -1686,10 +1514,6 @@ class chatlists:
 
 class contacts:
     GetStatuses = ContactsGetStatuses
-
-
-class ephemeral:
-    EditMessage = EphemeralEditMessage
 
 
 class messages:
@@ -1722,7 +1546,6 @@ ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
     ChannelsGetInactiveChannels,
     ChannelsSetBoostsToUnblockRestrictions,
     ChatlistsExportChatlistInvite,
-    EphemeralEditMessage,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLRequest]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_FUNCTIONS}
 NAME_MAP: dict[str, type[TLRequest]] = {entry.QUALNAME: entry for entry in ALL_FUNCTIONS}
@@ -1748,12 +1571,10 @@ __all__ = (
     "ChannelsGetInactiveChannels",
     "ChannelsSetBoostsToUnblockRestrictions",
     "ChatlistsExportChatlistInvite",
-    "EphemeralEditMessage",
     "account",
     "channels",
     "chatlists",
     "contacts",
-    "ephemeral",
     "messages",
     "CONSTRUCTOR_ID_MAP",
     "NAME_MAP",

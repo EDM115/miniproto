@@ -1460,6 +1460,110 @@ class CommunityPeer(TLConstructor):
         return cls(can_view_history=_value_can_view_history, visible=_value_visible, peer=_value_peer), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class RichButtonStyle(TLConstructor):
+    bg_primary: bool = False
+    bg_danger: bool = False
+    bg_success: bool = False
+    link: bool = False
+    CONSTRUCTOR_ID: ClassVar[int] = 0x03C610BD
+    QUALNAME: ClassVar[str] = "richButtonStyle"
+    RESULT_TYPE: ClassVar[str] = "RichButtonStyle"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="bg_primary",
+            python_name="bg_primary",
+            type="true",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="bg_danger",
+            python_name="bg_danger",
+            type="true",
+            flag="flags",
+            flag_index=1,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="bg_success",
+            python_name="bg_success",
+            type="true",
+            flag="flags",
+            flag_index=2,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="link",
+            python_name="link",
+            type="true",
+            flag="flags",
+            flag_index=3,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.bg_primary:
+            flags |= 1
+        if self.bg_danger:
+            flags |= 2
+        if self.bg_success:
+            flags |= 4
+        if self.link:
+            flags |= 8
+        output.extend(encode_int(flags))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_bg_primary = bool(flags & 1)
+        _value_bg_danger = bool(flags & 2)
+        _value_bg_success = bool(flags & 4)
+        _value_link = bool(flags & 8)
+        return cls(
+            bg_primary=_value_bg_primary, bg_danger=_value_bg_danger, bg_success=_value_bg_success, link=_value_link
+        ), cursor
+
+
 class account:
     ResetPasswordRequestedWait = AccountResetPasswordRequestedWait
 
@@ -1487,6 +1591,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     MessagesWebPage,
     InputRichFileDocument,
     CommunityPeer,
+    RichButtonStyle,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -1509,6 +1614,7 @@ __all__ = (
     "MessagesWebPage",
     "InputRichFileDocument",
     "CommunityPeer",
+    "RichButtonStyle",
     "account",
     "messages",
     "CONSTRUCTOR_ID_MAP",

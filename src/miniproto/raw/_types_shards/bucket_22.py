@@ -1380,6 +1380,166 @@ class UpdateBotPrecheckoutQuery(TLConstructor):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class UpdateEphemeralBotCallbackQuery(TLConstructor):
+    query_id: int
+    user_id: int
+    peer: Any | None = None
+    msg_id: int
+    data: bytes
+    chat_instance: int | None = None
+    message: Any
+    CONSTRUCTOR_ID: ClassVar[int] = 0x7C1079D6
+    QUALNAME: ClassVar[str] = "updateEphemeralBotCallbackQuery"
+    RESULT_TYPE: ClassVar[str] = "Update"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="query_id",
+            python_name="query_id",
+            type="long",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="user_id",
+            python_name="user_id",
+            type="long",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="peer",
+            python_name="peer",
+            type="Peer",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="msg_id",
+            python_name="msg_id",
+            type="int",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="data",
+            python_name="data",
+            type="bytes",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="chat_instance",
+            python_name="chat_instance",
+            type="long",
+            flag="flags",
+            flag_index=1,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="message",
+            python_name="message",
+            type="EphemeralMessage",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.peer is not None:
+            flags |= 1
+        if self.chat_instance is not None:
+            flags |= 2
+        output.extend(encode_int(flags))
+        output.extend(encode_long(self.query_id))
+        output.extend(encode_long(self.user_id))
+        if self.peer is not None:
+            output.extend(encode_value("Peer", self.peer))
+        output.extend(encode_int(self.msg_id))
+        output.extend(encode_bytes(self.data))
+        if self.chat_instance is not None:
+            output.extend(encode_long(self.chat_instance))
+        output.extend(encode_value("EphemeralMessage", self.message))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_query_id, cursor = decode_long(raw_data, cursor)
+        _value_user_id, cursor = decode_long(raw_data, cursor)
+        if bool(flags & 1):
+            _value_peer, cursor = decode_value("Peer", raw_data, cursor)
+        else:
+            _value_peer = None
+        _value_msg_id, cursor = decode_int(raw_data, cursor)
+        _value_data, cursor = decode_bytes(raw_data, cursor)
+        if bool(flags & 2):
+            _value_chat_instance, cursor = decode_long(raw_data, cursor)
+        else:
+            _value_chat_instance = None
+        _value_message, cursor = decode_value("EphemeralMessage", raw_data, cursor)
+        return cls(
+            query_id=_value_query_id,
+            user_id=_value_user_id,
+            peer=_value_peer,
+            msg_id=_value_msg_id,
+            data=_value_data,
+            chat_instance=_value_chat_instance,
+            message=_value_message,
+        ), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class ChatInviteExported(TLConstructor):
     revoked: bool = False
     permanent: bool = False
@@ -1776,178 +1936,6 @@ class MessagesStickerSet(TLConstructor):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class InputKeyboardButtonRequestPeer(TLConstructor):
-    name_requested: bool = False
-    username_requested: bool = False
-    photo_requested: bool = False
-    style: Any | None = None
-    text: str
-    button_id: int
-    peer_type: Any
-    max_quantity: int
-    CONSTRUCTOR_ID: ClassVar[int] = 0x02B78156
-    QUALNAME: ClassVar[str] = "inputKeyboardButtonRequestPeer"
-    RESULT_TYPE: ClassVar[str] = "KeyboardButton"
-    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
-        TLField(
-            name="name_requested",
-            python_name="name_requested",
-            type="true",
-            flag="flags",
-            flag_index=0,
-            is_optional=True,
-            is_true_flag=True,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="username_requested",
-            python_name="username_requested",
-            type="true",
-            flag="flags",
-            flag_index=1,
-            is_optional=True,
-            is_true_flag=True,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="photo_requested",
-            python_name="photo_requested",
-            type="true",
-            flag="flags",
-            flag_index=2,
-            is_optional=True,
-            is_true_flag=True,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="style",
-            python_name="style",
-            type="KeyboardButtonStyle",
-            flag="flags",
-            flag_index=10,
-            is_optional=True,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="text",
-            python_name="text",
-            type="string",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="button_id",
-            python_name="button_id",
-            type="int",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="peer_type",
-            python_name="peer_type",
-            type="RequestPeerType",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="max_quantity",
-            python_name="max_quantity",
-            type="int",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-    )
-    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
-        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
-    )
-
-    def serialize(self) -> bytes:
-        return self._serialize(boxed=True)
-
-    def _serialize(self, *, boxed: bool = True) -> bytes:
-        output = bytearray()
-        if boxed:
-            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
-        flags = 0
-        if self.name_requested:
-            flags |= 1
-        if self.username_requested:
-            flags |= 2
-        if self.photo_requested:
-            flags |= 4
-        if self.style is not None:
-            flags |= 1024
-        output.extend(encode_int(flags))
-        if self.style is not None:
-            output.extend(encode_value("KeyboardButtonStyle", self.style))
-        output.extend(encode_string(self.text))
-        output.extend(encode_int(self.button_id))
-        output.extend(encode_value("RequestPeerType", self.peer_type))
-        output.extend(encode_int(self.max_quantity))
-        return bytes(output)
-
-    @classmethod
-    def deserialize(cls, data: bytes | memoryview) -> Self:
-        obj, offset = cls._deserialize(data)
-        if offset != len(data):
-            raise TLCodecError("TL object payload has trailing bytes")
-        return obj
-
-    @classmethod
-    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
-        raw_data = data
-        cursor = offset
-        if boxed:
-            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
-            if constructor_id != cls.CONSTRUCTOR_ID:
-                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
-        flags = 0
-        flags, cursor = decode_int(raw_data, cursor)
-        _value_name_requested = bool(flags & 1)
-        _value_username_requested = bool(flags & 2)
-        _value_photo_requested = bool(flags & 4)
-        if bool(flags & 1024):
-            _value_style, cursor = decode_value("KeyboardButtonStyle", raw_data, cursor)
-        else:
-            _value_style = None
-        _value_text, cursor = decode_string(raw_data, cursor)
-        _value_button_id, cursor = decode_int(raw_data, cursor)
-        _value_peer_type, cursor = decode_value("RequestPeerType", raw_data, cursor)
-        _value_max_quantity, cursor = decode_int(raw_data, cursor)
-        return cls(
-            name_requested=_value_name_requested,
-            username_requested=_value_username_requested,
-            photo_requested=_value_photo_requested,
-            style=_value_style,
-            text=_value_text,
-            button_id=_value_button_id,
-            peer_type=_value_peer_type,
-            max_quantity=_value_max_quantity,
-        ), cursor
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
 class MessageEntityDiffInsert(TLConstructor):
     offset: int
     length: int
@@ -2280,6 +2268,96 @@ class TextEmail(TLConstructor):
         _value_text, cursor = decode_value("RichText", raw_data, cursor)
         _value_email, cursor = decode_string(raw_data, cursor)
         return cls(text=_value_text, email=_value_email), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class TextButton(TLConstructor):
+    text: Any
+    type: Any
+    style: Any | None = None
+    CONSTRUCTOR_ID: ClassVar[int] = 0xAFC79CD6
+    QUALNAME: ClassVar[str] = "textButton"
+    RESULT_TYPE: ClassVar[str] = "RichText"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="text",
+            python_name="text",
+            type="RichText",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="type",
+            python_name="type",
+            type="InlineButtonType",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="style",
+            python_name="style",
+            type="RichButtonStyle",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.style is not None:
+            flags |= 1
+        output.extend(encode_int(flags))
+        output.extend(encode_value("RichText", self.text))
+        output.extend(encode_value("InlineButtonType", self.type))
+        if self.style is not None:
+            output.extend(encode_value("RichButtonStyle", self.style))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_text, cursor = decode_value("RichText", raw_data, cursor)
+        _value_type, cursor = decode_value("InlineButtonType", raw_data, cursor)
+        if bool(flags & 1):
+            _value_style, cursor = decode_value("RichButtonStyle", raw_data, cursor)
+        else:
+            _value_style = None
+        return cls(text=_value_text, type=_value_type, style=_value_style), cursor
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -3982,13 +4060,14 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     UpdateMessageID,
     UpdateEncryptedChatTyping,
     UpdateBotPrecheckoutQuery,
+    UpdateEphemeralBotCallbackQuery,
     ChatInviteExported,
     MessagesStickerSet,
-    InputKeyboardButtonRequestPeer,
     MessageEntityDiffInsert,
     ChannelParticipant,
     MessagesRecentStickers,
     TextEmail,
+    TextButton,
     PageBlockRelatedArticles,
     SecureValueErrorSelfie,
     SavedPhoneContact,
@@ -4019,13 +4098,14 @@ __all__ = (
     "UpdateMessageID",
     "UpdateEncryptedChatTyping",
     "UpdateBotPrecheckoutQuery",
+    "UpdateEphemeralBotCallbackQuery",
     "ChatInviteExported",
     "MessagesStickerSet",
-    "InputKeyboardButtonRequestPeer",
     "MessageEntityDiffInsert",
     "ChannelParticipant",
     "MessagesRecentStickers",
     "TextEmail",
+    "TextButton",
     "PageBlockRelatedArticles",
     "SecureValueErrorSelfie",
     "SavedPhoneContact",

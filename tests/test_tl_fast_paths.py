@@ -38,8 +38,8 @@ def _has_direction(entry: dict[str, Any], direction: str) -> bool:
 
 
 def test_fast_path_metadata_is_layer_and_schema_pinned_with_thirty_unique_entries() -> None:
-    assert SCHEMA_LAYER == 228
-    assert SCHEMA_JSON_SHA256 == "1ca3f912010f05991a67367485396139e75efc47e6c2c62fcce56352867f9805"
+    assert SCHEMA_LAYER == 229
+    assert SCHEMA_JSON_SHA256 == "0631ec65da66e15bcfc45d34ac32bfbbca244985f8c1ffdd928a28ef64c49d8c"
     assert len(FAST_PATHS) == 30
     assert len(FAST_PATHS_BY_ID) == 30
     assert len(_API_PATHS) == 20

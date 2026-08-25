@@ -793,6 +793,70 @@ class AuthCodeTypeCall(TLConstructor):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class PageBlockDocument(TLConstructor):
+    document_id: int
+    caption: Any
+    CONSTRUCTOR_ID: ClassVar[int] = 0x38FA3BA3
+    QUALNAME: ClassVar[str] = "pageBlockDocument"
+    RESULT_TYPE: ClassVar[str] = "PageBlock"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="document_id",
+            python_name="document_id",
+            type="long",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="caption",
+            python_name="caption",
+            type="PageCaption",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_long(self.document_id))
+        output.extend(encode_value("PageCaption", self.caption))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_document_id, cursor = decode_long(raw_data, cursor)
+        _value_caption, cursor = decode_value("PageCaption", raw_data, cursor)
+        return cls(document_id=_value_document_id, caption=_value_caption), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class LangPackLanguage(TLConstructor):
     official: bool = False
     rtl: bool = False
@@ -1663,6 +1727,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     PrivacyKeyForwards,
     PrivacyValueDisallowAll,
     AuthCodeTypeCall,
+    PageBlockDocument,
     LangPackLanguage,
     SecureValueTypePersonalDetails,
     SecureValueTypeInternalPassport,
@@ -1687,6 +1752,7 @@ __all__ = (
     "PrivacyKeyForwards",
     "PrivacyValueDisallowAll",
     "AuthCodeTypeCall",
+    "PageBlockDocument",
     "LangPackLanguage",
     "SecureValueTypePersonalDetails",
     "SecureValueTypeInternalPassport",

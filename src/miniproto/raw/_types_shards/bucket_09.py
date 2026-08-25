@@ -936,96 +936,6 @@ class AccountPasswordInputSettings(TLConstructor):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class KeyboardButtonUserProfile(TLConstructor):
-    style: Any | None = None
-    text: str
-    user_id: int
-    CONSTRUCTOR_ID: ClassVar[int] = 0xC0FD5D09
-    QUALNAME: ClassVar[str] = "keyboardButtonUserProfile"
-    RESULT_TYPE: ClassVar[str] = "KeyboardButton"
-    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
-        TLField(
-            name="style",
-            python_name="style",
-            type="KeyboardButtonStyle",
-            flag="flags",
-            flag_index=10,
-            is_optional=True,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="text",
-            python_name="text",
-            type="string",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="user_id",
-            python_name="user_id",
-            type="long",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-    )
-    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
-        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
-    )
-
-    def serialize(self) -> bytes:
-        return self._serialize(boxed=True)
-
-    def _serialize(self, *, boxed: bool = True) -> bytes:
-        output = bytearray()
-        if boxed:
-            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
-        flags = 0
-        if self.style is not None:
-            flags |= 1024
-        output.extend(encode_int(flags))
-        if self.style is not None:
-            output.extend(encode_value("KeyboardButtonStyle", self.style))
-        output.extend(encode_string(self.text))
-        output.extend(encode_long(self.user_id))
-        return bytes(output)
-
-    @classmethod
-    def deserialize(cls, data: bytes | memoryview) -> Self:
-        obj, offset = cls._deserialize(data)
-        if offset != len(data):
-            raise TLCodecError("TL object payload has trailing bytes")
-        return obj
-
-    @classmethod
-    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
-        raw_data = data
-        cursor = offset
-        if boxed:
-            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
-            if constructor_id != cls.CONSTRUCTOR_ID:
-                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
-        flags = 0
-        flags, cursor = decode_int(raw_data, cursor)
-        if bool(flags & 1024):
-            _value_style, cursor = decode_value("KeyboardButtonStyle", raw_data, cursor)
-        else:
-            _value_style = None
-        _value_text, cursor = decode_string(raw_data, cursor)
-        _value_user_id, cursor = decode_long(raw_data, cursor)
-        return cls(style=_value_style, text=_value_text, user_id=_value_user_id), cursor
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
 class MessageEntityBold(TLConstructor):
     offset: int
     length: int
@@ -2280,7 +2190,6 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     InputPrivacyValueDisallowAll,
     InputPrivacyValueAllowCloseFriends,
     AccountPasswordInputSettings,
-    KeyboardButtonUserProfile,
     MessageEntityBold,
     InputMessageEntityMentionName,
     BotInlineMessageMediaInvoice,
@@ -2314,7 +2223,6 @@ __all__ = (
     "InputPrivacyValueDisallowAll",
     "InputPrivacyValueAllowCloseFriends",
     "AccountPasswordInputSettings",
-    "KeyboardButtonUserProfile",
     "MessageEntityBold",
     "InputMessageEntityMentionName",
     "BotInlineMessageMediaInvoice",

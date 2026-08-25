@@ -795,6 +795,108 @@ class UpdateManagedBot(TLConstructor):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class SendMessageTextDraftAction(TLConstructor):
+    can_stop: bool = False
+    keep_on_stop: bool = False
+    random_id: int
+    text: Any
+    CONSTRUCTOR_ID: ClassVar[int] = 0x3630B85A
+    QUALNAME: ClassVar[str] = "sendMessageTextDraftAction"
+    RESULT_TYPE: ClassVar[str] = "SendMessageAction"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="can_stop",
+            python_name="can_stop",
+            type="true",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="keep_on_stop",
+            python_name="keep_on_stop",
+            type="true",
+            flag="flags",
+            flag_index=1,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="random_id",
+            python_name="random_id",
+            type="long",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="text",
+            python_name="text",
+            type="TextWithEntities",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.can_stop:
+            flags |= 1
+        if self.keep_on_stop:
+            flags |= 2
+        output.extend(encode_int(flags))
+        output.extend(encode_long(self.random_id))
+        output.extend(encode_value("TextWithEntities", self.text))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_can_stop = bool(flags & 1)
+        _value_keep_on_stop = bool(flags & 2)
+        _value_random_id, cursor = decode_long(raw_data, cursor)
+        _value_text, cursor = decode_value("TextWithEntities", raw_data, cursor)
+        return cls(
+            can_stop=_value_can_stop, keep_on_stop=_value_keep_on_stop, random_id=_value_random_id, text=_value_text
+        ), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class PrivacyValueDisallowContacts(TLConstructor):
     pass
     CONSTRUCTOR_ID: ClassVar[int] = 0xF888FA1A
@@ -1935,159 +2037,25 @@ class StoryAlbum(TLConstructor):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class EphemeralMessage(TLConstructor):
-    out: bool = False
-    id: int
-    from_id: Any
-    peer_id: Any
-    receiver_id: int
-    top_msg_id: int | None = None
-    date: int
-    message: str
-    entities: tuple[Any, ...] | None = None
-    media: Any | None = None
-    reply_markup: Any | None = None
-    reply_to: Any | None = None
-    CONSTRUCTOR_ID: ClassVar[int] = 0xD9C6DC1A
-    QUALNAME: ClassVar[str] = "ephemeralMessage"
-    RESULT_TYPE: ClassVar[str] = "EphemeralMessage"
+class InputInlineButtonTypeUserProfile(TLConstructor):
+    user_id: Any
+    CONSTRUCTOR_ID: ClassVar[int] = 0x53F3CE5A
+    QUALNAME: ClassVar[str] = "inputInlineButtonTypeUserProfile"
+    RESULT_TYPE: ClassVar[str] = "InlineButtonType"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
         TLField(
-            name="out",
-            python_name="out",
-            type="true",
-            flag="flags",
-            flag_index=0,
-            is_optional=True,
-            is_true_flag=True,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="id",
-            python_name="id",
-            type="int",
+            name="user_id",
+            python_name="user_id",
+            type="InputUser",
             flag=None,
             flag_index=None,
             is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="from_id",
-            python_name="from_id",
-            type="Peer",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="peer_id",
-            python_name="peer_id",
-            type="Peer",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="receiver_id",
-            python_name="receiver_id",
-            type="long",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="top_msg_id",
-            python_name="top_msg_id",
-            type="int",
-            flag="flags",
-            flag_index=1,
-            is_optional=True,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="date",
-            python_name="date",
-            type="int",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="message",
-            python_name="message",
-            type="string",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="entities",
-            python_name="entities",
-            type="Vector<MessageEntity>",
-            flag="flags",
-            flag_index=2,
-            is_optional=True,
-            is_true_flag=False,
-            is_vector=True,
-            vector_item_type="MessageEntity",
-        ),
-        TLField(
-            name="media",
-            python_name="media",
-            type="MessageMedia",
-            flag="flags",
-            flag_index=3,
-            is_optional=True,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="reply_markup",
-            python_name="reply_markup",
-            type="ReplyMarkup",
-            flag="flags",
-            flag_index=4,
-            is_optional=True,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="reply_to",
-            python_name="reply_to",
-            type="MessageReplyHeader",
-            flag="flags",
-            flag_index=6,
-            is_optional=True,
             is_true_flag=False,
             is_vector=False,
             vector_item_type=None,
         ),
     )
-    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
-        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
-    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
     def serialize(self) -> bytes:
         return self._serialize(boxed=True)
@@ -2096,36 +2064,7 @@ class EphemeralMessage(TLConstructor):
         output = bytearray()
         if boxed:
             output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
-        flags = 0
-        if self.out:
-            flags |= 1
-        if self.top_msg_id is not None:
-            flags |= 2
-        if self.entities is not None:
-            flags |= 4
-        if self.media is not None:
-            flags |= 8
-        if self.reply_markup is not None:
-            flags |= 16
-        if self.reply_to is not None:
-            flags |= 64
-        output.extend(encode_int(flags))
-        output.extend(encode_int(self.id))
-        output.extend(encode_value("Peer", self.from_id))
-        output.extend(encode_value("Peer", self.peer_id))
-        output.extend(encode_long(self.receiver_id))
-        if self.top_msg_id is not None:
-            output.extend(encode_int(self.top_msg_id))
-        output.extend(encode_int(self.date))
-        output.extend(encode_string(self.message))
-        if self.entities is not None:
-            output.extend(encode_vector(self.entities, "MessageEntity"))
-        if self.media is not None:
-            output.extend(encode_value("MessageMedia", self.media))
-        if self.reply_markup is not None:
-            output.extend(encode_value("ReplyMarkup", self.reply_markup))
-        if self.reply_to is not None:
-            output.extend(encode_value("MessageReplyHeader", self.reply_to))
+        output.extend(encode_value("InputUser", self.user_id))
         return bytes(output)
 
     @classmethod
@@ -2143,49 +2082,8 @@ class EphemeralMessage(TLConstructor):
             constructor_id, cursor = decode_constructor_id(raw_data, cursor)
             if constructor_id != cls.CONSTRUCTOR_ID:
                 raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
-        flags = 0
-        flags, cursor = decode_int(raw_data, cursor)
-        _value_out = bool(flags & 1)
-        _value_id, cursor = decode_int(raw_data, cursor)
-        _value_from_id, cursor = decode_value("Peer", raw_data, cursor)
-        _value_peer_id, cursor = decode_value("Peer", raw_data, cursor)
-        _value_receiver_id, cursor = decode_long(raw_data, cursor)
-        if bool(flags & 2):
-            _value_top_msg_id, cursor = decode_int(raw_data, cursor)
-        else:
-            _value_top_msg_id = None
-        _value_date, cursor = decode_int(raw_data, cursor)
-        _value_message, cursor = decode_string(raw_data, cursor)
-        if bool(flags & 4):
-            _value_entities, cursor = decode_vector(raw_data, cursor, "MessageEntity")
-        else:
-            _value_entities = None
-        if bool(flags & 8):
-            _value_media, cursor = decode_value("MessageMedia", raw_data, cursor)
-        else:
-            _value_media = None
-        if bool(flags & 16):
-            _value_reply_markup, cursor = decode_value("ReplyMarkup", raw_data, cursor)
-        else:
-            _value_reply_markup = None
-        if bool(flags & 64):
-            _value_reply_to, cursor = decode_value("MessageReplyHeader", raw_data, cursor)
-        else:
-            _value_reply_to = None
-        return cls(
-            out=_value_out,
-            id=_value_id,
-            from_id=_value_from_id,
-            peer_id=_value_peer_id,
-            receiver_id=_value_receiver_id,
-            top_msg_id=_value_top_msg_id,
-            date=_value_date,
-            message=_value_message,
-            entities=_value_entities,
-            media=_value_media,
-            reply_markup=_value_reply_markup,
-            reply_to=_value_reply_to,
-        ), cursor
+        _value_user_id, cursor = decode_value("InputUser", raw_data, cursor)
+        return cls(user_id=_value_user_id), cursor
 
 
 class auth:
@@ -2203,6 +2101,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     UpdateNewEncryptedMessage,
     UpdateTranscribedAudio,
     UpdateManagedBot,
+    SendMessageTextDraftAction,
     PrivacyValueDisallowContacts,
     ChannelParticipantSelf,
     DraftMessageEmpty,
@@ -2215,7 +2114,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     StarsSubscription,
     MessageReactor,
     StoryAlbum,
-    EphemeralMessage,
+    InputInlineButtonTypeUserProfile,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -2230,6 +2129,7 @@ __all__ = (
     "UpdateNewEncryptedMessage",
     "UpdateTranscribedAudio",
     "UpdateManagedBot",
+    "SendMessageTextDraftAction",
     "PrivacyValueDisallowContacts",
     "ChannelParticipantSelf",
     "DraftMessageEmpty",
@@ -2242,7 +2142,7 @@ __all__ = (
     "StarsSubscription",
     "MessageReactor",
     "StoryAlbum",
-    "EphemeralMessage",
+    "InputInlineButtonTypeUserProfile",
     "auth",
     "CONSTRUCTOR_ID_MAP",
     "NAME_MAP",

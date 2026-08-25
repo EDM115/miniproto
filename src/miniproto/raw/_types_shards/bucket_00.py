@@ -326,6 +326,56 @@ class MessageActionChatAddUser(TLConstructor):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class MessageActionChatJoinedViaCommunity(TLConstructor):
+    community_id: int
+    CONSTRUCTOR_ID: ClassVar[int] = 0x4A8BFE80
+    QUALNAME: ClassVar[str] = "messageActionChatJoinedViaCommunity"
+    RESULT_TYPE: ClassVar[str] = "MessageAction"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="community_id",
+            python_name="community_id",
+            type="long",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_long(self.community_id))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_community_id, cursor = decode_long(raw_data, cursor)
+        return cls(community_id=_value_community_id), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class MessagesDialogs(TLConstructor):
     dialogs: tuple[Any, ...]
     messages: tuple[Any, ...]
@@ -1784,6 +1834,42 @@ class JoinChatBotResultQueued(TLConstructor):
         return cls(), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class ButtonTypeRequestGeoLocation(TLConstructor):
+    pass
+    CONSTRUCTOR_ID: ClassVar[int] = 0x9BEEE140
+    QUALNAME: ClassVar[str] = "buttonTypeRequestGeoLocation"
+    RESULT_TYPE: ClassVar[str] = "ButtonType"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        return cls(), cursor
+
+
 class auth:
     LoginToken = AuthLoginToken
 
@@ -1805,6 +1891,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     InputChatUploadedPhoto,
     StorageFilePng,
     MessageActionChatAddUser,
+    MessageActionChatJoinedViaCommunity,
     MessagesDialogs,
     UpdateFolderPeers,
     Updates,
@@ -1827,6 +1914,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     ProfileTabFiles,
     InputAiComposeToneID,
     JoinChatBotResultQueued,
+    ButtonTypeRequestGeoLocation,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -1835,6 +1923,7 @@ __all__ = (
     "InputChatUploadedPhoto",
     "StorageFilePng",
     "MessageActionChatAddUser",
+    "MessageActionChatJoinedViaCommunity",
     "MessagesDialogs",
     "UpdateFolderPeers",
     "Updates",
@@ -1857,6 +1946,7 @@ __all__ = (
     "ProfileTabFiles",
     "InputAiComposeToneID",
     "JoinChatBotResultQueued",
+    "ButtonTypeRequestGeoLocation",
     "auth",
     "messages",
     "phone",

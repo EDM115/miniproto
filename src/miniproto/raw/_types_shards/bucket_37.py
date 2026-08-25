@@ -1938,6 +1938,42 @@ class StarGiftAuctionRoundExtendable(TLConstructor):
         ), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class InlineButtonTypeBuy(TLConstructor):
+    pass
+    CONSTRUCTOR_ID: ClassVar[int] = 0x48BAD7A5
+    QUALNAME: ClassVar[str] = "inlineButtonTypeBuy"
+    RESULT_TYPE: ClassVar[str] = "InlineButtonType"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        return cls(), cursor
+
+
 class account:
     PasswordSettings = AccountPasswordSettings
 
@@ -1972,6 +2008,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     Folder,
     SuggestedPost,
     StarGiftAuctionRoundExtendable,
+    InlineButtonTypeBuy,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -1997,6 +2034,7 @@ __all__ = (
     "Folder",
     "SuggestedPost",
     "StarGiftAuctionRoundExtendable",
+    "InlineButtonTypeBuy",
     "account",
     "auth",
     "photos",

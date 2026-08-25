@@ -1183,70 +1183,6 @@ class PageBlockParagraph(TLConstructor):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class PageBlockBlockquote(TLConstructor):
-    text: Any
-    caption: Any
-    CONSTRUCTOR_ID: ClassVar[int] = 0x263D7C26
-    QUALNAME: ClassVar[str] = "pageBlockBlockquote"
-    RESULT_TYPE: ClassVar[str] = "PageBlock"
-    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
-        TLField(
-            name="text",
-            python_name="text",
-            type="RichText",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="caption",
-            python_name="caption",
-            type="RichText",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-    )
-    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
-
-    def serialize(self) -> bytes:
-        return self._serialize(boxed=True)
-
-    def _serialize(self, *, boxed: bool = True) -> bytes:
-        output = bytearray()
-        if boxed:
-            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
-        output.extend(encode_value("RichText", self.text))
-        output.extend(encode_value("RichText", self.caption))
-        return bytes(output)
-
-    @classmethod
-    def deserialize(cls, data: bytes | memoryview) -> Self:
-        obj, offset = cls._deserialize(data)
-        if offset != len(data):
-            raise TLCodecError("TL object payload has trailing bytes")
-        return obj
-
-    @classmethod
-    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
-        raw_data = data
-        cursor = offset
-        if boxed:
-            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
-            if constructor_id != cls.CONSTRUCTOR_ID:
-                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
-        _value_text, cursor = decode_value("RichText", raw_data, cursor)
-        _value_caption, cursor = decode_value("RichText", raw_data, cursor)
-        return cls(text=_value_text, caption=_value_caption), cursor
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
 class ChannelAdminLogEventActionToggleNoForwards(TLConstructor):
     new_value: bool
     CONSTRUCTOR_ID: ClassVar[int] = 0xCB2AC766
@@ -2559,7 +2495,6 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     MessagesMessageEditData,
     MessagesFeaturedStickersNotModified,
     PageBlockParagraph,
-    PageBlockBlockquote,
     ChannelAdminLogEventActionToggleNoForwards,
     SecureValueTypeAddress,
     HelpDeepLinkInfoEmpty,
@@ -2592,7 +2527,6 @@ __all__ = (
     "MessagesMessageEditData",
     "MessagesFeaturedStickersNotModified",
     "PageBlockParagraph",
-    "PageBlockBlockquote",
     "ChannelAdminLogEventActionToggleNoForwards",
     "SecureValueTypeAddress",
     "HelpDeepLinkInfoEmpty",

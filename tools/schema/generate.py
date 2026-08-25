@@ -22,7 +22,13 @@ from pathlib import Path
 from typing import Any
 
 from tools.schema.parser import TLParameter, TLSchema, iter_public_params, parse_schema_file
-from tools.schema.rust_fast import fast_api_directions, load_fast_entries, render_python_metadata, render_rust
+from tools.schema.rust_fast import (
+    fast_api_directions,
+    load_fast_entries,
+    render_fast_manifest,
+    render_python_metadata,
+    render_rust,
+)
 
 _GENERATOR_VERSION = "5"
 _SCHEMA_LAYER = 214
@@ -110,7 +116,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--rust-fast-manifest",
         type=Path,
         default=_DEFAULT_RUST_FAST_MANIFEST,
-        help="reviewed Rust TL fast-path manifest JSON to read",
+        help="reviewed Rust TL fast-path manifest JSON whose schema pins are refreshed",
     )
     parser.add_argument(
         "--generated-rust",
@@ -165,7 +171,7 @@ def render_outputs(
         metadata_path: Generated schema metadata destination and existing metadata input.
         errors_path: Pinned Telegram RPC-error database.
         raw_dir: Root directory for generated raw Python modules and shards.
-        rust_fast_manifest_path: Optional reviewed fast-path manifest.
+        rust_fast_manifest_path: Optional reviewed fast-path manifest whose schema pins are refreshed.
         generated_rust_path: Optional generated Rust fast-path destination.
         fast_metadata_path: Optional generated Python fast-path metadata destination.
         telegram_bindings_path: Optional generated static raw-Python binding manifest destination.
@@ -177,8 +183,15 @@ def render_outputs(
     rpc_error_database = _load_rpc_error_database(errors_path)
     metadata = _metadata(schema_path, errors_path, metadata_path, schema, rpc_error_database)
     binding_manifest_path = telegram_bindings_path or metadata_path.with_name("telegram-bindings.json")
+    fast_manifest = (
+        render_fast_manifest(rust_fast_manifest_path, schema_path, int(metadata["schema_layer"]))
+        if rust_fast_manifest_path is not None
+        else None
+    )
     fast_entries = (
-        load_fast_entries(rust_fast_manifest_path, schema_path, int(metadata["schema_layer"]), schema)
+        load_fast_entries(
+            rust_fast_manifest_path, schema_path, int(metadata["schema_layer"]), schema, manifest_text=fast_manifest
+        )
         if rust_fast_manifest_path is not None
         else ()
     )
@@ -205,6 +218,8 @@ def render_outputs(
         files[fast_metadata_path] = render_python_metadata(
             fast_entries, int(metadata["schema_layer"]), str(metadata["schema_json_sha256"])
         )
+    if rust_fast_manifest_path is not None and fast_manifest is not None:
+        files[rust_fast_manifest_path] = fast_manifest
     files.update(
         _render_shards(
             schema.constructors,

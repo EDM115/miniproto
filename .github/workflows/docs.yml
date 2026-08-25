@@ -45,7 +45,7 @@ jobs:
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          toolchain: nightly-2026-08-12
+          toolchain: nightly-2026-08-25
 
       - name: Install pinned Rust documentation renderer
         run: cargo install cargo-docs-md --version 0.2.4 --locked

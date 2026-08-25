@@ -39,28 +39,28 @@ jobs:
             arch: x86_64
             target: x86_64-unknown-linux-gnu
             compatibility: "2_17"
-            container: quay.io/pypa/manylinux2014_x86_64@sha256:0a42cb7e5f4ba6bbfb8d0a86d1aab0c8876ba9c3be16bd99360ae42bf010ec77
+            container: quay.io/pypa/manylinux2014_x86_64@2026.08.24-1
             docker-platform: linux/amd64
             qemu: ""
           - libc: glibc
             arch: aarch64
             target: aarch64-unknown-linux-gnu
             compatibility: "2_17"
-            container: quay.io/pypa/manylinux2014_aarch64@sha256:63bfa74be47f0277e998cb7c1b571b27664ac848bb356b0f4588438f930285dd
+            container: quay.io/pypa/manylinux2014_aarch64@2026.08.24-1
             docker-platform: linux/arm64
             qemu: arm64
           - libc: musl
             arch: x86_64
             target: x86_64-unknown-linux-musl
             compatibility: musllinux_1_2
-            container: quay.io/pypa/musllinux_1_2_x86_64@sha256:b06e331e36f400fa1529b4dd2ee37016f2828422b2e5d054a66257fcf4535697
+            container: quay.io/pypa/musllinux_1_2_x86_64@2026.08.24-1
             docker-platform: linux/amd64
             qemu: ""
           - libc: musl
             arch: aarch64
             target: aarch64-unknown-linux-musl
             compatibility: musllinux_1_2
-            container: quay.io/pypa/musllinux_1_2_aarch64@sha256:23371d5e69a9c90f17d8b36571204c7164c8fac0685725d05696aa8fd607f43b
+            container: quay.io/pypa/musllinux_1_2_aarch64@2026.08.24-1
             docker-platform: linux/arm64
             qemu: arm64
     steps:
@@ -76,11 +76,11 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           command: build
-          maturin-version: v1.14.1
+          maturin-version: v1.15.0
           target: ${{ matrix.platform.target }}
           manylinux: ${{ matrix.platform.compatibility }}
           container: ${{ matrix.platform.container }}
-          rust-toolchain: "1.97"
+          rust-toolchain: "1.98"
           args: --release --locked --compatibility pypi -i ${{ matrix.python.interpreter }} --out dist
 
       - name: Install and exercise wheel in its target Linux container
@@ -165,10 +165,10 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           command: build
-          maturin-version: v1.14.1
+          maturin-version: v1.15.0
           target: ${{ matrix.platform.target }}
           manylinux: "off"
-          rust-toolchain: "1.97"
+          rust-toolchain: "1.98"
           args: --release --locked --compatibility pypi -i python --out dist
 
       - name: Install and exercise wheel in clean runner Python
@@ -252,7 +252,7 @@ jobs:
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          toolchain: "1.97"
+          toolchain: "1.98"
 
       - name: Build Python source distribution
         run: |
@@ -298,7 +298,7 @@ jobs:
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          toolchain: "1.97"
+          toolchain: "1.98"
 
       - name: Inspect Cargo package contents
         run: cargo package --locked -p miniproto --list

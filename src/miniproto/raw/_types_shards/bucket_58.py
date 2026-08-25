@@ -107,6 +107,7 @@ class ChannelFull(TLConstructor):
     paid_reactions_available: bool = False
     stargifts_available: bool = False
     paid_messages_available: bool = False
+    has_welcome_messages: bool = False
     id: int
     about: str
     participants_count: int | None = None
@@ -383,6 +384,17 @@ class ChannelFull(TLConstructor):
             type="true",
             flag="flags2",
             flag_index=20,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="has_welcome_messages",
+            python_name="has_welcome_messages",
+            type="true",
+            flag="flags2",
+            flag_index=24,
             is_optional=True,
             is_true_flag=True,
             is_vector=False,
@@ -951,6 +963,8 @@ class ChannelFull(TLConstructor):
             flags2 |= 524288
         if self.paid_messages_available:
             flags2 |= 1048576
+        if self.has_welcome_messages:
+            flags2 |= 16777216
         if self.participants_count is not None:
             flags |= 1
         if self.admins_count is not None:
@@ -1152,6 +1166,7 @@ class ChannelFull(TLConstructor):
         _value_paid_reactions_available = bool(flags2 & 65536)
         _value_stargifts_available = bool(flags2 & 524288)
         _value_paid_messages_available = bool(flags2 & 1048576)
+        _value_has_welcome_messages = bool(flags2 & 16777216)
         _value_id, cursor = decode_long(raw_data, cursor)
         _value_about, cursor = decode_string(raw_data, cursor)
         if bool(flags & 1):
@@ -1331,6 +1346,7 @@ class ChannelFull(TLConstructor):
             paid_reactions_available=_value_paid_reactions_available,
             stargifts_available=_value_stargifts_available,
             paid_messages_available=_value_paid_messages_available,
+            has_welcome_messages=_value_has_welcome_messages,
             id=_value_id,
             about=_value_about,
             participants_count=_value_participants_count,
@@ -3769,6 +3785,56 @@ class MessagesComposedMessageWithAI(TLConstructor):
         return cls(result_text=_value_result_text, diff_text=_value_diff_text), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class ButtonTypeSimpleWebView(TLConstructor):
+    url: str
+    CONSTRUCTOR_ID: ClassVar[int] = 0xC01A597A
+    QUALNAME: ClassVar[str] = "buttonTypeSimpleWebView"
+    RESULT_TYPE: ClassVar[str] = "ButtonType"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="url",
+            python_name="url",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_string(self.url))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_url, cursor = decode_string(raw_data, cursor)
+        return cls(url=_value_url), cursor
+
+
 class help:
     PromoData = HelpPromoData
 
@@ -3815,6 +3881,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     PremiumBoostsStatus,
     StoriesAlbums,
     MessagesComposedMessageWithAI,
+    ButtonTypeSimpleWebView,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -3844,6 +3911,7 @@ __all__ = (
     "PremiumBoostsStatus",
     "StoriesAlbums",
     "MessagesComposedMessageWithAI",
+    "ButtonTypeSimpleWebView",
     "help",
     "messages",
     "payments",

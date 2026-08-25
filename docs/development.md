@@ -85,7 +85,7 @@ uv run miniproto-provision-benchmark-session --help
 uv run miniproto-schema-generate
 ```
 
-Run this after changing any pinned input under `tools/schema/`, `tools/schema/generate.py`, or `tools/schema/parser.py`. It rewrites the Layer 228 lazy facades, stubs, registries, shards, errors, generated metadata, and `docs/raw-api.md` from the normalized TDLib canonical model.
+Run this after changing any pinned input under `tools/schema/`, `tools/schema/generate.py`, or `tools/schema/parser.py`. It rewrites the Layer 228 lazy facades, stubs, registries, shards, errors, generated metadata, and `docs/raw-api.md` from the normalized TDLib canonical model. Normal generation also refreshes only the schema layer and hash pins in `tools/schema/rust-fast-paths.json` before validating its reviewed selection and rendering the Rust/Python fast-path outputs; `--check` reports stale pins without rewriting them.
 
 ## Update Pinned Schema Inputs
 

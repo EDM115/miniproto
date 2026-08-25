@@ -2781,6 +2781,96 @@ class MessagesComposedRichMessageWithAI(TLConstructor):
         return cls(result=_value_result), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class PageButton(TLConstructor):
+    text: Any
+    type: Any
+    style: Any | None = None
+    CONSTRUCTOR_ID: ClassVar[int] = 0x692A5488
+    QUALNAME: ClassVar[str] = "pageButton"
+    RESULT_TYPE: ClassVar[str] = "PageButton"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="text",
+            python_name="text",
+            type="RichText",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="type",
+            python_name="type",
+            type="InlineButtonType",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="style",
+            python_name="style",
+            type="RichButtonStyle",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.style is not None:
+            flags |= 1
+        output.extend(encode_int(flags))
+        output.extend(encode_value("RichText", self.text))
+        output.extend(encode_value("InlineButtonType", self.type))
+        if self.style is not None:
+            output.extend(encode_value("RichButtonStyle", self.style))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_text, cursor = decode_value("RichText", raw_data, cursor)
+        _value_type, cursor = decode_value("InlineButtonType", raw_data, cursor)
+        if bool(flags & 1):
+            _value_style, cursor = decode_value("RichButtonStyle", raw_data, cursor)
+        else:
+            _value_style = None
+        return cls(text=_value_text, type=_value_type, style=_value_style), cursor
+
+
 class account:
     PaidMessagesRevenue = AccountPaidMessagesRevenue
 
@@ -2831,6 +2921,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     StarGiftAuctionAcquiredGift,
     InputStarGiftAuctionSlug,
     MessagesComposedRichMessageWithAI,
+    PageButton,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -2871,6 +2962,7 @@ __all__ = (
     "StarGiftAuctionAcquiredGift",
     "InputStarGiftAuctionSlug",
     "MessagesComposedRichMessageWithAI",
+    "PageButton",
     "account",
     "help",
     "messages",

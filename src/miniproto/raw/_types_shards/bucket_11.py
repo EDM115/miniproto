@@ -713,6 +713,91 @@ class BotInlineMediaResult(TLConstructor):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class PageBlockBlockquote(TLConstructor):
+    collapsed: bool = False
+    text: Any
+    caption: Any
+    CONSTRUCTOR_ID: ClassVar[int] = 0x66D1670B
+    QUALNAME: ClassVar[str] = "pageBlockBlockquote"
+    RESULT_TYPE: ClassVar[str] = "PageBlock"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="collapsed",
+            python_name="collapsed",
+            type="true",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="text",
+            python_name="text",
+            type="RichText",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="caption",
+            python_name="caption",
+            type="RichText",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.collapsed:
+            flags |= 1
+        output.extend(encode_int(flags))
+        output.extend(encode_value("RichText", self.text))
+        output.extend(encode_value("RichText", self.caption))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_collapsed = bool(flags & 1)
+        _value_text, cursor = decode_value("RichText", raw_data, cursor)
+        _value_caption, cursor = decode_value("RichText", raw_data, cursor)
+        return cls(collapsed=_value_collapsed, text=_value_text, caption=_value_caption), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class PageBlockEmbedPost(TLConstructor):
     url: str
     webpage_id: int
@@ -1639,6 +1724,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     MessageEntityUnderline,
     ChannelParticipantsSearch,
     BotInlineMediaResult,
+    PageBlockBlockquote,
     PageBlockEmbedPost,
     SecureValueTypeIdentityCard,
     ChannelLocationEmpty,
@@ -1665,6 +1751,7 @@ __all__ = (
     "MessageEntityUnderline",
     "ChannelParticipantsSearch",
     "BotInlineMediaResult",
+    "PageBlockBlockquote",
     "PageBlockEmbedPost",
     "SecureValueTypeIdentityCard",
     "ChannelLocationEmpty",

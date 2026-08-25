@@ -1,5 +1,5 @@
 [build-system]
-requires = ["maturin==1.14.1,<2.0"]
+requires = ["maturin~=1.15.0"]
 build-backend = "maturin"
 
 [project]
@@ -24,22 +24,22 @@ classifiers = [
 ]
 dependencies = [
   # Remove the Windows ARM64 exclusion after https://github.com/pyca/cryptography/pull/15350 ships in a release with regular and free-threaded wheels on PyPI
-  "cryptography==50.0.0; sys_platform != 'win32' or (platform_machine != 'ARM64' and platform_machine != 'arm64' and platform_machine != 'aarch64')",
-  "uvloop==0.22.1; sys_platform == 'linux' or sys_platform == 'darwin'",
-  "winloop==0.6.3; sys_platform == 'win32' or sys_platform == 'cygwin' or sys_platform == 'cli'",
+  "cryptography~=50.0.0; sys_platform != 'win32' or (platform_machine != 'ARM64' and platform_machine != 'arm64' and platform_machine != 'aarch64')",
+  "uvloop~=0.22.1; sys_platform == 'linux' or sys_platform == 'darwin'",
+  "winloop~=0.6.3; sys_platform == 'win32' or sys_platform == 'cygwin' or sys_platform == 'cli'",
 ]
 
 [project.optional-dependencies]
 dev = [
-  "maturin==1.14.1,<2.0",
-  "pytest==9.1.1",
-  "PyYAML==6.0.3",
-  "ruff==0.16.3",
-  "ty==0.0.72",
+  "maturin~=1.15.0",
+  "pytest~=9.1.1",
+  "PyYAML~=6.0.3",
+  "ruff~=0.16.4",
+  "ty~=0.0.74",
 ]
 docs = [
-  "griffe==2.2.0",
-  "griffe2md==1.5.0",
+  "griffe~=2.2.0",
+  "griffe2md~=1.5.0",
 ]
 
 [project.urls]
@@ -91,8 +91,7 @@ testpaths = ["tests"]
 pythonpath = ["."]
 
 [tool.ruff]
-# Generated reference Markdown is validated by the documentation generator and
-# Astro build; Ruff must not rewrite committed output after a drift check.
+# Generated reference Markdown is validated by the documentation generator and Astro build, Ruff must not rewrite committed output after a drift check
 exclude = [".venv", ".tmp", "docs/reference"]
 target-version = "py313"
 line-length = 120
@@ -104,7 +103,6 @@ line-ending = "lf"
 skip-magic-trailing-comma = true
 
 [tool.ruff.lint]
-# future-annotations = true
 select = ["E", "F", "I", "UP", "B", "ASYNC", "C4", "SIM", "RUF", "N", "S", "W"]
 ignore = ["S101", "E501", "N818"]
 

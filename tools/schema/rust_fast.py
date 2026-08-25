@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import pprint
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
@@ -65,8 +66,32 @@ class FastEntry:
         return tuple(field for field in self.fields if field.value_index is not None)
 
 
+def render_fast_manifest(manifest_path: Path, schema_path: Path, schema_layer: int) -> str:
+    """Refresh schema-derived pins without changing the reviewed fast-path selection.
+
+    Args:
+        manifest_path: Reviewed fast-path manifest JSON whose formatting and selections are preserved.
+        schema_path: Pinned normalized schema JSON used to derive the current hash.
+        schema_layer: Current Telegram schema layer to pin.
+
+    Returns:
+        Manifest text with only ``schema_layer`` and ``schema_json_sha256`` refreshed.
+
+    Raises:
+        ValueError: A required top-level schema pin is missing or cannot be replaced exactly once.
+    """
+    manifest_text = manifest_path.read_text(encoding="utf-8")
+    manifest = json.loads(manifest_text)
+    refreshed = _replace_manifest_pin(manifest_text, "schema_layer", manifest, schema_layer)
+    refreshed = _replace_manifest_pin(
+        refreshed, "schema_json_sha256", manifest, hashlib.sha256(schema_path.read_bytes()).hexdigest()
+    )
+    json.loads(refreshed)
+    return refreshed
+
+
 def load_fast_entries(
-    manifest_path: Path, schema_path: Path, schema_layer: int, schema: TLSchema
+    manifest_path: Path, schema_path: Path, schema_layer: int, schema: TLSchema, *, manifest_text: str | None = None
 ) -> tuple[FastEntry, ...]:
     """Load and validate the reviewed fixed-size Rust TL fast-path manifest.
 
@@ -75,6 +100,7 @@ def load_fast_entries(
         schema_path: Pinned normalized schema JSON used for hash validation.
         schema_layer: Expected Telegram schema layer.
         schema: Parsed schema used to resolve API entries.
+        manifest_text: Optional refreshed manifest content to validate instead of rereading ``manifest_path``.
 
     Returns:
         Exactly 30 unique, validated reviewed fast-path entries.
@@ -82,7 +108,7 @@ def load_fast_entries(
     Raises:
         ValueError: Manifest version, provenance, selection, fields, or uniqueness validation fails.
     """
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_text if manifest_text is not None else manifest_path.read_text(encoding="utf-8"))
     if manifest.get("version") != 1:
         raise ValueError("Rust TL fast-path manifest version must be 1")
     if manifest.get("schema_layer") != schema_layer:
@@ -149,6 +175,34 @@ def load_fast_entries(
         ids.add(entry.constructor_id)
         names.add(key)
     return tuple(entries)
+
+
+def _replace_manifest_pin(document: str, key: str, manifest: dict[str, Any], value: int | str) -> str:
+    """Replace one existing top-level manifest pin while preserving surrounding formatting.
+
+    Args:
+        document: Original or partially refreshed manifest JSON text.
+        key: Top-level pin name to replace.
+        manifest: Parsed original manifest used to identify the exact old JSON value.
+        value: New schema-derived pin value.
+
+    Returns:
+        Manifest text containing the replacement.
+
+    Raises:
+        ValueError: The pin is absent or its serialized field cannot be replaced exactly once.
+    """
+    if key not in manifest:
+        raise ValueError(f"Rust TL fast-path manifest is missing {key!r}")
+    pattern = re.compile(
+        rf'(?m)^(?P<indent>[ \t]*)"{re.escape(key)}"(?P<separator>[ \t]*:[ \t]*){re.escape(json.dumps(manifest[key]))}(?P<suffix>[ \t]*,?[ \t]*)$'
+    )
+
+    replacement = rf'\g<indent>"{key}"\g<separator>{json.dumps(value)}\g<suffix>'
+    rendered, count = pattern.subn(replacement, document)
+    if count != 1:
+        raise ValueError(f"Rust TL fast-path manifest field {key!r} must appear exactly once on its own line")
+    return rendered
 
 
 def render_rust(entries: tuple[FastEntry, ...], schema_layer: int, schema_sha256: str) -> str:

@@ -1297,6 +1297,15 @@
       "qualified_name": "auth.exportLoginToken"
     },
     {
+      "constructor_id": "0x2c85094c",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.AuthFinishFirebasePnvLogin",
+      "python_import": "from miniproto.raw.functions import AuthFinishFirebasePnvLogin",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "AuthFinishFirebasePnvLogin",
+      "qualified_name": "auth.finishFirebasePnvLogin"
+    },
+    {
       "constructor_id": "0x9857ad07",
       "kind": "function",
       "public_access": "miniproto.raw.functions.AuthFinishPasskeyLogin",
@@ -1304,6 +1313,15 @@
       "python_module": "miniproto.raw.functions",
       "python_name": "AuthFinishPasskeyLogin",
       "qualified_name": "auth.finishPasskeyLogin"
+    },
+    {
+      "constructor_id": "0x783f6b56",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.AuthFirebasePnvSignUp",
+      "python_import": "from miniproto.raw.functions import AuthFirebasePnvSignUp",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "AuthFirebasePnvSignUp",
+      "qualified_name": "auth.firebasePnvSignUp"
     },
     {
       "constructor_id": "0xa57a7dad",
@@ -1340,6 +1358,15 @@
       "python_module": "miniproto.raw.functions",
       "python_name": "AuthImportWebTokenAuthorization",
       "qualified_name": "auth.importWebTokenAuthorization"
+    },
+    {
+      "constructor_id": "0x777df37a",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.AuthInitFirebasePnvLogin",
+      "python_import": "from miniproto.raw.functions import AuthInitFirebasePnvLogin",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "AuthInitFirebasePnvLogin",
+      "qualified_name": "auth.initFirebasePnvLogin"
     },
     {
       "constructor_id": "0x518ad0b7",
@@ -2746,7 +2773,16 @@
       "qualified_name": "contacts.updateContactNote"
     },
     {
-      "constructor_id": "0xa3c0d511",
+      "constructor_id": "0x734f9721",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.EphemeralDeleteAllWelcomeMessages",
+      "python_import": "from miniproto.raw.functions import EphemeralDeleteAllWelcomeMessages",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "EphemeralDeleteAllWelcomeMessages",
+      "qualified_name": "ephemeral.deleteAllWelcomeMessages"
+    },
+    {
+      "constructor_id": "0x92f6e797",
       "kind": "function",
       "public_access": "miniproto.raw.functions.EphemeralDeleteMessage",
       "python_import": "from miniproto.raw.functions import EphemeralDeleteMessage",
@@ -2755,7 +2791,16 @@
       "qualified_name": "ephemeral.deleteMessage"
     },
     {
-      "constructor_id": "0x13f250ee",
+      "constructor_id": "0xe882a9e1",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.EphemeralDeleteWelcomeMessage",
+      "python_import": "from miniproto.raw.functions import EphemeralDeleteWelcomeMessage",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "EphemeralDeleteWelcomeMessage",
+      "qualified_name": "ephemeral.deleteWelcomeMessage"
+    },
+    {
+      "constructor_id": "0xcf9c725b",
       "kind": "function",
       "public_access": "miniproto.raw.functions.EphemeralEditMessage",
       "python_import": "from miniproto.raw.functions import EphemeralEditMessage",
@@ -2773,6 +2818,15 @@
       "qualified_name": "ephemeral.getCallbackAnswer"
     },
     {
+      "constructor_id": "0xdb9ac18d",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.EphemeralGetWelcomeMessages",
+      "python_import": "from miniproto.raw.functions import EphemeralGetWelcomeMessages",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "EphemeralGetWelcomeMessages",
+      "qualified_name": "ephemeral.getWelcomeMessages"
+    },
+    {
       "constructor_id": "0x8704f2bf",
       "kind": "function",
       "public_access": "miniproto.raw.functions.EphemeralReportMessage",
@@ -2782,7 +2836,7 @@
       "qualified_name": "ephemeral.reportMessage"
     },
     {
-      "constructor_id": "0x68cbd09f",
+      "constructor_id": "0xba8d5f35",
       "kind": "function",
       "public_access": "miniproto.raw.functions.EphemeralSendMessage",
       "python_import": "from miniproto.raw.functions import EphemeralSendMessage",
@@ -7903,6 +7957,15 @@
       "qualified_name": "auth.exportedAuthorization"
     },
     {
+      "constructor_id": "0xdf5ac00c",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.AuthFirebasePnvIntent",
+      "python_import": "from miniproto.raw.types import AuthFirebasePnvIntent",
+      "python_module": "miniproto.raw.types",
+      "python_name": "AuthFirebasePnvIntent",
+      "qualified_name": "auth.firebasePnvIntent"
+    },
+    {
       "constructor_id": "0xc3a2835f",
       "kind": "type",
       "public_access": "miniproto.raw.types.AuthLoggedOut",
@@ -8657,6 +8720,60 @@
       "python_module": "miniproto.raw.types",
       "python_name": "BusinessWorkHours",
       "qualified_name": "businessWorkHours"
+    },
+    {
+      "constructor_id": "0xc9dd90e9",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.ButtonTypeDefault",
+      "python_import": "from miniproto.raw.types import ButtonTypeDefault",
+      "python_module": "miniproto.raw.types",
+      "python_name": "ButtonTypeDefault",
+      "qualified_name": "buttonTypeDefault"
+    },
+    {
+      "constructor_id": "0x9beee140",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.ButtonTypeRequestGeoLocation",
+      "python_import": "from miniproto.raw.types import ButtonTypeRequestGeoLocation",
+      "python_module": "miniproto.raw.types",
+      "python_name": "ButtonTypeRequestGeoLocation",
+      "qualified_name": "buttonTypeRequestGeoLocation"
+    },
+    {
+      "constructor_id": "0x4f58a237",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.ButtonTypeRequestPeer",
+      "python_import": "from miniproto.raw.types import ButtonTypeRequestPeer",
+      "python_module": "miniproto.raw.types",
+      "python_name": "ButtonTypeRequestPeer",
+      "qualified_name": "buttonTypeRequestPeer"
+    },
+    {
+      "constructor_id": "0xdf3d36f9",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.ButtonTypeRequestPhone",
+      "python_import": "from miniproto.raw.types import ButtonTypeRequestPhone",
+      "python_module": "miniproto.raw.types",
+      "python_name": "ButtonTypeRequestPhone",
+      "qualified_name": "buttonTypeRequestPhone"
+    },
+    {
+      "constructor_id": "0xaacfff84",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.ButtonTypeRequestPoll",
+      "python_import": "from miniproto.raw.types import ButtonTypeRequestPoll",
+      "python_module": "miniproto.raw.types",
+      "python_name": "ButtonTypeRequestPoll",
+      "qualified_name": "buttonTypeRequestPoll"
+    },
+    {
+      "constructor_id": "0xc01a597a",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.ButtonTypeSimpleWebView",
+      "python_import": "from miniproto.raw.types import ButtonTypeSimpleWebView",
+      "python_module": "miniproto.raw.types",
+      "python_name": "ButtonTypeSimpleWebView",
+      "qualified_name": "buttonTypeSimpleWebView"
     },
     {
       "constructor_id": "0x5725e40a",
@@ -10432,7 +10549,25 @@
       "qualified_name": "encryptedMessageService"
     },
     {
-      "constructor_id": "0xd9c6dc1a",
+      "constructor_id": "0x104fc872",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.EphemeralWelcomeMessages",
+      "python_import": "from miniproto.raw.types import EphemeralWelcomeMessages",
+      "python_module": "miniproto.raw.types",
+      "python_name": "EphemeralWelcomeMessages",
+      "qualified_name": "ephemeral.welcomeMessages"
+    },
+    {
+      "constructor_id": "0x59ffdb31",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.EphemeralWelcomeMessagesNotModified",
+      "python_import": "from miniproto.raw.types import EphemeralWelcomeMessagesNotModified",
+      "python_module": "miniproto.raw.types",
+      "python_name": "EphemeralWelcomeMessagesNotModified",
+      "qualified_name": "ephemeral.welcomeMessagesNotModified"
+    },
+    {
+      "constructor_id": "0xdd27bee9",
       "kind": "type",
       "public_access": "miniproto.raw.types.EphemeralMessage",
       "python_import": "from miniproto.raw.types import EphemeralMessage",
@@ -10999,6 +11134,96 @@
       "qualified_name": "inlineBotWebView"
     },
     {
+      "constructor_id": "0x48bad7a5",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.InlineButtonTypeBuy",
+      "python_import": "from miniproto.raw.types import InlineButtonTypeBuy",
+      "python_module": "miniproto.raw.types",
+      "python_name": "InlineButtonTypeBuy",
+      "qualified_name": "inlineButtonTypeBuy"
+    },
+    {
+      "constructor_id": "0x2955bc38",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.InlineButtonTypeCallback",
+      "python_import": "from miniproto.raw.types import InlineButtonTypeCallback",
+      "python_module": "miniproto.raw.types",
+      "python_name": "InlineButtonTypeCallback",
+      "qualified_name": "inlineButtonTypeCallback"
+    },
+    {
+      "constructor_id": "0xb41d3272",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.InlineButtonTypeCopy",
+      "python_import": "from miniproto.raw.types import InlineButtonTypeCopy",
+      "python_module": "miniproto.raw.types",
+      "python_name": "InlineButtonTypeCopy",
+      "qualified_name": "inlineButtonTypeCopy"
+    },
+    {
+      "constructor_id": "0xa438619d",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.InlineButtonTypeDisabled",
+      "python_import": "from miniproto.raw.types import InlineButtonTypeDisabled",
+      "python_module": "miniproto.raw.types",
+      "python_name": "InlineButtonTypeDisabled",
+      "qualified_name": "inlineButtonTypeDisabled"
+    },
+    {
+      "constructor_id": "0x5cd3709d",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.InlineButtonTypeGame",
+      "python_import": "from miniproto.raw.types import InlineButtonTypeGame",
+      "python_module": "miniproto.raw.types",
+      "python_name": "InlineButtonTypeGame",
+      "qualified_name": "inlineButtonTypeGame"
+    },
+    {
+      "constructor_id": "0x93773ff5",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.InlineButtonTypeSwitchInline",
+      "python_import": "from miniproto.raw.types import InlineButtonTypeSwitchInline",
+      "python_module": "miniproto.raw.types",
+      "python_name": "InlineButtonTypeSwitchInline",
+      "qualified_name": "inlineButtonTypeSwitchInline"
+    },
+    {
+      "constructor_id": "0xeca4f8d4",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.InlineButtonTypeUrl",
+      "python_import": "from miniproto.raw.types import InlineButtonTypeUrl",
+      "python_module": "miniproto.raw.types",
+      "python_name": "InlineButtonTypeUrl",
+      "qualified_name": "inlineButtonTypeUrl"
+    },
+    {
+      "constructor_id": "0xbfd02da2",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.InlineButtonTypeUrlAuth",
+      "python_import": "from miniproto.raw.types import InlineButtonTypeUrlAuth",
+      "python_module": "miniproto.raw.types",
+      "python_name": "InlineButtonTypeUrlAuth",
+      "qualified_name": "inlineButtonTypeUrlAuth"
+    },
+    {
+      "constructor_id": "0x3fa33fcf",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.InlineButtonTypeUserProfile",
+      "python_import": "from miniproto.raw.types import InlineButtonTypeUserProfile",
+      "python_module": "miniproto.raw.types",
+      "python_name": "InlineButtonTypeUserProfile",
+      "qualified_name": "inlineButtonTypeUserProfile"
+    },
+    {
+      "constructor_id": "0x3bcab5b4",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.InlineButtonTypeWebView",
+      "python_import": "from miniproto.raw.types import InlineButtonTypeWebView",
+      "python_module": "miniproto.raw.types",
+      "python_name": "InlineButtonTypeWebView",
+      "qualified_name": "inlineButtonTypeWebView"
+    },
+    {
       "constructor_id": "0x0e3b2d0c",
       "kind": "type",
       "public_access": "miniproto.raw.types.InlineQueryPeerTypeBotPM",
@@ -11303,6 +11528,15 @@
       "python_module": "miniproto.raw.types",
       "python_name": "InputBusinessRecipients",
       "qualified_name": "inputBusinessRecipients"
+    },
+    {
+      "constructor_id": "0x3fe268fe",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.InputButtonTypeRequestPeer",
+      "python_import": "from miniproto.raw.types import InputButtonTypeRequestPeer",
+      "python_module": "miniproto.raw.types",
+      "python_name": "InputButtonTypeRequestPeer",
+      "qualified_name": "inputButtonTypeRequestPeer"
     },
     {
       "constructor_id": "0xf35aec28",
@@ -11674,6 +11908,24 @@
       "qualified_name": "inputGroupCallStream"
     },
     {
+      "constructor_id": "0x9961bcb4",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.InputInlineButtonTypeUrlAuth",
+      "python_import": "from miniproto.raw.types import InputInlineButtonTypeUrlAuth",
+      "python_module": "miniproto.raw.types",
+      "python_name": "InputInlineButtonTypeUrlAuth",
+      "qualified_name": "inputInlineButtonTypeUrlAuth"
+    },
+    {
+      "constructor_id": "0x53f3ce5a",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.InputInlineButtonTypeUserProfile",
+      "python_import": "from miniproto.raw.types import InputInlineButtonTypeUserProfile",
+      "python_module": "miniproto.raw.types",
+      "python_name": "InputInlineButtonTypeUserProfile",
+      "qualified_name": "inputInlineButtonTypeUserProfile"
+    },
+    {
       "constructor_id": "0xf4997e42",
       "kind": "type",
       "public_access": "miniproto.raw.types.InputInvoiceBusinessBotTransferStars",
@@ -11773,7 +12025,7 @@
       "qualified_name": "inputInvoiceStarGiftPrepaidUpgrade"
     },
     {
-      "constructor_id": "0xc39f5324",
+      "constructor_id": "0xe9b0c658",
       "kind": "type",
       "public_access": "miniproto.raw.types.InputInvoiceStarGiftResale",
       "python_import": "from miniproto.raw.types import InputInvoiceStarGiftResale",
@@ -11807,33 +12059,6 @@
       "python_module": "miniproto.raw.types",
       "python_name": "InputInvoiceStars",
       "qualified_name": "inputInvoiceStars"
-    },
-    {
-      "constructor_id": "0x02b78156",
-      "kind": "type",
-      "public_access": "miniproto.raw.types.InputKeyboardButtonRequestPeer",
-      "python_import": "from miniproto.raw.types import InputKeyboardButtonRequestPeer",
-      "python_module": "miniproto.raw.types",
-      "python_name": "InputKeyboardButtonRequestPeer",
-      "qualified_name": "inputKeyboardButtonRequestPeer"
-    },
-    {
-      "constructor_id": "0x68013e72",
-      "kind": "type",
-      "public_access": "miniproto.raw.types.InputKeyboardButtonUrlAuth",
-      "python_import": "from miniproto.raw.types import InputKeyboardButtonUrlAuth",
-      "python_module": "miniproto.raw.types",
-      "python_name": "InputKeyboardButtonUrlAuth",
-      "qualified_name": "inputKeyboardButtonUrlAuth"
-    },
-    {
-      "constructor_id": "0x7d5e07c7",
-      "kind": "type",
-      "public_access": "miniproto.raw.types.InputKeyboardButtonUserProfile",
-      "python_import": "from miniproto.raw.types import InputKeyboardButtonUserProfile",
-      "python_module": "miniproto.raw.types",
-      "python_name": "InputKeyboardButtonUserProfile",
-      "qualified_name": "inputKeyboardButtonUserProfile"
     },
     {
       "constructor_id": "0x2271f2bf",
@@ -13033,7 +13258,7 @@
       "qualified_name": "inputSecureValue"
     },
     {
-      "constructor_id": "0xe2b23b51",
+      "constructor_id": "0xa937c7be",
       "kind": "type",
       "public_access": "miniproto.raw.types.InputSendMessageRichMessageDraftAction",
       "python_import": "from miniproto.raw.types import InputSendMessageRichMessageDraftAction",
@@ -13564,85 +13789,13 @@
       "qualified_name": "jsonString"
     },
     {
-      "constructor_id": "0x7d170cff",
+      "constructor_id": "0x2f67a72f",
       "kind": "type",
       "public_access": "miniproto.raw.types.KeyboardButton",
       "python_import": "from miniproto.raw.types import KeyboardButton",
       "python_module": "miniproto.raw.types",
       "python_name": "KeyboardButton",
       "qualified_name": "keyboardButton"
-    },
-    {
-      "constructor_id": "0x3fa53905",
-      "kind": "type",
-      "public_access": "miniproto.raw.types.KeyboardButtonBuy",
-      "python_import": "from miniproto.raw.types import KeyboardButtonBuy",
-      "python_module": "miniproto.raw.types",
-      "python_name": "KeyboardButtonBuy",
-      "qualified_name": "keyboardButtonBuy"
-    },
-    {
-      "constructor_id": "0xe62bc960",
-      "kind": "type",
-      "public_access": "miniproto.raw.types.KeyboardButtonCallback",
-      "python_import": "from miniproto.raw.types import KeyboardButtonCallback",
-      "python_module": "miniproto.raw.types",
-      "python_name": "KeyboardButtonCallback",
-      "qualified_name": "keyboardButtonCallback"
-    },
-    {
-      "constructor_id": "0xbcc4af10",
-      "kind": "type",
-      "public_access": "miniproto.raw.types.KeyboardButtonCopy",
-      "python_import": "from miniproto.raw.types import KeyboardButtonCopy",
-      "python_module": "miniproto.raw.types",
-      "python_name": "KeyboardButtonCopy",
-      "qualified_name": "keyboardButtonCopy"
-    },
-    {
-      "constructor_id": "0x89c590f9",
-      "kind": "type",
-      "public_access": "miniproto.raw.types.KeyboardButtonGame",
-      "python_import": "from miniproto.raw.types import KeyboardButtonGame",
-      "python_module": "miniproto.raw.types",
-      "python_name": "KeyboardButtonGame",
-      "qualified_name": "keyboardButtonGame"
-    },
-    {
-      "constructor_id": "0xaa40f94d",
-      "kind": "type",
-      "public_access": "miniproto.raw.types.KeyboardButtonRequestGeoLocation",
-      "python_import": "from miniproto.raw.types import KeyboardButtonRequestGeoLocation",
-      "python_module": "miniproto.raw.types",
-      "python_name": "KeyboardButtonRequestGeoLocation",
-      "qualified_name": "keyboardButtonRequestGeoLocation"
-    },
-    {
-      "constructor_id": "0x5b0f15f5",
-      "kind": "type",
-      "public_access": "miniproto.raw.types.KeyboardButtonRequestPeer",
-      "python_import": "from miniproto.raw.types import KeyboardButtonRequestPeer",
-      "python_module": "miniproto.raw.types",
-      "python_name": "KeyboardButtonRequestPeer",
-      "qualified_name": "keyboardButtonRequestPeer"
-    },
-    {
-      "constructor_id": "0x417efd8f",
-      "kind": "type",
-      "public_access": "miniproto.raw.types.KeyboardButtonRequestPhone",
-      "python_import": "from miniproto.raw.types import KeyboardButtonRequestPhone",
-      "python_module": "miniproto.raw.types",
-      "python_name": "KeyboardButtonRequestPhone",
-      "qualified_name": "keyboardButtonRequestPhone"
-    },
-    {
-      "constructor_id": "0x7a11d782",
-      "kind": "type",
-      "public_access": "miniproto.raw.types.KeyboardButtonRequestPoll",
-      "python_import": "from miniproto.raw.types import KeyboardButtonRequestPoll",
-      "python_module": "miniproto.raw.types",
-      "python_name": "KeyboardButtonRequestPoll",
-      "qualified_name": "keyboardButtonRequestPoll"
     },
     {
       "constructor_id": "0x77608b83",
@@ -13654,15 +13807,6 @@
       "qualified_name": "keyboardButtonRow"
     },
     {
-      "constructor_id": "0xe15c4370",
-      "kind": "type",
-      "public_access": "miniproto.raw.types.KeyboardButtonSimpleWebView",
-      "python_import": "from miniproto.raw.types import KeyboardButtonSimpleWebView",
-      "python_module": "miniproto.raw.types",
-      "python_name": "KeyboardButtonSimpleWebView",
-      "qualified_name": "keyboardButtonSimpleWebView"
-    },
-    {
       "constructor_id": "0x4fdd3430",
       "kind": "type",
       "public_access": "miniproto.raw.types.KeyboardButtonStyle",
@@ -13672,49 +13816,22 @@
       "qualified_name": "keyboardButtonStyle"
     },
     {
-      "constructor_id": "0x991399fc",
+      "constructor_id": "0x11c1a322",
       "kind": "type",
-      "public_access": "miniproto.raw.types.KeyboardButtonSwitchInline",
-      "python_import": "from miniproto.raw.types import KeyboardButtonSwitchInline",
+      "public_access": "miniproto.raw.types.KeyboardInlineButton",
+      "python_import": "from miniproto.raw.types import KeyboardInlineButton",
       "python_module": "miniproto.raw.types",
-      "python_name": "KeyboardButtonSwitchInline",
-      "qualified_name": "keyboardButtonSwitchInline"
+      "python_name": "KeyboardInlineButton",
+      "qualified_name": "keyboardInlineButton"
     },
     {
-      "constructor_id": "0xd80c25ec",
+      "constructor_id": "0x19420af6",
       "kind": "type",
-      "public_access": "miniproto.raw.types.KeyboardButtonUrl",
-      "python_import": "from miniproto.raw.types import KeyboardButtonUrl",
+      "public_access": "miniproto.raw.types.KeyboardInlineButtonRow",
+      "python_import": "from miniproto.raw.types import KeyboardInlineButtonRow",
       "python_module": "miniproto.raw.types",
-      "python_name": "KeyboardButtonUrl",
-      "qualified_name": "keyboardButtonUrl"
-    },
-    {
-      "constructor_id": "0xf51006f9",
-      "kind": "type",
-      "public_access": "miniproto.raw.types.KeyboardButtonUrlAuth",
-      "python_import": "from miniproto.raw.types import KeyboardButtonUrlAuth",
-      "python_module": "miniproto.raw.types",
-      "python_name": "KeyboardButtonUrlAuth",
-      "qualified_name": "keyboardButtonUrlAuth"
-    },
-    {
-      "constructor_id": "0xc0fd5d09",
-      "kind": "type",
-      "public_access": "miniproto.raw.types.KeyboardButtonUserProfile",
-      "python_import": "from miniproto.raw.types import KeyboardButtonUserProfile",
-      "python_module": "miniproto.raw.types",
-      "python_name": "KeyboardButtonUserProfile",
-      "qualified_name": "keyboardButtonUserProfile"
-    },
-    {
-      "constructor_id": "0xe846b1a0",
-      "kind": "type",
-      "public_access": "miniproto.raw.types.KeyboardButtonWebView",
-      "python_import": "from miniproto.raw.types import KeyboardButtonWebView",
-      "python_module": "miniproto.raw.types",
-      "python_name": "KeyboardButtonWebView",
-      "qualified_name": "keyboardButtonWebView"
+      "python_name": "KeyboardInlineButtonRow",
+      "qualified_name": "keyboardInlineButtonRow"
     },
     {
       "constructor_id": "0xcb296bf8",
@@ -13985,6 +14102,15 @@
       "python_module": "miniproto.raw.types",
       "python_name": "MessageActionChatJoinedByRequest",
       "qualified_name": "messageActionChatJoinedByRequest"
+    },
+    {
+      "constructor_id": "0x4a8bfe80",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.MessageActionChatJoinedViaCommunity",
+      "python_import": "from miniproto.raw.types import MessageActionChatJoinedViaCommunity",
+      "python_module": "miniproto.raw.types",
+      "python_name": "MessageActionChatJoinedViaCommunity",
+      "qualified_name": "messageActionChatJoinedViaCommunity"
     },
     {
       "constructor_id": "0xe1037f92",
@@ -14365,7 +14491,7 @@
       "qualified_name": "messageActionStarGiftPurchaseOfferDeclined"
     },
     {
-      "constructor_id": "0xe6c31522",
+      "constructor_id": "0x7e1c1187",
       "kind": "type",
       "public_access": "miniproto.raw.types.MessageActionStarGiftUnique",
       "python_import": "from miniproto.raw.types import MessageActionStarGiftUnique",
@@ -16048,7 +16174,7 @@
       "qualified_name": "pageBlockAuthorDate"
     },
     {
-      "constructor_id": "0x263d7c26",
+      "constructor_id": "0x66d1670b",
       "kind": "type",
       "public_access": "miniproto.raw.types.PageBlockBlockquote",
       "python_import": "from miniproto.raw.types import PageBlockBlockquote",
@@ -16064,6 +16190,15 @@
       "python_module": "miniproto.raw.types",
       "python_name": "PageBlockBlockquoteBlocks",
       "qualified_name": "pageBlockBlockquoteBlocks"
+    },
+    {
+      "constructor_id": "0x6d640318",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.PageBlockButtonRow",
+      "python_import": "from miniproto.raw.types import PageBlockButtonRow",
+      "python_module": "miniproto.raw.types",
+      "python_name": "PageBlockButtonRow",
+      "qualified_name": "pageBlockButtonRow"
     },
     {
       "constructor_id": "0xef1751b5",
@@ -16109,6 +16244,15 @@
       "python_module": "miniproto.raw.types",
       "python_name": "PageBlockDivider",
       "qualified_name": "pageBlockDivider"
+    },
+    {
+      "constructor_id": "0x38fa3ba3",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.PageBlockDocument",
+      "python_import": "from miniproto.raw.types import PageBlockDocument",
+      "python_module": "miniproto.raw.types",
+      "python_name": "PageBlockDocument",
+      "qualified_name": "pageBlockDocument"
     },
     {
       "constructor_id": "0xa8718dc5",
@@ -16361,6 +16505,15 @@
       "python_module": "miniproto.raw.types",
       "python_name": "PageBlockVideo",
       "qualified_name": "pageBlockVideo"
+    },
+    {
+      "constructor_id": "0x692a5488",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.PageButton",
+      "python_import": "from miniproto.raw.types import PageButton",
+      "python_module": "miniproto.raw.types",
+      "python_name": "PageButton",
+      "qualified_name": "pageButton"
     },
     {
       "constructor_id": "0x6f747657",
@@ -17875,7 +18028,7 @@
       "qualified_name": "recentStory"
     },
     {
-      "constructor_id": "0x48a30254",
+      "constructor_id": "0xb2b15770",
       "kind": "type",
       "public_access": "miniproto.raw.types.ReplyInlineMarkup",
       "python_import": "from miniproto.raw.types import ReplyInlineMarkup",
@@ -18035,6 +18188,15 @@
       "python_module": "miniproto.raw.types",
       "python_name": "RestrictionReason",
       "qualified_name": "restrictionReason"
+    },
+    {
+      "constructor_id": "0x03c610bd",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.RichButtonStyle",
+      "python_import": "from miniproto.raw.types import RichButtonStyle",
+      "python_module": "miniproto.raw.types",
+      "python_name": "RichButtonStyle",
+      "qualified_name": "richButtonStyle"
     },
     {
       "constructor_id": "0xbaf39d8b",
@@ -18541,7 +18703,7 @@
       "qualified_name": "sendMessageRecordVideoAction"
     },
     {
-      "constructor_id": "0xa2cb24f9",
+      "constructor_id": "0x52564893",
       "kind": "type",
       "public_access": "miniproto.raw.types.SendMessageRichMessageDraftAction",
       "python_import": "from miniproto.raw.types import SendMessageRichMessageDraftAction",
@@ -18550,7 +18712,16 @@
       "qualified_name": "sendMessageRichMessageDraftAction"
     },
     {
-      "constructor_id": "0x376d975c",
+      "constructor_id": "0xfbf902b0",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.SendMessageStopDraftAction",
+      "python_import": "from miniproto.raw.types import SendMessageStopDraftAction",
+      "python_module": "miniproto.raw.types",
+      "python_name": "SendMessageStopDraftAction",
+      "qualified_name": "sendMessageStopDraftAction"
+    },
+    {
+      "constructor_id": "0x3630b85a",
       "kind": "type",
       "public_access": "miniproto.raw.types.SendMessageTextDraftAction",
       "python_import": "from miniproto.raw.types import SendMessageTextDraftAction",
@@ -19693,6 +19864,15 @@
       "qualified_name": "textBotCommand"
     },
     {
+      "constructor_id": "0xafc79cd6",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.TextButton",
+      "python_import": "from miniproto.raw.types import TextButton",
+      "python_module": "miniproto.raw.types",
+      "python_name": "TextButton",
+      "qualified_name": "textButton"
+    },
+    {
       "constructor_id": "0x7b9e1801",
       "kind": "type",
       "public_access": "miniproto.raw.types.TextCashtag",
@@ -20683,7 +20863,7 @@
       "qualified_name": "updateEncryption"
     },
     {
-      "constructor_id": "0x9b380762",
+      "constructor_id": "0x7c1079d6",
       "kind": "type",
       "public_access": "miniproto.raw.types.UpdateEphemeralBotCallbackQuery",
       "python_import": "from miniproto.raw.types import UpdateEphemeralBotCallbackQuery",
@@ -28687,6 +28867,6 @@
       "python_name": "TranslationTimeout"
     }
   ],
-  "layer": 228,
+  "layer": 229,
   "schema_version": 1
 }

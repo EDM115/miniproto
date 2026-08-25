@@ -72,6 +72,70 @@ class AuthResetAuthorizations(TLRequest):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class AuthInitFirebasePnvLogin(TLRequest):
+    api_id: int
+    api_hash: str
+    CONSTRUCTOR_ID: ClassVar[int] = 0x777DF37A
+    QUALNAME: ClassVar[str] = "auth.initFirebasePnvLogin"
+    RESULT_TYPE: ClassVar[str] = "auth.FirebasePnvIntent"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="api_id",
+            python_name="api_id",
+            type="int",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="api_hash",
+            python_name="api_hash",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_int(self.api_id))
+        output.extend(encode_string(self.api_hash))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_api_id, cursor = decode_int(raw_data, cursor)
+        _value_api_hash, cursor = decode_string(raw_data, cursor)
+        return cls(api_id=_value_api_id, api_hash=_value_api_hash), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class AccountRegisterDevice(TLRequest):
     no_muted: bool = False
     token_type: int
@@ -1772,6 +1836,7 @@ class account:
 
 
 class auth:
+    InitFirebasePnvLogin = AuthInitFirebasePnvLogin
     ResetAuthorizations = AuthResetAuthorizations
 
 
@@ -1823,6 +1888,7 @@ class upload:
 
 ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
     AuthResetAuthorizations,
+    AuthInitFirebasePnvLogin,
     AccountRegisterDevice,
     AccountGetAuthorizationForm,
     AccountGetAutoSaveSettings,
@@ -1849,6 +1915,7 @@ CONSTRUCTOR_ID_MAP: dict[int, type[TLRequest]] = {entry.CONSTRUCTOR_ID: entry fo
 NAME_MAP: dict[str, type[TLRequest]] = {entry.QUALNAME: entry for entry in ALL_FUNCTIONS}
 __all__ = (
     "AuthResetAuthorizations",
+    "AuthInitFirebasePnvLogin",
     "AccountRegisterDevice",
     "AccountGetAuthorizationForm",
     "AccountGetAutoSaveSettings",

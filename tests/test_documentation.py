@@ -452,13 +452,13 @@ def test_telegram_reference_real_pins_have_complete_unique_bound_surface() -> No
         repository_url="https://github.com/EDM115/miniproto",
     )
 
-    assert len(bindings.declarations) == 2_460
+    assert len(bindings.declarations) == 2_480
     assert len(bindings.errors) == 818
-    assert len(surface.pages) == 3_946
-    assert sum(page.kind == "function" for page in surface.pages) == 811
-    assert sum(page.kind == "type" for page in surface.pages) == 1_649
+    assert len(surface.pages) == 3_975
+    assert sum(page.kind == "function" for page in surface.pages) == 817
+    assert sum(page.kind == "type" for page in surface.pages) == 1_663
     assert sum(page.kind == "error" for page in surface.pages) == 818
-    assert sum(page.kind == "index" for page in surface.pages) == 668
+    assert sum(page.kind == "index" for page in surface.pages) == 677
     paths = [page.path for page in surface.pages]
     routes = [page.path.removesuffix("index.md").removesuffix(".md").rstrip("/") for page in surface.pages]
     assert len(paths) == len(set(paths))

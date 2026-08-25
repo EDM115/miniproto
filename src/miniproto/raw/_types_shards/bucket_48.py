@@ -700,6 +700,56 @@ class HelpAppUpdate(TLConstructor):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class SendMessageStopDraftAction(TLConstructor):
+    random_id: int
+    CONSTRUCTOR_ID: ClassVar[int] = 0xFBF902B0
+    QUALNAME: ClassVar[str] = "sendMessageStopDraftAction"
+    RESULT_TYPE: ClassVar[str] = "SendMessageAction"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="random_id",
+            python_name="random_id",
+            type="long",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_long(self.random_id))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_random_id, cursor = decode_long(raw_data, cursor)
+        return cls(random_id=_value_random_id), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class PrivacyKeyStatusTimestamp(TLConstructor):
     pass
     CONSTRUCTOR_ID: ClassVar[int] = 0xBC2EAB30
@@ -800,46 +850,34 @@ class ChatInvitePeek(TLConstructor):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class KeyboardButtonSimpleWebView(TLConstructor):
-    style: Any | None = None
-    text: str
-    url: str
-    CONSTRUCTOR_ID: ClassVar[int] = 0xE15C4370
-    QUALNAME: ClassVar[str] = "keyboardButtonSimpleWebView"
-    RESULT_TYPE: ClassVar[str] = "KeyboardButton"
+class ReplyInlineMarkup(TLConstructor):
+    force_reply: bool = False
+    rows: tuple[Any, ...]
+    CONSTRUCTOR_ID: ClassVar[int] = 0xB2B15770
+    QUALNAME: ClassVar[str] = "replyInlineMarkup"
+    RESULT_TYPE: ClassVar[str] = "ReplyMarkup"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
         TLField(
-            name="style",
-            python_name="style",
-            type="KeyboardButtonStyle",
+            name="force_reply",
+            python_name="force_reply",
+            type="true",
             flag="flags",
-            flag_index=10,
+            flag_index=5,
             is_optional=True,
-            is_true_flag=False,
+            is_true_flag=True,
             is_vector=False,
             vector_item_type=None,
         ),
         TLField(
-            name="text",
-            python_name="text",
-            type="string",
+            name="rows",
+            python_name="rows",
+            type="Vector<KeyboardInlineButtonRow>",
             flag=None,
             flag_index=None,
             is_optional=False,
             is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="url",
-            python_name="url",
-            type="string",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
+            is_vector=True,
+            vector_item_type="KeyboardInlineButtonRow",
         ),
     )
     TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
@@ -854,13 +892,10 @@ class KeyboardButtonSimpleWebView(TLConstructor):
         if boxed:
             output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
         flags = 0
-        if self.style is not None:
-            flags |= 1024
+        if self.force_reply:
+            flags |= 32
         output.extend(encode_int(flags))
-        if self.style is not None:
-            output.extend(encode_value("KeyboardButtonStyle", self.style))
-        output.extend(encode_string(self.text))
-        output.extend(encode_string(self.url))
+        output.extend(encode_vector(self.rows, "KeyboardInlineButtonRow"))
         return bytes(output)
 
     @classmethod
@@ -880,13 +915,9 @@ class KeyboardButtonSimpleWebView(TLConstructor):
                 raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
         flags = 0
         flags, cursor = decode_int(raw_data, cursor)
-        if bool(flags & 1024):
-            _value_style, cursor = decode_value("KeyboardButtonStyle", raw_data, cursor)
-        else:
-            _value_style = None
-        _value_text, cursor = decode_string(raw_data, cursor)
-        _value_url, cursor = decode_string(raw_data, cursor)
-        return cls(style=_value_style, text=_value_text, url=_value_url), cursor
+        _value_force_reply = bool(flags & 32)
+        _value_rows, cursor = decode_vector(raw_data, cursor, "KeyboardInlineButtonRow")
+        return cls(force_reply=_value_force_reply, rows=_value_rows), cursor
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -2630,9 +2661,10 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     UpdatePeerLocated,
     UpdateJoinChatWebViewDecision,
     HelpAppUpdate,
+    SendMessageStopDraftAction,
     PrivacyKeyStatusTimestamp,
     ChatInvitePeek,
-    KeyboardButtonSimpleWebView,
+    ReplyInlineMarkup,
     TopPeerCategoryForwardChats,
     PageBlockAnchor,
     InputSecureFileUploaded,
@@ -2656,9 +2688,10 @@ __all__ = (
     "UpdatePeerLocated",
     "UpdateJoinChatWebViewDecision",
     "HelpAppUpdate",
+    "SendMessageStopDraftAction",
     "PrivacyKeyStatusTimestamp",
     "ChatInvitePeek",
-    "KeyboardButtonSimpleWebView",
+    "ReplyInlineMarkup",
     "TopPeerCategoryForwardChats",
     "PageBlockAnchor",
     "InputSecureFileUploaded",

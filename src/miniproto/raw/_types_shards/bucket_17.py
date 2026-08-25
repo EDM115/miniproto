@@ -769,70 +769,6 @@ class UpdateWebBrowserException(TLConstructor):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class InputSendMessageRichMessageDraftAction(TLConstructor):
-    random_id: int
-    rich_message: Any
-    CONSTRUCTOR_ID: ClassVar[int] = 0xE2B23B51
-    QUALNAME: ClassVar[str] = "inputSendMessageRichMessageDraftAction"
-    RESULT_TYPE: ClassVar[str] = "SendMessageAction"
-    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
-        TLField(
-            name="random_id",
-            python_name="random_id",
-            type="long",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="rich_message",
-            python_name="rich_message",
-            type="InputRichMessage",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-    )
-    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
-
-    def serialize(self) -> bytes:
-        return self._serialize(boxed=True)
-
-    def _serialize(self, *, boxed: bool = True) -> bytes:
-        output = bytearray()
-        if boxed:
-            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
-        output.extend(encode_long(self.random_id))
-        output.extend(encode_value("InputRichMessage", self.rich_message))
-        return bytes(output)
-
-    @classmethod
-    def deserialize(cls, data: bytes | memoryview) -> Self:
-        obj, offset = cls._deserialize(data)
-        if offset != len(data):
-            raise TLCodecError("TL object payload has trailing bytes")
-        return obj
-
-    @classmethod
-    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
-        raw_data = data
-        cursor = offset
-        if boxed:
-            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
-            if constructor_id != cls.CONSTRUCTOR_ID:
-                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
-        _value_random_id, cursor = decode_long(raw_data, cursor)
-        _value_rich_message, cursor = decode_value("InputRichMessage", raw_data, cursor)
-        return cls(random_id=_value_random_id, rich_message=_value_rich_message), cursor
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
 class WebPageNotModified(TLConstructor):
     cached_page_views: int | None = None
     CONSTRUCTOR_ID: ClassVar[int] = 0x7311CA11
@@ -900,6 +836,7 @@ class ReplyKeyboardMarkup(TLConstructor):
     single_use: bool = False
     selective: bool = False
     persistent: bool = False
+    force_reply: bool = False
     rows: tuple[Any, ...]
     placeholder: str | None = None
     CONSTRUCTOR_ID: ClassVar[int] = 0x85DD99D1
@@ -951,6 +888,17 @@ class ReplyKeyboardMarkup(TLConstructor):
             vector_item_type=None,
         ),
         TLField(
+            name="force_reply",
+            python_name="force_reply",
+            type="true",
+            flag="flags",
+            flag_index=5,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
             name="rows",
             python_name="rows",
             type="Vector<KeyboardButtonRow>",
@@ -993,6 +941,8 @@ class ReplyKeyboardMarkup(TLConstructor):
             flags |= 4
         if self.persistent:
             flags |= 16
+        if self.force_reply:
+            flags |= 32
         if self.placeholder is not None:
             flags |= 8
         output.extend(encode_int(flags))
@@ -1022,6 +972,7 @@ class ReplyKeyboardMarkup(TLConstructor):
         _value_single_use = bool(flags & 2)
         _value_selective = bool(flags & 4)
         _value_persistent = bool(flags & 16)
+        _value_force_reply = bool(flags & 32)
         _value_rows, cursor = decode_vector(raw_data, cursor, "KeyboardButtonRow")
         if bool(flags & 8):
             _value_placeholder, cursor = decode_string(raw_data, cursor)
@@ -1032,6 +983,7 @@ class ReplyKeyboardMarkup(TLConstructor):
             single_use=_value_single_use,
             selective=_value_selective,
             persistent=_value_persistent,
+            force_reply=_value_force_reply,
             rows=_value_rows,
             placeholder=_value_placeholder,
         ), cursor
@@ -3259,7 +3211,6 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     UpdateChatParticipantAdd,
     UpdateLoginToken,
     UpdateWebBrowserException,
-    InputSendMessageRichMessageDraftAction,
     WebPageNotModified,
     ReplyKeyboardMarkup,
     ChannelParticipantBanned,
@@ -3293,7 +3244,6 @@ __all__ = (
     "UpdateChatParticipantAdd",
     "UpdateLoginToken",
     "UpdateWebBrowserException",
-    "InputSendMessageRichMessageDraftAction",
     "WebPageNotModified",
     "ReplyKeyboardMarkup",
     "ChannelParticipantBanned",

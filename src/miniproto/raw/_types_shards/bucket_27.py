@@ -103,6 +103,7 @@ class ChatFull(TLConstructor):
     can_set_username: bool = False
     has_scheduled: bool = False
     translations_disabled: bool = False
+    has_welcome_messages: bool = False
     id: int
     about: str
     participants: Any
@@ -152,6 +153,17 @@ class ChatFull(TLConstructor):
             type="true",
             flag="flags",
             flag_index=19,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="has_welcome_messages",
+            python_name="has_welcome_messages",
+            type="true",
+            flag="flags",
+            flag_index=21,
             is_optional=True,
             is_true_flag=True,
             is_vector=False,
@@ -363,6 +375,8 @@ class ChatFull(TLConstructor):
             flags |= 256
         if self.translations_disabled:
             flags |= 524288
+        if self.has_welcome_messages:
+            flags |= 2097152
         if self.chat_photo is not None:
             flags |= 4
         if self.exported_invite is not None:
@@ -442,6 +456,7 @@ class ChatFull(TLConstructor):
         _value_can_set_username = bool(flags & 128)
         _value_has_scheduled = bool(flags & 256)
         _value_translations_disabled = bool(flags & 524288)
+        _value_has_welcome_messages = bool(flags & 2097152)
         _value_id, cursor = decode_long(raw_data, cursor)
         _value_about, cursor = decode_string(raw_data, cursor)
         _value_participants, cursor = decode_value("ChatParticipants", raw_data, cursor)
@@ -502,6 +517,7 @@ class ChatFull(TLConstructor):
             can_set_username=_value_can_set_username,
             has_scheduled=_value_has_scheduled,
             translations_disabled=_value_translations_disabled,
+            has_welcome_messages=_value_has_welcome_messages,
             id=_value_id,
             about=_value_about,
             participants=_value_participants,

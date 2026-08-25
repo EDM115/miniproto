@@ -933,6 +933,7 @@ class ChatAdminRights(TLConstructor):
     manage_direct_messages: bool = False
     manage_ranks: bool = False
     manage_linked_peers: bool = False
+    manage_welcome_messages: bool = False
     CONSTRUCTOR_ID: ClassVar[int] = 0x5FB224D5
     QUALNAME: ClassVar[str] = "chatAdminRights"
     RESULT_TYPE: ClassVar[str] = "ChatAdminRights"
@@ -1135,6 +1136,17 @@ class ChatAdminRights(TLConstructor):
             is_vector=False,
             vector_item_type=None,
         ),
+        TLField(
+            name="manage_welcome_messages",
+            python_name="manage_welcome_messages",
+            type="true",
+            flag="flags",
+            flag_index=20,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
     )
     TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
         TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
@@ -1184,6 +1196,8 @@ class ChatAdminRights(TLConstructor):
             flags |= 262144
         if self.manage_linked_peers:
             flags |= 524288
+        if self.manage_welcome_messages:
+            flags |= 1048576
         output.extend(encode_int(flags))
         return bytes(output)
 
@@ -1222,6 +1236,7 @@ class ChatAdminRights(TLConstructor):
         _value_manage_direct_messages = bool(flags & 131072)
         _value_manage_ranks = bool(flags & 262144)
         _value_manage_linked_peers = bool(flags & 524288)
+        _value_manage_welcome_messages = bool(flags & 1048576)
         return cls(
             change_info=_value_change_info,
             post_messages=_value_post_messages,
@@ -1241,6 +1256,7 @@ class ChatAdminRights(TLConstructor):
             manage_direct_messages=_value_manage_direct_messages,
             manage_ranks=_value_manage_ranks,
             manage_linked_peers=_value_manage_linked_peers,
+            manage_welcome_messages=_value_manage_welcome_messages,
         ), cursor
 
 

@@ -3,7 +3,6 @@
 !docs/**
 !docs-site/
 !docs-site/**
-
 docs/.env*
 docs-site/.env*
 docs/THOUGHTS.md

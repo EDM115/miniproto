@@ -2337,6 +2337,77 @@ class InputSavedStarGiftSlug(TLConstructor):
         return cls(slug=_value_slug), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class InlineButtonTypeCallback(TLConstructor):
+    requires_password: bool = False
+    data: bytes
+    CONSTRUCTOR_ID: ClassVar[int] = 0x2955BC38
+    QUALNAME: ClassVar[str] = "inlineButtonTypeCallback"
+    RESULT_TYPE: ClassVar[str] = "InlineButtonType"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="requires_password",
+            python_name="requires_password",
+            type="true",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="data",
+            python_name="data",
+            type="bytes",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.requires_password:
+            flags |= 1
+        output.extend(encode_int(flags))
+        output.extend(encode_bytes(self.data))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_requires_password = bool(flags & 1)
+        _value_data, cursor = decode_bytes(raw_data, cursor)
+        return cls(requires_password=_value_requires_password, data=_value_data), cursor
+
+
 class auth:
     ExportedAuthorization = AuthExportedAuthorization
 
@@ -2390,6 +2461,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     StarsTransactionPeerPremiumBot,
     UsersUsers,
     InputSavedStarGiftSlug,
+    InlineButtonTypeCallback,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -2426,6 +2498,7 @@ __all__ = (
     "StarsTransactionPeerPremiumBot",
     "UsersUsers",
     "InputSavedStarGiftSlug",
+    "InlineButtonTypeCallback",
     "auth",
     "help",
     "messages",

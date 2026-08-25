@@ -2366,6 +2366,90 @@ class StarGiftAttributeRarity(TLConstructor):
         return cls(permille=_value_permille), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class ButtonTypeRequestPeer(TLConstructor):
+    button_id: int
+    peer_type: Any
+    max_quantity: int
+    CONSTRUCTOR_ID: ClassVar[int] = 0x4F58A237
+    QUALNAME: ClassVar[str] = "buttonTypeRequestPeer"
+    RESULT_TYPE: ClassVar[str] = "ButtonType"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="button_id",
+            python_name="button_id",
+            type="int",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="peer_type",
+            python_name="peer_type",
+            type="RequestPeerType",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="max_quantity",
+            python_name="max_quantity",
+            type="int",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        output.extend(encode_int(flags))
+        output.extend(encode_int(self.button_id))
+        output.extend(encode_value("RequestPeerType", self.peer_type))
+        output.extend(encode_int(self.max_quantity))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_button_id, cursor = decode_int(raw_data, cursor)
+        _value_peer_type, cursor = decode_value("RequestPeerType", raw_data, cursor)
+        _value_max_quantity, cursor = decode_int(raw_data, cursor)
+        return cls(button_id=_value_button_id, peer_type=_value_peer_type, max_quantity=_value_max_quantity), cursor
+
+
 class account:
     SavedRingtoneConverted = AccountSavedRingtoneConverted
 
@@ -2411,6 +2495,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     PaymentsStarsRevenueWithdrawalUrl,
     BusinessBotRights,
     StarGiftAttributeRarity,
+    ButtonTypeRequestPeer,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -2443,6 +2528,7 @@ __all__ = (
     "PaymentsStarsRevenueWithdrawalUrl",
     "BusinessBotRights",
     "StarGiftAttributeRarity",
+    "ButtonTypeRequestPeer",
     "account",
     "payments",
     "storage",

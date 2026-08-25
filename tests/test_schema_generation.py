@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import tomllib
 from pathlib import Path
@@ -257,11 +258,44 @@ def test_generation_is_deterministic_for_real_schema_slice(tmp_path) -> None:
     assert 'help = lazy_namespace("functions", "help")' in generated_functions
 
 
+def test_generation_refreshes_rust_fast_path_schema_pins_without_changing_reviewed_selection(tmp_path: Path) -> None:
+    """Refresh derived manifest pins while preserving the reviewed fast-path selection.
+
+    Args:
+        tmp_path: Isolated filesystem root supplied by pytest.
+    """
+    schema_path = ROOT / "tools" / "schema" / "schema.json"
+    metadata = json.loads(METADATA.read_text(encoding="utf-8"))
+    reviewed_manifest = json.loads((ROOT / "tools" / "schema" / "rust-fast-paths.json").read_text(encoding="utf-8"))
+    stale_manifest = dict(reviewed_manifest)
+    stale_manifest["schema_layer"] = 0
+    stale_manifest["schema_json_sha256"] = "0" * 64
+    manifest_path = tmp_path / "rust-fast-paths.json"
+    manifest_path.write_text(json.dumps(stale_manifest, indent=2) + "\n", encoding="utf-8")
+
+    outputs = render_outputs(
+        schema_path,
+        METADATA,
+        ERRORS,
+        tmp_path / "raw",
+        manifest_path,
+        tmp_path / "generated_tl.rs",
+        tmp_path / "fast_metadata.py",
+    )
+
+    assert manifest_path in stale_outputs(outputs)
+    refreshed_manifest = json.loads(outputs.files[manifest_path])
+    assert refreshed_manifest["schema_layer"] == metadata["schema_layer"]
+    assert refreshed_manifest["schema_json_sha256"] == hashlib.sha256(schema_path.read_bytes()).hexdigest()
+    assert refreshed_manifest["api"] == reviewed_manifest["api"]
+    assert refreshed_manifest["mtproto"] == reviewed_manifest["mtproto"]
+
+
 def test_generated_committed_raw_modules_match_full_schema_metadata() -> None:
     """Keep committed generated raw, Rust, and fast-path outputs fresh."""
     schema = parse_schema_file(SCHEMA)
     metadata = __import__("json").loads(METADATA.read_text(encoding="utf-8"))
-    assert metadata["schema_layer"] == 228
+    assert metadata["schema_layer"] == 229
     assert metadata["changelog_latest_layer"] == 225
     assert metadata["rpc_error_layer"] == 227
     outputs = render_outputs(
@@ -278,12 +312,12 @@ def test_generated_committed_raw_modules_match_full_schema_metadata() -> None:
         '"""Generated metadata describing the TL constructors with native fast paths."""\n\n'
     )
     assert not stale_outputs(outputs)
-    assert len(schema.constructors) == 1649
-    assert len(schema.functions) == 811
+    assert len(schema.constructors) == 1663
+    assert len(schema.functions) == 817
     assert BINDINGS.exists()
     bindings = json.loads(BINDINGS.read_text(encoding="utf-8"))
-    assert bindings["layer"] == 228
-    assert len(bindings["declarations"]) == 2460
+    assert bindings["layer"] == 229
+    assert len(bindings["declarations"]) == 2480
     assert len(bindings["errors"]) == 818
 
 
@@ -293,7 +327,7 @@ def test_committed_layer_228_raw_surface_exposes_tdlib_additions_and_changed_met
 
     assert types.InputPeerPhotoFileLocationLegacy.CONSTRUCTOR_ID == 0x27D69997
     assert functions.InvokeWithReCaptchaPrefix.CONSTRUCTOR_ID == 0xADBB0F94
-    assert functions.EphemeralEditMessage.CONSTRUCTOR_ID == 0x13F250EE
+    assert functions.EphemeralEditMessage.CONSTRUCTOR_ID == 0xCF9C725B
     assert functions.ChannelsJoinChannel.CONSTRUCTOR_ID == 0x7F6A1E22
     assert functions.ChannelsJoinChannel.RESULT_TYPE == "messages.ChatInviteJoinResult"
     assert not hasattr(types, "Null")

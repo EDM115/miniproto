@@ -764,130 +764,6 @@ class SendMessageCancelAction(TLConstructor):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class KeyboardButtonRequestPeer(TLConstructor):
-    style: Any | None = None
-    text: str
-    button_id: int
-    peer_type: Any
-    max_quantity: int
-    CONSTRUCTOR_ID: ClassVar[int] = 0x5B0F15F5
-    QUALNAME: ClassVar[str] = "keyboardButtonRequestPeer"
-    RESULT_TYPE: ClassVar[str] = "KeyboardButton"
-    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
-        TLField(
-            name="style",
-            python_name="style",
-            type="KeyboardButtonStyle",
-            flag="flags",
-            flag_index=10,
-            is_optional=True,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="text",
-            python_name="text",
-            type="string",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="button_id",
-            python_name="button_id",
-            type="int",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="peer_type",
-            python_name="peer_type",
-            type="RequestPeerType",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="max_quantity",
-            python_name="max_quantity",
-            type="int",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-    )
-    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
-        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
-    )
-
-    def serialize(self) -> bytes:
-        return self._serialize(boxed=True)
-
-    def _serialize(self, *, boxed: bool = True) -> bytes:
-        output = bytearray()
-        if boxed:
-            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
-        flags = 0
-        if self.style is not None:
-            flags |= 1024
-        output.extend(encode_int(flags))
-        if self.style is not None:
-            output.extend(encode_value("KeyboardButtonStyle", self.style))
-        output.extend(encode_string(self.text))
-        output.extend(encode_int(self.button_id))
-        output.extend(encode_value("RequestPeerType", self.peer_type))
-        output.extend(encode_int(self.max_quantity))
-        return bytes(output)
-
-    @classmethod
-    def deserialize(cls, data: bytes | memoryview) -> Self:
-        obj, offset = cls._deserialize(data)
-        if offset != len(data):
-            raise TLCodecError("TL object payload has trailing bytes")
-        return obj
-
-    @classmethod
-    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
-        raw_data = data
-        cursor = offset
-        if boxed:
-            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
-            if constructor_id != cls.CONSTRUCTOR_ID:
-                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
-        flags = 0
-        flags, cursor = decode_int(raw_data, cursor)
-        if bool(flags & 1024):
-            _value_style, cursor = decode_value("KeyboardButtonStyle", raw_data, cursor)
-        else:
-            _value_style = None
-        _value_text, cursor = decode_string(raw_data, cursor)
-        _value_button_id, cursor = decode_int(raw_data, cursor)
-        _value_peer_type, cursor = decode_value("RequestPeerType", raw_data, cursor)
-        _value_max_quantity, cursor = decode_int(raw_data, cursor)
-        return cls(
-            style=_value_style,
-            text=_value_text,
-            button_id=_value_button_id,
-            peer_type=_value_peer_type,
-            max_quantity=_value_max_quantity,
-        ), cursor
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
 class ContactsTopPeersNotModified(TLConstructor):
     pass
     CONSTRUCTOR_ID: ClassVar[int] = 0xDE266EF5
@@ -1910,6 +1786,97 @@ class MessagesEmojiGameUnavailable(TLConstructor):
         return cls(), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class InlineButtonTypeSwitchInline(TLConstructor):
+    same_peer: bool = False
+    query: str
+    peer_types: tuple[Any, ...] | None = None
+    CONSTRUCTOR_ID: ClassVar[int] = 0x93773FF5
+    QUALNAME: ClassVar[str] = "inlineButtonTypeSwitchInline"
+    RESULT_TYPE: ClassVar[str] = "InlineButtonType"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="same_peer",
+            python_name="same_peer",
+            type="true",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="query",
+            python_name="query",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="peer_types",
+            python_name="peer_types",
+            type="Vector<InlineQueryPeerType>",
+            flag="flags",
+            flag_index=1,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=True,
+            vector_item_type="InlineQueryPeerType",
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.same_peer:
+            flags |= 1
+        if self.peer_types is not None:
+            flags |= 2
+        output.extend(encode_int(flags))
+        output.extend(encode_string(self.query))
+        if self.peer_types is not None:
+            output.extend(encode_vector(self.peer_types, "InlineQueryPeerType"))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_same_peer = bool(flags & 1)
+        _value_query, cursor = decode_string(raw_data, cursor)
+        if bool(flags & 2):
+            _value_peer_types, cursor = decode_vector(raw_data, cursor, "InlineQueryPeerType")
+        else:
+            _value_peer_types = None
+        return cls(same_peer=_value_same_peer, query=_value_query, peer_types=_value_peer_types), cursor
+
+
 class contacts:
     TopPeersNotModified = ContactsTopPeersNotModified
 
@@ -1936,7 +1903,6 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     MessagesSentEncryptedMessage,
     InputDocument,
     SendMessageCancelAction,
-    KeyboardButtonRequestPeer,
     ContactsTopPeersNotModified,
     PageBlockChannel,
     PhoneCall,
@@ -1948,6 +1914,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     BotBusinessConnection,
     StarsTransactionPeerAppStore,
     MessagesEmojiGameUnavailable,
+    InlineButtonTypeSwitchInline,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -1962,7 +1929,6 @@ __all__ = (
     "MessagesSentEncryptedMessage",
     "InputDocument",
     "SendMessageCancelAction",
-    "KeyboardButtonRequestPeer",
     "ContactsTopPeersNotModified",
     "PageBlockChannel",
     "PhoneCall",
@@ -1974,6 +1940,7 @@ __all__ = (
     "BotBusinessConnection",
     "StarsTransactionPeerAppStore",
     "MessagesEmojiGameUnavailable",
+    "InlineButtonTypeSwitchInline",
     "contacts",
     "help",
     "messages",

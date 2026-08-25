@@ -1232,6 +1232,169 @@ class PaymentsCheckCanSendGiftResultFail(TLConstructor):
         return cls(reason=_value_reason), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class InputInlineButtonTypeUrlAuth(TLConstructor):
+    request_write_access: bool = False
+    fwd_text: str | None = None
+    url: str
+    bot: Any | None = None
+    CONSTRUCTOR_ID: ClassVar[int] = 0x9961BCB4
+    QUALNAME: ClassVar[str] = "inputInlineButtonTypeUrlAuth"
+    RESULT_TYPE: ClassVar[str] = "InlineButtonType"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="request_write_access",
+            python_name="request_write_access",
+            type="true",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="fwd_text",
+            python_name="fwd_text",
+            type="string",
+            flag="flags",
+            flag_index=1,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="url",
+            python_name="url",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="bot",
+            python_name="bot",
+            type="InputUser",
+            flag="flags",
+            flag_index=2,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.request_write_access:
+            flags |= 1
+        if self.fwd_text is not None:
+            flags |= 2
+        if self.bot is not None:
+            flags |= 4
+        output.extend(encode_int(flags))
+        if self.fwd_text is not None:
+            output.extend(encode_string(self.fwd_text))
+        output.extend(encode_string(self.url))
+        if self.bot is not None:
+            output.extend(encode_value("InputUser", self.bot))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_request_write_access = bool(flags & 1)
+        if bool(flags & 2):
+            _value_fwd_text, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_fwd_text = None
+        _value_url, cursor = decode_string(raw_data, cursor)
+        if bool(flags & 4):
+            _value_bot, cursor = decode_value("InputUser", raw_data, cursor)
+        else:
+            _value_bot = None
+        return cls(
+            request_write_access=_value_request_write_access, fwd_text=_value_fwd_text, url=_value_url, bot=_value_bot
+        ), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class InlineButtonTypeWebView(TLConstructor):
+    url: str
+    CONSTRUCTOR_ID: ClassVar[int] = 0x3BCAB5B4
+    QUALNAME: ClassVar[str] = "inlineButtonTypeWebView"
+    RESULT_TYPE: ClassVar[str] = "InlineButtonType"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="url",
+            python_name="url",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_string(self.url))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_url, cursor = decode_string(raw_data, cursor)
+        return cls(url=_value_url), cursor
+
+
 class account:
     TmpPassword = AccountTmpPassword
 
@@ -1267,6 +1430,8 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     MessagesFoundStickersNotModified,
     UsersUsersSlice,
     PaymentsCheckCanSendGiftResultFail,
+    InputInlineButtonTypeUrlAuth,
+    InlineButtonTypeWebView,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -1289,6 +1454,8 @@ __all__ = (
     "MessagesFoundStickersNotModified",
     "UsersUsersSlice",
     "PaymentsCheckCanSendGiftResultFail",
+    "InputInlineButtonTypeUrlAuth",
+    "InlineButtonTypeWebView",
     "account",
     "messages",
     "payments",

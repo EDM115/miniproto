@@ -1151,6 +1151,7 @@ class ChatFull(TLConstructor):
     can_set_username: bool
     has_scheduled: bool
     translations_disabled: bool
+    has_welcome_messages: bool
     id: int
     about: str
     participants: Any
@@ -1174,6 +1175,7 @@ class ChatFull(TLConstructor):
         can_set_username: bool = ...,
         has_scheduled: bool = ...,
         translations_disabled: bool = ...,
+        has_welcome_messages: bool = ...,
         id: int,
         about: str,
         participants: Any,
@@ -1218,6 +1220,7 @@ class ChannelFull(TLConstructor):
     paid_reactions_available: bool
     stargifts_available: bool
     paid_messages_available: bool
+    has_welcome_messages: bool
     id: int
     about: str
     participants_count: int | None
@@ -1288,6 +1291,7 @@ class ChannelFull(TLConstructor):
         paid_reactions_available: bool = ...,
         stargifts_available: bool = ...,
         paid_messages_available: bool = ...,
+        has_welcome_messages: bool = ...,
         id: int,
         about: str,
         participants_count: int | None = ...,
@@ -2365,6 +2369,7 @@ class MessageActionStarGiftUnique(TLConstructor):
     assigned: bool
     from_offer: bool
     craft: bool
+    name_hidden: bool
     gift: Any
     can_export_at: int | None
     transfer_stars: int | None
@@ -2376,6 +2381,7 @@ class MessageActionStarGiftUnique(TLConstructor):
     can_resell_at: int | None
     drop_original_details_stars: int | None
     can_craft_at: int | None
+    message: Any | None
     def __init__(
         self,
         *,
@@ -2387,6 +2393,7 @@ class MessageActionStarGiftUnique(TLConstructor):
         assigned: bool = ...,
         from_offer: bool = ...,
         craft: bool = ...,
+        name_hidden: bool = ...,
         gift: Any,
         can_export_at: int | None = ...,
         transfer_stars: int | None = ...,
@@ -2398,6 +2405,7 @@ class MessageActionStarGiftUnique(TLConstructor):
         can_resell_at: int | None = ...,
         drop_original_details_stars: int | None = ...,
         can_craft_at: int | None = ...,
+        message: Any | None = ...,
     ) -> None: ...
 
 class MessageActionPaidMessagesRefunded(TLConstructor):
@@ -2585,6 +2593,13 @@ class MessageActionChangeCommunity(TLConstructor):
     RESULT_TYPE: ClassVar[str]
     community_id: int | None
     def __init__(self, *, community_id: int | None = ...) -> None: ...
+
+class MessageActionChatJoinedViaCommunity(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    community_id: int
+    def __init__(self, *, community_id: int) -> None: ...
 
 class Dialog(TLConstructor):
     CONSTRUCTOR_ID: ClassVar[int]
@@ -5109,11 +5124,22 @@ class UpdateEphemeralBotCallbackQuery(TLConstructor):
     RESULT_TYPE: ClassVar[str]
     query_id: int
     user_id: int
-    peer: Any
+    peer: Any | None
     msg_id: int
     data: bytes
+    chat_instance: int | None
     message: Any
-    def __init__(self, *, query_id: int, user_id: int, peer: Any, msg_id: int, data: bytes, message: Any) -> None: ...
+    def __init__(
+        self,
+        *,
+        query_id: int,
+        user_id: int,
+        peer: Any | None = ...,
+        msg_id: int,
+        data: bytes,
+        chat_instance: int | None = ...,
+        message: Any,
+    ) -> None: ...
 
 class UpdateBotStarsSubscription(TLConstructor):
     CONSTRUCTOR_ID: ClassVar[int]
@@ -5993,25 +6019,42 @@ class SendMessageTextDraftAction(TLConstructor):
     CONSTRUCTOR_ID: ClassVar[int]
     QUALNAME: ClassVar[str]
     RESULT_TYPE: ClassVar[str]
+    can_stop: bool
+    keep_on_stop: bool
     random_id: int
     text: Any
-    def __init__(self, *, random_id: int, text: Any) -> None: ...
+    def __init__(self, *, can_stop: bool = ..., keep_on_stop: bool = ..., random_id: int, text: Any) -> None: ...
 
 class InputSendMessageRichMessageDraftAction(TLConstructor):
     CONSTRUCTOR_ID: ClassVar[int]
     QUALNAME: ClassVar[str]
     RESULT_TYPE: ClassVar[str]
+    can_stop: bool
+    keep_on_stop: bool
     random_id: int
     rich_message: Any
-    def __init__(self, *, random_id: int, rich_message: Any) -> None: ...
+    def __init__(
+        self, *, can_stop: bool = ..., keep_on_stop: bool = ..., random_id: int, rich_message: Any
+    ) -> None: ...
 
 class SendMessageRichMessageDraftAction(TLConstructor):
     CONSTRUCTOR_ID: ClassVar[int]
     QUALNAME: ClassVar[str]
     RESULT_TYPE: ClassVar[str]
+    can_stop: bool
+    keep_on_stop: bool
     random_id: int
     rich_message: Any
-    def __init__(self, *, random_id: int, rich_message: Any) -> None: ...
+    def __init__(
+        self, *, can_stop: bool = ..., keep_on_stop: bool = ..., random_id: int, rich_message: Any
+    ) -> None: ...
+
+class SendMessageStopDraftAction(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    random_id: int
+    def __init__(self, *, random_id: int) -> None: ...
 
 class ContactsFound(TLConstructor):
     CONSTRUCTOR_ID: ClassVar[int]
@@ -6987,203 +7030,8 @@ class KeyboardButton(TLConstructor):
     RESULT_TYPE: ClassVar[str]
     style: Any | None
     text: str
-    def __init__(self, *, style: Any | None = ..., text: str) -> None: ...
-
-class KeyboardButtonUrl(TLConstructor):
-    CONSTRUCTOR_ID: ClassVar[int]
-    QUALNAME: ClassVar[str]
-    RESULT_TYPE: ClassVar[str]
-    style: Any | None
-    text: str
-    url: str
-    def __init__(self, *, style: Any | None = ..., text: str, url: str) -> None: ...
-
-class KeyboardButtonCallback(TLConstructor):
-    CONSTRUCTOR_ID: ClassVar[int]
-    QUALNAME: ClassVar[str]
-    RESULT_TYPE: ClassVar[str]
-    requires_password: bool
-    style: Any | None
-    text: str
-    data: bytes
-    def __init__(self, *, requires_password: bool = ..., style: Any | None = ..., text: str, data: bytes) -> None: ...
-
-class KeyboardButtonRequestPhone(TLConstructor):
-    CONSTRUCTOR_ID: ClassVar[int]
-    QUALNAME: ClassVar[str]
-    RESULT_TYPE: ClassVar[str]
-    style: Any | None
-    text: str
-    def __init__(self, *, style: Any | None = ..., text: str) -> None: ...
-
-class KeyboardButtonRequestGeoLocation(TLConstructor):
-    CONSTRUCTOR_ID: ClassVar[int]
-    QUALNAME: ClassVar[str]
-    RESULT_TYPE: ClassVar[str]
-    style: Any | None
-    text: str
-    def __init__(self, *, style: Any | None = ..., text: str) -> None: ...
-
-class KeyboardButtonSwitchInline(TLConstructor):
-    CONSTRUCTOR_ID: ClassVar[int]
-    QUALNAME: ClassVar[str]
-    RESULT_TYPE: ClassVar[str]
-    same_peer: bool
-    style: Any | None
-    text: str
-    query: str
-    peer_types: tuple[Any, ...] | None
-    def __init__(
-        self,
-        *,
-        same_peer: bool = ...,
-        style: Any | None = ...,
-        text: str,
-        query: str,
-        peer_types: tuple[Any, ...] | None = ...,
-    ) -> None: ...
-
-class KeyboardButtonGame(TLConstructor):
-    CONSTRUCTOR_ID: ClassVar[int]
-    QUALNAME: ClassVar[str]
-    RESULT_TYPE: ClassVar[str]
-    style: Any | None
-    text: str
-    def __init__(self, *, style: Any | None = ..., text: str) -> None: ...
-
-class KeyboardButtonBuy(TLConstructor):
-    CONSTRUCTOR_ID: ClassVar[int]
-    QUALNAME: ClassVar[str]
-    RESULT_TYPE: ClassVar[str]
-    style: Any | None
-    text: str
-    def __init__(self, *, style: Any | None = ..., text: str) -> None: ...
-
-class KeyboardButtonUrlAuth(TLConstructor):
-    CONSTRUCTOR_ID: ClassVar[int]
-    QUALNAME: ClassVar[str]
-    RESULT_TYPE: ClassVar[str]
-    style: Any | None
-    text: str
-    fwd_text: str | None
-    url: str
-    button_id: int
-    def __init__(
-        self, *, style: Any | None = ..., text: str, fwd_text: str | None = ..., url: str, button_id: int
-    ) -> None: ...
-
-class InputKeyboardButtonUrlAuth(TLConstructor):
-    CONSTRUCTOR_ID: ClassVar[int]
-    QUALNAME: ClassVar[str]
-    RESULT_TYPE: ClassVar[str]
-    request_write_access: bool
-    style: Any | None
-    text: str
-    fwd_text: str | None
-    url: str
-    bot: Any
-    def __init__(
-        self,
-        *,
-        request_write_access: bool = ...,
-        style: Any | None = ...,
-        text: str,
-        fwd_text: str | None = ...,
-        url: str,
-        bot: Any,
-    ) -> None: ...
-
-class KeyboardButtonRequestPoll(TLConstructor):
-    CONSTRUCTOR_ID: ClassVar[int]
-    QUALNAME: ClassVar[str]
-    RESULT_TYPE: ClassVar[str]
-    style: Any | None
-    quiz: bool | None
-    text: str
-    def __init__(self, *, style: Any | None = ..., quiz: bool | None = ..., text: str) -> None: ...
-
-class InputKeyboardButtonUserProfile(TLConstructor):
-    CONSTRUCTOR_ID: ClassVar[int]
-    QUALNAME: ClassVar[str]
-    RESULT_TYPE: ClassVar[str]
-    style: Any | None
-    text: str
-    user_id: Any
-    def __init__(self, *, style: Any | None = ..., text: str, user_id: Any) -> None: ...
-
-class KeyboardButtonUserProfile(TLConstructor):
-    CONSTRUCTOR_ID: ClassVar[int]
-    QUALNAME: ClassVar[str]
-    RESULT_TYPE: ClassVar[str]
-    style: Any | None
-    text: str
-    user_id: int
-    def __init__(self, *, style: Any | None = ..., text: str, user_id: int) -> None: ...
-
-class KeyboardButtonWebView(TLConstructor):
-    CONSTRUCTOR_ID: ClassVar[int]
-    QUALNAME: ClassVar[str]
-    RESULT_TYPE: ClassVar[str]
-    style: Any | None
-    text: str
-    url: str
-    def __init__(self, *, style: Any | None = ..., text: str, url: str) -> None: ...
-
-class KeyboardButtonSimpleWebView(TLConstructor):
-    CONSTRUCTOR_ID: ClassVar[int]
-    QUALNAME: ClassVar[str]
-    RESULT_TYPE: ClassVar[str]
-    style: Any | None
-    text: str
-    url: str
-    def __init__(self, *, style: Any | None = ..., text: str, url: str) -> None: ...
-
-class KeyboardButtonRequestPeer(TLConstructor):
-    CONSTRUCTOR_ID: ClassVar[int]
-    QUALNAME: ClassVar[str]
-    RESULT_TYPE: ClassVar[str]
-    style: Any | None
-    text: str
-    button_id: int
-    peer_type: Any
-    max_quantity: int
-    def __init__(
-        self, *, style: Any | None = ..., text: str, button_id: int, peer_type: Any, max_quantity: int
-    ) -> None: ...
-
-class InputKeyboardButtonRequestPeer(TLConstructor):
-    CONSTRUCTOR_ID: ClassVar[int]
-    QUALNAME: ClassVar[str]
-    RESULT_TYPE: ClassVar[str]
-    name_requested: bool
-    username_requested: bool
-    photo_requested: bool
-    style: Any | None
-    text: str
-    button_id: int
-    peer_type: Any
-    max_quantity: int
-    def __init__(
-        self,
-        *,
-        name_requested: bool = ...,
-        username_requested: bool = ...,
-        photo_requested: bool = ...,
-        style: Any | None = ...,
-        text: str,
-        button_id: int,
-        peer_type: Any,
-        max_quantity: int,
-    ) -> None: ...
-
-class KeyboardButtonCopy(TLConstructor):
-    CONSTRUCTOR_ID: ClassVar[int]
-    QUALNAME: ClassVar[str]
-    RESULT_TYPE: ClassVar[str]
-    style: Any | None
-    text: str
-    copy_text: str
-    def __init__(self, *, style: Any | None = ..., text: str, copy_text: str) -> None: ...
+    type: Any
+    def __init__(self, *, style: Any | None = ..., text: str, type: Any) -> None: ...
 
 class KeyboardButtonRow(TLConstructor):
     CONSTRUCTOR_ID: ClassVar[int]
@@ -7216,6 +7064,7 @@ class ReplyKeyboardMarkup(TLConstructor):
     single_use: bool
     selective: bool
     persistent: bool
+    force_reply: bool
     rows: tuple[Any, ...]
     placeholder: str | None
     def __init__(
@@ -7225,6 +7074,7 @@ class ReplyKeyboardMarkup(TLConstructor):
         single_use: bool = ...,
         selective: bool = ...,
         persistent: bool = ...,
+        force_reply: bool = ...,
         rows: tuple[Any, ...],
         placeholder: str | None = ...,
     ) -> None: ...
@@ -7233,8 +7083,9 @@ class ReplyInlineMarkup(TLConstructor):
     CONSTRUCTOR_ID: ClassVar[int]
     QUALNAME: ClassVar[str]
     RESULT_TYPE: ClassVar[str]
+    force_reply: bool
     rows: tuple[Any, ...]
-    def __init__(self, *, rows: tuple[Any, ...]) -> None: ...
+    def __init__(self, *, force_reply: bool = ..., rows: tuple[Any, ...]) -> None: ...
 
 class MessageEntityUnknown(TLConstructor):
     CONSTRUCTOR_ID: ClassVar[int]
@@ -9010,6 +8861,15 @@ class TextDiff(TLConstructor):
     old_text: Any
     def __init__(self, *, text: Any, old_text: Any) -> None: ...
 
+class TextButton(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    text: Any
+    type: Any
+    style: Any | None
+    def __init__(self, *, text: Any, type: Any, style: Any | None = ...) -> None: ...
+
 class PageBlockUnsupported(TLConstructor):
     CONSTRUCTOR_ID: ClassVar[int]
     QUALNAME: ClassVar[str]
@@ -9098,9 +8958,10 @@ class PageBlockBlockquote(TLConstructor):
     CONSTRUCTOR_ID: ClassVar[int]
     QUALNAME: ClassVar[str]
     RESULT_TYPE: ClassVar[str]
+    collapsed: bool
     text: Any
     caption: Any
-    def __init__(self, *, text: Any, caption: Any) -> None: ...
+    def __init__(self, *, collapsed: bool = ..., text: Any, caption: Any) -> None: ...
 
 class PageBlockPullquote(TLConstructor):
     CONSTRUCTOR_ID: ClassVar[int]
@@ -9235,9 +9096,12 @@ class PageBlockTable(TLConstructor):
     RESULT_TYPE: ClassVar[str]
     bordered: bool
     striped: bool
+    compact: bool
     title: Any
     rows: tuple[Any, ...]
-    def __init__(self, *, bordered: bool = ..., striped: bool = ..., title: Any, rows: tuple[Any, ...]) -> None: ...
+    def __init__(
+        self, *, bordered: bool = ..., striped: bool = ..., compact: bool = ..., title: Any, rows: tuple[Any, ...]
+    ) -> None: ...
 
 class PageBlockOrderedList(TLConstructor):
     CONSTRUCTOR_ID: ClassVar[int]
@@ -9353,6 +9217,26 @@ class PageBlockBlockquoteBlocks(TLConstructor):
     blocks: tuple[Any, ...]
     caption: Any
     def __init__(self, *, blocks: tuple[Any, ...], caption: Any) -> None: ...
+
+class PageBlockButtonRow(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    align_left: bool
+    align_center: bool
+    align_right: bool
+    buttons: tuple[Any, ...]
+    def __init__(
+        self, *, align_left: bool = ..., align_center: bool = ..., align_right: bool = ..., buttons: tuple[Any, ...]
+    ) -> None: ...
+
+class PageBlockDocument(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    document_id: int
+    caption: Any
+    def __init__(self, *, document_id: int, caption: Any) -> None: ...
 
 class PhoneCallDiscardReasonMissed(TLConstructor):
     CONSTRUCTOR_ID: ClassVar[int]
@@ -11619,6 +11503,7 @@ class ChatAdminRights(TLConstructor):
     manage_direct_messages: bool
     manage_ranks: bool
     manage_linked_peers: bool
+    manage_welcome_messages: bool
     def __init__(
         self,
         *,
@@ -11640,6 +11525,7 @@ class ChatAdminRights(TLConstructor):
         manage_direct_messages: bool = ...,
         manage_ranks: bool = ...,
         manage_linked_peers: bool = ...,
+        manage_welcome_messages: bool = ...,
     ) -> None: ...
 
 class ChatBannedRights(TLConstructor):
@@ -13818,9 +13704,13 @@ class InputInvoiceStarGiftResale(TLConstructor):
     QUALNAME: ClassVar[str]
     RESULT_TYPE: ClassVar[str]
     ton: bool
+    show_name: bool
     slug: str
     to_id: Any
-    def __init__(self, *, ton: bool = ..., slug: str, to_id: Any) -> None: ...
+    message: Any | None
+    def __init__(
+        self, *, ton: bool = ..., show_name: bool = ..., slug: str, to_id: Any, message: Any | None = ...
+    ) -> None: ...
 
 class InputInvoiceStarGiftPrepaidUpgrade(TLConstructor):
     CONSTRUCTOR_ID: ClassVar[int]
@@ -18496,9 +18386,12 @@ class EphemeralMessage(TLConstructor):
     QUALNAME: ClassVar[str]
     RESULT_TYPE: ClassVar[str]
     out: bool
+    welcome_template: bool
+    invert_media: bool
+    noforwards: bool
     id: int
     from_id: Any
-    peer_id: Any
+    peer_id: Any | None
     receiver_id: int
     top_msg_id: int | None
     date: int
@@ -18507,13 +18400,19 @@ class EphemeralMessage(TLConstructor):
     media: Any | None
     reply_markup: Any | None
     reply_to: Any | None
+    rich_message: Any | None
+    chat_instance: int | None
+    anchor_msg_id: int | None
     def __init__(
         self,
         *,
         out: bool = ...,
+        welcome_template: bool = ...,
+        invert_media: bool = ...,
+        noforwards: bool = ...,
         id: int,
         from_id: Any,
-        peer_id: Any,
+        peer_id: Any | None = ...,
         receiver_id: int,
         top_msg_id: int | None = ...,
         date: int,
@@ -18522,6 +18421,9 @@ class EphemeralMessage(TLConstructor):
         media: Any | None = ...,
         reply_markup: Any | None = ...,
         reply_to: Any | None = ...,
+        rich_message: Any | None = ...,
+        chat_instance: int | None = ...,
+        anchor_msg_id: int | None = ...,
     ) -> None: ...
 
 class CommunitiesParticipantJoinedChats(TLConstructor):
@@ -18554,6 +18456,218 @@ class MessagesComposedRichMessageWithAI(TLConstructor):
     RESULT_TYPE: ClassVar[str]
     result: Any
     def __init__(self, *, result: Any) -> None: ...
+
+class ButtonTypeDefault(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    def __init__(self) -> None: ...
+
+class ButtonTypeRequestPhone(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    def __init__(self) -> None: ...
+
+class ButtonTypeRequestGeoLocation(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    def __init__(self) -> None: ...
+
+class ButtonTypeRequestPoll(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    quiz: bool | None
+    def __init__(self, *, quiz: bool | None = ...) -> None: ...
+
+class ButtonTypeRequestPeer(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    button_id: int
+    peer_type: Any
+    max_quantity: int
+    def __init__(self, *, button_id: int, peer_type: Any, max_quantity: int) -> None: ...
+
+class InputButtonTypeRequestPeer(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    name_requested: bool
+    username_requested: bool
+    photo_requested: bool
+    button_id: int
+    peer_type: Any
+    max_quantity: int
+    def __init__(
+        self,
+        *,
+        name_requested: bool = ...,
+        username_requested: bool = ...,
+        photo_requested: bool = ...,
+        button_id: int,
+        peer_type: Any,
+        max_quantity: int,
+    ) -> None: ...
+
+class ButtonTypeSimpleWebView(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    url: str
+    def __init__(self, *, url: str) -> None: ...
+
+class InlineButtonTypeUrl(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    url: str
+    def __init__(self, *, url: str) -> None: ...
+
+class InlineButtonTypeUrlAuth(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    fwd_text: str | None
+    url: str
+    button_id: int
+    def __init__(self, *, fwd_text: str | None = ..., url: str, button_id: int) -> None: ...
+
+class InputInlineButtonTypeUrlAuth(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    request_write_access: bool
+    fwd_text: str | None
+    url: str
+    bot: Any | None
+    def __init__(
+        self, *, request_write_access: bool = ..., fwd_text: str | None = ..., url: str, bot: Any | None = ...
+    ) -> None: ...
+
+class InlineButtonTypeWebView(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    url: str
+    def __init__(self, *, url: str) -> None: ...
+
+class InlineButtonTypeCallback(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    requires_password: bool
+    data: bytes
+    def __init__(self, *, requires_password: bool = ..., data: bytes) -> None: ...
+
+class InlineButtonTypeGame(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    def __init__(self) -> None: ...
+
+class InlineButtonTypeBuy(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    def __init__(self) -> None: ...
+
+class InlineButtonTypeSwitchInline(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    same_peer: bool
+    query: str
+    peer_types: tuple[Any, ...] | None
+    def __init__(self, *, same_peer: bool = ..., query: str, peer_types: tuple[Any, ...] | None = ...) -> None: ...
+
+class InlineButtonTypeUserProfile(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    user_id: int
+    def __init__(self, *, user_id: int) -> None: ...
+
+class InputInlineButtonTypeUserProfile(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    user_id: Any
+    def __init__(self, *, user_id: Any) -> None: ...
+
+class InlineButtonTypeCopy(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    copy_text: str
+    def __init__(self, *, copy_text: str) -> None: ...
+
+class InlineButtonTypeDisabled(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    def __init__(self) -> None: ...
+
+class KeyboardInlineButton(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    style: Any | None
+    text: str
+    type: Any
+    def __init__(self, *, style: Any | None = ..., text: str, type: Any) -> None: ...
+
+class KeyboardInlineButtonRow(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    buttons: tuple[Any, ...]
+    def __init__(self, *, buttons: tuple[Any, ...]) -> None: ...
+
+class RichButtonStyle(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    bg_primary: bool
+    bg_danger: bool
+    bg_success: bool
+    link: bool
+    def __init__(
+        self, *, bg_primary: bool = ..., bg_danger: bool = ..., bg_success: bool = ..., link: bool = ...
+    ) -> None: ...
+
+class PageButton(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    text: Any
+    type: Any
+    style: Any | None
+    def __init__(self, *, text: Any, type: Any, style: Any | None = ...) -> None: ...
+
+class EphemeralWelcomeMessagesNotModified(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    def __init__(self) -> None: ...
+
+class EphemeralWelcomeMessages(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    hash: int
+    messages: tuple[Any, ...]
+    def __init__(self, *, hash: int, messages: tuple[Any, ...]) -> None: ...
+
+class AuthFirebasePnvIntent(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    nonce: str
+    digital_credential_payload: str
+    def __init__(self, *, nonce: str, digital_credential_payload: str) -> None: ...
 
 class account:
     AuthorizationForm = AccountAuthorizationForm
@@ -18610,6 +18724,7 @@ class auth:
     CodeTypeMissedCall = AuthCodeTypeMissedCall
     CodeTypeSms = AuthCodeTypeSms
     ExportedAuthorization = AuthExportedAuthorization
+    FirebasePnvIntent = AuthFirebasePnvIntent
     LoggedOut = AuthLoggedOut
     LoginToken = AuthLoginToken
     LoginTokenMigrateTo = AuthLoginTokenMigrateTo
@@ -18674,6 +18789,10 @@ class contacts:
     TopPeers = ContactsTopPeers
     TopPeersDisabled = ContactsTopPeersDisabled
     TopPeersNotModified = ContactsTopPeersNotModified
+
+class ephemeral:
+    WelcomeMessages = EphemeralWelcomeMessages
+    WelcomeMessagesNotModified = EphemeralWelcomeMessagesNotModified
 
 class fragment:
     CollectibleInfo = FragmentCollectibleInfo

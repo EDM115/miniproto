@@ -1,24 +1,25 @@
+<div align="center">
+
 # miniproto
 
-<p align="center">
-  <img src="docs-site/src/assets/brand/mark.svg" width="176" height="176" alt="miniproto Packet Loom mark">
-</p>
+<img src="docs-site/src/assets/brand/mark.svg" width="192" height="192" alt="miniproto logo">
 
-`miniproto` is a fast, async-first Telegram MTProto client core for Python. It owns protocol correctness, authorization, encrypted sessions, raw Layer 228 bindings, updates, peers, messages, and bounded media transfers while a bundled Rust/PyO3 extension accelerates measured hot paths.
+</div>
 
-The first public line is `0.1.x` Alpha: the implementation is substantial, but breaking changes remain possible while the API and operational defaults settle. Start with the [documentation website](https://miniproto.edm115.dev/) or the [five-minute quickstart](https://miniproto.edm115.dev/start/quickstart/).
+`miniproto` is a fast, async-first Telegram MTProto client core for Python. It owns protocol correctness, authorization, encrypted sessions, raw API bindings, updates, peers, messages, and bounded media transfers while a bundled Rust/PyO3 extension accelerates measured hot paths.  
+The first public line is `0.1.x` Alpha : the implementation is substantial, but breaking changes remain possible while the API and operational defaults settle. Start with the [documentation website](https://miniproto.edm115.dev/) or the [five-minute quickstart](https://miniproto.edm115.dev/start/quickstart/).
 
 ## Install
 
-```console
-python -m pip install miniproto
+```zsh
+uv add miniproto
 ```
 
-The package requires Python 3.13 or newer. Release automation targets normal CPython 3.13 and 3.14 plus free-threaded CPython 3.14t, with native wheels for Linux glibc/musl, Windows, and macOS on x86-64 and ARM64. CPython 3.13t and ARMv7 are not supported. Until the first Alpha artifacts are published, contributors can install the checkout with `uv sync --extra dev,docs` and `uv run maturin develop`.
+The package requires Python 3.13+. Release automation targets normal CPython 3.13 and 3.14 plus free-threaded CPython 3.14t, with native wheels for Linux glibc/musl, Windows, and macOS on x86-64 and ARM64. CPython 3.13t and ARMv7 are not supported.
 
 ## Secure minimal quickstart
 
-This deliberately uses in-memory storage, so it contacts Telegram but does not retain an authorization credential on disk:
+This deliberately uses in-memory storage, so it contacts Telegram but does not retain an authorization credential on disk :
 
 ```python
 import os
@@ -45,7 +46,7 @@ For a durable client, omit `session_storage`, provide `MINIPROTO_SESSION_KEY` th
 
 ## Authorization and identity
 
-Phone authorization accepts sync or async callbacks for the login code and optional two-step-verification password:
+Phone authorization accepts sync or async callbacks for the login code and optional two-step-verification password :
 
 ```python
 import getpass
@@ -60,9 +61,9 @@ me = await client.get_me()
 
 Bots use `await client.sign_in_bot(token)`. Neither flow grants permissions Telegram has not assigned to the account, and no credentialed example is part of the offline test suite.
 
-## Raw Layer 228 calls
+## Raw API calls
 
-The generated raw API exposes every pinned Telegram function and constructor while `Client.invoke()` owns request wrapping, result validation, datacenter migration, eligible retries, flood-wait handling, and optional quick acknowledgements:
+The generated raw API exposes every pinned Telegram function and constructor while `Client.invoke()` owns request wrapping, result validation, datacenter migration, eligible retries, flood-wait handling, and optional quick acknowledgements :
 
 ```python
 from miniproto.raw import functions
@@ -75,7 +76,7 @@ The [generated Telegram reference](https://miniproto.edm115.dev/reference/telegr
 
 ## Messages and files
 
-The convenience surface stays intentionally small:
+The convenience surface stays intentionally small :
 
 ```python
 message = await client.send_message("@your_test_chat", "Hello from miniproto")
@@ -117,23 +118,38 @@ Uploads and downloads use bounded request windows, shared byte-weighted per-DC s
 
 ## Sessions, native code, and fallbacks
 
-Native miniproto session strings can be exported as a checksummed bearer value or protected with Scrypt and AES-256-GCM. Telethon v1 and Pyrogram compatibility formats are supported with explicitly lossy field mappings. Every session string is a bearer credential, even when encrypted at rest.
-
+Native miniproto session strings can be exported as a checksummed bearer value or protected with Scrypt and AES-256-GCM. Telethon v1 and Pyrogram compatibility formats are supported with explicitly lossy field mappings. Every session string is a bearer credential, even when encrypted at rest.  
 The private `miniproto._native` extension provides crypto, MTProto envelope, transport framing, TL, and session hot paths. Public wrappers select capabilities rather than assuming that one successful import implements everything; supported Python/`cryptography` paths remain available when a native capability cannot load. Reproducible benchmark commands and result interpretation are documented in [Performance and benchmarks](https://miniproto.edm115.dev/guides/performance-and-benchmarks/); no local timing is presented as a universal Telegram throughput claim.
 
-## `miniproto` versus `mpgram`
+## `miniproto` vs `mpgram`
 
-`miniproto` is the reusable protocol SDK: transports, authorization, sessions, DC migration, raw invocation, generated bindings, updates, peers, core message helpers, and media primitives. The future `mpgram` package is the application-framework boundary for routers, filters, decorators, middleware, commands, plugins, dependency/context helpers, conversations, bound message methods, and broad high-level Telegram ergonomics.
+`miniproto` is the reusable protocol SDK : transports, authorization, sessions, DC migration, raw invocation, generated bindings, updates, peers, core message helpers, and media primitives. The `mpgram` package is the application-framework boundary for routers, filters, decorators, middleware, commands, plugins, dependency/context helpers, conversations, bound message methods, and broad high-level Telegram ergonomics.  
+TL;DR : use `miniproto` if you want to create your own framework or have "low-level" control, use [`mpgram`](https://github.com/EDM115/MPGram) if you want a high-level, opinionated framework that simplifies everything.
 
 ## Documentation and project links
 
-- [Documentation](https://miniproto.edm115.dev/) — authored guides plus searchable generated Python, Telegram, and Rust reference pages.
-- [Documentation backup](https://edm115.github.io/miniproto/) — in case the main site is down, always reflect the latest changes on the `master` branch.
-- [Architecture](https://miniproto.edm115.dev/concepts/architecture/) — ownership boundaries and the Python/schema/Rust execution model.
-- [Development commands](https://miniproto.edm115.dev/project/development/) — schema, docs, quality, tests, benchmarks, builds, and release diagnostics.
-- [Release guide](https://miniproto.edm115.dev/project/release/) — attested build artifacts, OIDC publishing, immutable releases, and recovery boundaries.
-- [Contributing](CONTRIBUTING.md) — local setup and verification expectations.
-- [Security policy](SECURITY.md) — supported Alpha line, secret handling, and private vulnerability reporting.
-- [Changelog](CHANGELOG.md) — complete `0.1.0` Alpha capability and limitation summary.
+- [Documentation](https://miniproto.edm115.dev/) : authored guides plus searchable generated Python, Telegram, and Rust reference pages
+- [Documentation backup](https://edm115.github.io/miniproto/) : in case the main site is down, always reflect the latest changes on the `master` branch
+- [Architecture](https://miniproto.edm115.dev/concepts/architecture/) : ownership boundaries and the Python/schema/Rust execution model
+- [Development commands](https://miniproto.edm115.dev/project/development/) : schema, docs, quality, tests, benchmarks, builds, and release diagnostics
+- [Release guide](https://miniproto.edm115.dev/project/release/) : attested build artifacts, OIDC publishing, immutable releases, and recovery boundaries
+- [Contributing](CONTRIBUTING.md) : local setup and verification expectations
+- [Security policy](SECURITY.md) : supported Alpha line, secret handling, and private vulnerability reporting
+- [Changelog](CHANGELOG.md) : complete `0.1.0` Alpha capability and limitation summary
 
-The project takes API-design inspiration from Telethon, Pyrogram and its forks, Grammers, TDLib, GramJS, mtcute, Telegram Web K/tweb, and Telegram's official MTProto documentation without copying copyleft implementation code. Telegram controls account permissions, limits, and service behavior; users remain responsible for Telegram's Terms of Service, API rules, account consent, and lawful data handling.
+---
+
+This project has been largely inspired by the following projects :
+
+- [Pyrogram](https://github.com/pyrogram/pyrogram)
+  - [Pyroblack](https://github.com/eyMarv/pyroblack)
+  - [Kurigram](https://github.com/KurimuzonAkuma/kurigram)
+  - [Pyrofork](https://github.com/Mayuri-Chan/pyrofork)
+  - [Hydrogram](https://github.com/hydrogram/hydrogram)
+- [Telethon](https://codeberg.org/Lonami/Telethon)
+- [MTKruto](https://github.com/MTKruto/MTKruto)
+- [mtcute](https://github.com/mtcute/mtcute)
+- [grammers](https://codeberg.org/Lonami/grammers)
+
+Show them some love too !  
+miniproto is released under the MIT license.

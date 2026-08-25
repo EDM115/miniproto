@@ -1966,6 +1966,96 @@ class StoriesGetStoryViewsList(TLRequest):
         ), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class EphemeralDeleteMessage(TLRequest):
+    peer: Any | None = None
+    receiver_id: Any
+    id: int
+    CONSTRUCTOR_ID: ClassVar[int] = 0x92F6E797
+    QUALNAME: ClassVar[str] = "ephemeral.deleteMessage"
+    RESULT_TYPE: ClassVar[str] = "Bool"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="peer",
+            python_name="peer",
+            type="InputPeer",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="receiver_id",
+            python_name="receiver_id",
+            type="InputUser",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="id",
+            python_name="id",
+            type="int",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.peer is not None:
+            flags |= 1
+        output.extend(encode_int(flags))
+        if self.peer is not None:
+            output.extend(encode_value("InputPeer", self.peer))
+        output.extend(encode_value("InputUser", self.receiver_id))
+        output.extend(encode_int(self.id))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        if bool(flags & 1):
+            _value_peer, cursor = decode_value("InputPeer", raw_data, cursor)
+        else:
+            _value_peer = None
+        _value_receiver_id, cursor = decode_value("InputUser", raw_data, cursor)
+        _value_id, cursor = decode_int(raw_data, cursor)
+        return cls(peer=_value_peer, receiver_id=_value_receiver_id, id=_value_id), cursor
+
+
 class account:
     SaveWallPaper = AccountSaveWallPaper
     ToggleConnectedBotPaused = AccountToggleConnectedBotPaused
@@ -1979,6 +2069,10 @@ class auth:
 class channels:
     ReadHistory = ChannelsReadHistory
     SetEmojiStickers = ChannelsSetEmojiStickers
+
+
+class ephemeral:
+    DeleteMessage = EphemeralDeleteMessage
 
 
 class messages:
@@ -2031,6 +2125,7 @@ ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
     PhoneCheckGroupCall,
     PhoneDeleteGroupCallMessages,
     StoriesGetStoryViewsList,
+    EphemeralDeleteMessage,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLRequest]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_FUNCTIONS}
 NAME_MAP: dict[str, type[TLRequest]] = {entry.QUALNAME: entry for entry in ALL_FUNCTIONS}
@@ -2057,9 +2152,11 @@ __all__ = (
     "PhoneCheckGroupCall",
     "PhoneDeleteGroupCallMessages",
     "StoriesGetStoryViewsList",
+    "EphemeralDeleteMessage",
     "account",
     "auth",
     "channels",
+    "ephemeral",
     "messages",
     "payments",
     "phone",

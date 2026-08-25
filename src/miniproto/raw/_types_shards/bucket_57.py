@@ -860,70 +860,6 @@ class UpdateChatParticipantRank(TLConstructor):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class SendMessageRichMessageDraftAction(TLConstructor):
-    random_id: int
-    rich_message: Any
-    CONSTRUCTOR_ID: ClassVar[int] = 0xA2CB24F9
-    QUALNAME: ClassVar[str] = "sendMessageRichMessageDraftAction"
-    RESULT_TYPE: ClassVar[str] = "SendMessageAction"
-    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
-        TLField(
-            name="random_id",
-            python_name="random_id",
-            type="long",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="rich_message",
-            python_name="rich_message",
-            type="RichMessage",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-    )
-    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
-
-    def serialize(self) -> bytes:
-        return self._serialize(boxed=True)
-
-    def _serialize(self, *, boxed: bool = True) -> bytes:
-        output = bytearray()
-        if boxed:
-            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
-        output.extend(encode_long(self.random_id))
-        output.extend(encode_value("RichMessage", self.rich_message))
-        return bytes(output)
-
-    @classmethod
-    def deserialize(cls, data: bytes | memoryview) -> Self:
-        obj, offset = cls._deserialize(data)
-        if offset != len(data):
-            raise TLCodecError("TL object payload has trailing bytes")
-        return obj
-
-    @classmethod
-    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
-        raw_data = data
-        cursor = offset
-        if boxed:
-            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
-            if constructor_id != cls.CONSTRUCTOR_ID:
-                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
-        _value_random_id, cursor = decode_long(raw_data, cursor)
-        _value_rich_message, cursor = decode_value("RichMessage", raw_data, cursor)
-        return cls(random_id=_value_random_id, rich_message=_value_rich_message), cursor
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
 class DocumentAttributeAnimated(TLConstructor):
     pass
     CONSTRUCTOR_ID: ClassVar[int] = 0x11B58939
@@ -1057,208 +993,6 @@ class InputStickerSetAnimatedEmojiAnimations(TLConstructor):
             if constructor_id != cls.CONSTRUCTOR_ID:
                 raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
         return cls(), cursor
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
-class KeyboardButtonGame(TLConstructor):
-    style: Any | None = None
-    text: str
-    CONSTRUCTOR_ID: ClassVar[int] = 0x89C590F9
-    QUALNAME: ClassVar[str] = "keyboardButtonGame"
-    RESULT_TYPE: ClassVar[str] = "KeyboardButton"
-    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
-        TLField(
-            name="style",
-            python_name="style",
-            type="KeyboardButtonStyle",
-            flag="flags",
-            flag_index=10,
-            is_optional=True,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="text",
-            python_name="text",
-            type="string",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-    )
-    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
-        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
-    )
-
-    def serialize(self) -> bytes:
-        return self._serialize(boxed=True)
-
-    def _serialize(self, *, boxed: bool = True) -> bytes:
-        output = bytearray()
-        if boxed:
-            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
-        flags = 0
-        if self.style is not None:
-            flags |= 1024
-        output.extend(encode_int(flags))
-        if self.style is not None:
-            output.extend(encode_value("KeyboardButtonStyle", self.style))
-        output.extend(encode_string(self.text))
-        return bytes(output)
-
-    @classmethod
-    def deserialize(cls, data: bytes | memoryview) -> Self:
-        obj, offset = cls._deserialize(data)
-        if offset != len(data):
-            raise TLCodecError("TL object payload has trailing bytes")
-        return obj
-
-    @classmethod
-    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
-        raw_data = data
-        cursor = offset
-        if boxed:
-            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
-            if constructor_id != cls.CONSTRUCTOR_ID:
-                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
-        flags = 0
-        flags, cursor = decode_int(raw_data, cursor)
-        if bool(flags & 1024):
-            _value_style, cursor = decode_value("KeyboardButtonStyle", raw_data, cursor)
-        else:
-            _value_style = None
-        _value_text, cursor = decode_string(raw_data, cursor)
-        return cls(style=_value_style, text=_value_text), cursor
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
-class KeyboardButtonUrlAuth(TLConstructor):
-    style: Any | None = None
-    text: str
-    fwd_text: str | None = None
-    url: str
-    button_id: int
-    CONSTRUCTOR_ID: ClassVar[int] = 0xF51006F9
-    QUALNAME: ClassVar[str] = "keyboardButtonUrlAuth"
-    RESULT_TYPE: ClassVar[str] = "KeyboardButton"
-    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
-        TLField(
-            name="style",
-            python_name="style",
-            type="KeyboardButtonStyle",
-            flag="flags",
-            flag_index=10,
-            is_optional=True,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="text",
-            python_name="text",
-            type="string",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="fwd_text",
-            python_name="fwd_text",
-            type="string",
-            flag="flags",
-            flag_index=0,
-            is_optional=True,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="url",
-            python_name="url",
-            type="string",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="button_id",
-            python_name="button_id",
-            type="int",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-    )
-    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
-        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
-    )
-
-    def serialize(self) -> bytes:
-        return self._serialize(boxed=True)
-
-    def _serialize(self, *, boxed: bool = True) -> bytes:
-        output = bytearray()
-        if boxed:
-            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
-        flags = 0
-        if self.style is not None:
-            flags |= 1024
-        if self.fwd_text is not None:
-            flags |= 1
-        output.extend(encode_int(flags))
-        if self.style is not None:
-            output.extend(encode_value("KeyboardButtonStyle", self.style))
-        output.extend(encode_string(self.text))
-        if self.fwd_text is not None:
-            output.extend(encode_string(self.fwd_text))
-        output.extend(encode_string(self.url))
-        output.extend(encode_int(self.button_id))
-        return bytes(output)
-
-    @classmethod
-    def deserialize(cls, data: bytes | memoryview) -> Self:
-        obj, offset = cls._deserialize(data)
-        if offset != len(data):
-            raise TLCodecError("TL object payload has trailing bytes")
-        return obj
-
-    @classmethod
-    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
-        raw_data = data
-        cursor = offset
-        if boxed:
-            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
-            if constructor_id != cls.CONSTRUCTOR_ID:
-                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
-        flags = 0
-        flags, cursor = decode_int(raw_data, cursor)
-        if bool(flags & 1024):
-            _value_style, cursor = decode_value("KeyboardButtonStyle", raw_data, cursor)
-        else:
-            _value_style = None
-        _value_text, cursor = decode_string(raw_data, cursor)
-        if bool(flags & 1):
-            _value_fwd_text, cursor = decode_string(raw_data, cursor)
-        else:
-            _value_fwd_text = None
-        _value_url, cursor = decode_string(raw_data, cursor)
-        _value_button_id, cursor = decode_int(raw_data, cursor)
-        return cls(
-            style=_value_style, text=_value_text, fwd_text=_value_fwd_text, url=_value_url, button_id=_value_button_id
-        ), cursor
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -1995,6 +1729,42 @@ class RequirementToContactEmpty(TLConstructor):
         return cls(), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class ButtonTypeRequestPhone(TLConstructor):
+    pass
+    CONSTRUCTOR_ID: ClassVar[int] = 0xDF3D36F9
+    QUALNAME: ClassVar[str] = "buttonTypeRequestPhone"
+    RESULT_TYPE: ClassVar[str] = "ButtonType"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        return cls(), cursor
+
+
 class auth:
     SentCodeTypeFragmentSms = AuthSentCodeTypeFragmentSms
 
@@ -2018,12 +1788,9 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     UpdateStoryID,
     UpdateStarsBalance,
     UpdateChatParticipantRank,
-    SendMessageRichMessageDraftAction,
     DocumentAttributeAnimated,
     ReceivedNotifyMessage,
     InputStickerSetAnimatedEmojiAnimations,
-    KeyboardButtonGame,
-    KeyboardButtonUrlAuth,
     ChannelParticipantsRecent,
     AuthSentCodeTypeFragmentSms,
     TextFixed,
@@ -2037,6 +1804,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     BusinessWeeklyOpen,
     BusinessAwayMessageScheduleAlways,
     RequirementToContactEmpty,
+    ButtonTypeRequestPhone,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -2051,12 +1819,9 @@ __all__ = (
     "UpdateStoryID",
     "UpdateStarsBalance",
     "UpdateChatParticipantRank",
-    "SendMessageRichMessageDraftAction",
     "DocumentAttributeAnimated",
     "ReceivedNotifyMessage",
     "InputStickerSetAnimatedEmojiAnimations",
-    "KeyboardButtonGame",
-    "KeyboardButtonUrlAuth",
     "ChannelParticipantsRecent",
     "AuthSentCodeTypeFragmentSms",
     "TextFixed",
@@ -2070,6 +1835,7 @@ __all__ = (
     "BusinessWeeklyOpen",
     "BusinessAwayMessageScheduleAlways",
     "RequirementToContactEmpty",
+    "ButtonTypeRequestPhone",
     "auth",
     "messages",
     "payments",

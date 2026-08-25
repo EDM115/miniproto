@@ -388,82 +388,6 @@ class InputPrivacyValueAllowChatParticipants(TLConstructor):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class KeyboardButtonRequestPhone(TLConstructor):
-    style: Any | None = None
-    text: str
-    CONSTRUCTOR_ID: ClassVar[int] = 0x417EFD8F
-    QUALNAME: ClassVar[str] = "keyboardButtonRequestPhone"
-    RESULT_TYPE: ClassVar[str] = "KeyboardButton"
-    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
-        TLField(
-            name="style",
-            python_name="style",
-            type="KeyboardButtonStyle",
-            flag="flags",
-            flag_index=10,
-            is_optional=True,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="text",
-            python_name="text",
-            type="string",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-    )
-    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
-        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
-    )
-
-    def serialize(self) -> bytes:
-        return self._serialize(boxed=True)
-
-    def _serialize(self, *, boxed: bool = True) -> bytes:
-        output = bytearray()
-        if boxed:
-            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
-        flags = 0
-        if self.style is not None:
-            flags |= 1024
-        output.extend(encode_int(flags))
-        if self.style is not None:
-            output.extend(encode_value("KeyboardButtonStyle", self.style))
-        output.extend(encode_string(self.text))
-        return bytes(output)
-
-    @classmethod
-    def deserialize(cls, data: bytes | memoryview) -> Self:
-        obj, offset = cls._deserialize(data)
-        if offset != len(data):
-            raise TLCodecError("TL object payload has trailing bytes")
-        return obj
-
-    @classmethod
-    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
-        raw_data = data
-        cursor = offset
-        if boxed:
-            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
-            if constructor_id != cls.CONSTRUCTOR_ID:
-                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
-        flags = 0
-        flags, cursor = decode_int(raw_data, cursor)
-        if bool(flags & 1024):
-            _value_style, cursor = decode_value("KeyboardButtonStyle", raw_data, cursor)
-        else:
-            _value_style = None
-        _value_text, cursor = decode_string(raw_data, cursor)
-        return cls(style=_value_style, text=_value_text), cursor
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
 class MessageEntitySpoiler(TLConstructor):
     offset: int
     length: int
@@ -2097,6 +2021,56 @@ class MessagesTranslatedRichMessage(TLConstructor):
         return cls(result=_value_result), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class InlineButtonTypeUserProfile(TLConstructor):
+    user_id: int
+    CONSTRUCTOR_ID: ClassVar[int] = 0x3FA33FCF
+    QUALNAME: ClassVar[str] = "inlineButtonTypeUserProfile"
+    RESULT_TYPE: ClassVar[str] = "InlineButtonType"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="user_id",
+            python_name="user_id",
+            type="long",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_long(self.user_id))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_user_id, cursor = decode_long(raw_data, cursor)
+        return cls(user_id=_value_user_id), cursor
+
+
 class account:
     SentEmailCode = AccountSentEmailCode
 
@@ -2126,7 +2100,6 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     UpdateSentPhoneCode,
     UpdateGroupCallChainBlocks,
     InputPrivacyValueAllowChatParticipants,
-    KeyboardButtonRequestPhone,
     MessageEntitySpoiler,
     TextEmpty,
     TextImage,
@@ -2146,6 +2119,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     FactCheck,
     InputPasskeyCredentialPublicKey,
     MessagesTranslatedRichMessage,
+    InlineButtonTypeUserProfile,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -2157,7 +2131,6 @@ __all__ = (
     "UpdateSentPhoneCode",
     "UpdateGroupCallChainBlocks",
     "InputPrivacyValueAllowChatParticipants",
-    "KeyboardButtonRequestPhone",
     "MessageEntitySpoiler",
     "TextEmpty",
     "TextImage",
@@ -2177,6 +2150,7 @@ __all__ = (
     "FactCheck",
     "InputPasskeyCredentialPublicKey",
     "MessagesTranslatedRichMessage",
+    "InlineButtonTypeUserProfile",
     "account",
     "messages",
     "payments",

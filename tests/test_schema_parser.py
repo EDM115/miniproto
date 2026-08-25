@@ -13,8 +13,8 @@ TDLIB_FIXTURE = ROOT / "tests" / "fixtures" / "schema" / "tdlib-layer228-slice.t
 
 def test_parser_reads_full_official_schema_mirror() -> None:
     schema = parse_schema_file(SCHEMA)
-    assert len(schema.constructors) == 1649
-    assert len(schema.functions) == 811
+    assert len(schema.constructors) == 1663
+    assert len(schema.functions) == 817
     assert len(schema.ignored_declarations) == 8
     help_config = next(entry for entry in schema.functions if entry.name == "help.getConfig")
     assert help_config.constructor_id_hex == "c4f9186b"

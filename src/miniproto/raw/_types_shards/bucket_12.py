@@ -1760,6 +1760,70 @@ class AuctionBidLevel(TLConstructor):
         return cls(pos=_value_pos, amount=_value_amount, date=_value_date), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class AuthFirebasePnvIntent(TLConstructor):
+    nonce: str
+    digital_credential_payload: str
+    CONSTRUCTOR_ID: ClassVar[int] = 0xDF5AC00C
+    QUALNAME: ClassVar[str] = "auth.firebasePnvIntent"
+    RESULT_TYPE: ClassVar[str] = "auth.FirebasePnvIntent"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="nonce",
+            python_name="nonce",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="digital_credential_payload",
+            python_name="digital_credential_payload",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_string(self.nonce))
+        output.extend(encode_string(self.digital_credential_payload))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_nonce, cursor = decode_string(raw_data, cursor)
+        _value_digital_credential_payload, cursor = decode_string(raw_data, cursor)
+        return cls(nonce=_value_nonce, digital_credential_payload=_value_digital_credential_payload), cursor
+
+
 class account:
     WallPapers = AccountWallPapers
 
@@ -1767,6 +1831,7 @@ class account:
 class auth:
     CodeTypeFragmentSms = AuthCodeTypeFragmentSms
     CodeTypeSms = AuthCodeTypeSms
+    FirebasePnvIntent = AuthFirebasePnvIntent
 
 
 class help:
@@ -1803,6 +1868,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     BusinessAwayMessageScheduleCustom,
     HelpTimezonesListNotModified,
     AuctionBidLevel,
+    AuthFirebasePnvIntent,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -1828,6 +1894,7 @@ __all__ = (
     "BusinessAwayMessageScheduleCustom",
     "HelpTimezonesListNotModified",
     "AuctionBidLevel",
+    "AuthFirebasePnvIntent",
     "account",
     "auth",
     "help",

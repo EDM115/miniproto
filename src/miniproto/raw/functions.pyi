@@ -388,6 +388,30 @@ class AuthFinishPasskeyLogin(TLRequest):
         self, *, credential: Any, from_dc_id: int | None = ..., from_auth_key_id: int | None = ...
     ) -> None: ...
 
+class AuthInitFirebasePnvLogin(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    api_id: int
+    api_hash: str
+    def __init__(self, *, api_id: int, api_hash: str) -> None: ...
+
+class AuthFinishFirebasePnvLogin(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    google_token: str
+    def __init__(self, *, google_token: str) -> None: ...
+
+class AuthFirebasePnvSignUp(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    no_joined_notifications: bool
+    first_name: str
+    last_name: str
+    def __init__(self, *, no_joined_notifications: bool = ..., first_name: str, last_name: str) -> None: ...
+
 class AccountRegisterDevice(TLRequest):
     CONSTRUCTOR_ID: ClassVar[int]
     QUALNAME: ClassVar[str]
@@ -1973,6 +1997,7 @@ class MessagesForwardMessages(TLRequest):
     drop_media_captions: bool
     noforwards: bool
     allow_paid_floodskip: bool
+    from_ephemeral: bool
     from_peer: Any
     id: tuple[int, ...]
     random_id: tuple[int, ...]
@@ -1997,6 +2022,7 @@ class MessagesForwardMessages(TLRequest):
         drop_media_captions: bool = ...,
         noforwards: bool = ...,
         allow_paid_floodskip: bool = ...,
+        from_ephemeral: bool = ...,
         from_peer: Any,
         id: tuple[int, ...],
         random_id: tuple[int, ...],
@@ -7853,7 +7879,11 @@ class EphemeralSendMessage(TLRequest):
     CONSTRUCTOR_ID: ClassVar[int]
     QUALNAME: ClassVar[str]
     RESULT_TYPE: ClassVar[str]
-    peer: Any
+    invert_media: bool
+    welcome: bool
+    anchor: bool
+    noforwards: bool
+    peer: Any | None
     receiver_id: Any
     query_id: int | None
     message: str
@@ -7866,7 +7896,11 @@ class EphemeralSendMessage(TLRequest):
     def __init__(
         self,
         *,
-        peer: Any,
+        invert_media: bool = ...,
+        welcome: bool = ...,
+        anchor: bool = ...,
+        noforwards: bool = ...,
+        peer: Any | None = ...,
         receiver_id: Any,
         query_id: int | None = ...,
         message: str,
@@ -7882,10 +7916,10 @@ class EphemeralDeleteMessage(TLRequest):
     CONSTRUCTOR_ID: ClassVar[int]
     QUALNAME: ClassVar[str]
     RESULT_TYPE: ClassVar[str]
-    peer: Any
+    peer: Any | None
     receiver_id: Any
     id: int
-    def __init__(self, *, peer: Any, receiver_id: Any, id: int) -> None: ...
+    def __init__(self, *, peer: Any | None = ..., receiver_id: Any, id: int) -> None: ...
 
 class EphemeralReportMessage(TLRequest):
     CONSTRUCTOR_ID: ClassVar[int]
@@ -7910,24 +7944,53 @@ class EphemeralEditMessage(TLRequest):
     CONSTRUCTOR_ID: ClassVar[int]
     QUALNAME: ClassVar[str]
     RESULT_TYPE: ClassVar[str]
-    peer: Any
+    invert_media: bool
+    welcome: bool
+    peer: Any | None
     receiver_id: Any
     id: int
     message: str | None
     media: Any | None
     entities: tuple[Any, ...] | None
     reply_markup: Any | None
+    rich_message: Any | None
     def __init__(
         self,
         *,
-        peer: Any,
+        invert_media: bool = ...,
+        welcome: bool = ...,
+        peer: Any | None = ...,
         receiver_id: Any,
         id: int,
         message: str | None = ...,
         media: Any | None = ...,
         entities: tuple[Any, ...] | None = ...,
         reply_markup: Any | None = ...,
+        rich_message: Any | None = ...,
     ) -> None: ...
+
+class EphemeralDeleteWelcomeMessage(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    peer: Any
+    id: int
+    def __init__(self, *, peer: Any, id: int) -> None: ...
+
+class EphemeralDeleteAllWelcomeMessages(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    peer: Any
+    def __init__(self, *, peer: Any) -> None: ...
+
+class EphemeralGetWelcomeMessages(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    peer: Any
+    hash: int
+    def __init__(self, *, peer: Any, hash: int) -> None: ...
 
 class account:
     AcceptAuthorization = AccountAcceptAuthorization
@@ -8078,11 +8141,14 @@ class auth:
     DropTempAuthKeys = AuthDropTempAuthKeys
     ExportAuthorization = AuthExportAuthorization
     ExportLoginToken = AuthExportLoginToken
+    FinishFirebasePnvLogin = AuthFinishFirebasePnvLogin
     FinishPasskeyLogin = AuthFinishPasskeyLogin
+    FirebasePnvSignUp = AuthFirebasePnvSignUp
     ImportAuthorization = AuthImportAuthorization
     ImportBotAuthorization = AuthImportBotAuthorization
     ImportLoginToken = AuthImportLoginToken
     ImportWebTokenAuthorization = AuthImportWebTokenAuthorization
+    InitFirebasePnvLogin = AuthInitFirebasePnvLogin
     InitPasskeyLogin = AuthInitPasskeyLogin
     LogOut = AuthLogOut
     RecoverPassword = AuthRecoverPassword
@@ -8251,9 +8317,12 @@ class contacts:
     UpdateContactNote = ContactsUpdateContactNote
 
 class ephemeral:
+    DeleteAllWelcomeMessages = EphemeralDeleteAllWelcomeMessages
     DeleteMessage = EphemeralDeleteMessage
+    DeleteWelcomeMessage = EphemeralDeleteWelcomeMessage
     EditMessage = EphemeralEditMessage
     GetCallbackAnswer = EphemeralGetCallbackAnswer
+    GetWelcomeMessages = EphemeralGetWelcomeMessages
     ReportMessage = EphemeralReportMessage
     SendMessage = EphemeralSendMessage
 

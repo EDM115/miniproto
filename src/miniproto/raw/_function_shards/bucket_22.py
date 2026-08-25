@@ -163,6 +163,95 @@ class AuthReportMissingCode(TLRequest):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class AuthFirebasePnvSignUp(TLRequest):
+    no_joined_notifications: bool = False
+    first_name: str
+    last_name: str
+    CONSTRUCTOR_ID: ClassVar[int] = 0x783F6B56
+    QUALNAME: ClassVar[str] = "auth.firebasePnvSignUp"
+    RESULT_TYPE: ClassVar[str] = "auth.Authorization"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="no_joined_notifications",
+            python_name="no_joined_notifications",
+            type="true",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="first_name",
+            python_name="first_name",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="last_name",
+            python_name="last_name",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.no_joined_notifications:
+            flags |= 1
+        output.extend(encode_int(flags))
+        output.extend(encode_string(self.first_name))
+        output.extend(encode_string(self.last_name))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_no_joined_notifications = bool(flags & 1)
+        _value_first_name, cursor = decode_string(raw_data, cursor)
+        _value_last_name, cursor = decode_string(raw_data, cursor)
+        return cls(
+            no_joined_notifications=_value_no_joined_notifications,
+            first_name=_value_first_name,
+            last_name=_value_last_name,
+        ), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class AccountGetWallPapers(TLRequest):
     hash: int
     CONSTRUCTOR_ID: ClassVar[int] = 0x07967D36
@@ -2406,6 +2495,7 @@ class account:
 
 class auth:
     CheckPassword = AuthCheckPassword
+    FirebasePnvSignUp = AuthFirebasePnvSignUp
     ReportMissingCode = AuthReportMissingCode
 
 
@@ -2448,6 +2538,7 @@ class stories:
 ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
     AuthCheckPassword,
     AuthReportMissingCode,
+    AuthFirebasePnvSignUp,
     AccountGetWallPapers,
     AccountVerifyPhone,
     AccountCancelPasswordEmail,
@@ -2480,6 +2571,7 @@ NAME_MAP: dict[str, type[TLRequest]] = {entry.QUALNAME: entry for entry in ALL_F
 __all__ = (
     "AuthCheckPassword",
     "AuthReportMissingCode",
+    "AuthFirebasePnvSignUp",
     "AccountGetWallPapers",
     "AccountVerifyPhone",
     "AccountCancelPasswordEmail",
