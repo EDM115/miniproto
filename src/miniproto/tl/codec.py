@@ -1,4 +1,4 @@
-"""TL primitive, vector, and generated-object wire codec primitives."""
+"""TL primitive, vector and generated-object wire codec primitives."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ _constructor_class_cache: dict[int, type[Any]] = {}
 
 
 class TLCodecError(ValueError):
-    """Raised when TL wire data, types, or generated metadata cannot be encoded or decoded."""
+    """Raised when TL wire data, types or generated metadata cannot be encoded or decoded."""
 
     pass
 
@@ -289,7 +289,7 @@ def encode_vector(values: Iterable[Any], item_type: str) -> bytes:
         item_type: Schema type of each item.
 
     Returns:
-        Vector constructor, item count, and encoded items.
+        Vector constructor, item count and encoded items.
     """
     items = tuple(values)
     clean_item_type = _clean_type(item_type)
@@ -432,7 +432,7 @@ def encode_value(type_name: str, value: Any) -> bytes:
     """Encode one value according to a TL schema type expression.
 
     Args:
-        type_name: Primitive, vector, bare, or object schema type.
+        type_name: Primitive, vector, bare or object schema type.
         value: Value compatible with that type.
 
     Returns:
@@ -474,7 +474,7 @@ def decode_value(type_name: str, data: bytes | memoryview, offset: int) -> tuple
     """Decode one value according to a TL schema type expression.
 
     Args:
-        type_name: Primitive, vector, bare, or object schema type.
+        type_name: Primitive, vector, bare or object schema type.
         data: TL wire bytes.
         offset: Starting byte offset.
 

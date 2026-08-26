@@ -27,4 +27,4 @@ Register a handler directly or return a decorator for one update subtype.
 
 **Returns:**
 
-- <code>[UpdateHandler](#miniproto.updates.manager.UpdateHandler)[[UpdateT](#miniproto.updates.manager.UpdateT)] | [Callable](#collections.abc.Callable)[[[UpdateHandler](#miniproto.updates.manager.UpdateHandler)[[UpdateT](#miniproto.updates.manager.UpdateT)]], [UpdateHandler](#miniproto.updates.manager.UpdateHandler)[[UpdateT](#miniproto.updates.manager.UpdateT)]]</code> – The registered handler, or a decorator that registers a supplied handler.
+- <code>[UpdateHandler](#miniproto.updates.manager.UpdateHandler)[[UpdateT](#miniproto.updates.manager.UpdateT)] | [Callable](#collections.abc.Callable)[[[UpdateHandler](#miniproto.updates.manager.UpdateHandler)[[UpdateT](#miniproto.updates.manager.UpdateT)]], [UpdateHandler](#miniproto.updates.manager.UpdateHandler)[[UpdateT](#miniproto.updates.manager.UpdateT)]]</code> – The registered handler or a decorator that registers a supplied handler.

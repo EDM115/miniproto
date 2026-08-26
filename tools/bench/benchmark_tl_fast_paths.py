@@ -70,7 +70,7 @@ def main() -> int:
 
     ``--iterations`` is complete mix executions per timed batch and ``--rounds``
     retains one native and fallback batch sample each. A missing native fast path,
-    non-positive sizing input, parity failure, or a failed ``--check`` threshold
+    non-positive sizing input, parity failure or a failed ``--check`` threshold
     raises instead of silently changing the comparison.
     """
     parser = argparse.ArgumentParser(description="Benchmark the generated Rust TL hot-constructor mix")
@@ -87,7 +87,7 @@ def main() -> int:
         "--mode",
         choices=("smoke", "full"),
         default="full",
-        help="workload size; smoke caps iterations, payload, and rounds while full uses the supplied values",
+        help="workload size; smoke caps iterations, payload and rounds while full uses the supplied values",
     )
     parser.add_argument("--json", type=Path, help="write the normalized report to this path")
     parser.add_argument("--check", action="store_true", help="fail unless the representative mix reaches 1.5x")
@@ -95,7 +95,7 @@ def main() -> int:
     if not fast.native_fast_paths_available():
         raise RuntimeError("native generated TL fast paths are unavailable")
     if args.iterations <= 0 or args.payload_bytes <= 0 or args.rounds <= 0:
-        raise ValueError("iterations, payload-bytes, and rounds must be positive")
+        raise ValueError("iterations, payload-bytes and rounds must be positive")
 
     result = _benchmark(iterations=args.iterations, payload_bytes=args.payload_bytes, rounds=args.rounds)
     report = build_benchmark_report(

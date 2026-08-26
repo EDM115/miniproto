@@ -1,6 +1,6 @@
 ---
 title: "miniproto.client.Client.resolve_peer"
-description: "Resolve a peer object, numeric ID, or username to a normalized ``Peer``."
+description: "Resolve a peer object, numeric ID or username to a normalized ``Peer``."
 generated: true
 editUrl: false
 language: "python"
@@ -18,11 +18,11 @@ module: "miniproto.client"
 resolve_peer(peer: Peer | str | int) -> Peer
 ```
 
-Resolve a peer object, numeric ID, or username to a normalized ``Peer``.
+Resolve a peer object, numeric ID or username to a normalized ``Peer``.
 
 **Parameters:**
 
-- **peer** (<code>[Peer](#miniproto.types.Peer) | [str](#str) | [int](#int)</code>) – Existing normalized peer, numeric identifier, or username to resolve through the peer cache.
+- **peer** (<code>[Peer](#miniproto.types.Peer) | [str](#str) | [int](#int)</code>) – Existing normalized peer, numeric identifier or username to resolve through the peer cache.
 
 **Raises:**
 

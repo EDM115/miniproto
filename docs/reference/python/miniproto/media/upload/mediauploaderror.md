@@ -18,6 +18,6 @@ Bases: <code>[RuntimeError](#RuntimeError)</code>
 
 Raised only for unsatisfiable part-count configuration or ``BoolFalse`` replies.
 
-Transport, RPC, cancellation, source, and other invocation failures propagate
+Transport, RPC, cancellation, source and other invocation failures propagate
 their original exceptions; this error marks a maximum-part-size constraint or
 Telegram returning false after the configured false-result retry budget.

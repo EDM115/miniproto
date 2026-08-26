@@ -51,7 +51,6 @@ relationships_path = "telegram/relationships.json"
 [rust]
 manifest_path = "rust/miniproto/Cargo.toml"
 source_root = "."
-toolchain_path = "rust/miniproto/rust-toolchain-docs.toml"
 crate = "miniproto_native"
 artifact_stem = "miniproto_native"
 reviewed_modules = ["crypto", "mtproto", "tl", "transport"]

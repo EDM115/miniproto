@@ -23,7 +23,7 @@ Export a typed or decoded session record in a portable bearer format.
 **Parameters:**
 
 - **record_or_mapping** (<code>[SessionRecord](#miniproto.session.models.SessionRecord) | [Mapping](#collections.abc.Mapping)[[str](#str), [Any](#typing.Any)]</code>) – A validated record or an already decoded record mapping.
-- **format** (<code>[Literal](#typing.Literal)['miniproto', 'telethon', 'pyrogram']</code>) – Native ``miniproto`` (default), ``telethon``, or ``pyrogram``.
+- **format** (<code>[Literal](#typing.Literal)['miniproto', 'telethon', 'pyrogram']</code>) – Native ``miniproto`` (default), ``telethon`` or ``pyrogram``.
 - **passphrase** (<code>[str](#str) | [bytes](#bytes) | None</code>) – Optional native-only authenticated encryption using scrypt and AES-256-GCM.
 - **api_id** (<code>[int](#int) | None</code>) – Required for Pyrogram when absent from record metadata.
 - **test_mode** (<code>[bool](#bool) | None</code>) – Required for Pyrogram when absent from record metadata.
@@ -34,10 +34,10 @@ Export a typed or decoded session record in a portable bearer format.
 
 **Raises:**
 
-- <code>[SessionEnvelopeError](#miniproto.errors.SessionEnvelopeError)</code> – If data, authentication material, limits, or format options are invalid.
+- <code>[SessionEnvelopeError](#miniproto.errors.SessionEnvelopeError)</code> – If data, authentication material, limits or format options are invalid.
 - <code>[TypeError](#TypeError)</code> – If the input is neither a record nor mapping.
 
 Protected native strings authenticate and encrypt their payload. Plain native,
-Telethon, and Pyrogram outputs remain validated bearer encodings. Generic
+Telethon and Pyrogram outputs remain validated bearer encodings. Generic
 asynchronous storage is exported through ``Client.export_session_string``; this
 layer deliberately only accepts already loaded state.

@@ -9,13 +9,11 @@ qualified_name: "miniproto_native::crypto::sha1_digest"
 source_path: "rust/miniproto/src/crypto.rs"
 source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L106"
 aliases: ["miniproto._native.sha1_digest"]
-crate: "miniproto_native"
 python_visible: true
 ---
 
 ## Provenance
 
-- Crate: `miniproto_native`
 - Rust visibility: `restricted`
 - Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L106)
 - Python exposure: `miniproto._native.sha1_digest` (confirmed from adjacent PyO3 attributes)

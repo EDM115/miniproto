@@ -1,17 +1,9 @@
 import { expect, test } from "@playwright/test";
 
-const REQUIRED_FILTERS = [
-  "crate",
-  "kind",
-  "language",
-  "layer",
-  "module",
-  "namespace",
-  "python_visible",
-];
+const REQUIRED_FILTERS = ["kind", "language", "module", "namespace", "python_visible"];
 const REQUESTED_BASE = process.env.MINIPROTO_DOCS_BASE ?? "/";
 const PUBLIC_BASE = REQUESTED_BASE === "/" ? "/" : `/${REQUESTED_BASE.replace(/^\/+|\/+$/g, "")}/`;
-const PUBLIC_SITE = process.env.MINIPROTO_DOCS_SITE ?? "https://edm115.github.io";
+const PUBLIC_SITE = process.env.MINIPROTO_DOCS_SITE ?? "https://miniproto.edm115.dev";
 const sitePath = (route: string) => `${PUBLIC_BASE}${route.replace(/^\/+/, "")}`;
 const siteUrl = (route: string) => new URL(sitePath(route), PUBLIC_SITE).href;
 
@@ -31,12 +23,10 @@ declare global {
   }
 }
 
-test("homepage explains the product and exposes the Packet Loom identity", async ({ page }) => {
+test("homepage explains the product", async ({ page }) => {
   await page.goto("./");
 
-  await expect(page.getByRole("img", { name: "Packet Loom mark" }).first()).toBeVisible();
   await expect(page.getByRole("heading", { level: 1 })).toContainText(/MTProto/i);
-  await expect(page.getByText("0.1.0 Alpha", { exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: /five-minute quickstart/i })).toBeVisible();
   await expect(page.getByRole("link", { name: /browse the raw api/i })).toBeVisible();
   await expect(page.locator('link[rel="sitemap"]')).toHaveAttribute(
@@ -121,7 +111,7 @@ test("nested documentation links and the handwritten sidebar remain complete wit
   await expect(sidebar.getByRole("link", { name: "First Raw Call", exact: true })).toBeVisible();
 });
 
-test("Pagefind indexes every reference language, parameter terms, prose, and filters", async ({
+test("Pagefind indexes every reference language, parameter terms, prose and filters", async ({
   page,
 }) => {
   await page.goto("./");

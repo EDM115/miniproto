@@ -1,6 +1,6 @@
 ---
 title: "Telegram types: stories"
-description: "Layer 228 index of 11 canonical Telegram types in the stories namespace from tdlib."
+description: "Layer 229 index of 11 canonical Telegram types in the stories namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -9,11 +9,10 @@ qualified_name: "telegram.types.stories"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "stories"
-layer: 228
 schema_source: "tdlib"
 ---
 
-## Layer 228 stories types
+## Layer 229 stories types
 
 Selected canonical types in this namespace: 11.
 

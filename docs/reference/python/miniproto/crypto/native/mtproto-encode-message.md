@@ -1,6 +1,6 @@
 ---
 title: "miniproto.crypto.native.mtproto_encode_message"
-description: "Build, pad, and encrypt a complete MTProto encrypted message."
+description: "Build, pad and encrypt a complete MTProto encrypted message."
 generated: true
 editUrl: false
 language: "python"
@@ -18,7 +18,7 @@ module: "miniproto.crypto.native"
 mtproto_encode_message(auth_key: bytes, server_salt: int, session_id: int, msg_id: int, seq_no: int, body: BytesLike, *, client_to_server: bool = True, padding: bytes | None = None) -> bytes
 ```
 
-Build, pad, and encrypt a complete MTProto encrypted message.
+Build, pad and encrypt a complete MTProto encrypted message.
 
 **Parameters:**
 
@@ -35,11 +35,11 @@ random padding.
 
 **Returns:**
 
-- <code>[bytes](#bytes)</code> – The encrypted wire packet: auth-key ID, message key, and ciphertext.
+- <code>[bytes](#bytes)</code> – The encrypted wire packet: auth-key ID, message key and ciphertext.
 
 **Raises:**
 
-- <code>[ValueError](#ValueError)</code> – If key, body, padding, or encrypted-layout constraints fail.
+- <code>[ValueError](#ValueError)</code> – If key, body, padding or encrypted-layout constraints fail.
 - <code>[OverflowError](#OverflowError)</code> – If signed ``msg_id`` or ``seq_no`` cannot be encoded.
 
 The default random-padding source belongs to the selected backend.  The

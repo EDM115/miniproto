@@ -21,7 +21,7 @@ Load current structured or legacy session data into a ``SessionRecord``.
 
 **Parameters:**
 
-- **payload** (<code>[Mapping](#collections.abc.Mapping)[[str](#str), [Any](#typing.Any)] | None</code>) – Stored session mapping, or ``None`` for a new session.
+- **payload** (<code>[Mapping](#collections.abc.Mapping)[[str](#str), [Any](#typing.Any)] | None</code>) – Stored session mapping or ``None`` for a new session.
 - **default_dc_id** (<code>[int](#int)</code>) – Fallback Telegram DC for empty or legacy mappings.
 
 **Returns:**

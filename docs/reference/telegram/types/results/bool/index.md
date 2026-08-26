@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: Bool"
-description: "Layer 228 result-family index for 2 canonical constructors returning Bool from tdlib."
+description: "Layer 229 result-family index for 2 canonical constructors returning Bool from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -9,11 +9,10 @@ qualified_name: "telegram.types.result.Bool"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "results"
-layer: 228
 schema_source: "tdlib"
 ---
 
-## Layer 228 result family `Bool`
+## Layer 229 result family `Bool`
 
 Selected canonical constructors in this family: 2.
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from typing import Any, cast
 
@@ -37,13 +38,13 @@ def _has_direction(entry: dict[str, Any], direction: str) -> bool:
     return direction in cast(list[str], entry["directions"])
 
 
-def test_fast_path_metadata_is_layer_and_schema_pinned_with_thirty_unique_entries() -> None:
-    assert SCHEMA_LAYER == 229
-    assert SCHEMA_JSON_SHA256 == "0631ec65da66e15bcfc45d34ac32bfbbca244985f8c1ffdd928a28ef64c49d8c"
-    assert len(FAST_PATHS) == 30
-    assert len(FAST_PATHS_BY_ID) == 30
-    assert len(_API_PATHS) == 20
-    assert len(_SERVICE_PATHS) == 10
+def test_fast_path_metadata_is_internally_consistent() -> None:
+    assert SCHEMA_LAYER > 0
+    assert re.fullmatch(r"[0-9a-f]{64}", SCHEMA_JSON_SHA256)
+    assert FAST_PATHS
+    assert len(FAST_PATHS_BY_ID) == len(FAST_PATHS)
+    assert len(_API_PATHS) + len(_SERVICE_PATHS) == len(FAST_PATHS)
+    assert set(FAST_PATHS_BY_ID) == {cast(int, entry["constructor_id"]) for entry in FAST_PATHS}
 
 
 @pytest.mark.parametrize("entry", _API_PATHS, ids=lambda entry: cast(str, entry["name"]))

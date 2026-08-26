@@ -1,4 +1,4 @@
-"""Measure parity-checked native and fallback crypto, envelope, and TL workloads.
+"""Measure parity-checked native and fallback crypto, envelope and TL workloads.
 
 Durations are per-call wall-clock milliseconds sampled after one warmup call
 (except the explicitly first-run DH fixtures).  Reports retain all samples and
@@ -6,7 +6,7 @@ their median; native and Python calls are compared only after exact normalized
 output parity succeeds.  Cases are omitted when the compiled module or the
 ``cryptography`` fallback is unavailable, so a ratio is never a cross-platform
 or generalized speed claim.  CPU governor, interpreter build, extension build,
-cryptography provider, and current system load can materially change results.
+cryptography provider and current system load can materially change results.
 """
 
 from __future__ import annotations
@@ -94,8 +94,8 @@ class BenchmarkCase:
 
     Attributes:
         name: Stable workload name written to the report.
-        native: Bound extension callable, or ``None`` when native is unavailable.
-        python: Bound fallback callable, or ``None`` when its dependency is unavailable.
+        native: Bound extension callable or ``None`` when native is unavailable.
+        python: Bound fallback callable or ``None`` when its dependency is unavailable.
     """
 
     name: str
@@ -159,7 +159,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     """Run configured crypto/TL workloads and emit a normalized JSON report.
 
     The report uses milliseconds per complete callable invocation.  It records
-    unavailable sides rather than substituting a different workload, and raises
+    unavailable sides rather than substituting a different workload and raises
     when the fixed RFC fixture or a native/fallback output comparison fails.
     Command-line ``--runs`` changes only the number of retained samples.
 
@@ -377,7 +377,7 @@ def _call(module: ModuleType | None, name: str, *args: object) -> Callable[[], o
     """Bind an extension callable and fixed arguments when that module exists.
 
     Args:
-        module: Imported native extension, or ``None`` when it is unavailable.
+        module: Imported native extension or ``None`` when it is unavailable.
         name: Native attribute name to bind.
         *args: Positional workload arguments captured by the returned callable.
     """
@@ -402,7 +402,7 @@ def _call_aes_ige_roundtrip(
     """Build the fixed AES-IGE encrypt/decrypt round-trip workload if native exists.
 
     Args:
-        module: Imported native extension, or ``None`` when unavailable.
+        module: Imported native extension or ``None`` when unavailable.
         payload: Fixed block-aligned plaintext bytes for the workload.
         key: Fixed 32-byte AES-256 key.
         iv: Fixed 32-byte AES-IGE chaining IV.
@@ -416,7 +416,7 @@ def _call_tl_int_loop(module: ModuleType | None, values: tuple[int, ...]) -> Cal
     """Bind a repeated scalar TL integer encode/decode workload when available.
 
     Args:
-        module: Native extension to exercise, or ``None`` when unavailable.
+        module: Native extension to exercise or ``None`` when unavailable.
         values: Fixed signed integers processed by the returned loop.
     """
     if module is None:
@@ -428,7 +428,7 @@ def _call_tl_vector(module: ModuleType | None, values: tuple[int, ...]) -> Calla
     """Bind the manual TL-vector construction workload when native exists.
 
     Args:
-        module: Native extension to exercise, or ``None`` when unavailable.
+        module: Native extension to exercise or ``None`` when unavailable.
         values: Fixed integer values placed in the manual Vector encoding.
     """
     if module is None:
@@ -440,7 +440,7 @@ def _call_tl_int_vector_loop(module: ModuleType | None, values: tuple[int, ...])
     """Bind the integer-vector encode/decode workload when native exists.
 
     Args:
-        module: Native extension to exercise, or ``None`` when unavailable.
+        module: Native extension to exercise or ``None`` when unavailable.
         values: Fixed signed 32-bit values for the Vector workload.
     """
     if module is None:
@@ -452,7 +452,7 @@ def _call_tl_long_vector_loop(module: ModuleType | None, values: tuple[int, ...]
     """Bind the long-vector encode/decode workload when native exists.
 
     Args:
-        module: Native extension to exercise, or ``None`` when unavailable.
+        module: Native extension to exercise or ``None`` when unavailable.
         values: Fixed signed 64-bit values for the Vector workload.
     """
     if module is None:

@@ -18,4 +18,4 @@ uv run miniproto-bench-session-crypto --mode smoke --json .tmp/bench/session-cry
 
 The command names are installed project scripts and are documented with their focused inputs in [Development Commands](../development.md). Keep JSON output under `.tmp/` or another task-owned output directory.
 
-Credentialed media and matrix benchmarks are intentionally separate. They depend on Telegram permissions, account type, data-center placement, rate limits, network conditions, and live credentials. Do not enable a live benchmark by accident or use one noisy run as a deterministic regression gate.
+Credentialed media and matrix benchmarks are intentionally separate. They depend on Telegram permissions, account type, data-center placement, rate limits, network conditions and live credentials. Do not enable a live benchmark by accident or use one noisy run as a deterministic regression gate.

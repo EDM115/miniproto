@@ -23,12 +23,12 @@ Resolve a supported media object and stream it through :func:`iter_download`.
 **Parameters:**
 
 - **invoke** (<code>[RawInvoker](#miniproto.media.download.RawInvoker)</code>) – Async raw-RPC invoker used for file requests.
-- **media** (<code>[object](#object)</code>) – A :class:`Media`, file ID, raw document/photo/message, or input file location.
+- **media** (<code>[object](#object)</code>) – A :class:`Media`, file ID, raw document/photo/message or input file location.
 - **kwargs** (<code>[Any](#typing.Any)</code>) – Forwarded ``**kwargs`` download options; a missing cache key and total size are inferred when possible.
 
 **Yields:**
 
-- <code>[AsyncGenerator](#collections.abc.AsyncGenerator)[[bytes](#bytes)]</code> – Ordered byte chunks with the cancellation, caching, CDN, and integrity semantics of :func:`iter_download`.
+- <code>[AsyncGenerator](#collections.abc.AsyncGenerator)[[bytes](#bytes)]</code> – Ordered byte chunks with the cancellation, caching, CDN and integrity semantics of :func:`iter_download`.
 
 **Raises:**
 

@@ -1,6 +1,6 @@
 ---
 title: "Telegram RPC errors by name"
-description: "Layer 228 index of 818 pinned Telegram RPC errors sorted by symbolic name."
+description: "Layer 229 index of 818 pinned Telegram RPC errors sorted by symbolic name."
 generated: true
 editUrl: false
 language: "telegram"
@@ -9,7 +9,6 @@ qualified_name: "telegram.errors.by_name"
 source_path: "tools/schema/rpc-errors.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/rpc-errors.json"
 namespace: "errors"
-layer: 228
 schema_source: "tdlib"
 ---
 

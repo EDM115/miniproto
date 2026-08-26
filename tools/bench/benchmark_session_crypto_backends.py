@@ -1,11 +1,11 @@
-"""Measure native, ``cryptography``, and selected protected-session backends.
+"""Measure native, ``cryptography`` and selected protected-session backends.
 
 Each sample is wall-clock milliseconds per operation, obtained by timing a
 fixed number of iterations and dividing by that count.  Every available backend
 must produce the same output before timing; order rotates for each run to reduce
-position bias, and smoke/full modes select distinct warmup and iteration counts.
+position bias and smoke/full modes select distinct warmup and iteration counts.
 The report's winner and median ratio describe only this host, build, payload,
-and provider state.  Missing capabilities are recorded, not emulated, and no
+and provider state.  Missing capabilities are recorded, not emulated and no
 failure threshold or observed winner establishes a cross-platform speed claim.
 """
 
@@ -49,8 +49,8 @@ class BenchmarkCase:
 
     Attributes:
         name: Stable workload name written to the report.
-        native: Explicit native callable, or ``None`` when its capability is absent.
-        cryptography: Explicit fallback callable, or ``None`` when unavailable.
+        native: Explicit native callable or ``None`` when its capability is absent.
+        cryptography: Explicit fallback callable or ``None`` when unavailable.
         selected: Callable using the public native-first selection policy.
         selected_backend: Report label for the selected policy's current backend.
         smoke_iterations: Operations per timed smoke-mode sample.
@@ -67,7 +67,7 @@ class BenchmarkCase:
 
 
 def parse_args(argv: Sequence[str] | None = None, env: Mapping[str, str] | None = None) -> argparse.Namespace:
-    """Parse mode, sample count, and optional JSON path from CLI/environment.
+    """Parse mode, sample count and optional JSON path from CLI/environment.
 
     Explicit CLI arguments take precedence over ``MINIPROTO_BENCH_*`` defaults; smoke retains three samples by default and full retains ten. A non-positive ``--runs`` value is rejected by the argument parser.
 
@@ -158,7 +158,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def _build_cases() -> tuple[BenchmarkCase, ...]:
-    """Construct deterministic AES-GCM, Scrypt, and combined-session workloads.
+    """Construct deterministic AES-GCM, Scrypt and combined-session workloads.
 
     Native callables exist only when the optional extension exposes each exact
     capability.  ``cryptography`` callables exist only when installed; the
@@ -322,7 +322,7 @@ def _build_cases() -> tuple[BenchmarkCase, ...]:
 
 
 def _measure_case(case: BenchmarkCase, *, mode: str, runs: int, warmup: int) -> dict[str, Any]:
-    """Warm, parity-check, interleave, and summarize one backend comparison.
+    """Warm, parity-check, interleave and summarize one backend comparison.
 
     Timed values are ns-to-ms elapsed time divided by ``iterations``.  Backend
     order rotates per retained run; a result is invalidated with ``AssertionError``

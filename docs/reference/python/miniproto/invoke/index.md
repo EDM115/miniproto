@@ -1,6 +1,6 @@
 ---
 title: "miniproto.invoke"
-description: "Prepare, send, decode, retry, and persist low-level Telegram RPC state."
+description: "Prepare, send, decode, retry and persist low-level Telegram RPC state."
 generated: true
 editUrl: false
 language: "python"
@@ -13,7 +13,7 @@ module: "miniproto.invoke"
 
 ## `miniproto.invoke`
 
-Prepare, send, decode, retry, and persist low-level Telegram RPC state.
+Prepare, send, decode, retry and persist low-level Telegram RPC state.
 
 ## Public objects
 
@@ -34,6 +34,6 @@ Prepare, send, decode, retry, and persist low-level Telegram RPC state.
 - [`MethodFloodWaitCache`](./methodfloodwaitcache/) — Bounded client-local cache for Telegram's method-scoped flood waits.
 - [`method_name_for_request`](./method-name-for-request/) — Return the innermost wrapped request class's Telegram-qualified method name.
 - [`load_session_record`](./load-session-record/) — Load current structured or legacy session data into a ``SessionRecord``.
-- [`build_sender_from_session`](./build-sender-from-session/) — Build a sender for the session DC, or -- with overrides -- a media DC.
+- [`build_sender_from_session`](./build-sender-from-session/) — Build a sender for the session DC or -- with overrides -- a media DC.
 - [`clear_invalid_auth_key`](./clear-invalid-auth-key/) — Atomically clear an unusable persisted authorization key and user identity.
 - [`wrap_transport_failure`](./wrap-transport-failure/) — Translate a transport exception to the RPC-level error exposed to callers.

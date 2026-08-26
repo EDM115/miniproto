@@ -31,9 +31,9 @@ Configure a disconnected sender and its bounded background machinery.
 **Parameters:**
 
 - **endpoint** (<code>[ConnectionEndpoint](#miniproto.connection.transport.ConnectionEndpoint)</code>) – Remote MTProto TCP destination.
-- **transport_config** (<code>[TransportConfig](#miniproto.config.TransportConfig)</code>) – Transport framing, deadline, and reconnect bounds.
+- **transport_config** (<code>[TransportConfig](#miniproto.config.TransportConfig)</code>) – Transport framing, deadline and reconnect bounds.
 - **state** (<code>[MTProtoState](#miniproto.mtproto.state.MTProtoState)</code>) – Mutable authorization/session state used to encrypt, validate,
-sequence, acknowledge, and persist MTProto messages.
+sequence, acknowledge and persist MTProto messages.
 - **connector** (<code>[StreamConnector](#miniproto.connection.transport.StreamConnector) | None</code>) – Optional stream factory passed to every transport open.
 - **reconnect_attempts** (<code>[int](#int)</code>) – Maximum connection attempts per recovery cycle;
 defaults to 3.

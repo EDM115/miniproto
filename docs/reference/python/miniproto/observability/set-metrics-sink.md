@@ -1,6 +1,6 @@
 ---
 title: "miniproto.observability.set_metrics_sink"
-description: "Set the process-global metrics destination, or disable metric recording."
+description: "Set the process-global metrics destination or disable metric recording."
 generated: true
 editUrl: false
 language: "python"
@@ -18,7 +18,7 @@ module: "miniproto.observability"
 set_metrics_sink(sink: MetricsSink | None) -> None
 ```
 
-Set the process-global metrics destination, or disable metric recording.
+Set the process-global metrics destination or disable metric recording.
 
 **Parameters:**
 

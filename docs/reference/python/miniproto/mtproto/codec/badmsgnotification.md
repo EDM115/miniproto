@@ -1,6 +1,6 @@
 ---
 title: "miniproto.mtproto.codec.BadMsgNotification"
-description: "MTProto notice that a message ID, sequence number, or other field was invalid."
+description: "MTProto notice that a message ID, sequence number or other field was invalid."
 generated: true
 editUrl: false
 language: "python"
@@ -18,7 +18,7 @@ module: "miniproto.mtproto.codec"
 BadMsgNotification(bad_msg_id: int, bad_msg_seq_no: int, error_code: int) -> None
 ```
 
-MTProto notice that a message ID, sequence number, or other field was invalid.
+MTProto notice that a message ID, sequence number or other field was invalid.
 
 **Attributes:**
 

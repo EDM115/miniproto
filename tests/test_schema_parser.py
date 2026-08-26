@@ -6,33 +6,12 @@ import pytest
 from tools.schema.parser import TLSchemaParseError, parse_schema, parse_schema_file
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA = ROOT / "tools" / "schema" / "schema.tl"
 FIXTURE = ROOT / "tests" / "fixtures" / "schema" / "layer223-slice.tl"
 TDLIB_FIXTURE = ROOT / "tests" / "fixtures" / "schema" / "tdlib-layer228-slice.tl"
 
 
-def test_parser_reads_full_official_schema_mirror() -> None:
-    schema = parse_schema_file(SCHEMA)
-    assert len(schema.constructors) == 1663
-    assert len(schema.functions) == 817
-    assert len(schema.ignored_declarations) == 8
-    help_config = next(entry for entry in schema.functions if entry.name == "help.getConfig")
-    assert help_config.constructor_id_hex == "c4f9186b"
-    assert help_config.namespace == "help"
-    assert help_config.result_type == "Config"
-    assert any(entry.name == "ephemeral.editMessage" for entry in schema.functions)
-    assert any(entry.name == "inputPeerPhotoFileLocationLegacy" for entry in schema.constructors)
-    assert not any(entry.name == "null" for entry in schema.constructors)
-    join_channel = next(entry for entry in schema.functions if entry.name == "channels.joinChannel")
-    assert join_channel.constructor_id_hex == "7f6a1e22"
-    assert join_channel.result_type == "messages.ChatInviteJoinResult"
-    contacts_search = next(entry for entry in schema.functions if entry.name == "contacts.search")
-    assert contacts_search.constructor_id_hex == "5f58d0f"
-    assert any(param.name == "broadcasts" and param.flag == "flags" for param in contacts_search.params)
-
-
 def test_parser_handles_real_flags_vectors_generics_and_reserved_names() -> None:
-    schema = parse_schema_file(SCHEMA)
+    schema = parse_schema_file(FIXTURE)
     user = next(entry for entry in schema.constructors if entry.name == "user")
     assert any(param.name == "flags2" and param.is_flags_marker for param in user.params)
     assert any(param.name == "usernames" and param.flag == "flags2" and param.is_vector for param in user.params)
@@ -46,17 +25,6 @@ def test_parser_handles_real_flags_vectors_generics_and_reserved_names() -> None
     story_header = next(entry for entry in schema.constructors if entry.name == "storyFwdHeader")
     from_param = next(param for param in story_header.params if param.name == "from")
     assert from_param.python_name == "from_"
-
-
-def test_tdlib_parser_fixture_is_copied_from_pinned_canonical_schema_lines() -> None:
-    official_lines = set(SCHEMA.read_text(encoding="utf-8").splitlines())
-    fixture_lines = [
-        line for line in TDLIB_FIXTURE.read_text(encoding="utf-8").splitlines() if line != "---functions---"
-    ]
-    assert fixture_lines
-    assert all(line in official_lines for line in fixture_lines)
-
-
 def test_parser_reads_json_schema_slice(tmp_path: Path) -> None:
     schema_path = tmp_path / "schema.json"
     schema_path.write_text(

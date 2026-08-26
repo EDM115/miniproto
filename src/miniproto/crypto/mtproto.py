@@ -116,10 +116,10 @@ def encrypt_payload(
             obtains the minimum compliant length from ``os.urandom``.
 
     Returns:
-        The key identifier, message key, and encrypted payload components.
+        The key identifier, message key and encrypted payload components.
 
     Raises:
-        ValueError: If key length, padding length (12 through 1024 bytes), or final
+        ValueError: If key length, padding length (12 through 1024 bytes) or final
             AES block alignment is invalid.
 
     The default only chooses a compliant padding length; callers who supply

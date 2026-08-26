@@ -3,11 +3,9 @@ import DefaultHead from '@astrojs/starlight/components/Head.astro';
 
 interface ReferenceMetadata {
   aliases?: string[];
-  crate?: string;
   description?: string;
   kind?: string;
   language?: string;
-  layer?: number;
   module?: string;
   namespace?: string;
   python_visible?: boolean;
@@ -20,8 +18,6 @@ const filters: Array<[string, string | number | boolean | undefined]> = [
   ['kind', data.kind],
   ['namespace', data.namespace],
   ['module', data.module],
-  ['crate', data.crate],
-  ['layer', data.layer],
   ['python_visible', data.python_visible],
 ];
 const presentFilters = filters.filter((entry) => entry[1] !== undefined);

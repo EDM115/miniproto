@@ -27,4 +27,4 @@ Report whether a complete bundled Rust backend was selected.
 - <code>[bool](#bool)</code> – fallback or a mixed dispatch path.
 
 The result is import-time state, not a benchmark, a capability guarantee for
-optional session crypto, or a security property.
+optional session crypto or a security property.

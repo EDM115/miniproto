@@ -1,6 +1,6 @@
 ---
 title: "miniproto.errors.InvalidCode"
-description: "Authentication flow failure for a missing, expired, or invalid phone code."
+description: "Authentication flow failure for a missing, expired or invalid phone code."
 generated: true
 editUrl: false
 language: "python"
@@ -20,7 +20,7 @@ InvalidCode(message: str = 'invalid phone code', *, request: object | None = Non
 
 Bases: <code>[AuthError](#miniproto.errors.AuthError)</code>
 
-Authentication flow failure for a missing, expired, or invalid phone code.
+Authentication flow failure for a missing, expired or invalid phone code.
 
 Create an invalid-code failure with status code 400.
 

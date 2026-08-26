@@ -26,5 +26,5 @@ before a new connection is attempted.
 
 **Raises:**
 
-- <code>[BaseException](#BaseException)</code> – A remembered fatal receive-loop failure, or any error
+- <code>[BaseException](#BaseException)</code> – A remembered fatal receive-loop failure or any error
 raised while opening the configured transport.

@@ -30,4 +30,4 @@ Validate an incoming envelope before permanently recording it.
 
 **Raises:**
 
-- <code>[ProtocolValidationError](#miniproto.errors.ProtocolValidationError)</code> – If session, parity, duplicate, replay-window, or trusted time checks fail.
+- <code>[ProtocolValidationError](#miniproto.errors.ProtocolValidationError)</code> – If session, parity, duplicate, replay-window or trusted time checks fail.

@@ -24,9 +24,9 @@ class FastField:
         python_name: Python attribute name used when binding the field to generated metadata or a raw object.
         schema_type: Declared TL or reviewed static-manifest type before native wire-type classification.
         wire_type: Supported native codec representation selected for Rust fast-path rendering.
-        value_index: Zero-based native value-slot index, or ``None`` for a flags-word field.
-        flag_group: Zero-based flags-word group for a marker or optional field, or ``None`` when no flags word applies.
-        flag_index: Bit index in ``flag_group`` that enables an optional field, or ``None`` for unconditional or marker fields.
+        value_index: Zero-based native value-slot index or ``None`` for a flags-word field.
+        flag_group: Zero-based flags-word group for a marker or optional field or ``None`` when no flags word applies.
+        flag_index: Bit index in ``flag_group`` that enables an optional field or ``None`` for unconditional or marker fields.
     """
 
     name: str
@@ -106,7 +106,7 @@ def load_fast_entries(
         Exactly 30 unique, validated reviewed fast-path entries.
 
     Raises:
-        ValueError: Manifest version, provenance, selection, fields, or uniqueness validation fails.
+        ValueError: Manifest version, provenance, selection, fields or uniqueness validation fails.
     """
     manifest = json.loads(manifest_text if manifest_text is not None else manifest_path.read_text(encoding="utf-8"))
     if manifest.get("version") != 1:

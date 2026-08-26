@@ -1,6 +1,6 @@
 ---
 title: "miniproto.client"
-description: "High-level asynchronous MTProto client, including lifecycle, messaging, updates, and media transfers."
+description: "High-level asynchronous MTProto client, including lifecycle, messaging, updates and media transfers."
 generated: true
 editUrl: false
 language: "python"
@@ -13,7 +13,7 @@ module: "miniproto.client"
 
 ## `miniproto.client`
 
-High-level asynchronous MTProto client, including lifecycle, messaging, updates, and media transfers.
+High-level asynchronous MTProto client, including lifecycle, messaging, updates and media transfers.
 
 ## Public objects
 

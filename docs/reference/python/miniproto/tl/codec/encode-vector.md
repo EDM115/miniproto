@@ -27,4 +27,4 @@ Encode a boxed TL vector.
 
 **Returns:**
 
-- <code>[bytes](#bytes)</code> – Vector constructor, item count, and encoded items.
+- <code>[bytes](#bytes)</code> – Vector constructor, item count and encoded items.

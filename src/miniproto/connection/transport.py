@@ -1,4 +1,4 @@
-"""Asyncio stream transports, proxy negotiation, deadlines, and MTProto framing."""
+"""Asyncio stream transports, proxy negotiation, deadlines and MTProto framing."""
 
 from __future__ import annotations
 
@@ -180,11 +180,11 @@ class _ProxyConfig:
 
 
 async def _open_proxy_connection(endpoint: ConnectionEndpoint, proxy_url: str) -> StreamPair:
-    """Open a proxy socket, negotiate a tunnel, and close it if negotiation fails.
+    """Open a proxy socket, negotiate a tunnel and close it if negotiation fails.
 
     Args:
         endpoint: Final MTProto destination requested through the proxy.
-        proxy_url: HTTP(S), SOCKS, or SOCKS5 URL with optional credentials.
+        proxy_url: HTTP(S), SOCKS or SOCKS5 URL with optional credentials.
     """
     proxy = _parse_proxy_url(proxy_url)
     reader, writer = await asyncio.open_connection(proxy.host, proxy.port)
@@ -233,7 +233,7 @@ async def _handshake_http_connect(
         writer: Connected proxy stream used to send CONNECT and optional Basic
             credentials.
         endpoint: Final host and port placed in the CONNECT target.
-        proxy: Normalized scheme, host, port, and optional credentials.
+        proxy: Normalized scheme, host, port and optional credentials.
     """
     authority_host = f"[{endpoint.host}]" if ":" in endpoint.host else endpoint.host
     target = f"{authority_host}:{endpoint.port}"
@@ -334,16 +334,16 @@ async def _read_socks5_bound_address(reader: asyncio.StreamReader, address_type:
 async def open_transport(
     endpoint: ConnectionEndpoint, config: TransportConfig, *, connector: StreamConnector | None = None
 ) -> Transport:
-    """Construct, connect, and return the transport matching ``config.mode``.
+    """Construct, connect and return the transport matching ``config.mode``.
 
     Args:
         endpoint: Remote MTProto destination.
-        config: Framing, timeout, proxy, and reconnection transport settings.
+        config: Framing, timeout, proxy and reconnection transport settings.
         connector: Optional stream factory for custom networking or tests. It
             defaults to :func:`default_stream_connector`.
 
     Returns:
-        A connected abridged, intermediate, or padded-intermediate transport.
+        A connected abridged, intermediate or padded-intermediate transport.
 
     Raises:
         ValueError: If ``config.mode`` is not a supported transport mode.
@@ -428,7 +428,7 @@ class StreamTransportBase:
         return not self._closed and self._writer is not None and not self._writer.is_closing()
 
     async def connect(self) -> None:
-        """Open the stream, reset framing, start deadline monitoring, and handshake.
+        """Open the stream, reset framing, start deadline monitoring and handshake.
 
         This is idempotent while a writer remains connected. Reconnection clears
         any partial frame state and replaces the watchdog task.
@@ -506,7 +506,7 @@ class StreamTransportBase:
         """Read and decode the next payload or quick-ACK event.
 
         Returns:
-            The next complete unframed MTProto payload, or a quick-ACK receipt.
+            The next complete unframed MTProto payload or a quick-ACK receipt.
             Negative transport frames are raised as exceptions instead.
 
         Raises:
@@ -515,12 +515,12 @@ class StreamTransportBase:
                 ``read_timeout``; idle transports with no pending read do not
                 time out.
             TransportFlood: If Telegram sends transport error 429.
-            TransportError: If framing is invalid, oversized, or a different
+            TransportError: If framing is invalid, oversized or a different
                 transport error frame is received.
 
         Notes:
             This is a single-reader operation. Do not await it concurrently with
-            another ``recv``, ``read_event``, or ``read_packet`` on this stream;
+            another ``recv``, ``read_event`` or ``read_packet`` on this stream;
             ``asyncio.StreamReader`` raises on concurrent reads.
         """
         from miniproto.connection.framing import PayloadFrame, QuickAckFrame, TransportErrorFrame
@@ -591,7 +591,7 @@ class StreamTransportBase:
         return payload
 
     async def close(self) -> None:
-        """Idempotently stop the watchdog, clear framing state, and close the stream."""
+        """Idempotently stop the watchdog, clear framing state and close the stream."""
         started = time.perf_counter()
         writer = self._writer
         self._closed = True
@@ -682,7 +682,7 @@ class StreamTransportBase:
 
         Notes:
             The caller must not read this ``StreamReader`` concurrently through
-            another ``read_event``, ``read_packet``, or ``recv`` call; asyncio
+            another ``read_event``, ``read_packet`` or ``recv`` call; asyncio
             rejects concurrent reads before framing can serialize them.
         """
         while not self._frame_events:
@@ -729,10 +729,10 @@ class StreamTransportBase:
 
 
 def _apply_socket_options(writer: asyncio.StreamWriter) -> None:
-    """Best-effort TCP tuning: NODELAY, keepalive, and >=1 MiB buffers.
+    """Best-effort TCP tuning: NODELAY, keepalive and >=1 MiB buffers.
 
     uvloop sets NODELAY by default but stdlib asyncio (notably the Windows
-    Proactor loop) does not, and default kernel buffers are too small for
+    Proactor loop) does not and default kernel buffers are too small for
     16 MiB/s at WAN round-trip times.
 
     Args:

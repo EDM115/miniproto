@@ -1,6 +1,6 @@
 ---
 title: "Telegram types: contacts"
-description: "Layer 228 index of 13 canonical Telegram types in the contacts namespace from tdlib."
+description: "Layer 229 index of 13 canonical Telegram types in the contacts namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -9,11 +9,10 @@ qualified_name: "telegram.types.contacts"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "contacts"
-layer: 228
 schema_source: "tdlib"
 ---
 
-## Layer 228 contacts types
+## Layer 229 contacts types
 
 Selected canonical types in this namespace: 13.
 

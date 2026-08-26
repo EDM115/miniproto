@@ -1,6 +1,6 @@
 ---
 title: "miniproto.updates"
-description: "Update-stream management, persistent cursors, duplicate tracking, and handler registration."
+description: "Update-stream management, persistent cursors, duplicate tracking and handler registration."
 generated: true
 editUrl: false
 language: "python"
@@ -13,7 +13,7 @@ module: "miniproto.updates"
 
 ## `miniproto.updates`
 
-Update-stream management, persistent cursors, duplicate tracking, and handler registration.
+Update-stream management, persistent cursors, duplicate tracking and handler registration.
 
 ## Public objects
 

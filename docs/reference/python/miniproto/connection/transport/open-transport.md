@@ -1,6 +1,6 @@
 ---
 title: "miniproto.connection.transport.open_transport"
-description: "Construct, connect, and return the transport matching ``config.mode``."
+description: "Construct, connect and return the transport matching ``config.mode``."
 generated: true
 editUrl: false
 language: "python"
@@ -18,18 +18,18 @@ module: "miniproto.connection.transport"
 open_transport(endpoint: ConnectionEndpoint, config: TransportConfig, *, connector: StreamConnector | None = None) -> Transport
 ```
 
-Construct, connect, and return the transport matching ``config.mode``.
+Construct, connect and return the transport matching ``config.mode``.
 
 **Parameters:**
 
 - **endpoint** (<code>[ConnectionEndpoint](#miniproto.connection.transport.ConnectionEndpoint)</code>) – Remote MTProto destination.
-- **config** (<code>[TransportConfig](#miniproto.config.TransportConfig)</code>) – Framing, timeout, proxy, and reconnection transport settings.
+- **config** (<code>[TransportConfig](#miniproto.config.TransportConfig)</code>) – Framing, timeout, proxy and reconnection transport settings.
 - **connector** (<code>[StreamConnector](#miniproto.connection.transport.StreamConnector) | None</code>) – Optional stream factory for custom networking or tests. It
 defaults to :func:`default_stream_connector`.
 
 **Returns:**
 
-- <code>[Transport](#miniproto.connection.transport.Transport)</code> – A connected abridged, intermediate, or padded-intermediate transport.
+- <code>[Transport](#miniproto.connection.transport.Transport)</code> – A connected abridged, intermediate or padded-intermediate transport.
 
 **Raises:**
 

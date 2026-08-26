@@ -22,8 +22,8 @@ Normalize supported raw Telegram media shapes into a :class:`Media` record.
 
 **Parameters:**
 
-- **raw** (<code>[object](#object)</code>) – Media, message/update, document, photo, or input file location.
+- **raw** (<code>[object](#object)</code>) – Media, message/update, document, photo or input file location.
 
 **Returns:**
 
-- <code>[Media](#miniproto.types.Media) | None</code> – A normalized media record, or ``None`` when ``raw`` is unsupported or absent.
+- <code>[Media](#miniproto.types.Media) | None</code> – A normalized media record or ``None`` when ``raw`` is unsupported or absent.

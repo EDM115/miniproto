@@ -3,7 +3,7 @@
 //! Each `#[pyfunction]` is exported under its Rust name in `miniproto._native`.  Byte-heavy
 //! wrappers conditionally release the GIL, while `*_raw` functions are Rust-only building blocks
 //! that never require it. PyO3 rejects incompatible Python argument conversion first, preserving
-//! its `TypeError`, `OverflowError`, or source exception; algorithm and byte-shape validation in
+//! its `TypeError`, `OverflowError` or source exception; algorithm and byte-shape validation in
 //! this module intentionally return Python `ValueError`. No caller-facing unsafe API is exposed.
 
 use aes::Aes256;
@@ -218,7 +218,7 @@ fn mtproto_encrypt_payload(
 
 /// Decrypts and verifies Python `mtproto_decrypt_payload` ciphertext.
 ///
-/// Returns padded plaintext or `ValueError` for invalid lengths, key material, or message-key
+/// Returns padded plaintext or `ValueError` for invalid lengths, key material or message-key
 /// verification; large work runs without the GIL.
 ///
 /// # Arguments
@@ -377,8 +377,8 @@ fn aes_256_ctr_crypt(
 
 /// Authenticated-encrypts Python `aes_256_gcm_encrypt` plaintext and associated data.
 ///
-/// Returns ciphertext followed by its GCM tag, or `ValueError` for a bad 32-byte key, 12-byte
-/// nonce, or encryption failure; large work releases the GIL.
+/// Returns ciphertext followed by its GCM tag or `ValueError` for a bad 32-byte key, 12-byte
+/// nonce or encryption failure; large work releases the GIL.
 ///
 /// # Arguments
 ///
@@ -427,7 +427,7 @@ fn aes_256_gcm_decrypt(
     })
 }
 
-/// Derives Python `scrypt_derive` bytes from password, salt, and scrypt cost parameters.
+/// Derives Python `scrypt_derive` bytes from password, salt and scrypt cost parameters.
 ///
 /// `n` must be a power of two above one and `length` is limited to 1..=1024; invalid parameters
 /// return `ValueError`. Estimated memory is capped at 256 MiB and aggregate work at 1 GiB. The
@@ -567,13 +567,13 @@ pub(crate) fn mtproto_derive_aes_key_iv_raw(
     (aes_key, aes_iv)
 }
 
-/// Produces the auth-key identifier, message key, and AES-IGE ciphertext for padded plaintext.
+/// Produces the auth-key identifier, message key and AES-IGE ciphertext for padded plaintext.
 ///
 /// Returns `ValueError` for malformed keys or non-block-aligned plaintext; no GIL interaction.
 ///
 /// # Arguments
 ///
-/// - `auth_key`: 256-byte authorization key used for id, message key, and AES derivation.
+/// - `auth_key`: 256-byte authorization key used for id, message key and AES derivation.
 /// - `plaintext_with_padding`: AES-block-aligned inner plaintext to encrypt.
 /// - `client_to_server`: Selects the directional MTProto key schedule.
 pub(crate) fn mtproto_encrypt_payload_raw(
@@ -638,7 +638,7 @@ pub(crate) fn xor_bytes_raw(left: &[u8], right: &[u8]) -> PyResult<Vec<u8>> {
 
 /// Encrypts a block-aligned byte slice using AES-256 IGE for Rust callers.
 ///
-/// Returns `ValueError` unless the key, IV, and plaintext lengths meet AES-IGE requirements.
+/// Returns `ValueError` unless the key, IV and plaintext lengths meet AES-IGE requirements.
 ///
 /// # Arguments
 ///
@@ -676,7 +676,7 @@ pub(crate) fn aes_256_ige_encrypt_raw(
 
 /// Decrypts a block-aligned AES-256 IGE ciphertext for Rust callers.
 ///
-/// Returns `ValueError` unless the key, IV, and ciphertext lengths meet AES-IGE requirements.
+/// Returns `ValueError` unless the key, IV and ciphertext lengths meet AES-IGE requirements.
 ///
 /// # Arguments
 ///
@@ -714,7 +714,7 @@ pub(crate) fn aes_256_ige_decrypt_raw(
 
 /// Encrypts a block-aligned byte slice with unpadded AES-256 CBC.
 ///
-/// Returns `ValueError` unless the key, IV, and plaintext lengths are valid.
+/// Returns `ValueError` unless the key, IV and plaintext lengths are valid.
 ///
 /// # Arguments
 ///
@@ -745,7 +745,7 @@ pub(crate) fn aes_256_cbc_encrypt_raw(
 
 /// Decrypts a block-aligned unpadded AES-256 CBC ciphertext.
 ///
-/// Returns `ValueError` unless the key, IV, and ciphertext lengths are valid.
+/// Returns `ValueError` unless the key, IV and ciphertext lengths are valid.
 ///
 /// # Arguments
 ///
@@ -868,7 +868,7 @@ pub(crate) fn aes_256_gcm_decrypt_raw(
 
 /// Runs scrypt with validated protocol-level output limits for Rust callers.
 ///
-/// Returns `ValueError` for invalid cost parameters, an unsupported output length, or derivation
+/// Returns `ValueError` for invalid cost parameters, an unsupported output length or derivation
 /// failure.  This is a synchronous, GIL-free primitive.
 ///
 /// # Arguments

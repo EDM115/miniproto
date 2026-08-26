@@ -104,7 +104,7 @@ header.header {
   border-color: var(--mp-seam);
 }
 .sidebar-content a[aria-current="page"] {
-  color: var(--sl-color-white);
+  color: var(--sl-color-black);
   font-weight: 700;
 }
 .sidebar-content a[aria-current="page"]::before {

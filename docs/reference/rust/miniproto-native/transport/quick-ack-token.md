@@ -9,13 +9,11 @@ qualified_name: "miniproto_native::transport::quick_ack_token"
 source_path: "rust/miniproto/src/transport.rs"
 source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L58"
 aliases: ["miniproto._native.quick_ack_token"]
-crate: "miniproto_native"
 python_visible: true
 ---
 
 ## Provenance
 
-- Crate: `miniproto_native`
 - Rust visibility: `restricted`
 - Source: [`rust/miniproto/src/transport.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L58)
 - Python exposure: `miniproto._native.quick_ack_token` (confirmed from adjacent PyO3 attributes)

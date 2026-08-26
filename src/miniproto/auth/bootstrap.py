@@ -81,7 +81,7 @@ class UnencryptedAuthKeyTransport:
         return bytes(decode_unencrypted_message(packet).body)
 
     async def close(self) -> None:
-        """Close the opened transport, if any, and make the instance reusable."""
+        """Close the opened transport, if any and make the instance reusable."""
         transport = self._transport
         self._transport = None
         if transport is not None:
@@ -101,7 +101,7 @@ async def ensure_auth_key(config: ClientConfig, storage: SessionStorage) -> None
 
     Existing keys are preserved. When no key is present, this performs Telegram's
     unencrypted authorization-key exchange, then atomically stores its key, salt,
-    server-time offset, and resolved data-center options.
+    server-time offset and resolved data-center options.
 
     Args:
         config: Client configuration, including target DC and test-mode selection.

@@ -1,7 +1,7 @@
 """Deterministic multi-session range planning and ordered download-part assembly.
 
 Assembly consumes local completed part paths in caller-supplied order. It does
-not schedule sessions, delete parts, restore caller-owned streams, or zeroize
+not schedule sessions, delete parts, restore caller-owned streams or zeroize
 in-memory assembled bytes. Path outputs are replaced atomically after validation.
 """
 
@@ -42,7 +42,7 @@ def download_session_count(total_size: int) -> int:
         total_size: Total media size in bytes.
 
     Returns:
-        One, two, or four sessions according to Telegram-friendly thresholds.
+        One, two or four sessions according to Telegram-friendly thresholds.
 
     Raises:
         ValueError: ``total_size`` is not positive.
@@ -68,7 +68,7 @@ def plan_download_ranges(total_size: int, *, session_count: int, alignment: int 
         Ordered, gap-free ranges whose limits sum exactly to ``total_size``.
 
     Raises:
-        ValueError: Any size, session count, or alignment is non-positive.
+        ValueError: Any size, session count or alignment is non-positive.
     """
     if total_size <= 0:
         raise ValueError("total_size must be positive")
@@ -100,7 +100,7 @@ def assemble_download_parts(
 
     Args:
         part_paths: Ordered filesystem paths of completed session outputs.
-        destination: Output path, binary stream, or ``None`` to return in-memory bytes.
+        destination: Output path, binary stream or ``None`` to return in-memory bytes.
         expected_size: Exact aggregate byte count required for successful assembly.
 
     Returns:
@@ -108,14 +108,14 @@ def assemble_download_parts(
 
     Destination Effects:
         A path destination has parents created, is assembled into a temporary
-        sibling, flushed, and atomically replaced only after exact-size validation;
+        sibling, flushed and atomically replaced only after exact-size validation;
         an existing path therefore survives assembly failure. A caller binary stream
         stays open at its post-write position and cannot be rolled back after a write
         failure. ``None`` creates an internal ``BytesIO`` whose immutable returned
         bytes are not zeroized. Completed range-part files remain caller-owned.
 
     Raises:
-        OSError: A part or path destination cannot be read, created, or written.
+        OSError: A part or path destination cannot be read, created or written.
         RuntimeError: Part metadata or copied data does not contain exactly
             ``expected_size`` bytes. Path destinations are not replaced on this error.
     """

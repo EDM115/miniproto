@@ -4,7 +4,7 @@ This module preserves one Python API across the optional bundled Rust extension
 and the internal pure-Python fallback.  Dispatch is operation-specific: several
 small scalar paths deliberately keep the benchmarked C-backed Python route,
 while larger or batched paths may use Rust.  Callers should depend on output
-parity, validation errors, and :func:`native_available`, not on a backend being
+parity, validation errors and :func:`native_available`, not on a backend being
 selected for every call.
 
 For exported Rust crypto work, the extension detaches from the GIL only when
@@ -138,7 +138,7 @@ class _NativeModule(Protocol):
         client_to_server: bool,
         padding: bytes | None = None,
     ) -> bytes:
-        """Serialize, pad, and encrypt a complete MTProto envelope.
+        """Serialize, pad and encrypt a complete MTProto envelope.
 
         Args:
             auth_key: The required 256-byte MTProto authorization key.
@@ -159,7 +159,7 @@ class _NativeModule(Protocol):
 
         Args:
             auth_key: The required 256-byte MTProto authorization key.
-            packet: Auth-key ID, message key, and encrypted packet bytes.
+            packet: Auth-key ID, message key and encrypted packet bytes.
             client_to_server: Whether to use the client-to-server key offset.
         """
         ...
@@ -538,7 +538,7 @@ def native_available() -> bool:
         fallback or a mixed dispatch path.
 
     The result is import-time state, not a benchmark, a capability guarantee for
-    optional session crypto, or a security property.
+    optional session crypto or a security property.
     """
     return bool(_native_impl.native_available())
 
@@ -702,7 +702,7 @@ def mtproto_encode_message(
     client_to_server: bool = True,
     padding: bytes | None = None,
 ) -> bytes:
-    """Build, pad, and encrypt a complete MTProto encrypted message.
+    """Build, pad and encrypt a complete MTProto encrypted message.
 
     Args:
         auth_key: Exactly 256 bytes of authorization-key material.
@@ -717,10 +717,10 @@ def mtproto_encode_message(
             random padding.
 
     Returns:
-        The encrypted wire packet: auth-key ID, message key, and ciphertext.
+        The encrypted wire packet: auth-key ID, message key and ciphertext.
 
     Raises:
-        ValueError: If key, body, padding, or encrypted-layout constraints fail.
+        ValueError: If key, body, padding or encrypted-layout constraints fail.
         OverflowError: If signed ``msg_id`` or ``seq_no`` cannot be encoded.
 
     The default random-padding source belongs to the selected backend.  The
@@ -736,7 +736,7 @@ def mtproto_encode_message(
 def mtproto_decode_message(
     auth_key: bytes, packet: BytesLike, *, client_to_server: bool = False
 ) -> tuple[bytes, int, int, int, int, bytes, bytes]:
-    """Decrypt, authenticate, and parse an MTProto encrypted message.
+    """Decrypt, authenticate and parse an MTProto encrypted message.
 
     Args:
         auth_key: Exactly 256 bytes of authorization-key material.
@@ -749,10 +749,10 @@ def mtproto_decode_message(
 
     Raises:
         ValueError: If the packet is malformed, keys mismatch, lengths are
-            invalid, or padding violates MTProto 2.0 constraints.
+            invalid or padding violates MTProto 2.0 constraints.
 
     This checks the packet's auth-key identifier and message key, but transport
-    ordering, replay handling, and message semantics remain the caller's job.
+    ordering, replay handling and message semantics remain the caller's job.
     """
     auth_key_id, server_salt, session_id, msg_id, seq_no, body, padding = _native_impl.mtproto_decode_message(
         auth_key, bytes(packet), client_to_server
@@ -908,7 +908,7 @@ def aes_256_gcm_encrypt(plaintext: bytes, key: bytes, nonce: bytes, associated_d
         Ciphertext followed by the 16-byte GCM authentication tag.
 
     Raises:
-        ValueError: If the key or nonce is invalid, or the backend rejects
+        ValueError: If the key or nonce is invalid or the backend rejects
             encryption.
 
     Uses Rust only when that optional session-crypto symbol exists; otherwise
@@ -1337,7 +1337,7 @@ def tl_encode_bytes(value: BytesLike) -> bytes:
     Args:
         value: Bytes-like payload.
     Returns:
-        TL length header, payload, and zero padding.
+        TL length header, payload and zero padding.
 
     The selected backend preserves TL wire bytes; the input is copied to output.
     """
@@ -1353,7 +1353,7 @@ def tl_decode_bytes(data: BytesLike, offset: int = 0) -> tuple[bytes, int]:
     Returns:
         Payload bytes and the aligned next offset.
     Raises:
-        ValueError: If the header, payload, or padding is truncated.
+        ValueError: If the header, payload or padding is truncated.
     """
     value, new_offset = _tl_decode_impl(data).tl_decode_bytes(data, offset)
     return bytes(value), int(new_offset)
@@ -1392,7 +1392,7 @@ def tl_encode_int_vector(values: Iterable[int]) -> bytes:
     Args:
         values: Values consumed once and materialized as a tuple.
     Returns:
-        Vector constructor, signed count, and encoded elements.
+        Vector constructor, signed count and encoded elements.
     Raises:
         ValueError: If count exceeds the signed 32-bit protocol limit.
         struct.error: If an element cannot be encoded as signed 32-bit.
@@ -1412,7 +1412,7 @@ def tl_decode_int_vector(data: BytesLike, offset: int = 0) -> tuple[tuple[int, .
     Returns:
         An immutable element tuple and aligned next offset.
     Raises:
-        ValueError: If constructor, count, or remaining payload is invalid.
+        ValueError: If constructor, count or remaining payload is invalid.
     """
     values, new_offset = _tl_decode_impl(data).tl_decode_int_vector(data, offset)
     return tuple(int(value) for value in values), int(new_offset)
@@ -1424,7 +1424,7 @@ def tl_encode_long_vector(values: Iterable[int]) -> bytes:
     Args:
         values: Values consumed once and materialized as a tuple.
     Returns:
-        Vector constructor, signed count, and encoded elements.
+        Vector constructor, signed count and encoded elements.
     Raises:
         ValueError: If count exceeds the signed 32-bit protocol limit.
         struct.error: If an element cannot be encoded as signed 64-bit.
@@ -1441,7 +1441,7 @@ def tl_decode_long_vector(data: BytesLike, offset: int = 0) -> tuple[tuple[int, 
     Returns:
         An immutable element tuple and aligned next offset.
     Raises:
-        ValueError: If constructor, count, or remaining payload is invalid.
+        ValueError: If constructor, count or remaining payload is invalid.
     """
     values, new_offset = _tl_decode_impl(data).tl_decode_long_vector(data, offset)
     return tuple(int(value) for value in values), int(new_offset)

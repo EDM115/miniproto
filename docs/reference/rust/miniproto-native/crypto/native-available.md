@@ -9,13 +9,11 @@ qualified_name: "miniproto_native::crypto::native_available"
 source_path: "rust/miniproto/src/crypto.rs"
 source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L93"
 aliases: ["miniproto._native.native_available"]
-crate: "miniproto_native"
 python_visible: true
 ---
 
 ## Provenance
 
-- Crate: `miniproto_native`
 - Rust visibility: `restricted`
 - Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L93)
 - Python exposure: `miniproto._native.native_available` (confirmed from adjacent PyO3 attributes)

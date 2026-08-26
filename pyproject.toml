@@ -62,7 +62,6 @@ miniproto-bench-native-fallback-crypto = "miniproto._cli:bench_native_fallback_c
 miniproto-bench-runtime-paths = "miniproto._cli:bench_runtime_paths"
 miniproto-bench-session-crypto = "miniproto._cli:bench_session_crypto"
 miniproto-bench-tl-fast-paths = "miniproto._cli:bench_tl_fast_paths"
-miniproto-bench-tglib = "miniproto._cli:bench_tglib"
 miniproto-bench-transport-framing = "miniproto._cli:bench_transport_framing"
 miniproto-docs = "miniproto._cli:docs"
 miniproto-docs-rust = "miniproto._cli:docs_rust"

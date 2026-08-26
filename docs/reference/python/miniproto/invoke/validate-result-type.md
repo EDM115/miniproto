@@ -24,7 +24,7 @@ Generic and absent result types deliberately bypass runtime checking.
 **Parameters:**
 
 - **result** (<code>[object](#object)</code>) – Decoded RPC result to validate.
-- **expected_type** (<code>[str](#str) | None</code>) – Declared TL result type, or ``None`` when unavailable.
+- **expected_type** (<code>[str](#str) | None</code>) – Declared TL result type or ``None`` when unavailable.
 - **raw_request** (<code>[object](#object)</code>) – Original request attached to a mismatch error for diagnostics.
 
 **Raises:**

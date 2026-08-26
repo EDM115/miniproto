@@ -56,7 +56,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         argv: Optional CLI arguments; none are currently accepted.
 
     Returns:
-        Zero after emitting best, median, and raw milliseconds samples.
+        Zero after emitting best, median and raw milliseconds samples.
     """
     parser = argparse.ArgumentParser(description="Profile the lazy generated raw API codec paths")
     parser.parse_args(argv)

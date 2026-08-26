@@ -511,14 +511,14 @@ class AuthKeyExchange:
         """Execute one complete Telegram authorization-key exchange.
 
         The method validates nonces, trusted RSA fingerprint selection, encrypted
-        server DH data, the safe DH group, public values, and Telegram's final
+        server DH data, the safe DH group, public values and Telegram's final
         ``new_nonce_hash1`` confirmation before returning secret key material.
 
         Returns:
-            The new MTProto authorization key, its key ID, server salt, time offset, and DC ID.
+            The new MTProto authorization key, its key ID, server salt, time offset and DC ID.
 
         Raises:
-            ValueError: If any Telegram handshake proof, nonce, key, DH parameter, or final confirmation is invalid.
+            ValueError: If any Telegram handshake proof, nonce, key, DH parameter or final confirmation is invalid.
             TLCodecError: If a handshake payload has an unexpected constructor or malformed encoding.
         """
         nonce = _random_int(16, self._random_bytes)
@@ -608,7 +608,7 @@ def encode_pq_inner_data_dc(inner: PQInnerDataDC) -> bytes:
     """Serialize ``p_q_inner_data_dc`` before applying Telegram RSA padding.
 
     Args:
-        inner: Exchange-specific factors, nonces, and target DC payload.
+        inner: Exchange-specific factors, nonces and target DC payload.
 
     Returns:
         Constructor-prefixed Telegram TL bytes.
@@ -646,7 +646,7 @@ def encode_client_dh_inner_data(inner: ClientDHInnerData) -> bytes:
     """Serialize ``client_DH_inner_data`` before temporary AES-IGE encryption.
 
     Args:
-        inner: Client DH nonces, retry identifier, and public value to encode.
+        inner: Client DH nonces, retry identifier and public value to encode.
     """
     return (
         encode_constructor_id(_CLIENT_DH_INNER_DATA_ID)
@@ -789,7 +789,7 @@ def derive_tmp_aes_key_iv(new_nonce: int, server_nonce: int) -> tuple[bytes, byt
 
 
 def decrypt_server_dh_answer(encrypted_answer: bytes, *, new_nonce: int, server_nonce: int) -> ServerDHInnerData:
-    """Decrypt, integrity-check, and decode Telegram's encrypted DH inner payload.
+    """Decrypt, integrity-check and decode Telegram's encrypted DH inner payload.
 
     Args:
         encrypted_answer: AES-IGE ciphertext returned in ``server_DH_params_ok``.
@@ -813,7 +813,7 @@ def decrypt_server_dh_answer(encrypted_answer: bytes, *, new_nonce: int, server_
 
 
 def encrypt_client_dh_inner_data(inner: ClientDHInnerData, *, new_nonce: int, server_nonce: int) -> bytes:
-    """SHA-1-prefix, pad, and AES-IGE encrypt client DH data for Telegram.
+    """SHA-1-prefix, pad and AES-IGE encrypt client DH data for Telegram.
 
     Args:
         inner: Serialized client DH values to protect.
@@ -868,18 +868,18 @@ def compute_auth_key(*, g_a: int, b: int, dh_prime: int) -> bytes:
 
 
 def compute_new_nonce_hash(new_nonce: int, auth_key: bytes, number: int) -> int:
-    """Compute Telegram's keyed new-nonce confirmation hash number 1, 2, or 3.
+    """Compute Telegram's keyed new-nonce confirmation hash number 1, 2 or 3.
 
     Args:
         new_nonce: Fresh client nonce from the active exchange.
         auth_key: Newly derived MTProto authorization key bytes.
-        number: Telegram confirmation-hash selector, restricted to 1, 2, or 3.
+        number: Telegram confirmation-hash selector, restricted to 1, 2 or 3.
 
     Raises:
         ValueError: If ``number`` is not a Telegram-defined confirmation index.
     """
     if number not in {1, 2, 3}:
-        raise ValueError("new_nonce_hash number must be 1, 2, or 3")
+        raise ValueError("new_nonce_hash number must be 1, 2 or 3")
     auth_key_aux_hash = sha1_digest(auth_key)[:8]
     digest = sha1_digest(_int_to_le(new_nonce, 32) + bytes([number]) + auth_key_aux_hash)
     return int.from_bytes(digest[-16:], "little", signed=False)

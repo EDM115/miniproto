@@ -1,6 +1,6 @@
 ---
 title: "miniproto.client.Client.disconnect"
-description: "Stop updates, senders, schedulers, auxiliary clients, and session storage."
+description: "Stop updates, senders, schedulers, auxiliary clients and session storage."
 generated: true
 editUrl: false
 language: "python"
@@ -18,7 +18,7 @@ module: "miniproto.client"
 disconnect() -> None
 ```
 
-Stop updates, senders, schedulers, auxiliary clients, and session storage.
+Stop updates, senders, schedulers, auxiliary clients and session storage.
 
 Cleanup continues after individual failures so resources are released; after cleanup it re-raises the first captured error. Calling it makes the client unusable because session storage is closed.
 

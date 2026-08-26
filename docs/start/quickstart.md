@@ -5,7 +5,7 @@ slug: /start/quickstart/
 generated: false
 ---
 
-This example uses explicit in-memory storage so it does not create a session database. It still contacts Telegram, authorizes the supplied bot token, and must be run only with an application and bot account you control.
+This example uses explicit in-memory storage so it does not create a session database. It still contacts Telegram, authorizes the supplied bot token and must be run only with an application and bot account you control.
 
 ```python
 import os
@@ -28,8 +28,8 @@ async def main() -> None:
 event_loop.run(main())
 ```
 
-`async with Client(...)` connects before entering the block and disconnects its sender, schedulers, update handling, and storage when leaving it. `sign_in_bot()` is safe to call after that initial connection because `connect()` is serialized and repeatable. The token remains a bearer credential in process memory while the client needs it, so do not print it or include it in an exception message.
+`async with Client(...)` connects before entering the block and disconnects its sender, schedulers, update handling and storage when leaving it. `sign_in_bot()` is safe to call after that initial connection because `connect()` is serialized and repeatable. The token remains a bearer credential in process memory while the client needs it, so do not print it or include it in an exception message.
 
-The sample calls `get_me()` after authorization because it returns the cached or refreshed normalized user identity and raises `Unauthorized` when the session has no authorization. It is a useful first network check, not proof that message sending, media transfers, or live limits have been accepted for every account or data center.
+The sample calls `get_me()` after authorization because it returns the cached or refreshed normalized user identity and raises `Unauthorized` when the session has no authorization. It is a useful first network check, not proof that message sending, media transfers or live limits have been accepted for every account or data center.
 
 For a durable account session, use the [authorization guide](./authentication.md) with a protected `MINIPROTO_SESSION_KEY`. For the next protocol-level step, continue with [First raw call](./raw-api.md).

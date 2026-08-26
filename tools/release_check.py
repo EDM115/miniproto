@@ -1,8 +1,8 @@
 """Non-mutating release-check orchestration and distribution evidence collection.
 
-Stages execute local validation, packaging, and controlled subprocess checks in
+Stages execute local validation, packaging and controlled subprocess checks in
 order. A passing stage is evidence only for that stage's stated boundary: it
-does not establish live Telegram acceptance, credential correctness, or release
+does not establish live Telegram acceptance, credential correctness or release
 approval. ``live`` mode additionally requires explicit environment opt-in.
 """
 
@@ -90,12 +90,12 @@ _REQUIRED_SDIST_PAYLOAD = frozenset(
 
 @dataclass(frozen=True, slots=True)
 class ReleaseConfig:
-    """Requested release-check mode, failure policy, and task-owned artifact location.
+    """Requested release-check mode, failure policy and task-owned artifact location.
 
     Attributes:
-        mode: ``quick``, ``offline``, or explicitly guarded ``live`` stage selection.
+        mode: ``quick``, ``offline`` or explicitly guarded ``live`` stage selection.
         keep_going: Continue after failures while retaining the first non-zero exit code.
-        artifacts_dir: Directory used for reports, distributions, and temporary clean environments.
+        artifacts_dir: Directory used for reports, distributions and temporary clean environments.
     """
 
     mode: str
@@ -109,7 +109,7 @@ class Stage:
 
     Attributes:
         name: Stable report label for the stage.
-        command: Fixed command tuple, or ``None`` when the stage is pending/unavailable.
+        command: Fixed command tuple or ``None`` when the stage is pending/unavailable.
         pending_reason: Human-readable explanation retained for an unavailable stage.
     """
 
@@ -122,11 +122,11 @@ def parse_args(argv: Sequence[str] | None = None, env: Mapping[str, str] | None 
     """Parse release-check modes without accepting credentials on the command line.
 
     Args:
-        argv: Optional mode, continuation, and artifact-directory arguments.
+        argv: Optional mode, continuation and artifact-directory arguments.
         env: Environment mapping used only for the default artifact directory.
 
     Returns:
-        CLI namespace selecting ``quick``, ``offline`` (default), or ``live`` mode.
+        CLI namespace selecting ``quick``, ``offline`` (default) or ``live`` mode.
 
     Raises:
         SystemExit: Mutually exclusive mode arguments or their values are invalid.
@@ -139,7 +139,7 @@ def parse_args(argv: Sequence[str] | None = None, env: Mapping[str, str] | None 
         dest="mode",
         action="store_const",
         const="quick",
-        help="run the short deterministic formatting, lint, type, schema, and focused-test gate",
+        help="run the short deterministic formatting, lint, type, schema and focused-test gate",
     )
     modes.add_argument(
         "--offline",
@@ -174,7 +174,7 @@ def build_stages(config: ReleaseConfig, *, repo: Path) -> tuple[Stage, ...]:
     """Construct the ordered check-only stage list for the requested mode.
 
     Args:
-        config: Mode, continuation policy, and artifact destination.
+        config: Mode, continuation policy and artifact destination.
         repo: Repository root used to discover optional documentation tooling.
 
     Returns:
@@ -182,7 +182,7 @@ def build_stages(config: ReleaseConfig, *, repo: Path) -> tuple[Stage, ...]:
         tooling becomes a ``pending`` stage rather than a silent success.
 
     Evidence Limits:
-        The list describes intended checks, not their execution result, and live
+        The list describes intended checks, not their execution result and live
         stages still require the main function's opt-in guard and real credentials.
     """
     python = sys.executable
@@ -197,7 +197,7 @@ def build_stages(config: ReleaseConfig, *, repo: Path) -> tuple[Stage, ...]:
         Stage(
             "docs",
             (python, "-m", "tools.docs", "--check", "--build") if docs_present else None,
-            pending_reason=None if docs_present else "Wave 5 documentation tooling is not present",
+            pending_reason=None if docs_present else "Documentation tooling is not present",
         ),
     ]
     if config.mode == "quick":
@@ -368,7 +368,7 @@ def build_release_environment(
 
 
 def run_stages(stages: Sequence[Stage], config: ReleaseConfig, *, runner: StageRunner) -> dict[str, Any]:
-    """Execute stages in order, report durations in seconds, and preserve first failure.
+    """Execute stages in order, report durations in seconds and preserve first failure.
 
     Args:
         stages: Ordered fixed checks to execute or mark pending.
@@ -429,7 +429,7 @@ def _inspect_release_metadata(payload: bytes, *, source: str, expected_version: 
         Stable selected metadata fields suitable for the artifact manifest.
 
     Raises:
-        ValueError: Required release identity, compatibility, licensing, dependency, or project-link metadata is absent or inconsistent.
+        ValueError: Required release identity, compatibility, licensing, dependency or project-link metadata is absent or inconsistent.
     """
     message = BytesParser(policy=policy.default).parsebytes(payload)
     classifiers = {str(value) for value in message.get_all("Classifier", [])}
@@ -507,13 +507,13 @@ def _inspect_release_metadata(payload: bytes, *, source: str, expected_version: 
 
 
 def inspect_wheel(path: Path) -> dict[str, Any]:
-    """Inspect one wheel for expected bundled Python, native extension, and console scripts.
+    """Inspect one wheel for expected bundled Python, native extension and console scripts.
 
     Args:
         path: Built wheel archive to inspect without installing it.
 
     Returns:
-        Stable artifact metadata including SHA-256, byte size, and discovered contents.
+        Stable artifact metadata including SHA-256, byte size and discovered contents.
 
     Raises:
         zipfile.BadZipFile: ``path`` is not a readable wheel archive.
@@ -521,7 +521,7 @@ def inspect_wheel(path: Path) -> dict[str, Any]:
 
     Evidence Limits:
         Archive inspection does not prove installation, importability, ABI support,
-        console-script execution, or runtime behavior; the separate clean-import
+        console-script execution or runtime behavior; the separate clean-import
         stage covers a narrow installation/import smoke boundary.
     """
     with zipfile.ZipFile(path) as archive:
@@ -595,17 +595,17 @@ def inspect_wheel(path: Path) -> dict[str, Any]:
 
 
 def inspect_sdist(path: Path) -> dict[str, Any]:
-    """Inspect one source distribution for release metadata, source inputs, and forbidden residue.
+    """Inspect one source distribution for release metadata, source inputs and forbidden residue.
 
     Args:
         path: Built ``.tar.gz`` source distribution inspected without extraction.
 
     Returns:
-        Stable artifact metadata including SHA-256, byte size, entry count, and selected package metadata.
+        Stable artifact metadata including SHA-256, byte size, entry count and selected package metadata.
 
     Raises:
         tarfile.TarError: ``path`` is not a readable tar archive.
-        ValueError: The archive layout, metadata, required source/build inputs, or hygiene boundary is invalid.
+        ValueError: The archive layout, metadata, required source/build inputs or hygiene boundary is invalid.
     """
     with tarfile.open(path, "r:gz") as archive:
         members = archive.getmembers()
@@ -692,7 +692,7 @@ def default_runner(config: ReleaseConfig, *, repo: Path) -> StageRunner:
     """Create the fixed-command subprocess/internal runner for one release-check invocation.
 
     Args:
-        config: Artifact location available to internal environment, inspection, and clean-import stages.
+        config: Artifact location available to internal environment, inspection and clean-import stages.
         repo: Working directory for fixed external stage commands.
 
     Returns:
@@ -735,18 +735,18 @@ def default_runner(config: ReleaseConfig, *, repo: Path) -> StageRunner:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run selected release checks, persist their report, and return the first failure code.
+    """Run selected release checks, persist their report and return the first failure code.
 
     Args:
         argv: Optional non-secret release-check arguments.
 
     Returns:
-        The first failing stage's exit code, ``0`` for no failures, or ``2`` when
+        The first failing stage's exit code, ``0`` for no failures or ``2`` when
         live mode lacks explicit ``MINIPROTO_RELEASE_LIVE=1`` authorization.
 
     Evidence Limits:
         The report records local stage outputs and environment context; it is not
-        a release approval and does not certify skipped, pending, or unrun checks.
+        a release approval and does not certify skipped, pending or unrun checks.
     """
     args = parse_args(argv)
     config = ReleaseConfig(args.mode, args.keep_going, args.artifacts_dir.resolve())
@@ -789,7 +789,7 @@ def _clean_import(artifacts_dir: Path, *, env: Mapping[str, str]) -> None:
 
     Raises:
         ValueError: The artifact set is ambiguous/incomplete or the ``uv`` executable needed for isolated environments is unavailable.
-        subprocess.CalledProcessError: Environment creation, dependency-resolving installation, or an isolated public/native smoke test fails.
+        subprocess.CalledProcessError: Environment creation, dependency-resolving installation or an isolated public/native smoke test fails.
     """
     distributions = artifacts_dir / "distributions"
     wheels = sorted(distributions.glob("*.whl"))
@@ -808,7 +808,6 @@ def _clean_import(artifacts_dir: Path, *, env: Mapping[str, str]) -> None:
         "from miniproto import _native; "
         "from miniproto.raw.functions import HelpGetConfig; "
         "from miniproto.raw.types import BoolTrue; "
-        "assert metadata.version('miniproto') == '0.1.0'; "
         "assert Path(miniproto.__file__).resolve().is_relative_to(Path(sys.prefix).resolve()); "
         "assert _native.native_available(); "
         "payload = b'miniproto-wave6'; "

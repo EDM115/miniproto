@@ -1,7 +1,7 @@
 """Run opt-in, credentialed live Telegram media upload and download measurements.
 
 The benchmark creates or reuses a large deterministic payload and reports observed
-throughput, retry, flood-wait, memory, and event-loop metrics for selected user or
+throughput, retry, flood-wait, memory and event-loop metrics for selected user or
 bot sessions. Results are environment- and time-dependent measurements, never
 deterministic acceptance evidence. The CLI refuses network work until its explicit
 live-benchmark guard is set; it does not print credential values or session secrets.
@@ -108,7 +108,7 @@ class SampleStats:
 
 @dataclass(frozen=True, slots=True)
 class TransferCounters:
-    """Observed per-transfer request, retry, pacing, writer, and lane counters.
+    """Observed per-transfer request, retry, pacing, writer and lane counters.
 
     Duration fields use seconds; ``requests_per_s`` is the observed part-request
     rate over the enclosing transfer duration.
@@ -176,13 +176,13 @@ class TransferCounters:
 class TransferSummary:
     """One measured upload or download result for an actor/session repeat.
 
-    Byte counts are exact bytes, durations use seconds, and transfer rates use
+    Byte counts are exact bytes, durations use seconds and transfer rates use
     MiB/s. ``file_id`` identifies remote media but is not an authorization secret.
 
     Attributes:
         actor: Live session role used for this observation.
         operation: Upload or download phase represented by this summary.
-        repeat_index: One-based measurement repeat, or zero for warm-up work.
+        repeat_index: One-based measurement repeat or zero for warm-up work.
         dc_id: Configured benchmark data center.
         media_dc_id: Remote media data center when encoded by the result.
         bytes: Transferred byte count.
@@ -192,7 +192,7 @@ class TransferSummary:
         overall_mib_s: Bytes divided by end-to-end duration in binary MiB/s.
         transfer_mib_s: Bytes divided by transfer duration in binary MiB/s.
         samples: Windowed observed transfer-rate statistics.
-        counters: Local request, pacing, and writer observations.
+        counters: Local request, pacing and writer observations.
         peer: Non-secret target peer representation.
         message_id: Sent message identifier when upload produced one.
         path: Local source or materialized destination path when applicable.
@@ -250,9 +250,9 @@ class MemorySummary:
 class BenchmarkSummary:
     """Serializable configuration and observed results for one live benchmark run.
 
-    Configuration sizes are bytes, timeout values are seconds, and rates inside
+    Configuration sizes are bytes, timeout values are seconds and rates inside
     ``results`` are MiB/s. The summary deliberately contains no API hash, bot token,
-    session-storage key, or login password.
+    session-storage key or login password.
 
     Attributes:
         generated_file: Local benchmark payload path.
@@ -324,13 +324,13 @@ class TransferRecorder:
     """Collect progress windows and print periodic transfer progress.
 
     Args:
-        total: Expected transfer size in bytes, or ``None`` when unknown.
+        total: Expected transfer size in bytes or ``None`` when unknown.
         label: Non-secret actor/operation label included in progress output.
         progress_interval_s: Minimum interval in seconds between progress messages; zero disables output.
         sample_interval_s: Minimum interval in seconds between throughput samples.
 
     Attributes:
-        total: Expected transfer byte count, or ``None`` when unknown.
+        total: Expected transfer byte count or ``None`` when unknown.
         label: Non-secret transfer label printed in progress output.
         progress_interval_s: Minimum heartbeat/progress output cadence in seconds.
         sample_interval_s: Minimum sample-window duration in seconds.
@@ -340,7 +340,7 @@ class TransferRecorder:
         last_sample_bytes: Transfer byte count at the last rate-window boundary.
         last_report_bytes: Transfer byte count at the last printed line.
         last_bytes: Greatest monotonic callback byte count accepted so far.
-        completed_at: Monotonic terminal-progress timestamp, or zero before completion.
+        completed_at: Monotonic terminal-progress timestamp or zero before completion.
         samples_mib_s: Collected observed binary-MiB-per-second window rates.
     """
 
@@ -389,7 +389,7 @@ class TransferRecorder:
         await asyncio.sleep(0)
 
     def record(self, current: int, total: int | None, *, now: float | None = None) -> None:
-        """Record monotonic byte progress, sample observed MiB/s, and print when due.
+        """Record monotonic byte progress, sample observed MiB/s and print when due.
 
         Regressing byte counts are ignored so retry/progress callback behavior cannot
         create negative rates. ``total`` is accepted for callback compatibility; the
@@ -453,7 +453,7 @@ class TransferRecorder:
         )
 
     def finish(self, bytes_done: int) -> tuple[float, float, SampleStats]:
-        """Finish timing and return overall duration, transfer duration, and rate statistics.
+        """Finish timing and return overall duration, transfer duration and rate statistics.
 
         Args:
             bytes_done: Final transferred byte count used for the fallback overall rate.
@@ -480,11 +480,11 @@ def main(argv: list[str] | None = None) -> int:
         argv: Optional arguments excluding the executable name; defaults to process arguments.
 
     Returns:
-        ``0`` for a completed or prepare-only run, or ``2`` when the explicit live guard is absent.
+        ``0`` for a completed or prepare-only run or ``2`` when the explicit live guard is absent.
 
     Notes:
         A guarded live run may create a large local payload, authenticate configured
-        Telegram actor sessions, and transfer remote media. It never treats a single
+        Telegram actor sessions and transfer remote media. It never treats a single
         result as deterministic acceptance evidence.
     """
     env = load_dotenv()
@@ -524,7 +524,7 @@ def parse_args(argv: list[str] | None = None, env: Mapping[str, str] | None = No
 
     Returns:
         Validated benchmark options. Size values are bytes; timeouts, retries, lanes,
-        repeat counts, and progress intervals retain their option-specific units.
+        repeat counts and progress intervals retain their option-specific units.
 
     Raises:
         ValueError: A numeric ``MINIPROTO_LIVE_BENCH_*`` default cannot be parsed before argparse validation.
@@ -569,7 +569,7 @@ def parse_args(argv: list[str] | None = None, env: Mapping[str, str] | None = No
     parser.add_argument(
         "--size",
         default=env_value(values, "MINIPROTO_LIVE_BENCH_SIZE", "telegram-default"),
-        help="payload size, e.g. telegram-default, 2000mib, 2gb, or a byte count",
+        help="payload size, e.g. telegram-default, 2000mib, 2gb or a byte count",
     )
     parser.add_argument(
         "--file",
@@ -853,11 +853,11 @@ async def run_benchmark(args: argparse.Namespace, env: Mapping[str, str]) -> int
 
 
 async def _run_benchmark(args: argparse.Namespace, env: Mapping[str, str], probe: LoopLagProbe | None) -> int:
-    """Prepare payloads, execute selected actor measurements, serialize results, and clean up clients.
+    """Prepare payloads, execute selected actor measurements, serialize results and clean up clients.
 
     Args:
         args: Validated live-benchmark configuration and local path options.
-        env: Environment-only opt-in, credential, and session configuration.
+        env: Environment-only opt-in, credential and session configuration.
         probe: Optional started local loop-lag probe stopped during final reporting.
     """
     limit_parts = upload_limit_parts_from_env_or_default(env, args.dc_id)
@@ -1045,7 +1045,7 @@ async def benchmark_actor(
     Args:
         client: Connected, authorized client for ``actor``; it remains caller-owned.
         actor: ``"user"`` or ``"bot"`` label used for isolated session/measurement output.
-        operation: Whether to upload, download, or perform both sequentially.
+        operation: Whether to upload, download or perform both sequentially.
         repeat_index: One-based measured repeat index; zero denotes an unrecorded warmup.
         peer: Target peer identifier for uploads and recovery lookup.
         source: Local deterministic source payload path.
@@ -1078,7 +1078,7 @@ async def benchmark_actor(
         One upload and/or download summary containing observed—not deterministic—measurements.
 
     Raises:
-        RuntimeError: If media cannot be recovered, sizes/digests mismatch, or download-only input is absent.
+        RuntimeError: If media cannot be recovered, sizes/digests mismatch or download-only input is absent.
 
     Notes:
         The function restores the previous metrics sink and stops its heartbeat tasks
@@ -1298,7 +1298,7 @@ async def authorized_client(actor: Actor, args: argparse.Namespace, env: Mapping
     Args:
         actor: User or bot account role to authorize.
         args: Parsed options providing the production DC and request timeout.
-        env: Credential mapping containing API identity, session key, and role-specific login data.
+        env: Credential mapping containing API identity, session key and role-specific login data.
 
     Returns:
         A connected client authorized as the selected actor.
@@ -1395,7 +1395,7 @@ def benchmark_peer_for_actor(actor: Actor, env: Mapping[str, str]) -> str:
     if actor == "bot":
         if _is_self_peer(configured):
             raise SystemExit(
-                "MINIPROTO_LIVE_BENCH_BOT_PEER must name a chat, user, or channel where the bot can send messages; bots cannot upload to Saved Messages/self."
+                "MINIPROTO_LIVE_BENCH_BOT_PEER must name a chat, user or channel where the bot can send messages; bots cannot upload to Saved Messages/self."
             )
         assert configured is not None
         return configured.strip()
@@ -1415,7 +1415,7 @@ def _is_self_peer(peer: str | None) -> bool:
 
 
 async def find_recent_media(client: Client, peer: str, caption: str) -> Any:
-    """Return recent media matching an uploaded benchmark caption, or ``None`` when absent.
+    """Return recent media matching an uploaded benchmark caption or ``None`` when absent.
 
     Args:
         client: Connected caller-owned live client used for recent-message lookup.
@@ -1544,7 +1544,7 @@ def transfer_counters(
         duration_s: Enclosing observed duration in seconds for ``requests_per_s``.
 
     Returns:
-        Counter values, durations in seconds, and the derived observed request rate.
+        Counter values, durations in seconds and the derived observed request rate.
     """
     part_requests = int(metric_sum(metrics, f"media.{operation}.part_requests"))
     launch_pace_rates = metric_values(metrics, f"media.{operation}.launch_pace_rate")
@@ -1760,7 +1760,7 @@ def _file_digest_sync(path: Path) -> str:
 
 
 def print_transfer(summary: TransferSummary) -> None:
-    """Print one observed transfer summary with explicit bytes, seconds, and MiB/s units.
+    """Print one observed transfer summary with explicit bytes, seconds and MiB/s units.
 
     Args:
         summary: Observed local phase result; printed rates are descriptive comparison data.
@@ -1808,13 +1808,13 @@ def print_transfer(summary: TransferSummary) -> None:
 def print_progress(label: str, *, current: int, total: int | None, elapsed_s: float, window_mib_s: float) -> None:
     """Print one non-secret progress line with observed rate and best-effort ETA.
 
-    Bytes are displayed as MiB, elapsed/ETA values use seconds, and the ETA remains
+    Bytes are displayed as MiB, elapsed/ETA values use seconds and the ETA remains
     ``unknown`` until a positive overall transfer rate is observable.
 
     Args:
         label: Non-secret operation label printed with the progress line.
         current: Current transferred byte count.
-        total: Expected transfer byte count, or ``None`` when unknown.
+        total: Expected transfer byte count or ``None`` when unknown.
         elapsed_s: Observed elapsed time in seconds.
         window_mib_s: Most recent window rate in binary MiB/s.
     """
@@ -1854,7 +1854,7 @@ def format_media_lanes(media_lanes: int | None, concurrency: int) -> str:
     """Render explicit lanes or the auto lane count derived from concurrency.
 
     Args:
-        media_lanes: Explicit lane count, or ``None`` to display derived automatic lanes.
+        media_lanes: Explicit lane count or ``None`` to display derived automatic lanes.
         concurrency: Request concurrency used for the automatic display count.
     """
     if media_lanes is None:
@@ -1934,7 +1934,7 @@ def require_live_env(env: Mapping[str, str], *, actor: str) -> None:
 
     Args:
         env: Environment-like credential/configuration mapping.
-        actor: ``user``, ``bot``, or ``both`` to select role-specific requirements.
+        actor: ``user``, ``bot`` or ``both`` to select role-specific requirements.
 
     Raises:
         SystemExit: If opt-in integration flags or required variable names are missing.
@@ -2013,13 +2013,13 @@ def prompt_code(env: Mapping[str, str]) -> str:
         SystemExit: If no permitted prompt mode is available.
 
     Args:
-        env: Environment-only prompt mode, token, and credential configuration.
+        env: Environment-only prompt mode, token and credential configuration.
     """
     if should_use_http_code_prompt(env):
         return prompt_code_http(env)
     if env_value(env, "MINIPROTO_LIVE_PROMPT_CODE") != "1" or not sys.stdin.isatty():
         raise SystemExit(
-            "no stored user session; set MINIPROTO_LIVE_PROMPT_CODE=1 and run interactively to enter the current Telegram code, or set MINIPROTO_LIVE_BENCH_CODE_PROMPT=http for the temporary HTTP prompt"
+            "no stored user session; set MINIPROTO_LIVE_PROMPT_CODE=1 and run interactively to enter the current Telegram code or set MINIPROTO_LIVE_BENCH_CODE_PROMPT=http for the temporary HTTP prompt"
         )
     return input("Telegram login code: ").strip()
 
@@ -2040,13 +2040,13 @@ def prompt_code_http(env: Mapping[str, str]) -> str:
     """Serve one token-gated HTTP form and return the submitted Telegram login code.
 
     The server binds to the configured host (loopback by default), accepts one
-    URL-token-protected code, limits request bodies to 256 bytes, and emits no request
+    URL-token-protected code, limits request bodies to 256 bytes and emits no request
     logs. The token is random unless explicitly configured and is printed only inside
-    its required prompt URL. Server shutdown, close, and thread joining happen in
+    its required prompt URL. Server shutdown, close and thread joining happen in
     ``finally`` after success or timeout.
 
     Args:
-        env: Prompt host, port, timeout, optional URL token, and optional public tunnel base URL.
+        env: Prompt host, port, timeout, optional URL token and optional public tunnel base URL.
 
     Returns:
         The stripped Telegram code with embedded spaces removed.
@@ -2074,7 +2074,7 @@ def prompt_code_http(env: Mapping[str, str]) -> str:
             self._send(200, _code_prompt_html(error=None), content_type="text/html; charset=utf-8")
 
         def do_POST(self) -> None:
-            """Validate one bounded form submission, enqueue its code, and stop the server."""
+            """Validate one bounded form submission, enqueue its code and stop the server."""
             if not self._authorized_path():
                 self._send(404, "not found")
                 return

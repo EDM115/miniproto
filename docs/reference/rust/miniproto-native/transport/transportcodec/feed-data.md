@@ -9,13 +9,11 @@ qualified_name: "miniproto_native::transport::TransportCodec::feed_data"
 source_path: "rust/miniproto/src/transport.rs"
 source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L187"
 aliases: ["miniproto._native.TransportCodec.feed_data"]
-crate: "miniproto_native"
 python_visible: true
 ---
 
 ## Provenance
 
-- Crate: `miniproto_native`
 - Rust visibility: `restricted`
 - Source: [`rust/miniproto/src/transport.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L187)
 - Python exposure: `miniproto._native.TransportCodec.feed_data` (confirmed from adjacent PyO3 attributes)
@@ -38,7 +36,7 @@ fn feed_data(self: &mut Self, data: &[u8]) -> _
 
   
 
-  Tuple kinds are `0` payload, `1` quick ACK, and `2` negative transport error. It preserves
+  Tuple kinds are `0` payload, `1` quick ACK and `2` negative transport error. It preserves
 
   incomplete trailing bytes for the next call and raises Python errors for invalid framing.
 

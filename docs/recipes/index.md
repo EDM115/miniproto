@@ -1,6 +1,6 @@
 ---
 title: Recipes
-description: Focused patterns for authorization, raw requests, sends, transfers, offline tests, benchmarks, and deployment.
+description: Focused patterns for authorization, raw requests, sends, transfers, offline tests, benchmarks and deployment.
 slug: /recipes/
 generated: false
 ---
@@ -15,4 +15,4 @@ These recipes are small adaptations of the public SDK surface, not a second API 
 - [Run deterministic benchmarks](./benchmarks.md)
 - [Deploy a durable client](./deployment.md)
 
-For detailed transfer behavior, destinations, integrity verification, and CDN handling, see [Media Primitives](../media.md). For session material and redaction, see [Session Security](../session-security.md). For Layer provenance and generated names, see [Raw API](../raw-api.md).
+For detailed transfer behavior, destinations, integrity verification and CDN handling, see [Media Primitives](../media.md). For session material and redaction, see [Session Security](../session-security.md). For Layer provenance and generated names, see [Raw API](../raw-api.md).

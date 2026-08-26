@@ -1,6 +1,6 @@
 ---
 title: "miniproto.media.download.DownloadRangeCache.get"
-description: "Return and refresh an exact cached range, or ``None`` on a cache miss."
+description: "Return and refresh an exact cached range or ``None`` on a cache miss."
 generated: true
 editUrl: false
 language: "python"
@@ -18,7 +18,7 @@ module: "miniproto.media.download"
 get(key: str, offset: int, limit: int) -> bytes | None
 ```
 
-Return and refresh an exact cached range, or ``None`` on a cache miss.
+Return and refresh an exact cached range or ``None`` on a cache miss.
 
 **Parameters:**
 

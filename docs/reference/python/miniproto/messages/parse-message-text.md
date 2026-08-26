@@ -23,7 +23,7 @@ Render the supported lightweight Markdown delimiters into MTProto entities.
 
 - **text** (<code>[str](#str)</code>) – Source message text, with backslashes escaping the next character.
 - **parse_mode** (<code>[str](#str) | None</code>) – ``markdown``/``markdown-lite``/``md`` enables parsing;
-``None``, ``plain``, ``text``, and ``none`` preserve text verbatim.
+``None``, ``plain``, ``text`` and ``none`` preserve text verbatim.
 
 **Returns:**
 

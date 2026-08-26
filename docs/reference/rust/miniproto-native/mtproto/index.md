@@ -8,13 +8,11 @@ kind: "module"
 qualified_name: "miniproto_native::mtproto"
 source_path: "rust/miniproto/src/mtproto.rs"
 source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/mtproto.rs#L1"
-crate: "miniproto_native"
 python_visible: false
 ---
 
 ## Provenance
 
-- Crate: `miniproto_native`
 - Rust visibility: `crate`
 - Source: [`rust/miniproto/src/mtproto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/mtproto.rs#L1)
 - Python exposure: Not evidenced by static PyO3 attributes.
@@ -37,7 +35,7 @@ Registers encrypted MTProto message-envelope callables.
 Native encoding and decoding of encrypted MTProto 2.0 message envelopes.
 
 The Python-visible functions in this module use the same argument and result layout as the
-Python fallback. PyO3 preserves `TypeError`, `OverflowError`, and source conversion exceptions
+Python fallback. PyO3 preserves `TypeError`, `OverflowError` and source conversion exceptions
 before a function body runs; protocol validation after conversion returns `ValueError`. The
 functions release the GIL for large byte workloads rather than exposing Rust panics.
 
@@ -77,7 +75,7 @@ functions release the GIL for large byte workloads rather than exposing Rust pan
 | [`mtproto_decode_message`](#mtproto-decode-message) | fn | Decodes Python `mtproto_decode_message` packet bytes into its seven-element envelope tuple. |
 | [`__pyfunction_mtproto_decode_message`](#pyfunction-mtproto-decode-message) | fn |  |
 | [`mtproto_encode_message_raw`](#mtproto-encode-message-raw) | fn | Builds and encrypts an MTProto envelope from already borrowed Rust inputs. |
-| [`mtproto_decode_message_raw`](#mtproto-decode-message-raw) | fn | Verifies, decrypts, and parses an encrypted MTProto packet for Rust callers. |
+| [`mtproto_decode_message_raw`](#mtproto-decode-message-raw) | fn | Verifies, decrypts and parses an encrypted MTProto packet for Rust callers. |
 | [`random_padding`](#random-padding) | fn | Generates random MTProto padding that completes `plaintext_len` to an AES block boundary. |
 | [`padding_len`](#padding-len) | fn | Computes the minimum valid padding length for an inner plaintext length. |
 | [`validate_padding`](#validate-padding) | fn | Validates MTProto 2.0 padding bounds and the resulting AES block alignment. |
@@ -246,11 +244,11 @@ fn mtproto_encode_message(py: Python<'_>, auth_key: Vec<u8>, server_salt: u64, s
 
 Encodes one encrypted MTProto envelope as Python `mtproto_encode_message`.
 
-The salt, session/message identifiers, sequence number, body length, `body`, and padding form
+The salt, session/message identifiers, sequence number, body length, `body` and padding form
 the inner envelope; `auth_key` encrypts it but is not itself serialized in that envelope.
 `client_to_server` chooses MTProto's directional key offset; optional `padding` replaces random
 padding. Returns auth-key-id/message-key/ciphertext concatenated in wire
-order, or `ValueError` for invalid key, body, or padding.  For large byte inputs it releases
+order or `ValueError` for invalid key, body or padding.  For large byte inputs it releases
 the GIL while performing the native work.
 
 # Arguments
@@ -284,8 +282,8 @@ fn mtproto_decode_message(py: Python<'_>, auth_key: Vec<u8>, packet: Vec<u8>, cl
 Decodes Python `mtproto_decode_message` packet bytes into its seven-element envelope tuple.
 
 `client_to_server` selects the direction used to verify and decrypt `packet`.  Returns
-`(auth_key_id, server_salt, session_id, msg_id, seq_no, body, padding)`, or `ValueError` if
-the wire packet, keys, body length, message key, or padding is invalid.  Large workloads run
+`(auth_key_id, server_salt, session_id, msg_id, seq_no, body, padding)` or `ValueError` if
+the wire packet, keys, body length, message key or padding is invalid.  Large workloads run
 with the GIL released.
 
 # Arguments
@@ -329,10 +327,10 @@ fn mtproto_decode_message_raw(auth_key: &[u8], packet: &[u8], client_to_server: 
 
 *Defined in `rust/miniproto/src/mtproto.rs:229-287`*
 
-Verifies, decrypts, and parses an encrypted MTProto packet for Rust callers.
+Verifies, decrypts and parses an encrypted MTProto packet for Rust callers.
 
-Returns the envelope fields and trailing padding, or a Python `ValueError` when any header,
-cryptographic check, length, or padding constraint fails.  It does not interact with the GIL.
+Returns the envelope fields and trailing padding or a Python `ValueError` when any header,
+cryptographic check, length or padding constraint fails.  It does not interact with the GIL.
 
 # Arguments
 

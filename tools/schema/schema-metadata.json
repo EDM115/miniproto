@@ -8,7 +8,7 @@
     "tdesktop",
     "core_json"
   ],
-  "fetch_date": "2026-08-25",
+  "fetch_date": "2026-08-26",
   "function_count": 817,
   "generated_file_manifest": [
     "src/miniproto/raw/base.py",

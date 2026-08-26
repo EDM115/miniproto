@@ -1,6 +1,6 @@
 ---
 title: "miniproto.auth.bootstrap.UnencryptedAuthKeyTransport.close"
-description: "Close the opened transport, if any, and make the instance reusable."
+description: "Close the opened transport, if any and make the instance reusable."
 generated: true
 editUrl: false
 language: "python"
@@ -17,4 +17,4 @@ module: "miniproto.auth.bootstrap"
 close() -> None
 ```
 
-Close the opened transport, if any, and make the instance reusable.
+Close the opened transport, if any and make the instance reusable.

@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: ChannelAdminLogEventAction"
-description: "Layer 228 result-family index for 52 canonical constructors returning ChannelAdminLogEventAction from tdlib."
+description: "Layer 229 result-family index for 52 canonical constructors returning ChannelAdminLogEventAction from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -9,11 +9,10 @@ qualified_name: "telegram.types.result.ChannelAdminLogEventAction"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "results"
-layer: 228
 schema_source: "tdlib"
 ---
 
-## Layer 228 result family `ChannelAdminLogEventAction`
+## Layer 229 result family `ChannelAdminLogEventAction`
 
 Selected canonical constructors in this family: 52.
 

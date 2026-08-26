@@ -9,9 +9,8 @@ qualified_name: "updateEphemeralBotCallbackQuery"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "base"
-layer: 228
 schema_source: "tdlib"
-constructor_id: "0x9b380762"
+constructor_id: "0x7c1079d6"
 ---
 
 # `updateEphemeralBotCallbackQuery`
@@ -21,7 +20,7 @@ No description provided by the pinned schema.
 ## Signature
 
 ```tl
-updateEphemeralBotCallbackQuery#9b380762 query_id:long user_id:long peer:Peer msg_id:int data:bytes message:EphemeralMessage = Update;
+updateEphemeralBotCallbackQuery#7c1079d6 flags:# query_id:long user_id:long peer:flags.0?Peer msg_id:int data:bytes chat_instance:flags.1?long message:EphemeralMessage = Update;
 ```
 
 ## Result type
@@ -32,12 +31,21 @@ updateEphemeralBotCallbackQuery#9b380762 query_id:long user_id:long peer:Peer ms
 
 | Name | Type | Flag | Default | Description |
 | --- | --- | --- | --- | --- |
+| flags | # | flag word | — | No description provided by the pinned schema. |
 | query_id | long | — | — | No description provided by the pinned schema. |
 | user_id | long | — | — | No description provided by the pinned schema. |
-| peer | Peer | — | — | No description provided by the pinned schema. |
+| peer | flags.0?Peer | flags.0 | — | No description provided by the pinned schema. |
 | msg_id | int | — | — | No description provided by the pinned schema. |
 | data | bytes | — | — | No description provided by the pinned schema. |
+| chat_instance | flags.1?long | flags.1 | — | No description provided by the pinned schema. |
 | message | EphemeralMessage | — | — | No description provided by the pinned schema. |
+
+## Flags
+
+| Parameter | Bit | Meaning |
+| --- | ---: | --- |
+| peer | 0 | Controlled by `flags`; present when this bit is set. |
+| chat_instance | 1 | Controlled by `flags`; present when this bit is set. |
 
 ## Python binding
 
@@ -68,13 +76,12 @@ constructor_type = UpdateEphemeralBotCallbackQuery
 
 ## Provenance
 
-- layer: 228
 - structural source: `tdlib`
 - canonical schema: https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/telegram_api.tl
 - prose merge precedence: TDLib → Telegram Desktop → Core JSON
-- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 228 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
+- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 229 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
 
 ## Source-diff notes
 
-- tdlib_vs_core: changed_count=68; core_only_count=1; overlap_count=2302; tdlib_only_count=158
-- tdlib_vs_tdesktop: changed_count=0; overlap_count=2448; tdesktop_only=null; tdlib_only=accessPointRule, ephemeral.editMessage, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret, updateEphemeralBotCallbackQuery
+- tdlib_vs_core: changed_count=78; core_only_count=18; overlap_count=2285; tdlib_only_count=195
+- tdlib_vs_tdesktop: changed_count=0; overlap_count=2470; tdesktop_only=null; tdlib_only=accessPointRule, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret

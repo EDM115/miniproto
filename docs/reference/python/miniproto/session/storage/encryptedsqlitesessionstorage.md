@@ -30,7 +30,7 @@ Open a lazy encrypted database using explicit or environment key material.
 **Parameters:**
 
 - **path** (<code>[str](#str) | [PathLike](#os.PathLike)[[str](#str)]</code>) – SQLite database path created lazily on first write.
-- **key** (<code>[bytes](#bytes) | [str](#str) | None</code>) – Secret bytes/text, or ``None`` to read ``MINIPROTO_SESSION_KEY``.
+- **key** (<code>[bytes](#bytes) | [str](#str) | None</code>) – Secret bytes/text or ``None`` to read ``MINIPROTO_SESSION_KEY``.
 
 **Raises:**
 

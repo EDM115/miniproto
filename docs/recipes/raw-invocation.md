@@ -17,6 +17,6 @@ async def current_datacenter(client: Client) -> int:
     return result.this_dc
 ```
 
-Call this only while `client` is connected, normally inside `async with Client(config)`. `invoke()` returns the decoded raw result and owns the configured timeout, retry, eligible flood-wait, sender reconnect, and main-session migration behavior. It can still raise `RpcError`, `FloodWait`, `TimeoutError`, or `ConnectionError`.
+Call this only while `client` is connected, normally inside `async with Client(config)`. `invoke()` returns the decoded raw result and owns the configured timeout, retry, eligible flood-wait, sender reconnect and main-session migration behavior. It can still raise `RpcError`, `FloodWait`, `TimeoutError` or `ConnectionError`.
 
 Do not set `retry=True` merely to make a failed write look successful: it forces retry eligibility and can replay a non-idempotent operation after an ambiguous transport failure. Use that override only when the operation is idempotent or Telegram de-duplicates it. See [First Raw Call](../start/raw-api.md) and [Raw API](../raw-api.md) for the generated surface and provenance.

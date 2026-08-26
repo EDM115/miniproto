@@ -25,7 +25,7 @@ Stream an exact media range as ordered, bounded byte chunks.
 - **invoke** (<code>[RawInvoker](#miniproto.media.download.RawInvoker)</code>) – Async raw-RPC invoker used for Telegram file requests.
 - **location** (<code>[object](#object)</code>) – Telegram input file location to retrieve.
 - **offset** (<code>[int](#int)</code>) – Starting byte offset; defaults to ``0``.
-- **limit** (<code>[int](#int) | None</code>) – Exact byte count to yield, or ``None`` to stream until EOF.
+- **limit** (<code>[int](#int) | None</code>) – Exact byte count to yield or ``None`` to stream until EOF.
 - **part_size** (<code>[int](#int)</code>) – Initial power-of-two request size; defaults to 512 KiB.
 - **progress** (<code>[ProgressCallback](#miniproto.media.upload.ProgressCallback) | None</code>) – Optional synchronous or async ``(current, total)`` callback;
 ``current`` is bytes yielded from this invocation, while ``total`` is
@@ -44,7 +44,7 @@ Eligible waits do not consume ``max_retries`` but are capped at 16 per part.
 - **max_in_flight_bytes** (<code>[int](#int) | None</code>) – Maximum requested but unyielded bytes.
 - **adaptive_part_size** (<code>[bool](#bool)</code>) – Probe larger legal parts for sufficiently large transfers.
 - **max_part_size** (<code>[int](#int)</code>) – Largest legal adaptive part size, at most one MiB.
-- **range_cache** (<code>[DownloadRangeCache](#miniproto.media.download.DownloadRangeCache) | [bool](#bool) | None</code>) – Exact-range cache instance, ``True`` for the shared cache, or ``False``/``None`` to disable it.
+- **range_cache** (<code>[DownloadRangeCache](#miniproto.media.download.DownloadRangeCache) | [bool](#bool) | None</code>) – Exact-range cache instance, ``True`` for the shared cache or ``False``/``None`` to disable it.
 - **range_cache_key** (<code>[str](#str) | None</code>) – Stable identity used to share cached ranges.
 - **range_cache_max_bytes** (<code>[int](#int)</code>) – Capacity for an implicitly created shared cache.
 - **read_ahead_bytes** (<code>[int](#int)</code>) – Best-effort cached prefetch budget for ranged reads only.
@@ -61,7 +61,7 @@ Eligible waits do not consume ``max_retries`` but are capped at 16 per part.
 
 **Raises:**
 
-- <code>[ValueError](#ValueError)</code> – A range, alignment, part size, retry, or cache option is invalid.
+- <code>[ValueError](#ValueError)</code> – A range, alignment, part size, retry or cache option is invalid.
 - <code>[TypeError](#TypeError)</code> – ``verify_plain_hashes`` or ``launch_stagger`` is not boolean.
 - <code>[MediaDownloadError](#miniproto.media.download.MediaDownloadError)</code> – Telegram ends a finite requested interval before full coverage.
 - <code>[MediaIntegrityError](#miniproto.media.download.MediaIntegrityError)</code> – Optional plain-file verification finds missing or mismatched hashes.

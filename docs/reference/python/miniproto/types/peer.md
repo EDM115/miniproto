@@ -23,5 +23,5 @@ Telegram peer reference suitable for high-level client operations.
 **Attributes:**
 
 - [**id**](#miniproto.types.Peer.id) (<code>[int](#int)</code>) – Telegram peer identifier.
-- [**kind**](#miniproto.types.Peer.kind) (<code>[PeerKind](#miniproto.types.PeerKind)</code>) – Peer category: user, chat, channel, or the current account.
+- [**kind**](#miniproto.types.Peer.kind) (<code>[PeerKind](#miniproto.types.PeerKind)</code>) – Peer category: user, chat, channel or the current account.
 - [**access_hash**](#miniproto.types.Peer.access_hash) (<code>[int](#int) | None</code>) – Optional Telegram access hash required for some peers.

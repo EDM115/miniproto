@@ -1,6 +1,6 @@
 ---
 title: "miniproto.mtproto.codec.encode_message_body"
-description: "Encode raw, generated, or built-in MTProto service message bodies."
+description: "Encode raw, generated or built-in MTProto service message bodies."
 generated: true
 editUrl: false
 language: "python"
@@ -18,11 +18,11 @@ module: "miniproto.mtproto.codec"
 encode_message_body(body: ByteBuffer | object) -> bytes
 ```
 
-Encode raw, generated, or built-in MTProto service message bodies.
+Encode raw, generated or built-in MTProto service message bodies.
 
 **Parameters:**
 
-- **body** (<code>[ByteBuffer](#miniproto.mtproto.codec.ByteBuffer) | [object](#object)</code>) – Bytes, generated TL object, or supported service-body object.
+- **body** (<code>[ByteBuffer](#miniproto.mtproto.codec.ByteBuffer) | [object](#object)</code>) – Bytes, generated TL object or supported service-body object.
 
 **Returns:**
 

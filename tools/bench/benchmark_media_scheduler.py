@@ -1,4 +1,4 @@
-"""Deterministic per-DC media-scheduler workload, fairness, and cleanup benchmark.
+"""Deterministic per-DC media-scheduler workload, fairness and cleanup benchmark.
 
 The benchmark exercises scheduler admission/accounting with cooperative
 ``asyncio.sleep(0)`` work, not real transfer I/O. Its fairness and isolation
@@ -32,7 +32,7 @@ async def run_scheduler_benchmark(
 
     Returns:
         A report with byte/second throughput, per-transfer results, grant fairness
-        ratio, active/queued accounting, cross-DC/direction isolation, and queued
+        ratio, active/queued accounting, cross-DC/direction isolation and queued
         waiter cancellation cleanup. Byte counters are bytes; durations/waits are
         seconds; throughput is bytes per second.
 
@@ -194,7 +194,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run the local scheduler workload, emit its JSON report, and return success.
+    """Run the local scheduler workload, emit its JSON report and return success.
 
     Args:
         argv: Optional argument sequence forwarded to :func:`parse_args`.

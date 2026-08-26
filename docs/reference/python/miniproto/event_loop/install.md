@@ -22,7 +22,7 @@ Install the backend's deprecated global policy on Python before 3.16.
 **Returns:**
 
 - <code>[bool](#bool)</code> – ``True`` after the selected backend's legacy ``install`` hook succeeds;
-- <code>[bool](#bool)</code> – ``False`` if no backend/hook is available, installation fails, or Python
+- <code>[bool](#bool)</code> – ``False`` if no backend/hook is available, installation fails or Python
 - <code>[bool](#bool)</code> – 3.16+ rejects policy installation.
 
 **Raises:**

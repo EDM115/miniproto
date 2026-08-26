@@ -1,6 +1,6 @@
 """Provision encrypted live-benchmark session databases from environment-only strings.
 
-String sessions, passphrases, and encryption keys are read only from the supplied
+String sessions, passphrases and encryption keys are read only from the supplied
 environment mapping. They are never accepted as command-line arguments, returned,
 or written to stdout; only the non-secret actor names of newly provisioned files
 are reported.
@@ -23,19 +23,19 @@ async def provision_sessions(*, dc_id: int, env: Mapping[str, str], root: Path =
 
     Args:
         dc_id: Required Telegram data-center ID for every imported session.
-        env: Source of session strings, optional string passphrase, and mandatory storage key.
+        env: Source of session strings, optional string passphrase and mandatory storage key.
         root: Directory receiving actor-specific encrypted SQLite files; defaults to ``.tmp``.
 
     Returns:
         Actor names newly provisioned. Existing target files and absent source strings are skipped.
 
     Raises:
-        SystemExit: A supplied session lacks an encryption key, uses the wrong DC, or has the wrong actor kind.
+        SystemExit: A supplied session lacks an encryption key, uses the wrong DC or has the wrong actor kind.
         OSError: The root or encrypted session database cannot be created or written.
 
     Secret Handling:
-        Session strings, passphrases, and storage keys remain in memory only and
-        must not be included in logs, reports, or caller-visible results.
+        Session strings, passphrases and storage keys remain in memory only and
+        must not be included in logs, reports or caller-visible results.
     """
     key = env.get("MINIPROTO_SESSION_KEY")
     candidates = {

@@ -1,6 +1,6 @@
 ---
 title: "miniproto.mtproto.codec.decode_encrypted_message"
-description: "Authenticate, decrypt, and parse one MTProto encrypted envelope."
+description: "Authenticate, decrypt and parse one MTProto encrypted envelope."
 generated: true
 editUrl: false
 language: "python"
@@ -18,7 +18,7 @@ module: "miniproto.mtproto.codec"
 decode_encrypted_message(auth_key: bytes, packet: ByteBuffer, *, client_to_server: bool = False) -> DecodedEncryptedMessage
 ```
 
-Authenticate, decrypt, and parse one MTProto encrypted envelope.
+Authenticate, decrypt and parse one MTProto encrypted envelope.
 
 **Parameters:**
 
@@ -32,4 +32,4 @@ Authenticate, decrypt, and parse one MTProto encrypted envelope.
 
 **Raises:**
 
-- <code>[ValueError](#ValueError)</code> – If the native codec rejects framing, key, or integrity data.
+- <code>[ValueError](#ValueError)</code> – If the native codec rejects framing, key or integrity data.

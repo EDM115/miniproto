@@ -22,14 +22,14 @@ Public API for miniproto.
 - [`AuthKeyExchangeResult`](./auth/key_exchange/authkeyexchangeresult/) — Authenticated MTProto key material and metadata produced by an exchange.
 - [`AuthService`](./auth/service/authservice/) — Run sign-in and data-center authorization flows for one client session.
 - [`Client`](./client/client/) — Async client facade for MTProto operations.
-- [`ClientConfig`](./config/clientconfig/) — Immutable client configuration for authentication, session storage, RPCs, updates, and media.
+- [`ClientConfig`](./config/clientconfig/) — Immutable client configuration for authentication, session storage, RPCs, updates and media.
 - [`DeviceInfo`](./config/deviceinfo/) — Application and device identity sent when initializing a Telegram session.
 - [`TransportConfig`](./config/transportconfig/) — Connection transport settings with validated timeouts and payload limits.
 - [`UpdateQueueOverflowPolicy`](./config/updatequeueoverflowpolicy/) — Public attribute `miniproto.config.UpdateQueueOverflowPolicy`.
 - [`QuickAckReceipt`](./connection/sender/quickackreceipt/) — Early transport-acknowledgement metadata for one encrypted send attempt.
 - [`AmbiguousRpcResult`](./errors/ambiguousrpcresult/) — The transport failed after an RPC may already have reached Telegram.
 - [`AuthError`](./errors/autherror/) — Base exception for authentication and authorization flow failures.
-- [`AuthKeyNotFound`](./errors/authkeynotfound/) — Authentication key is invalid, unregistered, or no longer available.
+- [`AuthKeyNotFound`](./errors/authkeynotfound/) — Authentication key is invalid, unregistered or no longer available.
 - [`AuthKeyRegenerationRequired`](./errors/authkeyregenerationrequired/) — Authentication key is duplicated or unsynchronized and must be replaced.
 - [`BadRequest`](./errors/badrequest/) — Classified client-side Telegram RPC error, normally status code 400.
 - [`ClientDisconnected`](./errors/clientdisconnected/) — Raised when invocation cannot continue because the client disconnected.
@@ -37,7 +37,7 @@ Public API for miniproto.
 - [`FloodWait`](./errors/floodwait/) — Telegram pacing failure that exposes the required wait duration in seconds.
 - [`Forbidden`](./errors/forbidden/) — Classified Telegram permission failure with status code 403.
 - [`InternalServerError`](./errors/internalservererror/) — Classified retryable server failure, normally a 5xx RPC code.
-- [`InvalidCode`](./errors/invalidcode/) — Authentication flow failure for a missing, expired, or invalid phone code.
+- [`InvalidCode`](./errors/invalidcode/) — Authentication flow failure for a missing, expired or invalid phone code.
 - [`InvalidDatacenter`](./errors/invaliddatacenter/) — Telegram rejects the current data centre, commonly before a migration hint.
 - [`InvokeError`](./errors/invokeerror/) — Base exception for raw invocation failures before Telegram returns a typed RPC error.
 - [`NotFound`](./errors/notfound/) — Classified Telegram missing-resource failure with status code 404.
@@ -68,9 +68,9 @@ Public API for miniproto.
 - [`iter_download`](./media/download/iter-download/) — Stream an exact media range as ordered, bounded byte chunks.
 - [`InMemoryMetrics`](./observability/inmemorymetrics/) — Simple in-memory ``MetricsSink`` useful for tests and local diagnostics.
 - [`LogFormat`](./observability/logformat/) — Public attribute `miniproto.observability.LogFormat`.
-- [`MemoryDelta`](./observability/memorydelta/) — Start, end, and peak resource snapshots for one monitored interval.
+- [`MemoryDelta`](./observability/memorydelta/) — Start, end and peak resource snapshots for one monitored interval.
 - [`MemoryMonitor`](./observability/memorymonitor/) — Collect resource snapshots and optionally manage a temporary tracemalloc session.
-- [`MetricEvent`](./observability/metricevent/) — Immutable metric event recorded with a unit, attributes, and wall-clock timestamp.
+- [`MetricEvent`](./observability/metricevent/) — Immutable metric event recorded with a unit, attributes and wall-clock timestamp.
 - [`MetricsSink`](./observability/metricssink/) — Protocol implemented by destinations that accept metric events.
 - [`ResourceSnapshot`](./observability/resourcesnapshot/) — Point-in-time process and tracemalloc memory counters.
 - [`StructuredFormatter`](./observability/structuredformatter/) — Formatter that redacts structured events and optionally emits compact JSON.
@@ -81,8 +81,8 @@ Public API for miniproto.
 - [`get_metrics_sink`](./observability/get-metrics-sink/) — Return the currently configured process-global metrics sink, if any.
 - [`process_rss_bytes`](./observability/process-rss-bytes/) — Return this process's reported RSS/working-set byte count when available.
 - [`record_metric`](./observability/record-metric/) — Record a metric through the configured sink, suppressing sink failures.
-- [`resource_snapshot`](./observability/resource-snapshot/) — Capture current RSS, active tracemalloc counters, and GC object count.
-- [`set_metrics_sink`](./observability/set-metrics-sink/) — Set the process-global metrics destination, or disable metric recording.
+- [`resource_snapshot`](./observability/resource-snapshot/) — Capture current RSS, active tracemalloc counters and GC object count.
+- [`set_metrics_sink`](./observability/set-metrics-sink/) — Set the process-global metrics destination or disable metric recording.
 - [`to_jsonable`](./observability/to-jsonable/) — Recursively convert supported observability values into JSON-compatible shapes.
 - [`AuthKey`](./session/models/authkey/) — Validated non-empty MTProto authorization key bound to a positive DC.
 - [`DCOption`](./session/models/dcoption/) — One validated Telegram data-centre endpoint and optional transport secret.
@@ -96,7 +96,7 @@ Public API for miniproto.
 - [`SessionString`](./session/strings/sessionstring/) — A bearer-secret string whose representation is always redacted.
 - [`SessionStringFormat`](./session/strings/sessionstringformat/) — Public attribute `miniproto.session.strings.SessionStringFormat`.
 - [`export_session_string`](./session/strings/export-session-string/) — Export a typed or decoded session record in a portable bearer format.
-- [`import_session_string`](./session/strings/import-session-string/) — Import a native, Telethon v1, or Pyrogram string into a validated record.
+- [`import_session_string`](./session/strings/import-session-string/) — Import a native, Telethon v1 or Pyrogram string into a validated record.
 - [`Media`](./types/media/) — Normalized Telegram media descriptor used for upload and download helpers.
 - [`Message`](./types/message/) — Normalized Telegram message returned by high-level messaging helpers.
 - [`NewMessage`](./types/newmessage/) — Update emitted for a newly received message.

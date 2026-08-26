@@ -59,7 +59,7 @@ class AuthService:
     """
 
     def __init__(self, config: ClientConfig, storage: SessionStorage, invoker: RawInvoker) -> None:
-        """Bind the client configuration, session storage, and raw-request invoker.
+        """Bind the client configuration, session storage and raw-request invoker.
 
         Args:
             config: Client credentials and default data-center configuration.
@@ -256,7 +256,7 @@ class AuthService:
         return exported
 
     async def _sign_in_password(self, password_callback: Callback0 | None) -> object:
-        """Resolve a 2FA callback, construct its SRP proof, and submit it to Telegram.
+        """Resolve a 2FA callback, construct its SRP proof and submit it to Telegram.
 
         Args:
             password_callback: Optional callable producing the user's plain-text 2FA password.
@@ -285,7 +285,7 @@ class AuthService:
     async def _persist_authorization(
         self, authorization: types.AuthAuthorization, *, phone: str | None, is_bot: bool
     ) -> None:
-        """Persist the authenticated identity, self peer, and optional future auth token.
+        """Persist the authenticated identity, self peer and optional future auth token.
 
         Args:
             authorization: Successful Telegram authorization result to persist.

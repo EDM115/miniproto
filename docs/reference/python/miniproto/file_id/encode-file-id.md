@@ -22,7 +22,7 @@ Encode supported Telegram media or input locations into a local file ID.
 
 **Parameters:**
 
-- **media** (<code>[Media](#miniproto.types.Media) | [object](#object)</code>) – A ``Media`` value, supported generated media object, or input file location.
+- **media** (<code>[Media](#miniproto.types.Media) | [object](#object)</code>) – A ``Media`` value, supported generated media object or input file location.
 
 **Returns:**
 

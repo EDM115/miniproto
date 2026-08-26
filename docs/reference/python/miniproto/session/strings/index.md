@@ -16,7 +16,7 @@ module: "miniproto.session.strings"
 Import and export validated portable bearer session strings without client dependencies.
 
 Only protected native strings use scrypt-derived AES-256-GCM authenticated encryption.
-Plain native strings, Telethon strings, and Pyrogram strings are bearer encodings:
+Plain native strings, Telethon strings and Pyrogram strings are bearer encodings:
 they are validated for shape and may carry a checksum, but do not authenticate a
 holder or protect their contained authorization key.
 
@@ -30,4 +30,4 @@ holder or protect their contained authorization key.
 - [`MAX_PEERS`](./max-peers/) — Public attribute `miniproto.session.strings.MAX_PEERS`.
 - [`SessionString`](./sessionstring/) — A bearer-secret string whose representation is always redacted.
 - [`export_session_string`](./export-session-string/) — Export a typed or decoded session record in a portable bearer format.
-- [`import_session_string`](./import-session-string/) — Import a native, Telethon v1, or Pyrogram string into a validated record.
+- [`import_session_string`](./import-session-string/) — Import a native, Telethon v1 or Pyrogram string into a validated record.

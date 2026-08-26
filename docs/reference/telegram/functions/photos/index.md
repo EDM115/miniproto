@@ -1,6 +1,6 @@
 ---
 title: "Telegram functions: photos"
-description: "Layer 228 index of 5 canonical Telegram functions in the photos namespace from tdlib."
+description: "Layer 229 index of 5 canonical Telegram functions in the photos namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -9,11 +9,10 @@ qualified_name: "telegram.functions.photos"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "photos"
-layer: 228
 schema_source: "tdlib"
 ---
 
-## Layer 228 photos functions
+## Layer 229 photos functions
 
 Selected canonical functions in this namespace: 5.
 

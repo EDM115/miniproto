@@ -25,4 +25,4 @@ exceed the configured threshold in seconds.
 **Parameters:**
 
 - **error** (<code>[FloodWait](#miniproto.errors.FloodWait)</code>) – Classified Telegram flood-wait response.
-- **threshold** (<code>[int](#int) | None</code>) – Maximum automatically slept duration in seconds, or ``None`` to disable it.
+- **threshold** (<code>[int](#int) | None</code>) – Maximum automatically slept duration in seconds or ``None`` to disable it.

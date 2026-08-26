@@ -1,6 +1,6 @@
 ---
 title: "miniproto.session.storage.SessionStorage.load"
-description: "Load a detached snapshot, or ``None`` when no session is stored."
+description: "Load a detached snapshot or ``None`` when no session is stored."
 generated: true
 editUrl: false
 language: "python"
@@ -18,4 +18,4 @@ module: "miniproto.session.storage"
 load() -> Mapping[str, Any] | None
 ```
 
-Load a detached snapshot, or ``None`` when no session is stored.
+Load a detached snapshot or ``None`` when no session is stored.

@@ -1,4 +1,4 @@
-"""Conservative redaction helpers for logs, metrics, and diagnostic representations."""
+"""Conservative redaction helpers for logs, metrics and diagnostic representations."""
 
 from __future__ import annotations
 
@@ -130,7 +130,7 @@ def safe_repr(value: object) -> str:
 
 
 def _redact_nested(value: object) -> object:
-    """Recursively sanitize mappings, dataclasses, sequences, binary values, and text.
+    """Recursively sanitize mappings, dataclasses, sequences, binary values and text.
 
     Args:
         value: Arbitrary nested value whose supported secret assignments must be redacted.

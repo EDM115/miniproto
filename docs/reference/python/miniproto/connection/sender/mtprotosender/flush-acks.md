@@ -1,6 +1,6 @@
 ---
 title: "miniproto.connection.sender.MTProtoSender.flush_acks"
-description: "Send currently queued acknowledgements, or return ``None`` when empty."
+description: "Send currently queued acknowledgements or return ``None`` when empty."
 generated: true
 editUrl: false
 language: "python"
@@ -18,11 +18,11 @@ module: "miniproto.connection.sender"
 flush_acks() -> int | None
 ```
 
-Send currently queued acknowledgements, or return ``None`` when empty.
+Send currently queued acknowledgements or return ``None`` when empty.
 
 **Returns:**
 
-- <code>[int](#int) | None</code> – The outgoing acknowledgement message ID, or ``None`` if there were
+- <code>[int](#int) | None</code> – The outgoing acknowledgement message ID or ``None`` if there were
 - <code>[int](#int) | None</code> – no pending acknowledgements to flush.
 
 **Raises:**

@@ -1,6 +1,6 @@
 """Run deterministic, in-process benchmarks for representative miniproto runtime paths.
 
-This script deliberately uses synthetic payloads, in-memory storage, fake invokers, and a loopback-only sender state. It exercises no live Telegram session, network transport, credential, or filesystem transfer path. Timings use ``perf_counter`` and report the best and median of ten complete runs; they are comparative local measurements, not service-level performance claims.
+This script deliberately uses synthetic payloads, in-memory storage, fake invokers and a loopback-only sender state. It exercises no live Telegram session, network transport, credential or filesystem transfer path. Timings use ``perf_counter`` and report the best and median of ten complete runs; they are comparative local measurements, not service-level performance claims.
 """
 
 from __future__ import annotations
@@ -131,7 +131,7 @@ class ConcurrentInvoker:
     count: int = 0
 
     async def __call__(self, request: object) -> object:
-        """Count one invocation, cooperatively yield, and return a synthetic success value.
+        """Count one invocation, cooperatively yield and return a synthetic success value.
 
         Args:
             request: Ignored synthetic request accepted to match an RPC invoker protocol.
@@ -178,7 +178,7 @@ class CountingCachedPeerStorage(_CachedSessionStorage):
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Parse command-line arguments, print event-loop metadata, and run all synthetic cases.
+    """Parse command-line arguments, print event-loop metadata and run all synthetic cases.
 
     Args:
         argv: Optional argument sequence; only standard argparse help is accepted.
@@ -287,7 +287,7 @@ async def _bench_upload(payload: bytes) -> int:
     """Measure 8-way synthetic media upload chunking against an in-memory success invoker.
 
     Args:
-        payload: Synthetic immutable source bytes; no file, session, or live request is used.
+        payload: Synthetic immutable source bytes; no file, session or live request is used.
     """
     invoker = UploadInvoker()
     result = await upload_file(
@@ -416,7 +416,7 @@ async def _bench_pending_slot_held_burst(sender: MTProtoSender, count: int) -> i
 async def _bench_peer_cache_10k() -> None:
     """Benchmark a 10,000-entry peer cache against canonical scans and enforce local gates.
 
-    Reports cold construction, warm lookup medians in nanoseconds, estimated incremental index heap, and a one-entity incremental reconciliation. It asserts fixed local speed/memory/load-count thresholds; these gates intentionally depend on the executing environment.
+    Reports cold construction, warm lookup medians in nanoseconds, estimated incremental index heap and a one-entity incremental reconciliation. It asserts fixed local speed/memory/load-count thresholds; these gates intentionally depend on the executing environment.
     """
     entries = _peer_entries_10k()
     record = SessionRecord(user=UserIdentity(id=50_000, access_hash=500_000, phone="+12025559999"), peers=entries)
@@ -455,7 +455,7 @@ async def _bench_peer_cache_10k() -> None:
         or cache.index_stats != warm_stats
     ):
         raise AssertionError(
-            "warm peer lookups reloaded the cached wrapper/backend, rebuilt, or visited the canonical tuple"
+            "warm peer lookups reloaded the cached wrapper/backend, rebuilt or visited the canonical tuple"
         )
     ratios = {name: baseline_ns[name] / indexed_ns[name] for name in indexed_ns}
     if any(ratio < 20.0 for ratio in ratios.values()):
@@ -507,7 +507,7 @@ async def _bench_peer_cache_10k() -> None:
 
 
 def _peer_entries_10k() -> tuple[PeerCacheEntry, ...]:
-    """Create a deterministic 10,000-entry mixture of synthetic users, chats, and channels."""
+    """Create a deterministic 10,000-entry mixture of synthetic users, chats and channels."""
     entries: list[PeerCacheEntry] = []
     now = datetime.now(UTC)
     for index in range(10_000):

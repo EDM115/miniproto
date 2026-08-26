@@ -8,7 +8,6 @@ kind: "file"
 qualified_name: "file:rust/miniproto/src/transport.rs"
 source_path: "rust/miniproto/src/transport.rs"
 source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L1"
-crate: "miniproto_native"
 ---
 
 ## Documented declarations

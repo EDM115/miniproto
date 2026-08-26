@@ -1,4 +1,4 @@
-"""Immutable configuration models for client connections, updates, and media transfers."""
+"""Immutable configuration models for client connections, updates and media transfers."""
 
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ class TransportConfig:
         """Validate positive timeouts and payload size plus ordered reconnect bounds.
 
         Raises:
-            ValueError: If a timeout or payload limit is non-positive, the initial reconnect delay is negative, or the maximum delay is smaller than the initial delay.
+            ValueError: If a timeout or payload limit is non-positive, the initial reconnect delay is negative or the maximum delay is smaller than the initial delay.
         """
         if self.connect_timeout <= 0:
             raise ValueError("connect_timeout must be positive")
@@ -80,7 +80,7 @@ class DeviceInfo:
 
 @dataclass(slots=True, frozen=True)
 class ClientConfig:
-    """Immutable client configuration for authentication, session storage, RPCs, updates, and media.
+    """Immutable client configuration for authentication, session storage, RPCs, updates and media.
 
     Args:
         api_id: Positive Telegram application identifier.
@@ -90,7 +90,7 @@ class ClientConfig:
         transport: TCP transport configuration.
         device: Telegram-facing device metadata.
         update_queue_size: Bounded number of pending updates, defaulting to 1000.
-        update_queue_overflow: Overflow action: ``"raise"``, ``"drop_oldest"``, or ``"drop_newest"``.
+        update_queue_overflow: Overflow action: ``"raise"``, ``"drop_oldest"`` or ``"drop_newest"``.
         update_duplicate_window: Number of recent updates retained for duplicate suppression.
         dc_id: Initial Telegram datacenter identifier, defaulting to 2.
         test_mode: Select Telegram's test environment when true.
@@ -110,10 +110,10 @@ class ClientConfig:
         bot_token: Optional bot token, excluded from representations.
 
     Raises:
-        ValueError: If required identifiers or secrets are empty, limits are invalid, or a media scheduler budget is below 64 KiB.
+        ValueError: If required identifiers or secrets are empty, limits are invalid or a media scheduler budget is below 64 KiB.
 
     Security:
-        ``api_hash``, ``bot_token``, and the supplied storage backend are hidden from the dataclass representation, but callers remain responsible for protecting configuration values and session storage.
+        ``api_hash``, ``bot_token`` and the supplied storage backend are hidden from the dataclass representation, but callers remain responsible for protecting configuration values and session storage.
     """
 
     api_id: int
@@ -146,10 +146,10 @@ class ClientConfig:
     bot_token: str | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
-        """Validate client, update, RPC, and media resource limits.
+        """Validate client, update, RPC and media resource limits.
 
         Raises:
-            ValueError: If an identifier, timeout, queue size, retry count, or configured resource bound violates its documented constraint.
+            ValueError: If an identifier, timeout, queue size, retry count or configured resource bound violates its documented constraint.
         """
         if self.api_id <= 0:
             raise ValueError("api_id must be a positive integer")
@@ -158,7 +158,7 @@ class ClientConfig:
         if self.update_queue_size <= 0:
             raise ValueError("update_queue_size must be positive")
         if self.update_queue_overflow not in {"raise", "drop_oldest", "drop_newest"}:
-            raise ValueError("update_queue_overflow must be raise, drop_oldest, or drop_newest")
+            raise ValueError("update_queue_overflow must be raise, drop_oldest or drop_newest")
         if self.update_duplicate_window <= 0:
             raise ValueError("update_duplicate_window must be positive")
         if self.dc_id <= 0:

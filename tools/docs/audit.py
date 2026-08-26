@@ -1,4 +1,4 @@
-"""Audit maintained Python, CLI, and Rust sources for missing or structurally inconsistent documentation."""
+"""Audit maintained Python, CLI and Rust sources for missing or structurally inconsistent documentation."""
 
 from __future__ import annotations
 
@@ -69,9 +69,9 @@ class RustDocumentationAudit:
     """Summarize whole-source Rust documentation coverage.
 
     Attributes:
-        documentation_unit_count: Total maintained modules, declarations, tuple fields, and test functions audited.
+        documentation_unit_count: Total maintained modules, declarations, tuple fields and test functions audited.
         named_declaration_count: Source-authored named declarations other than modules and test functions.
-        module_count: Maintained crate, file, and nested modules audited.
+        module_count: Maintained crate, file and nested modules audited.
         test_function_count: Source-authored functions carrying ``#[test]``.
         tuple_field_count: Positional enum or struct fields audited through direct or container prose.
         function_count: Non-test source-authored functions whose parameters were audited.
@@ -327,7 +327,7 @@ def _has_substantive_docstring(docstring: str | None) -> bool:
     """Return whether authored documentation contains more than an empty or known placeholder summary.
 
     Args:
-        docstring: Raw AST documentation text, or ``None`` when absent.
+        docstring: Raw AST documentation text or ``None`` when absent.
 
     Returns:
         ``True`` for non-empty prose that is not one of the deliberately rejected generic placeholders.
@@ -345,7 +345,7 @@ def _static_help_text(node: ast.expr | None) -> str:
         node: AST expression supplied to an ``add_argument(help=...)`` keyword.
 
     Returns:
-        Concatenated literal text, or an empty string for absent, dynamic, or placeholder help.
+        Concatenated literal text or an empty string for absent, dynamic or placeholder help.
     """
     if isinstance(node, ast.Constant) and isinstance(node.value, str):
         value = node.value
@@ -524,7 +524,7 @@ def _own_dataclass_constructor_fields(node: ast.ClassDef) -> tuple[str, ...]:
         node: Dataclass definition whose annotated assignments are inspected.
 
     Returns:
-        Direct constructor field names after ClassVar, KW_ONLY, and init-false filtering.
+        Direct constructor field names after ClassVar, KW_ONLY and init-false filtering.
     """
     fields: list[str] = []
     for statement in node.body:
@@ -557,7 +557,7 @@ def audit_maintained_rust_docs(
     """Audit every source-authored documentation unit in maintained Rust files.
 
     Args:
-        rustdoc_json: Format-versioned JSON emitted by the pinned nightly with private items enabled.
+        rustdoc_json: Format-versioned JSON emitted by the nightly with private items enabled.
         source_root: Repository root used to resolve rustdoc source spans.
         maintained_paths: Repository-relative Rust files whose authored declarations are in scope.
         excluded_paths: Generator-owned Rust files that must remain outside coverage.
@@ -838,7 +838,7 @@ def _rustdoc_direct_children(inner: Mapping[str, Any]) -> tuple[str, ...]:
         inner: One rustdoc item's tagged inner representation.
 
     Returns:
-        Direct module, type, variant, field, or trait children.
+        Direct module, type, variant, field or trait children.
     """
     children: list[str] = []
     module = inner.get("module")
@@ -1010,7 +1010,7 @@ def _rust_type_name(value: Any) -> str:
         value: Tagged rustdoc type representation.
 
     Returns:
-        Concise source-facing type name, or an empty string when unavailable.
+        Concise source-facing type name or an empty string when unavailable.
     """
     if not isinstance(value, Mapping):
         return ""
@@ -1128,7 +1128,7 @@ def find_missing_rustdoc_docs(
     """Return undocumented local declarations from one rustdoc JSON artifact.
 
     Args:
-        rustdoc_json: JSON emitted by the pinned nightly with private items enabled.
+        rustdoc_json: JSON emitted by the nightly with private items enabled.
         excluded_paths: Generator-owned source paths to omit from coverage.
 
     Returns:
@@ -1174,7 +1174,7 @@ def find_missing_rustdoc_parameter_docs(
     """Return Rust functions whose non-receiver arguments lack descriptions.
 
     Args:
-        rustdoc_json: JSON emitted by the pinned nightly with private items enabled.
+        rustdoc_json: JSON emitted by the nightly with private items enabled.
         excluded_paths: Generator-owned source paths to omit from coverage.
 
     Returns:

@@ -1,6 +1,6 @@
 ---
 title: "miniproto.config.ClientConfig"
-description: "Immutable client configuration for authentication, session storage, RPCs, updates, and media."
+description: "Immutable client configuration for authentication, session storage, RPCs, updates and media."
 generated: true
 editUrl: false
 language: "python"
@@ -18,7 +18,7 @@ module: "miniproto.config"
 ClientConfig(api_id: int, api_hash: str, session_storage: SessionStorage | None = None, session_path: str | os.PathLike[str] = 'miniproto.session.sqlite', transport: TransportConfig = TransportConfig(), device: DeviceInfo = DeviceInfo(), update_queue_size: int = 1000, update_queue_overflow: UpdateQueueOverflowPolicy = 'raise', update_duplicate_window: int = 2048, dc_id: int = 2, test_mode: bool = False, request_timeout: float = 30.0, max_request_retries: int = 2, max_reconnect_attempts: int | None = None, max_pending_rpcs: int = 512, flood_sleep_threshold: int | None = None, method_flood_cache_size: int = 512, media_concurrency: int | None = None, media_max_buffer_size: int | None = None, media_download_max_in_flight_bytes_per_dc: int = 16 * 1024 * 1024, media_upload_max_in_flight_bytes_per_dc: int = 8 * 1024 * 1024, media_download_small_queue_limit: int | None = None, media_download_large_queue_limit: int | None = None, media_idle_close: float | None = 120.0, bot_token: str | None = None) -> None
 ```
 
-Immutable client configuration for authentication, session storage, RPCs, updates, and media.
+Immutable client configuration for authentication, session storage, RPCs, updates and media.
 
 **Parameters:**
 
@@ -29,7 +29,7 @@ Immutable client configuration for authentication, session storage, RPCs, update
 - **transport** (<code>[TransportConfig](#miniproto.config.TransportConfig)</code>) – TCP transport configuration.
 - **device** (<code>[DeviceInfo](#miniproto.config.DeviceInfo)</code>) – Telegram-facing device metadata.
 - **update_queue_size** (<code>[int](#int)</code>) – Bounded number of pending updates, defaulting to 1000.
-- **update_queue_overflow** (<code>[UpdateQueueOverflowPolicy](#miniproto.config.UpdateQueueOverflowPolicy)</code>) – Overflow action: ``"raise"``, ``"drop_oldest"``, or ``"drop_newest"``.
+- **update_queue_overflow** (<code>[UpdateQueueOverflowPolicy](#miniproto.config.UpdateQueueOverflowPolicy)</code>) – Overflow action: ``"raise"``, ``"drop_oldest"`` or ``"drop_newest"``.
 - **update_duplicate_window** (<code>[int](#int)</code>) – Number of recent updates retained for duplicate suppression.
 - **dc_id** (<code>[int](#int)</code>) – Initial Telegram datacenter identifier, defaulting to 2.
 - **test_mode** (<code>[bool](#bool)</code>) – Select Telegram's test environment when true.
@@ -50,11 +50,11 @@ Immutable client configuration for authentication, session storage, RPCs, update
 
 **Raises:**
 
-- <code>[ValueError](#ValueError)</code> – If required identifiers or secrets are empty, limits are invalid, or a media scheduler budget is below 64 KiB.
+- <code>[ValueError](#ValueError)</code> – If required identifiers or secrets are empty, limits are invalid or a media scheduler budget is below 64 KiB.
 
 <details class="security" open markdown="1">
 <summary>Security</summary>
 
-``api_hash``, ``bot_token``, and the supplied storage backend are hidden from the dataclass representation, but callers remain responsible for protecting configuration values and session storage.
+``api_hash``, ``bot_token`` and the supplied storage backend are hidden from the dataclass representation, but callers remain responsible for protecting configuration values and session storage.
 
 </details>

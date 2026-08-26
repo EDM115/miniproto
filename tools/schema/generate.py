@@ -1,7 +1,7 @@
-"""Deterministically render, reconcile, and validate generated miniproto API artifacts.
+"""Deterministically render, reconcile and validate generated miniproto API artifacts.
 
 The pinned normalized TL schema is the structural source of truth. This generator owns the
-raw Python facades and shards, stubs, registry, RPC-error metadata, and reviewed Rust/TL
+raw Python facades and shards, stubs, registry, RPC-error metadata and reviewed Rust/TL
 fast-path metadata. Handwritten documentation is outside generator ownership. ``--check``
 compares each owned rendering with the working tree without mutating it; normal generation
 reconciles stale files and owned shards.
@@ -31,7 +31,6 @@ from tools.schema.rust_fast import (
 )
 
 _GENERATOR_VERSION = "5"
-_SCHEMA_LAYER = 214
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_SCHEMA = _REPO_ROOT / "tools" / "schema" / "schema.json"
 _DEFAULT_METADATA = _REPO_ROOT / "tools" / "schema" / "schema-metadata.json"
@@ -164,7 +163,7 @@ def render_outputs(
     fast_metadata_path: Path | None = None,
     telegram_bindings_path: Path | None = None,
 ) -> GeneratedOutputs:
-    """Render every deterministic artifact from pinned schema, metadata, and error inputs.
+    """Render every deterministic artifact from pinned schema, metadata and error inputs.
 
     Args:
         schema_path: Normalized TL schema JSON source.
@@ -265,7 +264,7 @@ def write_outputs(outputs: GeneratedOutputs) -> None:
 
 
 def stale_outputs(outputs: GeneratedOutputs) -> tuple[Path, ...]:
-    """Return expected outputs that are missing, differ, or are obsolete owned shards.
+    """Return expected outputs that are missing, differ or are obsolete owned shards.
 
     Args:
         outputs: Expected content and owned directories from :func:`render_outputs`.
@@ -766,7 +765,10 @@ def _metadata(
     error_count = sum(len(errors) for errors in rpc_error_database.get("errors", {}).values())
     previous = _load_existing_metadata(metadata_path)
     schema_format = "json" if schema_path.suffix == ".json" else "tl"
-    schema_layer = int(previous.get("schema_layer", previous.get("layer", _SCHEMA_LAYER)))
+    schema_layer_value = previous.get("schema_layer", previous.get("layer"))
+    if schema_layer_value is None:
+        raise ValueError("schema metadata must define schema_layer or layer")
+    schema_layer = int(schema_layer_value)
     rpc_error_layer = rpc_error_database.get("layer", previous.get("rpc_error_layer"))
     schema_sha256 = _sha256_file(schema_path)
     metadata = dict(previous)
@@ -1285,7 +1287,7 @@ def _flag_groups_by_index(groups: Sequence[tuple[str, str, int]]) -> dict[int, t
     """Group optional-flag specifications by generated field position.
 
     Args:
-        groups: Flag name, Python name, and insertion-index triples.
+        groups: Flag name, Python name and insertion-index triples.
     """
     grouped: dict[int, list[tuple[str, str, int]]] = {}
     for group in groups:
@@ -1413,10 +1415,10 @@ def _short_class_name(short_name: str) -> str:
 
 
 def _render_errors(database: Mapping[str, Any]) -> str:
-    """Render RPC error lookup metadata from pinned error-name, code, and method provenance.
+    """Render RPC error lookup metadata from pinned error-name, code and method provenance.
 
     Args:
-        database: Pinned Telegram RPC-error names, codes, descriptions, and method mappings.
+        database: Pinned Telegram RPC-error names, codes, descriptions and method mappings.
     """
     errors = database.get("errors", {})
     descriptions = database.get("descriptions", {})
@@ -1550,7 +1552,7 @@ def _telegram_declaration_binding(entry: Any, *, kind: str, module: str) -> dict
         module: Public raw facade module that exposes the generated class.
 
     Returns:
-        JSON-ready record keyed by kind, exact TL qualified name, and normalized constructor ID.
+        JSON-ready record keyed by kind, exact TL qualified name and normalized constructor ID.
     """
     python_name = str(entry.python_class_name)
     return {

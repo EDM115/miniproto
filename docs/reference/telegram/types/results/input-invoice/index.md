@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: InputInvoice"
-description: "Layer 228 result-family index for 15 canonical constructors returning InputInvoice from tdlib."
+description: "Layer 229 result-family index for 15 canonical constructors returning InputInvoice from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -9,11 +9,10 @@ qualified_name: "telegram.types.result.InputInvoice"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "results"
-layer: 228
 schema_source: "tdlib"
 ---
 
-## Layer 228 result family `InputInvoice`
+## Layer 229 result family `InputInvoice`
 
 Selected canonical constructors in this family: 15.
 

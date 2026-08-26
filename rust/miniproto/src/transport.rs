@@ -1,12 +1,12 @@
-//! Stateful native codecs for Telegram TCP abridged, intermediate, and padded-intermediate frames.
+//! Stateful native codecs for Telegram TCP abridged, intermediate and padded-intermediate frames.
 //!
 //! `TransportCodec` is exported to Python as `miniproto._native.TransportCodec` and mirrors the
 //! Python fallback's framing contract.  It accepts arbitrary receive fragmentation, emits payload,
-//! quick-ACK, and transport-error events, and returns Python exceptions for malformed or oversized
+//! quick-ACK and transport-error events and returns Python exceptions for malformed or oversized
 //! data rather than panicking. `FramePump` itself is Python-independent, but the PyO3 methods in
 //! this module currently do not detach regular parsing or encoding work from the GIL; the GIL is
 //! also required while their results are converted to Python objects.
-//! Incompatible Python inputs retain PyO3's `TypeError`, `OverflowError`, or source conversion
+//! Incompatible Python inputs retain PyO3's `TypeError`, `OverflowError` or source conversion
 //! exception; framing validation that runs after conversion intentionally returns `ValueError`.
 
 use pyo3::IntoPyObjectExt;
@@ -178,7 +178,7 @@ impl TransportCodec {
 
     /// Feeds Python `feed_data(data)` and returns tagged native event tuples.
     ///
-    /// Tuple kinds are `0` payload, `1` quick ACK, and `2` negative transport error. It preserves
+    /// Tuple kinds are `0` payload, `1` quick ACK and `2` negative transport error. It preserves
     /// incomplete trailing bytes for the next call and raises Python errors for invalid framing.
     ///
     /// # Arguments
@@ -349,7 +349,7 @@ impl FramePump {
 
     /// Encodes an intermediate frame with random zero-to-fifteen-byte padding.
     ///
-    /// Returns `ValueError` for arithmetic, size, or operating-system randomness failures.
+    /// Returns `ValueError` for arithmetic, size or operating-system randomness failures.
     ///
     /// # Arguments
     ///
@@ -380,9 +380,9 @@ impl FramePump {
         Ok(output)
     }
 
-    /// Buffers `data`, parses every complete frame, and retains a partial suffix for later input.
+    /// Buffers `data`, parses every complete frame and retains a partial suffix for later input.
     ///
-    /// Returns parsed events or a Python exception for allocation, overflow, or invalid framing.
+    /// Returns parsed events or a Python exception for allocation, overflow or invalid framing.
     ///
     /// # Arguments
     ///
@@ -509,7 +509,7 @@ impl FramePump {
         )))
     }
 
-    /// Converts a complete raw transport payload to an application, ACK, or error event.
+    /// Converts a complete raw transport payload to an application, ACK or error event.
     ///
     /// Removes and validates padded-intermediate suffix bytes when `padded`; returns `ValueError`
     /// for invalid encapsulated packet shape or a payload above the configured maximum.
@@ -706,7 +706,7 @@ fn to_fixed<const N: usize>(data: &[u8]) -> PyResult<[u8; N]> {
         .map_err(|_| PyValueError::new_err("transport frame ended unexpectedly"))
 }
 
-/// Unit tests for TCP transport framing, fragmentation, and quick-ACK interpretation.
+/// Unit tests for TCP transport framing, fragmentation and quick-ACK interpretation.
 #[cfg(test)]
 mod tests {
     use super::*;

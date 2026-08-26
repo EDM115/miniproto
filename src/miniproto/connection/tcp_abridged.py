@@ -6,7 +6,7 @@ from miniproto.connection.transport import StreamTransportBase
 class TcpAbridgedTransport(StreamTransportBase):
     """Stream transport using Telegram's compact four-byte-word TCP framing.
 
-    The base class owns connection, timeout, quick-ACK, and close behavior;
+    The base class owns connection, timeout, quick-ACK and close behavior;
     this specialization only selects its wire handshake and codec mode.
     """
 

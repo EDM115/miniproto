@@ -1,4 +1,4 @@
-"""Mutable MTProto session state for IDs, sequencing, replay checks, and acknowledgements."""
+"""Mutable MTProto session state for IDs, sequencing, replay checks and acknowledgements."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ _SERVER_MSG_ID_PARITY = 1
 
 @dataclass(slots=True)
 class MTProtoState:
-    """Track one authorization key's MTProto session, timing, and acknowledgement state.
+    """Track one authorization key's MTProto session, timing and acknowledgement state.
 
     Attributes:
         auth_key: Required 256-byte MTProto authorization key.
@@ -123,7 +123,7 @@ class MTProtoState:
             provisional_seen_msg_ids: Additional IDs already staged in the current transaction.
 
         Raises:
-            ProtocolValidationError: If session, parity, duplicate, replay-window, or trusted time checks fail.
+            ProtocolValidationError: If session, parity, duplicate, replay-window or trusted time checks fail.
         """
         if session_id != self.session_id:
             raise ProtocolValidationError("session_id", context={"msg_id": msg_id})
@@ -203,7 +203,7 @@ class MTProtoState:
             now: Optional monotonic timestamp for deterministic measurement.
 
         Returns:
-            Nonnegative age in seconds, or ``0.0`` when the queue is empty.
+            Nonnegative age in seconds or ``0.0`` when the queue is empty.
         """
         if not self._pending_acks:
             return 0.0

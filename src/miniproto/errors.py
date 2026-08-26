@@ -63,7 +63,7 @@ class AmbiguousRpcResult(MiniprotoError):
         Exception.__init__(self, redact_text(message))
 
     def __str__(self) -> str:
-        """Render redacted message, request, and optional context."""
+        """Render redacted message, request and optional context."""
         rendered = redact_text(self.message)
         if self.request is not None:
             rendered = f"{rendered} request={safe_repr(self.request)}"
@@ -326,7 +326,7 @@ class AuthError(RpcError):
 
 
 class InvalidCode(AuthError):
-    """Authentication flow failure for a missing, expired, or invalid phone code."""
+    """Authentication flow failure for a missing, expired or invalid phone code."""
 
     def __init__(
         self,
@@ -406,7 +406,7 @@ class SignUpRequired(AuthError):
 
 
 class AuthKeyNotFound(AuthError):
-    """Authentication key is invalid, unregistered, or no longer available."""
+    """Authentication key is invalid, unregistered or no longer available."""
 
     def __init__(
         self,
@@ -540,7 +540,7 @@ def classify_rpc_error(error: RpcError) -> RpcError:
 
     Returns:
         The same instance when no classification applies, otherwise a specific
-        error that preserves message, code, request, and context.
+        error that preserves message, code, request and context.
     """
     raw_message = str(error.message).strip()
     upper_message = raw_message.upper()
@@ -612,7 +612,7 @@ def _instantiate_error_class(cls: type[RpcError], error: RpcError) -> RpcError:
 
     Args:
         cls: More specific classified RPC error class to instantiate.
-        error: Raw RPC error supplying message, code, request, and context.
+        error: Raw RPC error supplying message, code, request and context.
     """
     if issubclass(cls, FloodWait):
         _template, values = _template_from_message(error.message)

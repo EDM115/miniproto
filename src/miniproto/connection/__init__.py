@@ -1,4 +1,4 @@
-"""Public MTProto connection, sender, and transport primitives."""
+"""Public MTProto connection, sender and transport primitives."""
 
 from miniproto.connection.sender import MTProtoSender, PendingRequest, QuickAckReceipt, SenderState
 from miniproto.connection.transport import (

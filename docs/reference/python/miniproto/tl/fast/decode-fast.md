@@ -28,4 +28,4 @@ Attempt native deserialization for a generated TL constructor.
 
 **Returns:**
 
-- <code>[tuple](#tuple)[[tuple](#tuple)[[object](#object), ...], [int](#int)] | None</code> – Decoded field values and next offset, or ``None`` when no fast path applies.
+- <code>[tuple](#tuple)[[tuple](#tuple)[[object](#object), ...], [int](#int)] | None</code> – Decoded field values and next offset or ``None`` when no fast path applies.

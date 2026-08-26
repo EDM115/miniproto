@@ -32,7 +32,7 @@ Redirect hashes seed a new cache when it is omitted.
 **Raises:**
 
 - <code>[CdnIntegrityError](#miniproto.media.cdn.CdnIntegrityError)</code> – Any byte lacks a valid complete hash block, hash metadata
-is invalid, or a SHA-256 digest mismatches.
+is invalid or a SHA-256 digest mismatches.
 - <code>[CancelledError](#asyncio.CancelledError)</code> – The awaited metadata request is cancelled.
 
 Hashes delivered with the redirect seed the lookup; uncovered blocks are

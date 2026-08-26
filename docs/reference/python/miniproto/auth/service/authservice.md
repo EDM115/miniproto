@@ -26,7 +26,7 @@ Run sign-in and data-center authorization flows for one client session.
 - **storage** (<code>[SessionStorage](#miniproto.session.storage.SessionStorage)</code>) – Session storage receiving successful authorization state.
 - **invoker** (<code>[RawInvoker](#miniproto.auth.service.RawInvoker)</code>) – Callable that sends raw Telegram requests, synchronously or asynchronously.
 
-Bind the client configuration, session storage, and raw-request invoker.
+Bind the client configuration, session storage and raw-request invoker.
 
 **Parameters:**
 

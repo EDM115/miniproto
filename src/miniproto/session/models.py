@@ -26,7 +26,7 @@ def _coerce_datetime(value: datetime | str | None, *, default: datetime | None =
     """Preserve aware timestamps and assume UTC only for naive values.
 
     Args:
-        value: Datetime or ISO-8601 string to coerce, or ``None``.
+        value: Datetime or ISO-8601 string to coerce or ``None``.
         default: Value returned unchanged when ``value`` is ``None``.
     """
     if value is None:
@@ -85,7 +85,7 @@ class DCOption:
         secret: Optional copied transport secret, hidden from ``repr``.
 
     Raises:
-        ValueError: If the ID, address, or port is invalid.
+        ValueError: If the ID, address or port is invalid.
     """
 
     id: int
@@ -148,7 +148,7 @@ class UserIdentity:
 class UpdateState:
     """Monotonic Telegram update cursors and their latest server timestamp.
 
-    All counters default to zero, and ``date`` defaults to current UTC time.
+    All counters default to zero and ``date`` defaults to current UTC time.
 
     Attributes:
         pts: Global persistent timestamp cursor.

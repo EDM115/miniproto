@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: PageBlock"
-description: "Layer 228 result-family index for 39 canonical constructors returning PageBlock from tdlib."
+description: "Layer 229 result-family index for 41 canonical constructors returning PageBlock from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -9,13 +9,12 @@ qualified_name: "telegram.types.result.PageBlock"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "results"
-layer: 228
 schema_source: "tdlib"
 ---
 
-## Layer 228 result family `PageBlock`
+## Layer 229 result family `PageBlock`
 
-Selected canonical constructors in this family: 39.
+Selected canonical constructors in this family: 41.
 
 ## Constructors
 
@@ -25,11 +24,13 @@ Selected canonical constructors in this family: 39.
 - [`pageBlockAuthorDate`](/reference/telegram/types/base/page-block-author-date/): `PageBlock`
 - [`pageBlockBlockquote`](/reference/telegram/types/base/page-block-blockquote/): `PageBlock`
 - [`pageBlockBlockquoteBlocks`](/reference/telegram/types/base/page-block-blockquote-blocks/): `PageBlock`
+- [`pageBlockButtonRow`](/reference/telegram/types/base/page-block-button-row/): `PageBlock`
 - [`pageBlockChannel`](/reference/telegram/types/base/page-block-channel/): `PageBlock`
 - [`pageBlockCollage`](/reference/telegram/types/base/page-block-collage/): `PageBlock`
 - [`pageBlockCover`](/reference/telegram/types/base/page-block-cover/): `PageBlock`
 - [`pageBlockDetails`](/reference/telegram/types/base/page-block-details/): `PageBlock`
 - [`pageBlockDivider`](/reference/telegram/types/base/page-block-divider/): `PageBlock`
+- [`pageBlockDocument`](/reference/telegram/types/base/page-block-document/): `PageBlock`
 - [`pageBlockEmbed`](/reference/telegram/types/base/page-block-embed/): `PageBlock`
 - [`pageBlockEmbedPost`](/reference/telegram/types/base/page-block-embed-post/): `PageBlock`
 - [`pageBlockFooter`](/reference/telegram/types/base/page-block-footer/): `PageBlock`

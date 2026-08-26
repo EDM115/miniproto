@@ -2,7 +2,7 @@
 
 The extractor reads the normalized canonical TDLib structure, schema metadata,
 and independently pinned RPC-error database without importing generated raw
-bindings, importing ``miniproto``, or accessing the network.
+bindings, importing ``miniproto`` or accessing the network.
 """
 
 from __future__ import annotations
@@ -132,7 +132,7 @@ class TelegramBindingManifest:
 
     Attributes:
         layer: Telegram layer covered by every declaration binding.
-        declarations: Bindings keyed by declaration kind, TL qualified name, and constructor ID.
+        declarations: Bindings keyed by declaration kind, TL qualified name and constructor ID.
         errors: Bindings keyed by numeric error code and symbolic error template.
     """
 
@@ -170,7 +170,7 @@ def generate_telegram_pages(
         schema_path: Normalized canonical schema JSON with ``constructors`` and
             ``methods`` declaration arrays.
         metadata_path: Pinned metadata JSON providing canonical source, layer,
-            documentation-precedence, source note, URLs, and diff summary.
+            documentation-precedence, source note, URLs and diff summary.
         rpc_errors_path: Pinned core RPC error JSON with code/name/method maps
             and optional descriptions.
         binding_manifest: Static schema-generator-owned Python binding manifest
@@ -182,12 +182,12 @@ def generate_telegram_pages(
         Detailed and index pages sorted by stable relative Markdown path.
 
     Raises:
-        ValueError: If static inputs, manifest records, or generated routes do
+        ValueError: If static inputs, manifest records or generated routes do
             not reconcile.
 
     Notes:
         The generator performs file reads only. It never imports generated raw
-        bindings, imports the miniproto package, scrapes web content, or makes
+        bindings, imports the miniproto package, scrapes web content or makes
         network requests.
     """
     return generate_telegram_reference_surface(
@@ -221,12 +221,12 @@ def generate_telegram_reference_surface(
         caller owns writing these generated artifacts into a documentation tree.
 
     Raises:
-        ValueError: If static inputs, bindings, relationship targets, or routes
+        ValueError: If static inputs, bindings, relationship targets or routes
             do not reconcile.
 
     Notes:
         The extractor performs file reads only. It never imports generated raw
-        bindings, imports the miniproto package, scrapes web content, or makes
+        bindings, imports the miniproto package, scrapes web content or makes
         network requests.
     """
     schema = _load_json_object(schema_path, label="schema")
@@ -276,7 +276,6 @@ def generate_telegram_reference_surface(
                 declaration_paths=declaration_paths,
                 error_paths=error_paths,
                 result_family_paths=result_family_paths,
-                layer=layer,
                 canonical_source=canonical_source,
                 structural_url=structural_url,
                 repository_base=repository_base,
@@ -339,7 +338,7 @@ def load_telegram_binding_manifest(path: Path) -> TelegramBindingManifest:
         Exact declaration and error bindings keyed by their source identities.
 
     Raises:
-        ValueError: If a record is malformed, duplicated, or violates the public
+        ValueError: If a record is malformed, duplicated or violates the public
             generated Python import contract.
     """
     payload = _load_json_object(path, label="Telegram binding manifest")
@@ -486,7 +485,7 @@ def _validate_binding_reconciliation(
         layer: Selected Telegram layer from schema metadata.
 
     Raises:
-        ValueError: If the manifest layer, identities, or record count differs from pinned inputs.
+        ValueError: If the manifest layer, identities or record count differs from pinned inputs.
     """
     if manifest.layer != layer:
         raise ValueError(f"binding manifest layer {manifest.layer} does not match metadata.layer={layer}")
@@ -536,7 +535,7 @@ def _normalize_declarations(schema: Mapping[str, Any]) -> tuple[TelegramDeclarat
             ``methods`` arrays.
 
     Returns:
-        Canonical declarations sorted by kind, qualified name, and identifier.
+        Canonical declarations sorted by kind, qualified name and identifier.
 
     Raises:
         ValueError: If either supported declaration collection has an invalid shape.
@@ -554,10 +553,10 @@ def _object_sequence(value: object, *, field: str) -> tuple[Mapping[str, Any], .
     """Validate a JSON array whose elements must all be objects.
 
     Args:
-        value: Value read from a selected schema, RPC-error, or binding-manifest
+        value: Value read from a selected schema, RPC-error or binding-manifest
             array field.
         field: Dotted JSON location reported when the selected array is absent,
-            scalar, or contains a non-object member.
+            scalar or contains a non-object member.
 
     Returns:
         Object entries in their original source order.
@@ -584,7 +583,7 @@ def _declaration_from_raw(raw: Mapping[str, Any], *, kind: str, name_key: str) -
         Validated declaration preserving canonical order and exact TL expressions.
 
     Raises:
-        ValueError: If identity, ID, result type, or parameters are malformed.
+        ValueError: If identity, ID, result type or parameters are malformed.
     """
     name = _required_string(raw.get(name_key), field=f"declaration.{name_key}")
     result_type = _required_string(raw.get("type"), field=f"declaration {name}.type")
@@ -692,7 +691,7 @@ def _required_string(value: object, *, field: str) -> str:
         value: Selected declaration identity, binding field, metadata field, or
             error-database value that the pinned input requires to be text.
         field: Dotted pinned-input location reported when the selected value is
-            absent, non-textual, or blank after trimming.
+            absent, non-textual or blank after trimming.
 
     Returns:
         Stripped non-empty text.
@@ -709,7 +708,7 @@ def _optional_description(value: object) -> str | None:
     """Return non-empty normalized prose without fabricating an unavailable description.
 
     Args:
-        value: Candidate declaration, parameter, or error description value.
+        value: Candidate declaration, parameter or error description value.
 
     Returns:
         Stripped prose when supplied as a non-empty string, otherwise ``None``.
@@ -721,7 +720,7 @@ def _integer(value: object, *, field: str) -> int:
     """Parse an integer-like JSON key or scalar for a protocol identifier/code.
 
     Args:
-        value: Selected schema identifier, RPC error code, or metadata count in
+        value: Selected schema identifier, RPC error code or metadata count in
             integer/base-ten/``0x`` string form.
         field: Dotted JSON location reported when the selected protocol value
             cannot be represented as an integer.
@@ -751,13 +750,13 @@ def _positive_integer(value: object, *, field: str) -> int:
         value: Selected metadata layer or count value that must be an integer
             greater than zero.
         field: Dotted metadata location reported when the selected layer/count
-            is absent, non-numeric, zero, or negative.
+            is absent, non-numeric, zero or negative.
 
     Returns:
         Positive parsed integer.
 
     Raises:
-        ValueError: If the value is zero, negative, or not an integer.
+        ValueError: If the value is zero, negative or not an integer.
     """
     result = _integer(value, field=field)
     if result <= 0:
@@ -769,7 +768,7 @@ def _constructor_id(value: object, *, field: str) -> str:
     """Normalize a signed or unsigned schema constructor ID to eight hex digits.
 
     Args:
-        value: JSON numeric ID in signed decimal, unsigned decimal, or ``0x`` form.
+        value: JSON numeric ID in signed decimal, unsigned decimal or ``0x`` form.
         field: Input field name included in validation failures.
 
     Returns:
@@ -794,7 +793,7 @@ def _validate_metadata_reconciliation(
         layer: Validated structural layer used in generated frontmatter.
 
     Raises:
-        ValueError: If a present count/layer is malformed, negative, or does not
+        ValueError: If a present count/layer is malformed, negative or does not
             reconcile with the static inputs.
     """
     expected_counts = {
@@ -880,7 +879,7 @@ def _declaration_paths(
     Args:
         declarations: Function or type declarations to route.
         category: Top-level route category, ``functions`` or ``types``.
-        reserved_routes: Routes already allocated to global, namespace, result, or error indexes.
+        reserved_routes: Routes already allocated to global, namespace, result or error indexes.
 
     Returns:
         Mapping from each declaration to its unique relative Markdown path.
@@ -1067,7 +1066,7 @@ def _leaf_name(name: str) -> str:
         name: Exact qualified or unqualified declaration name.
 
     Returns:
-        Text after the final dot, or the original unqualified name.
+        Text after the final dot or the original unqualified name.
     """
     return name.rsplit(".", 1)[-1]
 
@@ -1076,7 +1075,7 @@ def _slug(value: str) -> str:
     """Convert a raw Telegram identity segment to a stable kebab-case path segment.
 
     Args:
-        value: Raw method, predicate, result-family, or error-name segment.
+        value: Raw method, predicate, result-family or error-name segment.
 
     Returns:
         Non-empty collision-readable lowercase route segment.
@@ -1262,7 +1261,6 @@ def _declaration_page(
     declaration_paths: Mapping[TelegramDeclaration, str],
     error_paths: Mapping[TelegramRPCError, str],
     result_family_paths: Mapping[str, str],
-    layer: int,
     canonical_source: str,
     structural_url: str,
     repository_base: str,
@@ -1274,15 +1272,14 @@ def _declaration_page(
         declaration: Canonical declaration to render.
         path: Precomputed collision-safe relative Markdown page path.
         binding: Exact static public Python import binding for this declaration.
-        relationship_index: Precomputed errors, availability, and structural relationship cache.
+        relationship_index: Precomputed errors, availability and structural relationship cache.
         declaration_paths: All generated function/type paths keyed by canonical declaration.
         error_paths: All generated error paths keyed by pinned error identity.
         result_family_paths: Generated result-family index paths keyed by raw family name.
-        layer: Validated Telegram Desktop layer number from metadata.
         canonical_source: Canonical structural source identifier, normally TDLib.
         structural_url: Canonical external schema source URL for provenance text.
         repository_base: Repository browser URL for pinned local JSON source links.
-        metadata: Full metadata object providing merge precedence, notes, and diffs.
+        metadata: Full metadata object providing merge precedence, notes and diffs.
 
     Returns:
         A frontmatter-ready Telegram reference page.
@@ -1294,7 +1291,6 @@ def _declaration_page(
         declaration_paths=declaration_paths,
         error_paths=error_paths,
         result_family_paths=result_family_paths,
-        layer=layer,
         canonical_source=canonical_source,
         structural_url=structural_url,
         metadata=metadata,
@@ -1310,7 +1306,6 @@ def _declaration_page(
         source_url=f"{repository_base}/blob/master/tools/schema/schema.json",
         body=body,
         namespace=_namespace(declaration.name),
-        layer=layer,
         schema_source=canonical_source,
         constructor_id=declaration.constructor_id,
     )
@@ -1324,7 +1319,6 @@ def _declaration_body(
     declaration_paths: Mapping[TelegramDeclaration, str],
     error_paths: Mapping[TelegramRPCError, str],
     result_family_paths: Mapping[str, str],
-    layer: int,
     canonical_source: str,
     structural_url: str,
     metadata: Mapping[str, Any],
@@ -1334,14 +1328,13 @@ def _declaration_body(
     Args:
         declaration: Function or type declaration whose exact TL structure is rendered.
         binding: Exact static public Python binding for the declaration.
-        relationship_index: Precomputed errors, availability, and structural relationships.
+        relationship_index: Precomputed errors, availability and structural relationships.
         declaration_paths: All generated detail paths keyed by declaration.
         error_paths: All generated RPC error paths keyed by error identity.
         result_family_paths: All generated result-family index paths keyed by family.
-        layer: Validated selected schema layer.
         canonical_source: Identifier for the structure-authoritative source.
         structural_url: External canonical schema URL for provenance.
-        metadata: Source metadata supplying prose precedence, notes, and diffs.
+        metadata: Source metadata supplying prose precedence, notes and diffs.
 
     Returns:
         Deterministic Markdown body without frontmatter.
@@ -1398,9 +1391,7 @@ def _declaration_body(
             )
         )
     lines.extend(
-        _provenance_sections(
-            metadata, layer=layer, canonical_source=canonical_source, structural_url=structural_url, error_url=None
-        )
+        _provenance_sections(metadata, canonical_source=canonical_source, structural_url=structural_url, error_url=None)
     )
     return "\n".join(lines)
 
@@ -1435,7 +1426,7 @@ def _safe_usage_sections(declaration: TelegramDeclaration, *, binding: TelegramP
         binding: Exact public Python binding for the declaration.
 
     Returns:
-        Markdown lines that name the binding without constructing, sending, or authenticating.
+        Markdown lines that name the binding without constructing, sending or authenticating.
     """
     variable = "request_type" if declaration.kind == "function" else "constructor_type"
     noun = "request" if declaration.kind == "function" else "constructor"
@@ -1487,7 +1478,7 @@ def _flag_label(type_name: str) -> str:
         type_name: Exact normalized raw TL type expression.
 
     Returns:
-        ``flag word`` for ``#``, ``word.bit`` for conditional fields, or an em dash.
+        ``flag word`` for ``#``, ``word.bit`` for conditional fields or an em dash.
     """
     if type_name == "#":
         return "flag word"
@@ -1525,11 +1516,11 @@ def _function_sections(
     error_paths: Mapping[TelegramRPCError, str],
     result_family_paths: Mapping[str, str],
 ) -> tuple[str, ...]:
-    """Render method-specific errors, availability, and structural relationships.
+    """Render method-specific errors, availability and structural relationships.
 
     Args:
         declaration: Function declaration for which relationships are rendered.
-        relationship_index: Precomputed errors, availability, and structural relationships.
+        relationship_index: Precomputed errors, availability and structural relationships.
         declaration_paths: All generated declaration detail paths.
         error_paths: All generated pinned RPC error paths.
         result_family_paths: All generated result-family index paths.
@@ -1651,7 +1642,7 @@ def _declaration_link(declaration: TelegramDeclaration, *, declaration_paths: Ma
 
 
 def _family_link(family: str, *, result_family_paths: Mapping[str, str]) -> str:
-    """Render one linked result-family identity, or label a structural family with no page.
+    """Render one linked result-family identity or label a structural family with no page.
 
     Args:
         family: Raw non-primitive TL result family.
@@ -1672,7 +1663,7 @@ def _family_links(families: Sequence[str], *, result_family_paths: Mapping[str, 
         result_family_paths: Generated result-family indexes keyed by exact family.
 
     Returns:
-        Comma-separated links, or a stable explanation when no relationship exists.
+        Comma-separated links or a stable explanation when no relationship exists.
     """
     if not families:
         return "No non-primitive type relationships were found."
@@ -1711,7 +1702,7 @@ def _result_family(type_name: str) -> str:
         type_name: Exact normalized raw TL result type expression.
 
     Returns:
-        Outer result family, or the first referenced type when generic syntax is used.
+        Outer result family or the first referenced type when generic syntax is used.
     """
     references = _type_references(type_name)
     return sorted(references)[0] if references else type_name
@@ -1736,7 +1727,7 @@ def _type_references(type_name: str) -> set[str]:
     """Extract non-primitive type identifiers from a raw TL expression.
 
     Args:
-        type_name: Raw type expression that may include vectors, flags, or generics.
+        type_name: Raw type expression that may include vectors, flags or generics.
 
     Returns:
         Identifier set excluding scalar primitives and conditional flag words.
@@ -1802,9 +1793,7 @@ def _error_page(
         f"Public access: `{binding.public_access}`.",
     ]
     body_lines.extend(
-        _provenance_sections(
-            metadata, layer=layer, canonical_source=canonical_source, structural_url=None, error_url=error_url
-        )
+        _provenance_sections(metadata, canonical_source=canonical_source, structural_url=None, error_url=error_url)
     )
     return ReferencePage(
         path=path,
@@ -1817,7 +1806,6 @@ def _error_page(
         source_url=f"{repository_base}/blob/master/tools/schema/rpc-errors.json",
         body="\n".join(body_lines),
         namespace="errors",
-        layer=layer,
         schema_source=canonical_source,
     )
 
@@ -1838,7 +1826,7 @@ def _error_method_links(
         layer: Selected canonical Telegram layer used to qualify unmatched mappings.
 
     Returns:
-        Linked methods, or a non-deceptive label for mappings absent from the selected layer.
+        Linked methods or a non-deceptive label for mappings absent from the selected layer.
     """
     if not methods:
         return "No methods are mapped."
@@ -1954,7 +1942,7 @@ def _declaration_relationship_node(
         declaration_paths: Generated detail paths keyed by canonical declaration.
 
     Returns:
-        Object with exact kind, qualified name, constructor ID, and generated path.
+        Object with exact kind, qualified name, constructor ID and generated path.
     """
     return {
         "kind": declaration.kind,
@@ -1975,7 +1963,7 @@ def _error_relationship_node(
         selected_layer: Whether the associated mapping exists in the selected schema layer.
 
     Returns:
-        Object with code-qualified identity, null constructor ID, path, and layer status.
+        Object with code-qualified identity, null constructor ID, path and layer status.
     """
     return {
         "kind": "error",
@@ -2064,26 +2052,25 @@ def _markdown_cell(value: str) -> str:
 
 
 def _provenance_sections(
-    metadata: Mapping[str, Any], *, layer: int, canonical_source: str, structural_url: str | None, error_url: str | None
+    metadata: Mapping[str, Any], *, canonical_source: str, structural_url: str | None, error_url: str | None
 ) -> tuple[str, ...]:
     """Render canonical structure/prose/error provenance and deterministic diff notes.
 
     Args:
         metadata: Parsed schema metadata object.
-        layer: Validated Telegram Desktop layer.
         canonical_source: Structure-authoritative source identifier.
         structural_url: Canonical schema URL for declaration pages, if applicable.
         error_url: Independent RPC-error source URL for error pages, if applicable.
 
     Returns:
-        Markdown lines preserving available source-note, precedence, and diff data.
+        Markdown lines preserving available source-note, precedence and diff data.
     """
     precedence = _string_sequence(
         metadata.get("documentation_merge_precedence", ()), field="metadata.documentation_merge_precedence"
     )
     rendered_precedence = " → ".join(_source_label(item) for item in precedence)
     note = _optional_description(metadata.get("source_note"))
-    lines = ["", "## Provenance", "", f"- layer: {layer}", f"- structural source: `{canonical_source}`"]
+    lines = ["", "## Provenance", "", f"- structural source: `{canonical_source}`"]
     if structural_url is not None:
         lines.append(f"- canonical schema: {structural_url}")
     if error_url is not None:
@@ -2158,7 +2145,7 @@ def _string_list(value: object) -> tuple[str, ...] | None:
 
     Returns:
         String tuple when the value is a list/tuple of strings; ``None`` for
-        scalars, mappings, other sequences, or non-string members.
+        scalars, mappings, other sequences or non-string members.
     """
     if not isinstance(value, list | tuple):
         return None
@@ -2182,7 +2169,7 @@ def _index_pages(
     error_url: str,
     repository_base: str,
 ) -> tuple[ReferencePage, ...]:
-    """Build deterministic global, namespace, result-family, and error index pages.
+    """Build deterministic global, namespace, result-family and error index pages.
 
     Args:
         declarations: Every normalized function and constructor from the selected
@@ -2359,7 +2346,6 @@ def _index_page(
         source_url=source_url,
         body=body,
         namespace=namespace,
-        layer=layer,
         schema_source=canonical_source,
     )
 
@@ -2521,7 +2507,7 @@ def _error_index_page(
     source_url: str,
     repository_base: str,
 ) -> ReferencePage:
-    """Create an RPC-error index sortable by code, name, and mapped methods.
+    """Create an RPC-error index sortable by code, name and mapped methods.
 
     Args:
         errors: Flattened pinned RPC errors to list.
@@ -2586,7 +2572,7 @@ def _error_sort_index_pages(
     source_url: str,
     repository_base: str,
 ) -> tuple[ReferencePage, ...]:
-    """Create separately navigable RPC-error indexes by code, name, and method.
+    """Create separately navigable RPC-error indexes by code, name and method.
 
     Args:
         errors: Flattened pinned RPC error records to organize.
@@ -2599,7 +2585,7 @@ def _error_sort_index_pages(
         repository_base: Repository browser base for pinned JSON provenance links.
 
     Returns:
-        Code-, name-, and method-sorted error index pages in stable path order.
+        Code-, name- and method-sorted error index pages in stable path order.
     """
     common = {
         "layer": layer,

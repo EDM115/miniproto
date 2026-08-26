@@ -1,4 +1,4 @@
-"""Public session models, storage backends, and portable string codecs."""
+"""Public session models, storage backends and portable string codecs."""
 
 from miniproto.session.models import (
     AuthKey,

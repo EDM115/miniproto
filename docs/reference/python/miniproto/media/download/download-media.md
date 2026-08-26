@@ -23,8 +23,8 @@ Resolve media and materialize it through :func:`download_file`.
 **Parameters:**
 
 - **invoke** (<code>[RawInvoker](#miniproto.media.download.RawInvoker)</code>) – Async raw-RPC invoker used for file requests.
-- **media** (<code>[object](#object)</code>) – A :class:`Media`, file ID, raw document/photo/message, or input file location.
-- **destination** (<code>[Destination](#miniproto.media.download.Destination)</code>) – In-memory, path, or binary-stream destination forwarded to :func:`download_file`.
+- **media** (<code>[object](#object)</code>) – A :class:`Media`, file ID, raw document/photo/message or input file location.
+- **destination** (<code>[Destination](#miniproto.media.download.Destination)</code>) – In-memory, path or binary-stream destination forwarded to :func:`download_file`.
 - **kwargs** (<code>[Any](#typing.Any)</code>) – Remaining forwarded ``**kwargs`` download options; cache identity and total size are inferred when possible.
 
 **Returns:**

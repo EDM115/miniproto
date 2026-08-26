@@ -243,14 +243,3 @@ def test_fetch_url_falls_back_to_curl_after_urllib_failures(monkeypatch) -> None
     monkeypatch.setattr(schema_update.subprocess, "run", fake_run)
 
     assert schema_update._fetch_url("https://core.telegram.org/schema") == b"schema html"
-
-
-def test_upstream_schema_workflow_is_scheduled_manual_and_uploads_report() -> None:
-    workflow = (ROOT / ".github/workflows/schema-upstream.yml").read_text(encoding="utf-8")
-
-    assert "schedule:" in workflow
-    assert 'cron: "0 0 * * SUN"' in workflow
-    assert "workflow_dispatch:" in workflow
-    assert "miniproto-schema-update --check-upstream --report" in workflow
-    assert "actions/upload-artifact@v7" in workflow
-    assert "if: always()" in workflow

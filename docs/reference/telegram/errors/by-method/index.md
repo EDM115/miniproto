@@ -1,6 +1,6 @@
 ---
 title: "Telegram RPC errors by method"
-description: "Layer 228 index of 818 pinned Telegram RPC errors grouped by recorded method names."
+description: "Layer 229 index of 818 pinned Telegram RPC errors grouped by recorded method names."
 generated: true
 editUrl: false
 language: "telegram"
@@ -9,7 +9,6 @@ qualified_name: "telegram.errors.by_method"
 source_path: "tools/schema/rpc-errors.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/rpc-errors.json"
 namespace: "errors"
-layer: 228
 schema_source: "tdlib"
 ---
 
@@ -23,7 +22,7 @@ https://core.telegram.org/api/errors
 | [`account.acceptAuthorization`](/reference/telegram/functions/account/accept-authorization/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`account.acceptAuthorization`](/reference/telegram/functions/account/accept-authorization/) | 400 | [`PUBLIC_KEY_REQUIRED`](/reference/telegram/errors/public-key-required/) |
 | [`account.acceptAuthorization`](/reference/telegram/functions/account/accept-authorization/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
-| `account.addNoPaidMessagesException` (not in selected Layer 228 schema) | 400 | [`USER_ID_INVALID`](/reference/telegram/errors/user-id-invalid/) |
+| `account.addNoPaidMessagesException` (not in selected Layer 229 schema) | 400 | [`USER_ID_INVALID`](/reference/telegram/errors/user-id-invalid/) |
 | [`account.cancelPasswordEmail`](/reference/telegram/functions/account/cancel-password-email/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`account.cancelPasswordEmail`](/reference/telegram/functions/account/cancel-password-email/) | 400 | [`EMAIL_HASH_EXPIRED`](/reference/telegram/errors/email-hash-expired/) |
 | [`account.cancelPasswordEmail`](/reference/telegram/functions/account/cancel-password-email/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
@@ -38,7 +37,7 @@ https://core.telegram.org/api/errors
 | [`account.changePhone`](/reference/telegram/functions/account/change-phone/) | 400 | [`PHONE_NUMBER_OCCUPIED`](/reference/telegram/errors/phone-number-occupied/) |
 | [`account.changePhone`](/reference/telegram/functions/account/change-phone/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
 | [`account.changePhone`](/reference/telegram/functions/account/change-phone/) | 406 | [`PHONE_NUMBER_INVALID`](/reference/telegram/errors/phone-number-invalid-406/) |
-| `account.checkPassword` (not in selected Layer 228 schema) | 400 | [`PASSWORD_HASH_INVALID`](/reference/telegram/errors/password-hash-invalid/) |
+| `account.checkPassword` (not in selected Layer 229 schema) | 400 | [`PASSWORD_HASH_INVALID`](/reference/telegram/errors/password-hash-invalid/) |
 | [`account.checkUsername`](/reference/telegram/functions/account/check-username/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`account.checkUsername`](/reference/telegram/functions/account/check-username/) | 400 | [`USERNAME_INVALID`](/reference/telegram/errors/username-invalid/) |
 | [`account.checkUsername`](/reference/telegram/functions/account/check-username/) | 400 | [`USERNAME_OCCUPIED`](/reference/telegram/errors/username-occupied/) |
@@ -478,9 +477,9 @@ https://core.telegram.org/api/errors
 | [`auth.checkPassword`](/reference/telegram/functions/auth/check-password/) | 400 | [`SRP_PASSWORD_CHANGED`](/reference/telegram/errors/srp-password-changed/) |
 | [`auth.checkPassword`](/reference/telegram/functions/auth/check-password/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
 | [`auth.checkPassword`](/reference/telegram/functions/auth/check-password/) | 500 | [`AUTH_KEY_UNSYNCHRONIZED`](/reference/telegram/errors/auth-key-unsynchronized/) |
-| `auth.checkPhone` (not in selected Layer 228 schema) | 400 | [`PHONE_NUMBER_BANNED`](/reference/telegram/errors/phone-number-banned/) |
-| `auth.checkPhone` (not in selected Layer 228 schema) | 400 | [`PHONE_NUMBER_INVALID`](/reference/telegram/errors/phone-number-invalid/) |
-| `auth.checkPhone` (not in selected Layer 228 schema) | 406 | [`PHONE_NUMBER_INVALID`](/reference/telegram/errors/phone-number-invalid-406/) |
+| `auth.checkPhone` (not in selected Layer 229 schema) | 400 | [`PHONE_NUMBER_BANNED`](/reference/telegram/errors/phone-number-banned/) |
+| `auth.checkPhone` (not in selected Layer 229 schema) | 400 | [`PHONE_NUMBER_INVALID`](/reference/telegram/errors/phone-number-invalid/) |
+| `auth.checkPhone` (not in selected Layer 229 schema) | 406 | [`PHONE_NUMBER_INVALID`](/reference/telegram/errors/phone-number-invalid-406/) |
 | [`auth.checkRecoveryPassword`](/reference/telegram/functions/auth/check-recovery-password/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`auth.checkRecoveryPassword`](/reference/telegram/functions/auth/check-recovery-password/) | 400 | [`CODE_EMPTY`](/reference/telegram/errors/code-empty/) |
 | [`auth.checkRecoveryPassword`](/reference/telegram/functions/auth/check-recovery-password/) | 400 | [`PASSWORD_RECOVERY_EXPIRED`](/reference/telegram/errors/password-recovery-expired/) |
@@ -556,7 +555,7 @@ https://core.telegram.org/api/errors
 | [`auth.sendCode`](/reference/telegram/functions/auth/send-code/) | 406 | [`UPDATE_APP_TO_LOGIN`](/reference/telegram/errors/update-app-to-login/) |
 | [`auth.sendCode`](/reference/telegram/functions/auth/send-code/) | 500 | [`AUTH_RESTART`](/reference/telegram/errors/auth-restart/) |
 | [`auth.sendCode`](/reference/telegram/functions/auth/send-code/) | 500 | [`AUTH_RESTART_%d`](/reference/telegram/errors/auth-restart-500/) |
-| `auth.sendInvites` (not in selected Layer 228 schema) | 400 | [`MESSAGE_EMPTY`](/reference/telegram/errors/message-empty/) |
+| `auth.sendInvites` (not in selected Layer 229 schema) | 400 | [`MESSAGE_EMPTY`](/reference/telegram/errors/message-empty/) |
 | [`auth.signIn`](/reference/telegram/functions/auth/sign-in/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`auth.signIn`](/reference/telegram/functions/auth/sign-in/) | 400 | [`PHONE_CODE_EMPTY`](/reference/telegram/errors/phone-code-empty/) |
 | [`auth.signIn`](/reference/telegram/functions/auth/sign-in/) | 400 | [`PHONE_CODE_EXPIRED`](/reference/telegram/errors/phone-code-expired/) |
@@ -746,7 +745,7 @@ https://core.telegram.org/api/errors
 | [`channels.checkUsername`](/reference/telegram/functions/channels/check-username/) | 400 | [`USERNAME_OCCUPIED`](/reference/telegram/errors/username-occupied/) |
 | [`channels.checkUsername`](/reference/telegram/functions/channels/check-username/) | 400 | [`USERNAME_PURCHASE_AVAILABLE`](/reference/telegram/errors/username-purchase-available/) |
 | [`channels.checkUsername`](/reference/telegram/functions/channels/check-username/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
-| `channels.clickSponsoredMessage` (not in selected Layer 228 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
+| `channels.clickSponsoredMessage` (not in selected Layer 229 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
 | [`channels.convertToGigagroup`](/reference/telegram/functions/channels/convert-to-gigagroup/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`channels.convertToGigagroup`](/reference/telegram/functions/channels/convert-to-gigagroup/) | 400 | [`CHANNEL_ID_INVALID`](/reference/telegram/errors/channel-id-invalid/) |
 | [`channels.convertToGigagroup`](/reference/telegram/functions/channels/convert-to-gigagroup/) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
@@ -767,13 +766,13 @@ https://core.telegram.org/api/errors
 | [`channels.createChannel`](/reference/telegram/functions/channels/create-channel/) | 406 | [`USER_RESTRICTED`](/reference/telegram/errors/user-restricted-406/) |
 | [`channels.createChannel`](/reference/telegram/functions/channels/create-channel/) | 420 | [`ADDRESS_INVALID`](/reference/telegram/errors/address-invalid-420/) |
 | [`channels.createChannel`](/reference/telegram/functions/channels/create-channel/) | 500 | [`CHAT_INVALID`](/reference/telegram/errors/chat-invalid-500/) |
-| `channels.createForumTopic` (not in selected Layer 228 schema) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
-| `channels.createForumTopic` (not in selected Layer 228 schema) | 400 | [`CHANNEL_FORUM_MISSING`](/reference/telegram/errors/channel-forum-missing/) |
-| `channels.createForumTopic` (not in selected Layer 228 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
-| `channels.createForumTopic` (not in selected Layer 228 schema) | 400 | [`DOCUMENT_INVALID`](/reference/telegram/errors/document-invalid/) |
-| `channels.createForumTopic` (not in selected Layer 228 schema) | 400 | [`TOPIC_TITLE_EMPTY`](/reference/telegram/errors/topic-title-empty/) |
-| `channels.createForumTopic` (not in selected Layer 228 schema) | 403 | [`CHAT_WRITE_FORBIDDEN`](/reference/telegram/errors/chat-write-forbidden-403/) |
-| `channels.createForumTopic` (not in selected Layer 228 schema) | 403 | [`PREMIUM_ACCOUNT_REQUIRED`](/reference/telegram/errors/premium-account-required-403/) |
+| `channels.createForumTopic` (not in selected Layer 229 schema) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
+| `channels.createForumTopic` (not in selected Layer 229 schema) | 400 | [`CHANNEL_FORUM_MISSING`](/reference/telegram/errors/channel-forum-missing/) |
+| `channels.createForumTopic` (not in selected Layer 229 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
+| `channels.createForumTopic` (not in selected Layer 229 schema) | 400 | [`DOCUMENT_INVALID`](/reference/telegram/errors/document-invalid/) |
+| `channels.createForumTopic` (not in selected Layer 229 schema) | 400 | [`TOPIC_TITLE_EMPTY`](/reference/telegram/errors/topic-title-empty/) |
+| `channels.createForumTopic` (not in selected Layer 229 schema) | 403 | [`CHAT_WRITE_FORBIDDEN`](/reference/telegram/errors/chat-write-forbidden-403/) |
+| `channels.createForumTopic` (not in selected Layer 229 schema) | 403 | [`PREMIUM_ACCOUNT_REQUIRED`](/reference/telegram/errors/premium-account-required-403/) |
 | [`channels.deactivateAllUsernames`](/reference/telegram/functions/channels/deactivate-all-usernames/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`channels.deactivateAllUsernames`](/reference/telegram/functions/channels/deactivate-all-usernames/) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
 | [`channels.deactivateAllUsernames`](/reference/telegram/functions/channels/deactivate-all-usernames/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
@@ -811,22 +810,22 @@ https://core.telegram.org/api/errors
 | [`channels.deleteParticipantHistory`](/reference/telegram/functions/channels/delete-participant-history/) | 400 | [`PARTICIPANT_ID_INVALID`](/reference/telegram/errors/participant-id-invalid/) |
 | [`channels.deleteParticipantHistory`](/reference/telegram/functions/channels/delete-participant-history/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
 | [`channels.deleteParticipantHistory`](/reference/telegram/functions/channels/delete-participant-history/) | 403 | [`CHAT_WRITE_FORBIDDEN`](/reference/telegram/errors/chat-write-forbidden-403/) |
-| `channels.deleteTopicHistory` (not in selected Layer 228 schema) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
-| `channels.deleteTopicHistory` (not in selected Layer 228 schema) | 400 | [`CHANNEL_FORUM_MISSING`](/reference/telegram/errors/channel-forum-missing/) |
-| `channels.deleteTopicHistory` (not in selected Layer 228 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
-| `channels.deleteTopicHistory` (not in selected Layer 228 schema) | 400 | [`TOPIC_ID_INVALID`](/reference/telegram/errors/topic-id-invalid/) |
-| `channels.deleteTopicHistory` (not in selected Layer 228 schema) | 403 | [`CHAT_WRITE_FORBIDDEN`](/reference/telegram/errors/chat-write-forbidden-403/) |
-| `channels.deleteUserHistory` (not in selected Layer 228 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
-| `channels.deleteUserHistory` (not in selected Layer 228 schema) | 400 | [`CHANNEL_PRIVATE`](/reference/telegram/errors/channel-private/) |
-| `channels.deleteUserHistory` (not in selected Layer 228 schema) | 400 | [`CHAT_ADMIN_REQUIRED`](/reference/telegram/errors/chat-admin-required/) |
-| `channels.deleteUserHistory` (not in selected Layer 228 schema) | 400 | [`MSG_ID_INVALID`](/reference/telegram/errors/msg-id-invalid/) |
-| `channels.deleteUserHistory` (not in selected Layer 228 schema) | 400 | [`USER_ID_INVALID`](/reference/telegram/errors/user-id-invalid/) |
-| `channels.deleteUserHistory` (not in selected Layer 228 schema) | 403 | [`CHAT_ADMIN_REQUIRED`](/reference/telegram/errors/chat-admin-required-403/) |
-| `channels.deleteUserHistory` (not in selected Layer 228 schema) | 403 | [`CHAT_WRITE_FORBIDDEN`](/reference/telegram/errors/chat-write-forbidden-403/) |
-| `channels.editAbout` (not in selected Layer 228 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
-| `channels.editAbout` (not in selected Layer 228 schema) | 400 | [`CHAT_ABOUT_NOT_MODIFIED`](/reference/telegram/errors/chat-about-not-modified/) |
-| `channels.editAbout` (not in selected Layer 228 schema) | 400 | [`CHAT_ABOUT_TOO_LONG`](/reference/telegram/errors/chat-about-too-long/) |
-| `channels.editAbout` (not in selected Layer 228 schema) | 400 | [`CHAT_ADMIN_REQUIRED`](/reference/telegram/errors/chat-admin-required/) |
+| `channels.deleteTopicHistory` (not in selected Layer 229 schema) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
+| `channels.deleteTopicHistory` (not in selected Layer 229 schema) | 400 | [`CHANNEL_FORUM_MISSING`](/reference/telegram/errors/channel-forum-missing/) |
+| `channels.deleteTopicHistory` (not in selected Layer 229 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
+| `channels.deleteTopicHistory` (not in selected Layer 229 schema) | 400 | [`TOPIC_ID_INVALID`](/reference/telegram/errors/topic-id-invalid/) |
+| `channels.deleteTopicHistory` (not in selected Layer 229 schema) | 403 | [`CHAT_WRITE_FORBIDDEN`](/reference/telegram/errors/chat-write-forbidden-403/) |
+| `channels.deleteUserHistory` (not in selected Layer 229 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
+| `channels.deleteUserHistory` (not in selected Layer 229 schema) | 400 | [`CHANNEL_PRIVATE`](/reference/telegram/errors/channel-private/) |
+| `channels.deleteUserHistory` (not in selected Layer 229 schema) | 400 | [`CHAT_ADMIN_REQUIRED`](/reference/telegram/errors/chat-admin-required/) |
+| `channels.deleteUserHistory` (not in selected Layer 229 schema) | 400 | [`MSG_ID_INVALID`](/reference/telegram/errors/msg-id-invalid/) |
+| `channels.deleteUserHistory` (not in selected Layer 229 schema) | 400 | [`USER_ID_INVALID`](/reference/telegram/errors/user-id-invalid/) |
+| `channels.deleteUserHistory` (not in selected Layer 229 schema) | 403 | [`CHAT_ADMIN_REQUIRED`](/reference/telegram/errors/chat-admin-required-403/) |
+| `channels.deleteUserHistory` (not in selected Layer 229 schema) | 403 | [`CHAT_WRITE_FORBIDDEN`](/reference/telegram/errors/chat-write-forbidden-403/) |
+| `channels.editAbout` (not in selected Layer 229 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
+| `channels.editAbout` (not in selected Layer 229 schema) | 400 | [`CHAT_ABOUT_NOT_MODIFIED`](/reference/telegram/errors/chat-about-not-modified/) |
+| `channels.editAbout` (not in selected Layer 229 schema) | 400 | [`CHAT_ABOUT_TOO_LONG`](/reference/telegram/errors/chat-about-too-long/) |
+| `channels.editAbout` (not in selected Layer 229 schema) | 400 | [`CHAT_ADMIN_REQUIRED`](/reference/telegram/errors/chat-admin-required/) |
 | [`channels.editAdmin`](/reference/telegram/functions/channels/edit-admin/) | 400 | [`ADMINS_TOO_MUCH`](/reference/telegram/errors/admins-too-much/) |
 | [`channels.editAdmin`](/reference/telegram/functions/channels/edit-admin/) | 400 | [`ADMIN_RANK_EMOJI_NOT_ALLOWED`](/reference/telegram/errors/admin-rank-emoji-not-allowed/) |
 | [`channels.editAdmin`](/reference/telegram/functions/channels/edit-admin/) | 400 | [`ADMIN_RANK_INVALID`](/reference/telegram/errors/admin-rank-invalid/) |
@@ -873,37 +872,37 @@ https://core.telegram.org/api/errors
 | [`channels.editBanned`](/reference/telegram/functions/channels/edit-banned/) | 403 | [`CHAT_WRITE_FORBIDDEN`](/reference/telegram/errors/chat-write-forbidden-403/) |
 | [`channels.editBanned`](/reference/telegram/functions/channels/edit-banned/) | 406 | [`BANNED_RIGHTS_INVALID`](/reference/telegram/errors/banned-rights-invalid-406/) |
 | [`channels.editBanned`](/reference/telegram/functions/channels/edit-banned/) | 406 | [`CHANNEL_PRIVATE`](/reference/telegram/errors/channel-private-406/) |
-| `channels.editCreator` (not in selected Layer 228 schema) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
-| `channels.editCreator` (not in selected Layer 228 schema) | 400 | [`CHANNELS_ADMIN_PUBLIC_TOO_MUCH`](/reference/telegram/errors/channels-admin-public-too-much/) |
-| `channels.editCreator` (not in selected Layer 228 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
-| `channels.editCreator` (not in selected Layer 228 schema) | 400 | [`CHANNEL_MONOFORUM_UNSUPPORTED`](/reference/telegram/errors/channel-monoforum-unsupported/) |
-| `channels.editCreator` (not in selected Layer 228 schema) | 400 | [`CHANNEL_PRIVATE`](/reference/telegram/errors/channel-private/) |
-| `channels.editCreator` (not in selected Layer 228 schema) | 400 | [`CHAT_ADMIN_REQUIRED`](/reference/telegram/errors/chat-admin-required/) |
-| `channels.editCreator` (not in selected Layer 228 schema) | 400 | [`CHAT_MEMBER_ADD_FAILED`](/reference/telegram/errors/chat-member-add-failed/) |
-| `channels.editCreator` (not in selected Layer 228 schema) | 400 | [`CHAT_NOT_MODIFIED`](/reference/telegram/errors/chat-not-modified/) |
-| `channels.editCreator` (not in selected Layer 228 schema) | 400 | [`INPUT_USER_DEACTIVATED`](/reference/telegram/errors/input-user-deactivated/) |
-| `channels.editCreator` (not in selected Layer 228 schema) | 400 | [`PASSWORD_HASH_INVALID`](/reference/telegram/errors/password-hash-invalid/) |
-| `channels.editCreator` (not in selected Layer 228 schema) | 400 | [`PASSWORD_MISSING`](/reference/telegram/errors/password-missing/) |
-| `channels.editCreator` (not in selected Layer 228 schema) | 400 | [`PASSWORD_TOO_FRESH_%d`](/reference/telegram/errors/password-too-fresh/) |
-| `channels.editCreator` (not in selected Layer 228 schema) | 400 | [`SESSION_TOO_FRESH_%d`](/reference/telegram/errors/session-too-fresh/) |
-| `channels.editCreator` (not in selected Layer 228 schema) | 400 | [`SRP_ID_INVALID`](/reference/telegram/errors/srp-id-invalid/) |
-| `channels.editCreator` (not in selected Layer 228 schema) | 400 | [`USERS_TOO_MUCH`](/reference/telegram/errors/users-too-much/) |
-| `channels.editCreator` (not in selected Layer 228 schema) | 400 | [`USER_ID_INVALID`](/reference/telegram/errors/user-id-invalid/) |
-| `channels.editCreator` (not in selected Layer 228 schema) | 400 | [`USER_NOT_MUTUAL_CONTACT`](/reference/telegram/errors/user-not-mutual-contact/) |
-| `channels.editCreator` (not in selected Layer 228 schema) | 403 | [`CHAT_WRITE_FORBIDDEN`](/reference/telegram/errors/chat-write-forbidden-403/) |
-| `channels.editCreator` (not in selected Layer 228 schema) | 403 | [`USER_CHANNELS_TOO_MUCH`](/reference/telegram/errors/user-channels-too-much-403/) |
-| `channels.editCreator` (not in selected Layer 228 schema) | 403 | [`USER_PRIVACY_RESTRICTED`](/reference/telegram/errors/user-privacy-restricted/) |
-| `channels.editForumTopic` (not in selected Layer 228 schema) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
-| `channels.editForumTopic` (not in selected Layer 228 schema) | 400 | [`CHANNEL_FORUM_MISSING`](/reference/telegram/errors/channel-forum-missing/) |
-| `channels.editForumTopic` (not in selected Layer 228 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
-| `channels.editForumTopic` (not in selected Layer 228 schema) | 400 | [`DOCUMENT_INVALID`](/reference/telegram/errors/document-invalid/) |
-| `channels.editForumTopic` (not in selected Layer 228 schema) | 400 | [`GENERAL_MODIFY_ICON_FORBIDDEN`](/reference/telegram/errors/general-modify-icon-forbidden/) |
-| `channels.editForumTopic` (not in selected Layer 228 schema) | 400 | [`NOGENERAL_HIDE_FORBIDDEN`](/reference/telegram/errors/nogeneral-hide-forbidden/) |
-| `channels.editForumTopic` (not in selected Layer 228 schema) | 400 | [`TOPIC_CLOSE_SEPARATELY`](/reference/telegram/errors/topic-close-separately/) |
-| `channels.editForumTopic` (not in selected Layer 228 schema) | 400 | [`TOPIC_HIDE_SEPARATELY`](/reference/telegram/errors/topic-hide-separately/) |
-| `channels.editForumTopic` (not in selected Layer 228 schema) | 400 | [`TOPIC_ID_INVALID`](/reference/telegram/errors/topic-id-invalid/) |
-| `channels.editForumTopic` (not in selected Layer 228 schema) | 400 | [`TOPIC_NOT_MODIFIED`](/reference/telegram/errors/topic-not-modified/) |
-| `channels.editForumTopic` (not in selected Layer 228 schema) | 403 | [`CHAT_ADMIN_REQUIRED`](/reference/telegram/errors/chat-admin-required-403/) |
+| `channels.editCreator` (not in selected Layer 229 schema) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
+| `channels.editCreator` (not in selected Layer 229 schema) | 400 | [`CHANNELS_ADMIN_PUBLIC_TOO_MUCH`](/reference/telegram/errors/channels-admin-public-too-much/) |
+| `channels.editCreator` (not in selected Layer 229 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
+| `channels.editCreator` (not in selected Layer 229 schema) | 400 | [`CHANNEL_MONOFORUM_UNSUPPORTED`](/reference/telegram/errors/channel-monoforum-unsupported/) |
+| `channels.editCreator` (not in selected Layer 229 schema) | 400 | [`CHANNEL_PRIVATE`](/reference/telegram/errors/channel-private/) |
+| `channels.editCreator` (not in selected Layer 229 schema) | 400 | [`CHAT_ADMIN_REQUIRED`](/reference/telegram/errors/chat-admin-required/) |
+| `channels.editCreator` (not in selected Layer 229 schema) | 400 | [`CHAT_MEMBER_ADD_FAILED`](/reference/telegram/errors/chat-member-add-failed/) |
+| `channels.editCreator` (not in selected Layer 229 schema) | 400 | [`CHAT_NOT_MODIFIED`](/reference/telegram/errors/chat-not-modified/) |
+| `channels.editCreator` (not in selected Layer 229 schema) | 400 | [`INPUT_USER_DEACTIVATED`](/reference/telegram/errors/input-user-deactivated/) |
+| `channels.editCreator` (not in selected Layer 229 schema) | 400 | [`PASSWORD_HASH_INVALID`](/reference/telegram/errors/password-hash-invalid/) |
+| `channels.editCreator` (not in selected Layer 229 schema) | 400 | [`PASSWORD_MISSING`](/reference/telegram/errors/password-missing/) |
+| `channels.editCreator` (not in selected Layer 229 schema) | 400 | [`PASSWORD_TOO_FRESH_%d`](/reference/telegram/errors/password-too-fresh/) |
+| `channels.editCreator` (not in selected Layer 229 schema) | 400 | [`SESSION_TOO_FRESH_%d`](/reference/telegram/errors/session-too-fresh/) |
+| `channels.editCreator` (not in selected Layer 229 schema) | 400 | [`SRP_ID_INVALID`](/reference/telegram/errors/srp-id-invalid/) |
+| `channels.editCreator` (not in selected Layer 229 schema) | 400 | [`USERS_TOO_MUCH`](/reference/telegram/errors/users-too-much/) |
+| `channels.editCreator` (not in selected Layer 229 schema) | 400 | [`USER_ID_INVALID`](/reference/telegram/errors/user-id-invalid/) |
+| `channels.editCreator` (not in selected Layer 229 schema) | 400 | [`USER_NOT_MUTUAL_CONTACT`](/reference/telegram/errors/user-not-mutual-contact/) |
+| `channels.editCreator` (not in selected Layer 229 schema) | 403 | [`CHAT_WRITE_FORBIDDEN`](/reference/telegram/errors/chat-write-forbidden-403/) |
+| `channels.editCreator` (not in selected Layer 229 schema) | 403 | [`USER_CHANNELS_TOO_MUCH`](/reference/telegram/errors/user-channels-too-much-403/) |
+| `channels.editCreator` (not in selected Layer 229 schema) | 403 | [`USER_PRIVACY_RESTRICTED`](/reference/telegram/errors/user-privacy-restricted/) |
+| `channels.editForumTopic` (not in selected Layer 229 schema) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
+| `channels.editForumTopic` (not in selected Layer 229 schema) | 400 | [`CHANNEL_FORUM_MISSING`](/reference/telegram/errors/channel-forum-missing/) |
+| `channels.editForumTopic` (not in selected Layer 229 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
+| `channels.editForumTopic` (not in selected Layer 229 schema) | 400 | [`DOCUMENT_INVALID`](/reference/telegram/errors/document-invalid/) |
+| `channels.editForumTopic` (not in selected Layer 229 schema) | 400 | [`GENERAL_MODIFY_ICON_FORBIDDEN`](/reference/telegram/errors/general-modify-icon-forbidden/) |
+| `channels.editForumTopic` (not in selected Layer 229 schema) | 400 | [`NOGENERAL_HIDE_FORBIDDEN`](/reference/telegram/errors/nogeneral-hide-forbidden/) |
+| `channels.editForumTopic` (not in selected Layer 229 schema) | 400 | [`TOPIC_CLOSE_SEPARATELY`](/reference/telegram/errors/topic-close-separately/) |
+| `channels.editForumTopic` (not in selected Layer 229 schema) | 400 | [`TOPIC_HIDE_SEPARATELY`](/reference/telegram/errors/topic-hide-separately/) |
+| `channels.editForumTopic` (not in selected Layer 229 schema) | 400 | [`TOPIC_ID_INVALID`](/reference/telegram/errors/topic-id-invalid/) |
+| `channels.editForumTopic` (not in selected Layer 229 schema) | 400 | [`TOPIC_NOT_MODIFIED`](/reference/telegram/errors/topic-not-modified/) |
+| `channels.editForumTopic` (not in selected Layer 229 schema) | 403 | [`CHAT_ADMIN_REQUIRED`](/reference/telegram/errors/chat-admin-required-403/) |
 | [`channels.editLocation`](/reference/telegram/functions/channels/edit-location/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`channels.editLocation`](/reference/telegram/functions/channels/edit-location/) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
 | [`channels.editLocation`](/reference/telegram/functions/channels/edit-location/) | 400 | [`CHAT_ADMIN_REQUIRED`](/reference/telegram/errors/chat-admin-required/) |
@@ -939,9 +938,9 @@ https://core.telegram.org/api/errors
 | [`channels.editTitle`](/reference/telegram/functions/channels/edit-title/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
 | [`channels.editTitle`](/reference/telegram/functions/channels/edit-title/) | 403 | [`CHAT_ADMIN_REQUIRED`](/reference/telegram/errors/chat-admin-required-403/) |
 | [`channels.editTitle`](/reference/telegram/functions/channels/edit-title/) | 403 | [`CHAT_WRITE_FORBIDDEN`](/reference/telegram/errors/chat-write-forbidden-403/) |
-| `channels.exportInvite` (not in selected Layer 228 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
-| `channels.exportInvite` (not in selected Layer 228 schema) | 400 | [`CHAT_ADMIN_REQUIRED`](/reference/telegram/errors/chat-admin-required/) |
-| `channels.exportInvite` (not in selected Layer 228 schema) | 400 | [`INVITE_HASH_EXPIRED`](/reference/telegram/errors/invite-hash-expired/) |
+| `channels.exportInvite` (not in selected Layer 229 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
+| `channels.exportInvite` (not in selected Layer 229 schema) | 400 | [`CHAT_ADMIN_REQUIRED`](/reference/telegram/errors/chat-admin-required/) |
+| `channels.exportInvite` (not in selected Layer 229 schema) | 400 | [`INVITE_HASH_EXPIRED`](/reference/telegram/errors/invite-hash-expired/) |
 | [`channels.exportMessageLink`](/reference/telegram/functions/channels/export-message-link/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`channels.exportMessageLink`](/reference/telegram/functions/channels/export-message-link/) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
 | [`channels.exportMessageLink`](/reference/telegram/functions/channels/export-message-link/) | 400 | [`CHANNEL_PRIVATE`](/reference/telegram/errors/channel-private/) |
@@ -973,15 +972,15 @@ https://core.telegram.org/api/errors
 | [`channels.getChannels`](/reference/telegram/functions/channels/get-channels/) | 400 | [`USER_BANNED_IN_CHANNEL`](/reference/telegram/errors/user-banned-in-channel/) |
 | [`channels.getChannels`](/reference/telegram/functions/channels/get-channels/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
 | [`channels.getChannels`](/reference/telegram/functions/channels/get-channels/) | 406 | [`CHANNEL_PRIVATE`](/reference/telegram/errors/channel-private-406/) |
-| `channels.getForumTopics` (not in selected Layer 228 schema) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
-| `channels.getForumTopics` (not in selected Layer 228 schema) | 400 | [`CHANNEL_FORUM_MISSING`](/reference/telegram/errors/channel-forum-missing/) |
-| `channels.getForumTopics` (not in selected Layer 228 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
-| `channels.getForumTopics` (not in selected Layer 228 schema) | 400 | [`CHANNEL_MONOFORUM_UNSUPPORTED`](/reference/telegram/errors/channel-monoforum-unsupported/) |
-| `channels.getForumTopics` (not in selected Layer 228 schema) | 400 | [`CHANNEL_PRIVATE`](/reference/telegram/errors/channel-private/) |
-| `channels.getForumTopicsByID` (not in selected Layer 228 schema) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
-| `channels.getForumTopicsByID` (not in selected Layer 228 schema) | 400 | [`CHANNEL_FORUM_MISSING`](/reference/telegram/errors/channel-forum-missing/) |
-| `channels.getForumTopicsByID` (not in selected Layer 228 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
-| `channels.getForumTopicsByID` (not in selected Layer 228 schema) | 400 | [`TOPICS_EMPTY`](/reference/telegram/errors/topics-empty/) |
+| `channels.getForumTopics` (not in selected Layer 229 schema) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
+| `channels.getForumTopics` (not in selected Layer 229 schema) | 400 | [`CHANNEL_FORUM_MISSING`](/reference/telegram/errors/channel-forum-missing/) |
+| `channels.getForumTopics` (not in selected Layer 229 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
+| `channels.getForumTopics` (not in selected Layer 229 schema) | 400 | [`CHANNEL_MONOFORUM_UNSUPPORTED`](/reference/telegram/errors/channel-monoforum-unsupported/) |
+| `channels.getForumTopics` (not in selected Layer 229 schema) | 400 | [`CHANNEL_PRIVATE`](/reference/telegram/errors/channel-private/) |
+| `channels.getForumTopicsByID` (not in selected Layer 229 schema) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
+| `channels.getForumTopicsByID` (not in selected Layer 229 schema) | 400 | [`CHANNEL_FORUM_MISSING`](/reference/telegram/errors/channel-forum-missing/) |
+| `channels.getForumTopicsByID` (not in selected Layer 229 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
+| `channels.getForumTopicsByID` (not in selected Layer 229 schema) | 400 | [`TOPICS_EMPTY`](/reference/telegram/errors/topics-empty/) |
 | [`channels.getFullChannel`](/reference/telegram/functions/channels/get-full-channel/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`channels.getFullChannel`](/reference/telegram/functions/channels/get-full-channel/) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
 | [`channels.getFullChannel`](/reference/telegram/functions/channels/get-full-channel/) | 400 | [`CHANNEL_PRIVATE`](/reference/telegram/errors/channel-private/) |
@@ -990,8 +989,8 @@ https://core.telegram.org/api/errors
 | [`channels.getFullChannel`](/reference/telegram/functions/channels/get-full-channel/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
 | [`channels.getFullChannel`](/reference/telegram/functions/channels/get-full-channel/) | 403 | [`CHANNEL_PUBLIC_GROUP_NA`](/reference/telegram/errors/channel-public-group-na/) |
 | [`channels.getFullChannel`](/reference/telegram/functions/channels/get-full-channel/) | 406 | [`CHANNEL_PRIVATE`](/reference/telegram/errors/channel-private-406/) |
-| `channels.getFutureCreatorAfterLeave` (not in selected Layer 228 schema) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
-| `channels.getFutureCreatorAfterLeave` (not in selected Layer 228 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
+| `channels.getFutureCreatorAfterLeave` (not in selected Layer 229 schema) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
+| `channels.getFutureCreatorAfterLeave` (not in selected Layer 229 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
 | [`channels.getGroupsForDiscussion`](/reference/telegram/functions/channels/get-groups-for-discussion/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`channels.getGroupsForDiscussion`](/reference/telegram/functions/channels/get-groups-for-discussion/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
 | [`channels.getInactiveChannels`](/reference/telegram/functions/channels/get-inactive-channels/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
@@ -1039,10 +1038,10 @@ https://core.telegram.org/api/errors
 | [`channels.getSendAs`](/reference/telegram/functions/channels/get-send-as/) | 400 | [`CHAT_ID_INVALID`](/reference/telegram/errors/chat-id-invalid/) |
 | [`channels.getSendAs`](/reference/telegram/functions/channels/get-send-as/) | 400 | [`PEER_ID_INVALID`](/reference/telegram/errors/peer-id-invalid/) |
 | [`channels.getSendAs`](/reference/telegram/functions/channels/get-send-as/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
-| `channels.getSponsoredMessages` (not in selected Layer 228 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
-| `channels.getSponsoredMessages` (not in selected Layer 228 schema) | 400 | [`CHANNEL_PRIVATE`](/reference/telegram/errors/channel-private/) |
-| `channels.getSponsoredMessages` (not in selected Layer 228 schema) | 400 | [`CHAT_NOT_MODIFIED`](/reference/telegram/errors/chat-not-modified/) |
-| `channels.getSponsoredMessages` (not in selected Layer 228 schema) | 400 | [`MSG_ID_INVALID`](/reference/telegram/errors/msg-id-invalid/) |
+| `channels.getSponsoredMessages` (not in selected Layer 229 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
+| `channels.getSponsoredMessages` (not in selected Layer 229 schema) | 400 | [`CHANNEL_PRIVATE`](/reference/telegram/errors/channel-private/) |
+| `channels.getSponsoredMessages` (not in selected Layer 229 schema) | 400 | [`CHAT_NOT_MODIFIED`](/reference/telegram/errors/chat-not-modified/) |
+| `channels.getSponsoredMessages` (not in selected Layer 229 schema) | 400 | [`MSG_ID_INVALID`](/reference/telegram/errors/msg-id-invalid/) |
 | [`channels.inviteToChannel`](/reference/telegram/functions/channels/invite-to-channel/) | 400 | [`BOTS_TOO_MUCH`](/reference/telegram/errors/bots-too-much/) |
 | [`channels.inviteToChannel`](/reference/telegram/functions/channels/invite-to-channel/) | 400 | [`BOT_GROUPS_BLOCKED`](/reference/telegram/errors/bot-groups-blocked/) |
 | [`channels.inviteToChannel`](/reference/telegram/functions/channels/invite-to-channel/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
@@ -1112,8 +1111,8 @@ https://core.telegram.org/api/errors
 | [`channels.readMessageContents`](/reference/telegram/functions/channels/read-message-contents/) | 400 | [`MSG_ID_INVALID`](/reference/telegram/errors/msg-id-invalid/) |
 | [`channels.readMessageContents`](/reference/telegram/functions/channels/read-message-contents/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
 | [`channels.readMessageContents`](/reference/telegram/functions/channels/read-message-contents/) | 406 | [`CHANNEL_PRIVATE`](/reference/telegram/errors/channel-private-406/) |
-| `channels.reorderPinnedForumTopics` (not in selected Layer 228 schema) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
-| `channels.reorderPinnedForumTopics` (not in selected Layer 228 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
+| `channels.reorderPinnedForumTopics` (not in selected Layer 229 schema) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
+| `channels.reorderPinnedForumTopics` (not in selected Layer 229 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
 | [`channels.reorderUsernames`](/reference/telegram/functions/channels/reorder-usernames/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`channels.reorderUsernames`](/reference/telegram/functions/channels/reorder-usernames/) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
 | [`channels.reorderUsernames`](/reference/telegram/functions/channels/reorder-usernames/) | 400 | [`CHAT_NOT_MODIFIED`](/reference/telegram/errors/chat-not-modified/) |
@@ -1128,9 +1127,9 @@ https://core.telegram.org/api/errors
 | [`channels.reportSpam`](/reference/telegram/functions/channels/report-spam/) | 400 | [`MSG_ID_INVALID`](/reference/telegram/errors/msg-id-invalid/) |
 | [`channels.reportSpam`](/reference/telegram/functions/channels/report-spam/) | 400 | [`USER_ID_INVALID`](/reference/telegram/errors/user-id-invalid/) |
 | [`channels.reportSpam`](/reference/telegram/functions/channels/report-spam/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
-| `channels.reportSponsoredMessage` (not in selected Layer 228 schema) | 400 | [`AD_EXPIRED`](/reference/telegram/errors/ad-expired/) |
-| `channels.reportSponsoredMessage` (not in selected Layer 228 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
-| `channels.reportSponsoredMessage` (not in selected Layer 228 schema) | 400 | [`PREMIUM_ACCOUNT_REQUIRED`](/reference/telegram/errors/premium-account-required/) |
+| `channels.reportSponsoredMessage` (not in selected Layer 229 schema) | 400 | [`AD_EXPIRED`](/reference/telegram/errors/ad-expired/) |
+| `channels.reportSponsoredMessage` (not in selected Layer 229 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
+| `channels.reportSponsoredMessage` (not in selected Layer 229 schema) | 400 | [`PREMIUM_ACCOUNT_REQUIRED`](/reference/telegram/errors/premium-account-required/) |
 | [`channels.restrictSponsoredMessages`](/reference/telegram/functions/channels/restrict-sponsored-messages/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`channels.restrictSponsoredMessages`](/reference/telegram/functions/channels/restrict-sponsored-messages/) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
 | [`channels.restrictSponsoredMessages`](/reference/telegram/functions/channels/restrict-sponsored-messages/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
@@ -1177,9 +1176,9 @@ https://core.telegram.org/api/errors
 | [`channels.toggleForum`](/reference/telegram/functions/channels/toggle-forum/) | 400 | [`CHAT_ID_INVALID`](/reference/telegram/errors/chat-id-invalid/) |
 | [`channels.toggleForum`](/reference/telegram/functions/channels/toggle-forum/) | 400 | [`CHAT_NOT_MODIFIED`](/reference/telegram/errors/chat-not-modified/) |
 | [`channels.toggleForum`](/reference/telegram/functions/channels/toggle-forum/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
-| `channels.toggleInvites` (not in selected Layer 228 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
-| `channels.toggleInvites` (not in selected Layer 228 schema) | 400 | [`CHAT_ADMIN_REQUIRED`](/reference/telegram/errors/chat-admin-required/) |
-| `channels.toggleInvites` (not in selected Layer 228 schema) | 400 | [`CHAT_NOT_MODIFIED`](/reference/telegram/errors/chat-not-modified/) |
+| `channels.toggleInvites` (not in selected Layer 229 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
+| `channels.toggleInvites` (not in selected Layer 229 schema) | 400 | [`CHAT_ADMIN_REQUIRED`](/reference/telegram/errors/chat-admin-required/) |
+| `channels.toggleInvites` (not in selected Layer 229 schema) | 400 | [`CHAT_NOT_MODIFIED`](/reference/telegram/errors/chat-not-modified/) |
 | [`channels.toggleJoinRequest`](/reference/telegram/functions/channels/toggle-join-request/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`channels.toggleJoinRequest`](/reference/telegram/functions/channels/toggle-join-request/) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
 | [`channels.toggleJoinRequest`](/reference/telegram/functions/channels/toggle-join-request/) | 400 | [`CHAT_ADMIN_REQUIRED`](/reference/telegram/errors/chat-admin-required/) |
@@ -1247,17 +1246,17 @@ https://core.telegram.org/api/errors
 | [`channels.updatePaidMessagesPrice`](/reference/telegram/functions/channels/update-paid-messages-price/) | 400 | [`CHAT_NOT_MODIFIED`](/reference/telegram/errors/chat-not-modified/) |
 | [`channels.updatePaidMessagesPrice`](/reference/telegram/functions/channels/update-paid-messages-price/) | 400 | [`STARS_AMOUNT_INVALID`](/reference/telegram/errors/stars-amount-invalid/) |
 | [`channels.updatePaidMessagesPrice`](/reference/telegram/functions/channels/update-paid-messages-price/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
-| `channels.updatePinnedForumTopic` (not in selected Layer 228 schema) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
-| `channels.updatePinnedForumTopic` (not in selected Layer 228 schema) | 400 | [`CHANNEL_FORUM_MISSING`](/reference/telegram/errors/channel-forum-missing/) |
-| `channels.updatePinnedForumTopic` (not in selected Layer 228 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
-| `channels.updatePinnedForumTopic` (not in selected Layer 228 schema) | 400 | [`PINNED_TOO_MUCH`](/reference/telegram/errors/pinned-too-much/) |
-| `channels.updatePinnedForumTopic` (not in selected Layer 228 schema) | 400 | [`PINNED_TOPIC_NOT_MODIFIED`](/reference/telegram/errors/pinned-topic-not-modified/) |
-| `channels.updatePinnedForumTopic` (not in selected Layer 228 schema) | 400 | [`TOPIC_ID_INVALID`](/reference/telegram/errors/topic-id-invalid/) |
-| `channels.updatePinnedForumTopic` (not in selected Layer 228 schema) | 403 | [`CHAT_WRITE_FORBIDDEN`](/reference/telegram/errors/chat-write-forbidden-403/) |
-| `channels.updatePinnedMessage` (not in selected Layer 228 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
-| `channels.updatePinnedMessage` (not in selected Layer 228 schema) | 400 | [`CHAT_ADMIN_REQUIRED`](/reference/telegram/errors/chat-admin-required/) |
-| `channels.updatePinnedMessage` (not in selected Layer 228 schema) | 400 | [`CHAT_ID_INVALID`](/reference/telegram/errors/chat-id-invalid/) |
-| `channels.updatePinnedMessage` (not in selected Layer 228 schema) | 400 | [`CHAT_NOT_MODIFIED`](/reference/telegram/errors/chat-not-modified/) |
+| `channels.updatePinnedForumTopic` (not in selected Layer 229 schema) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
+| `channels.updatePinnedForumTopic` (not in selected Layer 229 schema) | 400 | [`CHANNEL_FORUM_MISSING`](/reference/telegram/errors/channel-forum-missing/) |
+| `channels.updatePinnedForumTopic` (not in selected Layer 229 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
+| `channels.updatePinnedForumTopic` (not in selected Layer 229 schema) | 400 | [`PINNED_TOO_MUCH`](/reference/telegram/errors/pinned-too-much/) |
+| `channels.updatePinnedForumTopic` (not in selected Layer 229 schema) | 400 | [`PINNED_TOPIC_NOT_MODIFIED`](/reference/telegram/errors/pinned-topic-not-modified/) |
+| `channels.updatePinnedForumTopic` (not in selected Layer 229 schema) | 400 | [`TOPIC_ID_INVALID`](/reference/telegram/errors/topic-id-invalid/) |
+| `channels.updatePinnedForumTopic` (not in selected Layer 229 schema) | 403 | [`CHAT_WRITE_FORBIDDEN`](/reference/telegram/errors/chat-write-forbidden-403/) |
+| `channels.updatePinnedMessage` (not in selected Layer 229 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
+| `channels.updatePinnedMessage` (not in selected Layer 229 schema) | 400 | [`CHAT_ADMIN_REQUIRED`](/reference/telegram/errors/chat-admin-required/) |
+| `channels.updatePinnedMessage` (not in selected Layer 229 schema) | 400 | [`CHAT_ID_INVALID`](/reference/telegram/errors/chat-id-invalid/) |
+| `channels.updatePinnedMessage` (not in selected Layer 229 schema) | 400 | [`CHAT_NOT_MODIFIED`](/reference/telegram/errors/chat-not-modified/) |
 | [`channels.updateUsername`](/reference/telegram/functions/channels/update-username/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`channels.updateUsername`](/reference/telegram/functions/channels/update-username/) | 400 | [`CHANNELS_ADMIN_PUBLIC_TOO_MUCH`](/reference/telegram/errors/channels-admin-public-too-much/) |
 | [`channels.updateUsername`](/reference/telegram/functions/channels/update-username/) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
@@ -1271,8 +1270,8 @@ https://core.telegram.org/api/errors
 | [`channels.updateUsername`](/reference/telegram/functions/channels/update-username/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
 | [`channels.updateUsername`](/reference/telegram/functions/channels/update-username/) | 403 | [`CHAT_ADMIN_REQUIRED`](/reference/telegram/errors/chat-admin-required-403/) |
 | [`channels.updateUsername`](/reference/telegram/functions/channels/update-username/) | 403 | [`CHAT_WRITE_FORBIDDEN`](/reference/telegram/errors/chat-write-forbidden-403/) |
-| `channels.viewSponsoredMessage` (not in selected Layer 228 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
-| `channels.viewSponsoredMessage` (not in selected Layer 228 schema) | 400 | [`CHANNEL_PRIVATE`](/reference/telegram/errors/channel-private/) |
+| `channels.viewSponsoredMessage` (not in selected Layer 229 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
+| `channels.viewSponsoredMessage` (not in selected Layer 229 schema) | 400 | [`CHANNEL_PRIVATE`](/reference/telegram/errors/channel-private/) |
 | [`chatlists.checkChatlistInvite`](/reference/telegram/functions/chatlists/check-chatlist-invite/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`chatlists.checkChatlistInvite`](/reference/telegram/functions/chatlists/check-chatlist-invite/) | 400 | [`INVITE_SLUG_EMPTY`](/reference/telegram/errors/invite-slug-empty/) |
 | [`chatlists.checkChatlistInvite`](/reference/telegram/functions/chatlists/check-chatlist-invite/) | 400 | [`INVITE_SLUG_EXPIRED`](/reference/telegram/errors/invite-slug-expired/) |
@@ -1355,7 +1354,7 @@ https://core.telegram.org/api/errors
 | [`contacts.blockFromReplies`](/reference/telegram/functions/contacts/block-from-replies/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
 | [`contacts.deleteByPhones`](/reference/telegram/functions/contacts/delete-by-phones/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`contacts.deleteByPhones`](/reference/telegram/functions/contacts/delete-by-phones/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
-| `contacts.deleteContact` (not in selected Layer 228 schema) | 400 | [`CONTACT_ID_INVALID`](/reference/telegram/errors/contact-id-invalid/) |
+| `contacts.deleteContact` (not in selected Layer 229 schema) | 400 | [`CONTACT_ID_INVALID`](/reference/telegram/errors/contact-id-invalid/) |
 | [`contacts.deleteContacts`](/reference/telegram/functions/contacts/delete-contacts/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`contacts.deleteContacts`](/reference/telegram/functions/contacts/delete-contacts/) | 400 | [`MSG_ID_INVALID`](/reference/telegram/errors/msg-id-invalid/) |
 | [`contacts.deleteContacts`](/reference/telegram/functions/contacts/delete-contacts/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
@@ -1391,7 +1390,7 @@ https://core.telegram.org/api/errors
 | [`contacts.getTopPeers`](/reference/telegram/functions/contacts/get-top-peers/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`contacts.getTopPeers`](/reference/telegram/functions/contacts/get-top-peers/) | 400 | [`TYPES_EMPTY`](/reference/telegram/errors/types-empty/) |
 | [`contacts.getTopPeers`](/reference/telegram/functions/contacts/get-top-peers/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
-| `contacts.importCard` (not in selected Layer 228 schema) | 400 | [`EXPORT_CARD_INVALID`](/reference/telegram/errors/export-card-invalid/) |
+| `contacts.importCard` (not in selected Layer 229 schema) | 400 | [`EXPORT_CARD_INVALID`](/reference/telegram/errors/export-card-invalid/) |
 | [`contacts.importContactToken`](/reference/telegram/functions/contacts/import-contact-token/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`contacts.importContactToken`](/reference/telegram/functions/contacts/import-contact-token/) | 400 | [`IMPORT_TOKEN_INVALID`](/reference/telegram/errors/import-token-invalid/) |
 | [`contacts.importContactToken`](/reference/telegram/functions/contacts/import-contact-token/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
@@ -1429,8 +1428,8 @@ https://core.telegram.org/api/errors
 | [`contacts.updateContactNote`](/reference/telegram/functions/contacts/update-contact-note/) | 400 | [`CONTACT_ID_INVALID`](/reference/telegram/errors/contact-id-invalid/) |
 | [`contacts.updateContactNote`](/reference/telegram/functions/contacts/update-contact-note/) | 400 | [`CONTACT_MISSING`](/reference/telegram/errors/contact-missing/) |
 | [`contacts.updateContactNote`](/reference/telegram/functions/contacts/update-contact-note/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
-| `folders.deleteFolder` (not in selected Layer 228 schema) | 400 | [`FOLDER_ID_EMPTY`](/reference/telegram/errors/folder-id-empty/) |
-| `folders.deleteFolder` (not in selected Layer 228 schema) | 400 | [`FOLDER_ID_INVALID`](/reference/telegram/errors/folder-id-invalid/) |
+| `folders.deleteFolder` (not in selected Layer 229 schema) | 400 | [`FOLDER_ID_EMPTY`](/reference/telegram/errors/folder-id-empty/) |
+| `folders.deleteFolder` (not in selected Layer 229 schema) | 400 | [`FOLDER_ID_INVALID`](/reference/telegram/errors/folder-id-invalid/) |
 | [`folders.editPeerFolders`](/reference/telegram/functions/folders/edit-peer-folders/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`folders.editPeerFolders`](/reference/telegram/functions/folders/edit-peer-folders/) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
 | [`folders.editPeerFolders`](/reference/telegram/functions/folders/edit-peer-folders/) | 400 | [`CHANNEL_PRIVATE`](/reference/telegram/errors/channel-private/) |
@@ -1858,10 +1857,10 @@ https://core.telegram.org/api/errors
 | [`messages.faveSticker`](/reference/telegram/functions/messages/fave-sticker/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`messages.faveSticker`](/reference/telegram/functions/messages/fave-sticker/) | 400 | [`STICKER_ID_INVALID`](/reference/telegram/errors/sticker-id-invalid/) |
 | [`messages.faveSticker`](/reference/telegram/functions/messages/fave-sticker/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
-| `messages.forwardMessage` (not in selected Layer 228 schema) | 400 | [`CHAT_ID_INVALID`](/reference/telegram/errors/chat-id-invalid/) |
-| `messages.forwardMessage` (not in selected Layer 228 schema) | 400 | [`MESSAGE_ID_INVALID`](/reference/telegram/errors/message-id-invalid/) |
-| `messages.forwardMessage` (not in selected Layer 228 schema) | 400 | [`PEER_ID_INVALID`](/reference/telegram/errors/peer-id-invalid/) |
-| `messages.forwardMessage` (not in selected Layer 228 schema) | 400 | [`YOU_BLOCKED_USER`](/reference/telegram/errors/you-blocked-user/) |
+| `messages.forwardMessage` (not in selected Layer 229 schema) | 400 | [`CHAT_ID_INVALID`](/reference/telegram/errors/chat-id-invalid/) |
+| `messages.forwardMessage` (not in selected Layer 229 schema) | 400 | [`MESSAGE_ID_INVALID`](/reference/telegram/errors/message-id-invalid/) |
+| `messages.forwardMessage` (not in selected Layer 229 schema) | 400 | [`PEER_ID_INVALID`](/reference/telegram/errors/peer-id-invalid/) |
+| `messages.forwardMessage` (not in selected Layer 229 schema) | 400 | [`YOU_BLOCKED_USER`](/reference/telegram/errors/you-blocked-user/) |
 | [`messages.forwardMessages`](/reference/telegram/functions/messages/forward-messages/) | 400 | [`BROADCAST_PUBLIC_VOTERS_FORBIDDEN`](/reference/telegram/errors/broadcast-public-voters-forbidden/) |
 | [`messages.forwardMessages`](/reference/telegram/functions/messages/forward-messages/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`messages.forwardMessages`](/reference/telegram/functions/messages/forward-messages/) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
@@ -2140,8 +2139,8 @@ https://core.telegram.org/api/errors
 | [`messages.getMessagesReactions`](/reference/telegram/functions/messages/get-messages-reactions/) | 400 | [`CHANNEL_PRIVATE`](/reference/telegram/errors/channel-private/) |
 | [`messages.getMessagesReactions`](/reference/telegram/functions/messages/get-messages-reactions/) | 400 | [`MSG_ID_INVALID`](/reference/telegram/errors/msg-id-invalid/) |
 | [`messages.getMessagesReactions`](/reference/telegram/functions/messages/get-messages-reactions/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
-| `messages.getMessagesReadParticipants` (not in selected Layer 228 schema) | 400 | [`CHAT_TOO_BIG`](/reference/telegram/errors/chat-too-big/) |
-| `messages.getMessagesReadParticipants` (not in selected Layer 228 schema) | 400 | [`MESSAGE_ID_INVALID`](/reference/telegram/errors/message-id-invalid/) |
+| `messages.getMessagesReadParticipants` (not in selected Layer 229 schema) | 400 | [`CHAT_TOO_BIG`](/reference/telegram/errors/chat-too-big/) |
+| `messages.getMessagesReadParticipants` (not in selected Layer 229 schema) | 400 | [`MESSAGE_ID_INVALID`](/reference/telegram/errors/message-id-invalid/) |
 | [`messages.getMessagesViews`](/reference/telegram/functions/messages/get-messages-views/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`messages.getMessagesViews`](/reference/telegram/functions/messages/get-messages-views/) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
 | [`messages.getMessagesViews`](/reference/telegram/functions/messages/get-messages-views/) | 400 | [`CHANNEL_PRIVATE`](/reference/telegram/errors/channel-private/) |
@@ -2270,7 +2269,7 @@ https://core.telegram.org/api/errors
 | [`messages.getSponsoredMessages`](/reference/telegram/functions/messages/get-sponsored-messages/) | 400 | [`MESSAGE_ID_INVALID`](/reference/telegram/errors/message-id-invalid/) |
 | [`messages.getSponsoredMessages`](/reference/telegram/functions/messages/get-sponsored-messages/) | 400 | [`MSG_ID_INVALID`](/reference/telegram/errors/msg-id-invalid/) |
 | [`messages.getSponsoredMessages`](/reference/telegram/functions/messages/get-sponsored-messages/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
-| `messages.getStatsURL` (not in selected Layer 228 schema) | 400 | [`PEER_ID_INVALID`](/reference/telegram/errors/peer-id-invalid/) |
+| `messages.getStatsURL` (not in selected Layer 229 schema) | 400 | [`PEER_ID_INVALID`](/reference/telegram/errors/peer-id-invalid/) |
 | [`messages.getStickerSet`](/reference/telegram/functions/messages/get-sticker-set/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`messages.getStickerSet`](/reference/telegram/functions/messages/get-sticker-set/) | 400 | [`EMOTICON_STICKERPACK_MISSING`](/reference/telegram/errors/emoticon-stickerpack-missing/) |
 | [`messages.getStickerSet`](/reference/telegram/functions/messages/get-sticker-set/) | 400 | [`STICKERSET_INVALID`](/reference/telegram/errors/stickerset-invalid/) |
@@ -2330,7 +2329,7 @@ https://core.telegram.org/api/errors
 | [`messages.hidePeerSettingsBar`](/reference/telegram/functions/messages/hide-peer-settings-bar/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`messages.hidePeerSettingsBar`](/reference/telegram/functions/messages/hide-peer-settings-bar/) | 400 | [`PEER_ID_INVALID`](/reference/telegram/errors/peer-id-invalid/) |
 | [`messages.hidePeerSettingsBar`](/reference/telegram/functions/messages/hide-peer-settings-bar/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
-| `messages.hideReportSpam` (not in selected Layer 228 schema) | 400 | [`PEER_ID_INVALID`](/reference/telegram/errors/peer-id-invalid/) |
+| `messages.hideReportSpam` (not in selected Layer 229 schema) | 400 | [`PEER_ID_INVALID`](/reference/telegram/errors/peer-id-invalid/) |
 | [`messages.importChatInvite`](/reference/telegram/functions/messages/import-chat-invite/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`messages.importChatInvite`](/reference/telegram/functions/messages/import-chat-invite/) | 400 | [`CHANNELS_TOO_MUCH`](/reference/telegram/errors/channels-too-much/) |
 | [`messages.importChatInvite`](/reference/telegram/functions/messages/import-chat-invite/) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
@@ -2548,8 +2547,8 @@ https://core.telegram.org/api/errors
 | [`messages.searchCustomEmoji`](/reference/telegram/functions/messages/search-custom-emoji/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
 | [`messages.searchEmojiStickerSets`](/reference/telegram/functions/messages/search-emoji-sticker-sets/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`messages.searchEmojiStickerSets`](/reference/telegram/functions/messages/search-emoji-sticker-sets/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
-| `messages.searchGifs` (not in selected Layer 228 schema) | 400 | [`METHOD_INVALID`](/reference/telegram/errors/method-invalid/) |
-| `messages.searchGifs` (not in selected Layer 228 schema) | 400 | [`SEARCH_QUERY_EMPTY`](/reference/telegram/errors/search-query-empty/) |
+| `messages.searchGifs` (not in selected Layer 229 schema) | 400 | [`METHOD_INVALID`](/reference/telegram/errors/method-invalid/) |
+| `messages.searchGifs` (not in selected Layer 229 schema) | 400 | [`SEARCH_QUERY_EMPTY`](/reference/telegram/errors/search-query-empty/) |
 | [`messages.searchGlobal`](/reference/telegram/functions/messages/search-global/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`messages.searchGlobal`](/reference/telegram/functions/messages/search-global/) | 400 | [`FOLDER_ID_INVALID`](/reference/telegram/errors/folder-id-invalid/) |
 | [`messages.searchGlobal`](/reference/telegram/functions/messages/search-global/) | 400 | [`INPUT_FILTER_INVALID`](/reference/telegram/errors/input-filter-invalid/) |
@@ -3108,8 +3107,8 @@ https://core.telegram.org/api/errors
 | [`messages.toggleBotInAttachMenu`](/reference/telegram/functions/messages/toggle-bot-in-attach-menu/) | 400 | [`BOT_INVALID`](/reference/telegram/errors/bot-invalid/) |
 | [`messages.toggleBotInAttachMenu`](/reference/telegram/functions/messages/toggle-bot-in-attach-menu/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`messages.toggleBotInAttachMenu`](/reference/telegram/functions/messages/toggle-bot-in-attach-menu/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
-| `messages.toggleChatAdmins` (not in selected Layer 228 schema) | 400 | [`CHAT_ID_INVALID`](/reference/telegram/errors/chat-id-invalid/) |
-| `messages.toggleChatAdmins` (not in selected Layer 228 schema) | 400 | [`CHAT_NOT_MODIFIED`](/reference/telegram/errors/chat-not-modified/) |
+| `messages.toggleChatAdmins` (not in selected Layer 229 schema) | 400 | [`CHAT_ID_INVALID`](/reference/telegram/errors/chat-id-invalid/) |
+| `messages.toggleChatAdmins` (not in selected Layer 229 schema) | 400 | [`CHAT_NOT_MODIFIED`](/reference/telegram/errors/chat-not-modified/) |
 | [`messages.toggleDialogFilterTags`](/reference/telegram/functions/messages/toggle-dialog-filter-tags/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`messages.toggleDialogFilterTags`](/reference/telegram/functions/messages/toggle-dialog-filter-tags/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
 | [`messages.toggleDialogFilterTags`](/reference/telegram/functions/messages/toggle-dialog-filter-tags/) | 403 | [`PREMIUM_ACCOUNT_REQUIRED`](/reference/telegram/errors/premium-account-required-403/) |
@@ -3251,9 +3250,9 @@ https://core.telegram.org/api/errors
 | [`payments.botCancelStarsSubscription`](/reference/telegram/functions/payments/bot-cancel-stars-subscription/) | 400 | [`CHARGE_ID_INVALID`](/reference/telegram/errors/charge-id-invalid/) |
 | [`payments.botCancelStarsSubscription`](/reference/telegram/functions/payments/bot-cancel-stars-subscription/) | 400 | [`USER_ID_INVALID`](/reference/telegram/errors/user-id-invalid/) |
 | [`payments.botCancelStarsSubscription`](/reference/telegram/functions/payments/bot-cancel-stars-subscription/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
-| `payments.canPurchasePremium` (not in selected Layer 228 schema) | 400 | [`USER_GIFT_UNAVAILABLE`](/reference/telegram/errors/user-gift-unavailable/) |
-| `payments.canPurchasePremium` (not in selected Layer 228 schema) | 400 | [`USER_ID_INVALID`](/reference/telegram/errors/user-id-invalid/) |
-| `payments.canPurchasePremium` (not in selected Layer 228 schema) | 406 | [`PREMIUM_CURRENTLY_UNAVAILABLE`](/reference/telegram/errors/premium-currently-unavailable/) |
+| `payments.canPurchasePremium` (not in selected Layer 229 schema) | 400 | [`USER_GIFT_UNAVAILABLE`](/reference/telegram/errors/user-gift-unavailable/) |
+| `payments.canPurchasePremium` (not in selected Layer 229 schema) | 400 | [`USER_ID_INVALID`](/reference/telegram/errors/user-id-invalid/) |
+| `payments.canPurchasePremium` (not in selected Layer 229 schema) | 406 | [`PREMIUM_CURRENTLY_UNAVAILABLE`](/reference/telegram/errors/premium-currently-unavailable/) |
 | [`payments.canPurchaseStore`](/reference/telegram/functions/payments/can-purchase-store/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`payments.canPurchaseStore`](/reference/telegram/functions/payments/can-purchase-store/) | 400 | [`INPUT_PURPOSE_INVALID`](/reference/telegram/errors/input-purpose-invalid/) |
 | [`payments.canPurchaseStore`](/reference/telegram/functions/payments/can-purchase-store/) | 406 | [`PREMIUM_CURRENTLY_UNAVAILABLE`](/reference/telegram/errors/premium-currently-unavailable/) |
@@ -3453,7 +3452,7 @@ https://core.telegram.org/api/errors
 | [`payments.getUniqueStarGiftValueInfo`](/reference/telegram/functions/payments/get-unique-star-gift-value-info/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`payments.getUniqueStarGiftValueInfo`](/reference/telegram/functions/payments/get-unique-star-gift-value-info/) | 400 | [`STARGIFT_SLUG_INVALID`](/reference/telegram/errors/stargift-slug-invalid/) |
 | [`payments.getUniqueStarGiftValueInfo`](/reference/telegram/functions/payments/get-unique-star-gift-value-info/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
-| `payments.getUserStarGifts` (not in selected Layer 228 schema) | 400 | [`USER_ID_INVALID`](/reference/telegram/errors/user-id-invalid/) |
+| `payments.getUserStarGifts` (not in selected Layer 229 schema) | 400 | [`USER_ID_INVALID`](/reference/telegram/errors/user-id-invalid/) |
 | [`payments.launchPrepaidGiveaway`](/reference/telegram/functions/payments/launch-prepaid-giveaway/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`payments.launchPrepaidGiveaway`](/reference/telegram/functions/payments/launch-prepaid-giveaway/) | 400 | [`PEER_ID_INVALID`](/reference/telegram/errors/peer-id-invalid/) |
 | [`payments.launchPrepaidGiveaway`](/reference/telegram/functions/payments/launch-prepaid-giveaway/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
@@ -3608,7 +3607,7 @@ https://core.telegram.org/api/errors
 | [`phone.discardGroupCall`](/reference/telegram/functions/phone/discard-group-call/) | 400 | [`GROUPCALL_INVALID`](/reference/telegram/errors/groupcall-invalid/) |
 | [`phone.discardGroupCall`](/reference/telegram/functions/phone/discard-group-call/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
 | [`phone.discardGroupCall`](/reference/telegram/functions/phone/discard-group-call/) | 403 | [`GROUPCALL_FORBIDDEN`](/reference/telegram/errors/groupcall-forbidden-403/) |
-| `phone.discardGroupCallRequest` (not in selected Layer 228 schema) | 400 | [`GROUPCALL_ALREADY_DISCARDED`](/reference/telegram/errors/groupcall-already-discarded/) |
+| `phone.discardGroupCallRequest` (not in selected Layer 229 schema) | 400 | [`GROUPCALL_ALREADY_DISCARDED`](/reference/telegram/errors/groupcall-already-discarded/) |
 | [`phone.editGroupCallParticipant`](/reference/telegram/functions/phone/edit-group-call-participant/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`phone.editGroupCallParticipant`](/reference/telegram/functions/phone/edit-group-call-participant/) | 400 | [`GROUPCALL_FORBIDDEN`](/reference/telegram/errors/groupcall-forbidden/) |
 | [`phone.editGroupCallParticipant`](/reference/telegram/functions/phone/edit-group-call-participant/) | 400 | [`GROUPCALL_INVALID`](/reference/telegram/errors/groupcall-invalid/) |
@@ -3828,15 +3827,15 @@ https://core.telegram.org/api/errors
 | [`smsjobs.updateSettings`](/reference/telegram/functions/smsjobs/update-settings/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`smsjobs.updateSettings`](/reference/telegram/functions/smsjobs/update-settings/) | 400 | [`NOT_JOINED`](/reference/telegram/errors/not-joined/) |
 | [`smsjobs.updateSettings`](/reference/telegram/functions/smsjobs/update-settings/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
-| `stats.getBroadcastRevenueStats` (not in selected Layer 228 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
-| `stats.getBroadcastRevenueStats` (not in selected Layer 228 schema) | 400 | [`CHAT_ADMIN_REQUIRED`](/reference/telegram/errors/chat-admin-required/) |
-| `stats.getBroadcastRevenueStats` (not in selected Layer 228 schema) | 400 | [`PEER_ID_INVALID`](/reference/telegram/errors/peer-id-invalid/) |
-| `stats.getBroadcastRevenueTransactions` (not in selected Layer 228 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
-| `stats.getBroadcastRevenueTransactions` (not in selected Layer 228 schema) | 400 | [`PEER_ID_INVALID`](/reference/telegram/errors/peer-id-invalid/) |
-| `stats.getBroadcastRevenueWithdrawalUrl` (not in selected Layer 228 schema) | 400 | [`PASSWORD_HASH_INVALID`](/reference/telegram/errors/password-hash-invalid/) |
-| `stats.getBroadcastRevenueWithdrawalUrl` (not in selected Layer 228 schema) | 400 | [`PASSWORD_MISSING`](/reference/telegram/errors/password-missing/) |
-| `stats.getBroadcastRevenueWithdrawalUrl` (not in selected Layer 228 schema) | 400 | [`PASSWORD_TOO_FRESH_%d`](/reference/telegram/errors/password-too-fresh/) |
-| `stats.getBroadcastRevenueWithdrawalUrl` (not in selected Layer 228 schema) | 400 | [`SESSION_TOO_FRESH_%d`](/reference/telegram/errors/session-too-fresh/) |
+| `stats.getBroadcastRevenueStats` (not in selected Layer 229 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
+| `stats.getBroadcastRevenueStats` (not in selected Layer 229 schema) | 400 | [`CHAT_ADMIN_REQUIRED`](/reference/telegram/errors/chat-admin-required/) |
+| `stats.getBroadcastRevenueStats` (not in selected Layer 229 schema) | 400 | [`PEER_ID_INVALID`](/reference/telegram/errors/peer-id-invalid/) |
+| `stats.getBroadcastRevenueTransactions` (not in selected Layer 229 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
+| `stats.getBroadcastRevenueTransactions` (not in selected Layer 229 schema) | 400 | [`PEER_ID_INVALID`](/reference/telegram/errors/peer-id-invalid/) |
+| `stats.getBroadcastRevenueWithdrawalUrl` (not in selected Layer 229 schema) | 400 | [`PASSWORD_HASH_INVALID`](/reference/telegram/errors/password-hash-invalid/) |
+| `stats.getBroadcastRevenueWithdrawalUrl` (not in selected Layer 229 schema) | 400 | [`PASSWORD_MISSING`](/reference/telegram/errors/password-missing/) |
+| `stats.getBroadcastRevenueWithdrawalUrl` (not in selected Layer 229 schema) | 400 | [`PASSWORD_TOO_FRESH_%d`](/reference/telegram/errors/password-too-fresh/) |
+| `stats.getBroadcastRevenueWithdrawalUrl` (not in selected Layer 229 schema) | 400 | [`SESSION_TOO_FRESH_%d`](/reference/telegram/errors/session-too-fresh/) |
 | [`stats.getBroadcastStats`](/reference/telegram/functions/stats/get-broadcast-stats/) | 400 | [`BROADCAST_REQUIRED`](/reference/telegram/errors/broadcast-required/) |
 | [`stats.getBroadcastStats`](/reference/telegram/functions/stats/get-broadcast-stats/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`stats.getBroadcastStats`](/reference/telegram/functions/stats/get-broadcast-stats/) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
@@ -3940,12 +3939,12 @@ https://core.telegram.org/api/errors
 | [`stories.activateStealthMode`](/reference/telegram/functions/stories/activate-stealth-mode/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`stories.activateStealthMode`](/reference/telegram/functions/stories/activate-stealth-mode/) | 400 | [`PREMIUM_ACCOUNT_REQUIRED`](/reference/telegram/errors/premium-account-required/) |
 | [`stories.activateStealthMode`](/reference/telegram/functions/stories/activate-stealth-mode/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
-| `stories.applyBoost` (not in selected Layer 228 schema) | 400 | [`BOOST_NOT_MODIFIED`](/reference/telegram/errors/boost-not-modified/) |
-| `stories.applyBoost` (not in selected Layer 228 schema) | 400 | [`PEER_ID_INVALID`](/reference/telegram/errors/peer-id-invalid/) |
-| `stories.applyBoost` (not in selected Layer 228 schema) | 400 | [`PREMIUM_ACCOUNT_REQUIRED`](/reference/telegram/errors/premium-account-required/) |
-| `stories.canApplyBoost` (not in selected Layer 228 schema) | 400 | [`BOOST_NOT_MODIFIED`](/reference/telegram/errors/boost-not-modified/) |
-| `stories.canApplyBoost` (not in selected Layer 228 schema) | 400 | [`PEER_ID_INVALID`](/reference/telegram/errors/peer-id-invalid/) |
-| `stories.canApplyBoost` (not in selected Layer 228 schema) | 400 | [`PREMIUM_ACCOUNT_REQUIRED`](/reference/telegram/errors/premium-account-required/) |
+| `stories.applyBoost` (not in selected Layer 229 schema) | 400 | [`BOOST_NOT_MODIFIED`](/reference/telegram/errors/boost-not-modified/) |
+| `stories.applyBoost` (not in selected Layer 229 schema) | 400 | [`PEER_ID_INVALID`](/reference/telegram/errors/peer-id-invalid/) |
+| `stories.applyBoost` (not in selected Layer 229 schema) | 400 | [`PREMIUM_ACCOUNT_REQUIRED`](/reference/telegram/errors/premium-account-required/) |
+| `stories.canApplyBoost` (not in selected Layer 229 schema) | 400 | [`BOOST_NOT_MODIFIED`](/reference/telegram/errors/boost-not-modified/) |
+| `stories.canApplyBoost` (not in selected Layer 229 schema) | 400 | [`PEER_ID_INVALID`](/reference/telegram/errors/peer-id-invalid/) |
+| `stories.canApplyBoost` (not in selected Layer 229 schema) | 400 | [`PREMIUM_ACCOUNT_REQUIRED`](/reference/telegram/errors/premium-account-required/) |
 | [`stories.canSendStory`](/reference/telegram/functions/stories/can-send-story/) | 400 | [`BOOSTS_REQUIRED`](/reference/telegram/errors/boosts-required/) |
 | [`stories.canSendStory`](/reference/telegram/functions/stories/can-send-story/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`stories.canSendStory`](/reference/telegram/functions/stories/can-send-story/) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
@@ -3988,10 +3987,10 @@ https://core.telegram.org/api/errors
 | [`stories.getAllReadPeerStories`](/reference/telegram/functions/stories/get-all-read-peer-stories/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
 | [`stories.getAllStories`](/reference/telegram/functions/stories/get-all-stories/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`stories.getAllStories`](/reference/telegram/functions/stories/get-all-stories/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
-| `stories.getBoostersList` (not in selected Layer 228 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
-| `stories.getBoostersList` (not in selected Layer 228 schema) | 400 | [`CHAT_ADMIN_REQUIRED`](/reference/telegram/errors/chat-admin-required/) |
-| `stories.getBoostersList` (not in selected Layer 228 schema) | 400 | [`PEER_ID_INVALID`](/reference/telegram/errors/peer-id-invalid/) |
-| `stories.getBoostsStatus` (not in selected Layer 228 schema) | 400 | [`PEER_ID_INVALID`](/reference/telegram/errors/peer-id-invalid/) |
+| `stories.getBoostersList` (not in selected Layer 229 schema) | 400 | [`CHANNEL_INVALID`](/reference/telegram/errors/channel-invalid/) |
+| `stories.getBoostersList` (not in selected Layer 229 schema) | 400 | [`CHAT_ADMIN_REQUIRED`](/reference/telegram/errors/chat-admin-required/) |
+| `stories.getBoostersList` (not in selected Layer 229 schema) | 400 | [`PEER_ID_INVALID`](/reference/telegram/errors/peer-id-invalid/) |
+| `stories.getBoostsStatus` (not in selected Layer 229 schema) | 400 | [`PEER_ID_INVALID`](/reference/telegram/errors/peer-id-invalid/) |
 | [`stories.getChatsToSend`](/reference/telegram/functions/stories/get-chats-to-send/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`stories.getChatsToSend`](/reference/telegram/functions/stories/get-chats-to-send/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
 | [`stories.getPeerMaxIDs`](/reference/telegram/functions/stories/get-peer-max-ids/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
@@ -4032,7 +4031,7 @@ https://core.telegram.org/api/errors
 | [`stories.getStoryViewsList`](/reference/telegram/functions/stories/get-story-views-list/) | 400 | [`PEER_ID_INVALID`](/reference/telegram/errors/peer-id-invalid/) |
 | [`stories.getStoryViewsList`](/reference/telegram/functions/stories/get-story-views-list/) | 400 | [`STORY_ID_INVALID`](/reference/telegram/errors/story-id-invalid/) |
 | [`stories.getStoryViewsList`](/reference/telegram/functions/stories/get-story-views-list/) | 401 | [`AUTH_KEY_UNREGISTERED`](/reference/telegram/errors/auth-key-unregistered/) |
-| `stories.getUserStories` (not in selected Layer 228 schema) | 400 | [`USER_ID_INVALID`](/reference/telegram/errors/user-id-invalid/) |
+| `stories.getUserStories` (not in selected Layer 229 schema) | 400 | [`USER_ID_INVALID`](/reference/telegram/errors/user-id-invalid/) |
 | [`stories.incrementStoryViews`](/reference/telegram/functions/stories/increment-story-views/) | 400 | [`BUSINESS_CONNECTION_NOT_ALLOWED`](/reference/telegram/errors/business-connection-not-allowed/) |
 | [`stories.incrementStoryViews`](/reference/telegram/functions/stories/increment-story-views/) | 400 | [`PEER_ID_INVALID`](/reference/telegram/errors/peer-id-invalid/) |
 | [`stories.incrementStoryViews`](/reference/telegram/functions/stories/increment-story-views/) | 400 | [`STORY_ID_EMPTY`](/reference/telegram/errors/story-id-empty/) |

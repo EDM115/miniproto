@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: MessageAction"
-description: "Layer 228 result-family index for 68 canonical constructors returning MessageAction from tdlib."
+description: "Layer 229 result-family index for 69 canonical constructors returning MessageAction from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -9,13 +9,12 @@ qualified_name: "telegram.types.result.MessageAction"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "results"
-layer: 228
 schema_source: "tdlib"
 ---
 
-## Layer 228 result family `MessageAction`
+## Layer 229 result family `MessageAction`
 
-Selected canonical constructors in this family: 68.
+Selected canonical constructors in this family: 69.
 
 ## Constructors
 
@@ -33,6 +32,7 @@ Selected canonical constructors in this family: 68.
 - [`messageActionChatEditTitle`](/reference/telegram/types/base/message-action-chat-edit-title/): `MessageAction`
 - [`messageActionChatJoinedByLink`](/reference/telegram/types/base/message-action-chat-joined-by-link/): `MessageAction`
 - [`messageActionChatJoinedByRequest`](/reference/telegram/types/base/message-action-chat-joined-by-request/): `MessageAction`
+- [`messageActionChatJoinedViaCommunity`](/reference/telegram/types/base/message-action-chat-joined-via-community/): `MessageAction`
 - [`messageActionChatMigrateTo`](/reference/telegram/types/base/message-action-chat-migrate-to/): `MessageAction`
 - [`messageActionConferenceCall`](/reference/telegram/types/base/message-action-conference-call/): `MessageAction`
 - [`messageActionContactSignUp`](/reference/telegram/types/base/message-action-contact-sign-up/): `MessageAction`

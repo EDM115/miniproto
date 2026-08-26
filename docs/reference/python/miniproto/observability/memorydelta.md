@@ -1,6 +1,6 @@
 ---
 title: "miniproto.observability.MemoryDelta"
-description: "Start, end, and peak resource snapshots for one monitored interval."
+description: "Start, end and peak resource snapshots for one monitored interval."
 generated: true
 editUrl: false
 language: "python"
@@ -18,7 +18,7 @@ module: "miniproto.observability"
 MemoryDelta(start: ResourceSnapshot, end: ResourceSnapshot, peak: ResourceSnapshot) -> None
 ```
 
-Start, end, and peak resource snapshots for one monitored interval.
+Start, end and peak resource snapshots for one monitored interval.
 
 **Attributes:**
 

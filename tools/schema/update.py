@@ -1,4 +1,4 @@
-"""Fetch, validate, normalize, compare, and pin upstream Telegram schema sources."""
+"""Fetch, validate, normalize, compare and pin upstream Telegram schema sources."""
 
 from __future__ import annotations
 
@@ -47,7 +47,7 @@ _ALLOWED_FETCH_URLS = frozenset(
 
 @dataclass(frozen=True, slots=True)
 class UpstreamSchemaSnapshot:
-    """Validated upstream schema sources, normalized artifacts, and provenance for one update.
+    """Validated upstream schema sources, normalized artifacts and provenance for one update.
 
     Attributes:
         schema_json: Normalized schema mapping structurally derived from the canonical TDLib declarations with merged documentation.
@@ -61,10 +61,10 @@ class UpstreamSchemaSnapshot:
         rpc_errors: Decoded core.telegram.org RPC-error database mapping.
         rpc_errors_text: Original UTF-8 RPC-error JSON text retained for deterministic pinning.
         schema_layer: Telegram layer number extracted from Telegram Desktop's strict end-of-file layer marker.
-        changelog_latest_layer: Highest Telegram layer number found in the changelog HTML, or ``None`` when no marker is found.
+        changelog_latest_layer: Highest Telegram layer number found in the changelog HTML or ``None`` when no marker is found.
         fetch_date: ISO 8601 calendar-date string recorded as snapshot provenance.
         source_diff: Structural comparison mapping between canonical TDLib declarations and Telegram Desktop/core supporting schemas.
-        source_metadata: Reproducible per-source URL, role, normalization, size, digest, and declaration-count metadata.
+        source_metadata: Reproducible per-source URL, role, normalization, size, digest and declaration-count metadata.
     """
 
     schema_json: Mapping[str, Any]
@@ -91,7 +91,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         argv: Optional CLI arguments; defaults to process arguments.
 
     Returns:
-        ``0`` when update/check succeeds, or ``1`` when ``--check-upstream`` finds stale files.
+        ``0`` when update/check succeeds or ``1`` when ``--check-upstream`` finds stale files.
     """
     parser = argparse.ArgumentParser(description="Update pinned Telegram schema inputs.")
     parser.add_argument(
@@ -137,7 +137,7 @@ def build_upstream_snapshot(
         fetch_date: Optional ISO date recorded in provenance; defaults to today.
 
     Returns:
-        Normalized schema, error, layer, source-diff, and provenance payloads.
+        Normalized schema, error, layer, source-diff and provenance payloads.
 
     Raises:
         ValueError: An upstream payload lacks required schema or layer semantics.
@@ -197,7 +197,7 @@ def build_upstream_snapshot(
 
 
 def render_pinned_files(snapshot: UpstreamSchemaSnapshot, *, root: Path) -> dict[Path, str]:
-    """Render deterministic pinned schema, metadata, error, and provenance files.
+    """Render deterministic pinned schema, metadata, error and provenance files.
 
     Args:
         snapshot: Validated upstream snapshot to pin.
@@ -312,7 +312,7 @@ def write_pinned_files(files: Mapping[Path, str]) -> None:
     Raises:
         ValueError: The requested outputs do not share one destination directory.
         RuntimeError: A staged UTF-8 file does not round-trip to the expected bytes before replacement.
-        OSError: Directory creation, staging, or atomic replacement fails.
+        OSError: Directory creation, staging or atomic replacement fails.
     """
     if not files:
         return
@@ -780,7 +780,7 @@ def _source_metadata(
     core_schema_tl_text: str,
     core_schema_tl_source_kind: str,
 ) -> Mapping[str, Any]:
-    """Build reproducible per-source provenance, normalization, and declaration counts.
+    """Build reproducible per-source provenance, normalization and declaration counts.
 
     Args:
         payloads: Raw bytes keyed by fixed upstream URL.

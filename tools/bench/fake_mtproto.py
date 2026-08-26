@@ -3,7 +3,7 @@
 These servers exercise production client transport framing, encrypted envelopes,
 and (for :class:`FakeAuthMTProtoServer`) the auth-key exchange. They deliberately
 do not model Telegram routing, authorization policy, server timing, load,
-datacenter behavior, or live credentials, so their results prove deterministic
+datacenter behavior or live credentials, so their results prove deterministic
 invariants only and are not live-service acceptance evidence.
 """
 
@@ -58,7 +58,7 @@ class FakeMTProtoServer:
         auth_key: Pre-shared 256-byte test key used for every encrypted envelope.
         config: Transport framing mode and bounds to mirror in the fake.
         handler: Synchronous or asynchronous function receiving each non-ACK
-            decoded request leaf and returning a response body, or ``None``.
+            decoded request leaf and returning a response body or ``None``.
         server_salt: Fixed salt advertised in encrypted responses.
         session_id: Fixed session identifier expected by benchmark clients.
         host: Loopback bind host; defaults to ``127.0.0.1``.
@@ -257,7 +257,7 @@ class FakeAuthMTProtoServer:
 
     The fixture advertises an exponent-one RSA key so tests can reverse Telegram's
     RSA_PAD envelope without embedding a private production/test key. All DH,
-    temporary-AES, nonce-hash, transport, and encrypted-envelope work on the
+    temporary-AES, nonce-hash, transport and encrypted-envelope work on the
     client side still runs through production code.
 
     Args:
@@ -287,7 +287,7 @@ class FakeAuthMTProtoServer:
     Notes:
         The fake validates selected handshake structure and performs real client
         crypto paths, but it does not establish a real Telegram identity,
-        datacenter session, network condition, or live acceptance result.
+        datacenter session, network condition or live acceptance result.
     """
 
     config: TransportConfig

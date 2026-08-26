@@ -34,4 +34,4 @@ One validated Telegram data-centre endpoint and optional transport secret.
 
 **Raises:**
 
-- <code>[ValueError](#ValueError)</code> – If the ID, address, or port is invalid.
+- <code>[ValueError](#ValueError)</code> – If the ID, address or port is invalid.

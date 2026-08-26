@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: InlineQueryPeerType"
-description: "Layer 228 result-family index for 6 canonical constructors returning InlineQueryPeerType from tdlib."
+description: "Layer 229 result-family index for 6 canonical constructors returning InlineQueryPeerType from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -9,11 +9,10 @@ qualified_name: "telegram.types.result.InlineQueryPeerType"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "results"
-layer: 228
 schema_source: "tdlib"
 ---
 
-## Layer 228 result family `InlineQueryPeerType`
+## Layer 229 result family `InlineQueryPeerType`
 
 Selected canonical constructors in this family: 6.
 

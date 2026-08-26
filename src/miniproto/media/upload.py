@@ -49,7 +49,7 @@ type FileSource = (
 class MediaUploadError(RuntimeError):
     """Raised only for unsatisfiable part-count configuration or ``BoolFalse`` replies.
 
-    Transport, RPC, cancellation, source, and other invocation failures propagate
+    Transport, RPC, cancellation, source and other invocation failures propagate
     their original exceptions; this error marks a maximum-part-size constraint or
     Telegram returning false after the configured false-result retry budget.
     """
@@ -121,7 +121,7 @@ async def upload_file(
 
     Args:
         invoke: Raw request callable used to save each part.
-        source: Path, bytes, readable stream, or synchronous/asynchronous byte iterable. Paths are opened by this function; caller-owned readers are not closed.
+        source: Path, bytes, readable stream or synchronous/asynchronous byte iterable. Paths are opened by this function; caller-owned readers are not closed.
         file_name: Optional override for the Telegram file name.
         part_size: KiB-aligned part size in bytes, at most 512 KiB.
         concurrency: Maximum in-flight save requests and bounded read-ahead queue slots.
@@ -145,7 +145,7 @@ async def upload_file(
     The checksum covers exactly the bytes read for small files. Seekable callers
     are rewound to their initial offset before uploading and left at their final
     read position; one-shot streams and iterables are consumed into an owned
-    temporary spool that is closed on success, failure, or cancellation.
+    temporary spool that is closed on success, failure or cancellation.
     """
     _validate_upload_options(
         part_size, concurrency, max_retries, max_buffer_size, flood_sleep_threshold, max_file_parts
@@ -331,7 +331,7 @@ def _validate_upload_options(
     flood_sleep_threshold: int | None = None,
     max_file_parts: int | None = None,
 ) -> None:
-    """Validate upload window, retry, flood-pacing, and part-count options.
+    """Validate upload window, retry, flood-pacing and part-count options.
 
     Args:
         part_size: Requested KiB-aligned part size in bytes.
@@ -393,7 +393,7 @@ async def _prepare_upload_source(source: FileSource, *, file_name: str | None, c
     """Normalize replayable sources directly and materialize one-shot sources.
 
     Args:
-        source: Input path, bytes, stream, or iterable.
+        source: Input path, bytes, stream or iterable.
         file_name: Optional file-name override.
         chunk_size: Spool/read chunk size in bytes.
     """
@@ -597,7 +597,7 @@ async def _sleep_before_retry(exc: Exception | None, attempt: int, *, big: bool)
     """Apply server flood pacing or exponential transient-error backoff.
 
     Args:
-        exc: Flood error carrying server pacing, or another/absent retry cause.
+        exc: Flood error carrying server pacing or another/absent retry cause.
         attempt: One-based transient attempt used for exponential backoff.
         big: Whether retry telemetry is for a big-file upload.
     """
@@ -654,7 +654,7 @@ async def _call_progress(progress: ProgressCallback | None, current: int, total:
     Args:
         progress: Callback receiving completed and total byte counts, if any.
         current: Cumulative successfully uploaded bytes.
-        total: Exact total source bytes, or ``None`` when unavailable.
+        total: Exact total source bytes or ``None`` when unavailable.
     """
     if progress is None:
         return

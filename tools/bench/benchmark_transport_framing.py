@@ -5,8 +5,8 @@ wall-clock milliseconds after three warmup batches. Native and legacy timing
 orders alternate each round, while payload equality and end-of-stream checks
 protect comparison validity. Results are not socket, network, latency, or
 cross-platform benchmarks: event-loop implementation, extension build, CPU
-state, and adapter choice (especially ``--raw-native``) can change them.
-``--check`` is a local Wave 3 acceptance threshold of 2x for every measured
+state and adapter choice (especially ``--raw-native``) can change them.
+``--check`` is a local acceptance threshold of 2x for every measured
 mode, not a universal performance guarantee.
 """
 
@@ -91,9 +91,9 @@ def main() -> int:
     """Run validated frame-pump comparisons and emit their JSON report.
 
     ``--frames`` counts complete payloads per timed batch, ``--rounds`` supplies
-    one sample per side per mode, and durations are milliseconds per batch.
+    one sample per side per mode and durations are milliseconds per batch.
     ``--check`` fails below the project-local 2x target; invalid input, missing
-    native transport support, or decoding mismatch also fails rather than
+    native transport support or decoding mismatch also fails rather than
     reporting an incomparable result.
     """
     parser = argparse.ArgumentParser(
@@ -121,7 +121,7 @@ def main() -> int:
         "--raw-native", action="store_true", help="diagnose the Rust/PyO3 boundary without adapter objects"
     )
     parser.add_argument("--json", type=Path, help="write the normalized report to this path")
-    parser.add_argument("--check", action="store_true", help="fail unless every mode reaches the 2x Wave 3 target")
+    parser.add_argument("--check", action="store_true", help="fail unless every mode reaches the 2x target")
     args = parser.parse_args()
     if not native_transport_available():
         raise RuntimeError("native transport frame codec is unavailable")
@@ -239,7 +239,7 @@ async def _benchmark_mode(mode: str, payload: bytes, *, frames: int, rounds: int
 
 
 async def _decode_native(codec: FramePump, reader: asyncio.StreamReader, frames: int, payload: bytes) -> None:
-    """Decode every native event and reject mismatch, EOF, or leftovers.
+    """Decode every native event and reject mismatch, EOF or leftovers.
 
     Args:
         codec: Native codec or adapter that accepts transport data chunks.

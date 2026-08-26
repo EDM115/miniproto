@@ -8,13 +8,11 @@ kind: "module"
 qualified_name: "miniproto_native::transport"
 source_path: "rust/miniproto/src/transport.rs"
 source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L1"
-crate: "miniproto_native"
 python_visible: false
 ---
 
 ## Provenance
 
-- Crate: `miniproto_native`
 - Rust visibility: `crate`
 - Source: [`rust/miniproto/src/transport.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L1)
 - Python exposure: Not evidenced by static PyO3 attributes.
@@ -34,15 +32,15 @@ python_visible: false
 # Module `transport`
 
 Registers TCP transport framing callables and the stateful codec class.
-Stateful native codecs for Telegram TCP abridged, intermediate, and padded-intermediate frames.
+Stateful native codecs for Telegram TCP abridged, intermediate and padded-intermediate frames.
 
 `TransportCodec` is exported to Python as `miniproto._native.TransportCodec` and mirrors the
 Python fallback's framing contract.  It accepts arbitrary receive fragmentation, emits payload,
-quick-ACK, and transport-error events, and returns Python exceptions for malformed or oversized
+quick-ACK and transport-error events and returns Python exceptions for malformed or oversized
 data rather than panicking. `FramePump` itself is Python-independent, but the PyO3 methods in
 this module currently do not detach regular parsing or encoding work from the GIL; the GIL is
 also required while their results are converted to Python objects.
-Incompatible Python inputs retain PyO3's `TypeError`, `OverflowError`, or source conversion
+Incompatible Python inputs retain PyO3's `TypeError`, `OverflowError` or source conversion
 exception; framing validation that runs after conversion intentionally returns `ValueError`.
 
 ## Contents
@@ -164,7 +162,7 @@ Python-visible incremental TCP framing codec, exported as `miniproto._native.Tra
 
   
 
-  Tuple kinds are `0` payload, `1` quick ACK, and `2` negative transport error. It preserves
+  Tuple kinds are `0` payload, `1` quick ACK and `2` negative transport error. It preserves
 
   incomplete trailing bytes for the next call and raises Python errors for invalid framing.
 
@@ -408,7 +406,7 @@ GIL-free incremental parser/encoder retaining incomplete receive data between ca
 
   
 
-  Returns `ValueError` for arithmetic, size, or operating-system randomness failures.
+  Returns `ValueError` for arithmetic, size or operating-system randomness failures.
 
   
 
@@ -422,11 +420,11 @@ GIL-free incremental parser/encoder retaining incomplete receive data between ca
 
 - <span id="framepump-feed-data"></span>`fn feed_data(&mut self, data: &[u8]) -> PyResult<Vec<FrameEvent>>` — [`FrameEvent`](#frameevent)
 
-  Buffers `data`, parses every complete frame, and retains a partial suffix for later input.
+  Buffers `data`, parses every complete frame and retains a partial suffix for later input.
 
   
 
-  Returns parsed events or a Python exception for allocation, overflow, or invalid framing.
+  Returns parsed events or a Python exception for allocation, overflow or invalid framing.
 
   
 
@@ -472,7 +470,7 @@ GIL-free incremental parser/encoder retaining incomplete receive data between ca
 
 - <span id="framepump-payload-event"></span>`fn payload_event(&self, payload: Vec<u8>, padded: bool, quick_ack_requested: bool) -> PyResult<FrameEvent>` — [`FrameEvent`](#frameevent)
 
-  Converts a complete raw transport payload to an application, ACK, or error event.
+  Converts a complete raw transport payload to an application, ACK or error event.
 
   
 

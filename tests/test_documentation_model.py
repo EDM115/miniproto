@@ -59,25 +59,17 @@ def test_reference_manifest_tracks_machine_readable_relationship_artifacts(tmp_p
         source_url="https://example.invalid/schema.json",
         body="Generated body.",
         namespace="global",
-        layer=228,
         schema_source="tdlib",
     )
     relationships = '{"schema_version":1}\n'
 
     manifest = json.loads(
         build_reference_manifest(
-            (page,),
-            tool_versions={"generator": "1"},
-            source_hashes={"schema": "abc"},
-            artifacts={"telegram/relationships.json": relationships},
+            (page,), source_hashes={"schema": "abc"}, artifacts={"telegram/relationships.json": relationships}
         )
     )
     write_reference_tree(
-        tmp_path,
-        (page,),
-        tool_versions={"generator": "1"},
-        source_hashes={"schema": "abc"},
-        artifacts={"telegram/relationships.json": relationships},
+        tmp_path, (page,), source_hashes={"schema": "abc"}, artifacts={"telegram/relationships.json": relationships}
     )
 
     assert manifest["artifacts"] == [

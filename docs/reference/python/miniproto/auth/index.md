@@ -1,6 +1,6 @@
 ---
 title: "miniproto.auth"
-description: "Telegram authorization, data-center selection, key exchange, and SRP helpers."
+description: "Telegram authorization, data-center selection, key exchange and SRP helpers."
 generated: true
 editUrl: false
 language: "python"
@@ -13,7 +13,7 @@ module: "miniproto.auth"
 
 ## `miniproto.auth`
 
-Telegram authorization, data-center selection, key exchange, and SRP helpers.
+Telegram authorization, data-center selection, key exchange and SRP helpers.
 
 ## Public objects
 
@@ -38,8 +38,8 @@ Telegram authorization, data-center selection, key exchange, and SRP helpers.
 - [`ServerDHParamsOk`](./key_exchange/serverdhparamsok/) — Successful ``server_DH_params_ok`` wrapper for encrypted DH parameters.
 - [`SetClientDHParams`](./key_exchange/setclientdhparams/) — Serialized ``set_client_DH_params`` request carrying AES-IGE ciphertext.
 - [`compute_auth_key`](./key_exchange/compute-auth-key/) — Compute the 256-byte MTProto key from validated DH peer and private values.
-- [`compute_new_nonce_hash`](./key_exchange/compute-new-nonce-hash/) — Compute Telegram's keyed new-nonce confirmation hash number 1, 2, or 3.
-- [`decrypt_server_dh_answer`](./key_exchange/decrypt-server-dh-answer/) — Decrypt, integrity-check, and decode Telegram's encrypted DH inner payload.
+- [`compute_new_nonce_hash`](./key_exchange/compute-new-nonce-hash/) — Compute Telegram's keyed new-nonce confirmation hash number 1, 2 or 3.
+- [`decrypt_server_dh_answer`](./key_exchange/decrypt-server-dh-answer/) — Decrypt, integrity-check and decode Telegram's encrypted DH inner payload.
 - [`derive_tmp_aes_key_iv`](./key_exchange/derive-tmp-aes-key-iv/) — Derive the temporary AES-256-IGE key and IV defined by MTProto key exchange.
 - [`encode_client_dh_inner_data`](./key_exchange/encode-client-dh-inner-data/) — Serialize ``client_DH_inner_data`` before temporary AES-IGE encryption.
 - [`encode_pq_inner_data_dc`](./key_exchange/encode-pq-inner-data-dc/) — Serialize ``p_q_inner_data_dc`` before applying Telegram RSA padding.

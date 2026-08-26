@@ -162,14 +162,14 @@ class _MediaScheduler:
         large_limit: int | None,
         on_idle: Callable[[_MediaScheduler], None],
     ) -> None:
-        """Initialise private queues, capacity limits, metrics, and idle cleanup.
+        """Initialise private queues, capacity limits, metrics and idle cleanup.
 
         Args:
             dc_id: Data-centre key shared only by this scheduler instance.
             direction: Upload or download key paired with ``dc_id``.
             max_bytes: Per-key charged-byte ceiling in bytes.
-            small_limit: Maximum active small download transfers, or no cap.
-            large_limit: Maximum active large download transfers, or no cap.
+            small_limit: Maximum active small download transfers or no cap.
+            large_limit: Maximum active large download transfers or no cap.
             on_idle: Callback used to evict this scheduler after complete drain.
         """
         self.dc_id = dc_id
@@ -189,7 +189,7 @@ class _MediaScheduler:
 
     @property
     def idle(self) -> bool:
-        """Return whether no registered, active, or queued transfer remains."""
+        """Return whether no registered, active or queued transfer remains."""
         return not self._states and self._active_bytes == 0 and self._queued_bytes == 0
 
     def register(self, *, transfer_id: str, size_class: MediaSizeClass, priority: MediaPriority) -> _TransferState:
@@ -296,7 +296,7 @@ class _MediaScheduler:
         target._dispatch()
 
     def unregister(self, state: _TransferState) -> None:
-        """Close a transfer, cancel pending waiters, and retain live permits.
+        """Close a transfer, cancel pending waiters and retain live permits.
 
         Args:
             state: Transfer state to close. Its live permits remain charged until
@@ -320,8 +320,8 @@ class _MediaScheduler:
         """Replace operation limits and promptly dispatch newly unblocked work.
 
         Args:
-            small_limit: Active small-transfer cap, or ``None`` for no cap.
-            large_limit: Active large-transfer cap, or ``None`` for no cap.
+            small_limit: Active small-transfer cap or ``None`` for no cap.
+            large_limit: Active large-transfer cap or ``None`` for no cap.
         """
         self.small_limit = small_limit
         self.large_limit = large_limit
@@ -338,7 +338,7 @@ class _MediaScheduler:
         self._dispatch()
 
     def snapshot(self) -> MediaSchedulerSnapshot:
-        """Return a copy-safe snapshot of capacity, queues, and grant counts."""
+        """Return a copy-safe snapshot of capacity, queues and grant counts."""
         queued_transfers = sum(bool(state.pending) for state in self._states)
         active_transfers = sum(state.active_permits > 0 for state in self._states)
         return MediaSchedulerSnapshot(
@@ -573,14 +573,14 @@ class MediaTransfer:
         total_size: int | None,
         priority: MediaPriority,
     ) -> None:
-        """Register this transfer using its direction, priority, and size class.
+        """Register this transfer using its direction, priority and size class.
 
         Args:
             registry: Registry that owns the selected scheduler.
             transfer_id: Unique registry-generated transfer name.
             dc_id: Initial data-centre binding.
             direction: Upload or download scheduler direction.
-            total_size: Known total bytes, or ``None`` to classify as large.
+            total_size: Known total bytes or ``None`` to classify as large.
             priority: Default foreground or background request priority.
         """
         self._registry = registry
@@ -705,11 +705,11 @@ class MediaSchedulerRegistry:
         Args:
             dc_id: Positive Telegram data-centre identifier.
             direction: Whether requests upload or download.
-            total_size: Known size, or ``None`` to conservatively classify it as large.
+            total_size: Known size or ``None`` to conservatively classify it as large.
             priority: ``foreground`` by default; background still receives periodic grants.
 
         Raises:
-            ValueError: If the DC, direction, size, or priority is invalid.
+            ValueError: If the DC, direction, size or priority is invalid.
         """
         if dc_id <= 0:
             raise ValueError("media transfer dc_id must be positive")
@@ -743,7 +743,7 @@ class MediaSchedulerRegistry:
                 scheduler.configure_limits(small_limit=small_limit, large_limit=large_limit)
 
     async def close(self) -> None:
-        """Close all schedulers, cancel their queues, and discard the registry map."""
+        """Close all schedulers, cancel their queues and discard the registry map."""
         schedulers = tuple(self._schedulers.values())
         for scheduler in schedulers:
             scheduler.close()

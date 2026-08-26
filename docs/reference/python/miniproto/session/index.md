@@ -1,6 +1,6 @@
 ---
 title: "miniproto.session"
-description: "Public session models, storage backends, and portable string codecs."
+description: "Public session models, storage backends and portable string codecs."
 generated: true
 editUrl: false
 language: "python"
@@ -13,7 +13,7 @@ module: "miniproto.session"
 
 ## `miniproto.session`
 
-Public session models, storage backends, and portable string codecs.
+Public session models, storage backends and portable string codecs.
 
 ## Public objects
 
@@ -31,4 +31,4 @@ Public session models, storage backends, and portable string codecs.
 - [`SessionString`](./strings/sessionstring/) — A bearer-secret string whose representation is always redacted.
 - [`SessionStringFormat`](./strings/sessionstringformat/) — Public attribute `miniproto.session.strings.SessionStringFormat`.
 - [`export_session_string`](./strings/export-session-string/) — Export a typed or decoded session record in a portable bearer format.
-- [`import_session_string`](./strings/import-session-string/) — Import a native, Telethon v1, or Pyrogram string into a validated record.
+- [`import_session_string`](./strings/import-session-string/) — Import a native, Telethon v1 or Pyrogram string into a validated record.

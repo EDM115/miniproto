@@ -9,13 +9,11 @@ qualified_name: "miniproto_native::tl::tl_encode_double"
 source_path: "rust/miniproto/src/tl.rs"
 source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L624"
 aliases: ["miniproto._native.tl_encode_double"]
-crate: "miniproto_native"
 python_visible: true
 ---
 
 ## Provenance
 
-- Crate: `miniproto_native`
 - Rust visibility: `restricted`
 - Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L624)
 - Python exposure: `miniproto._native.tl_encode_double` (confirmed from adjacent PyO3 attributes)

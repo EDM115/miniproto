@@ -22,4 +22,4 @@ Capture the final snapshot and summarize the monitored interval.
 
 **Returns:**
 
-- <code>[MemoryDelta](#miniproto.observability.MemoryDelta)</code> – Start, end, and highest-observed snapshot data.
+- <code>[MemoryDelta](#miniproto.observability.MemoryDelta)</code> – Start, end and highest-observed snapshot data.

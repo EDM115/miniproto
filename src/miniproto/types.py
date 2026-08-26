@@ -20,7 +20,7 @@ class Peer:
 
     Attributes:
         id: Telegram peer identifier.
-        kind: Peer category: user, chat, channel, or the current account.
+        kind: Peer category: user, chat, channel or the current account.
         access_hash: Optional Telegram access hash required for some peers.
     """
 
@@ -92,7 +92,7 @@ class Media:
         """Encode this media as a portable file ID when its fields support that format.
 
         Returns:
-            The encoded ID, or ``None`` when the media lacks the information needed for encoding.
+            The encoded ID or ``None`` when the media lacks the information needed for encoding.
         """
         from miniproto.file_id import try_encode_file_id
 

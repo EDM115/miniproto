@@ -22,9 +22,9 @@ Build a cursor from persisted session state and bounded update metadata.
 
 **Parameters:**
 
-- **record** (<code>[SessionRecord](#miniproto.session.models.SessionRecord)</code>) – Session record containing update state, peer cache, and metadata.
+- **record** (<code>[SessionRecord](#miniproto.session.models.SessionRecord)</code>) – Session record containing update state, peer cache and metadata.
 - **duplicate_window** (<code>[int](#int)</code>) – Maximum recent duplicate keys to restore.
 
 **Returns:**
 
-- <code>[UpdateCursor](#miniproto.updates.state.UpdateCursor)</code> – A cursor containing global state, channel cursors, cached entities, and the newest retained keys.
+- <code>[UpdateCursor](#miniproto.updates.state.UpdateCursor)</code> – A cursor containing global state, channel cursors, cached entities and the newest retained keys.

@@ -22,7 +22,7 @@ Stream ordered media bytes without materializing the complete download.
 
 **Parameters:**
 
-- **media** (<code>[object](#object)</code>) – Normalized media, raw media, or compatible miniproto file ID to stream.
+- **media** (<code>[object](#object)</code>) – Normalized media, raw media or compatible miniproto file ID to stream.
 - ****kwargs** (<code>[Any](#typing.Any)</code>) – Download options accepted by ``_download_media_options`` except ``multi_session`` and ``resume``, which this streaming API rejects.
 
 **Yields:**

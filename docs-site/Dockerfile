@@ -1,12 +1,10 @@
-# syntax=docker/dockerfile:1.7
-
-FROM node:26.7.0-alpine3.24 AS dependencies
+FROM node:26-alpine AS dependencies
 
 ENV PNPM_HOME=/pnpm
-ENV PATH=${PNPM_HOME}:${PATH}
+ENV PATH="${PNPM_HOME}:${PNPM_HOME}/bin:/workspace/docs-site/node_modules/.bin:${PATH}"
 WORKDIR /workspace
 
-RUN npm install --global pnpm@11.22.0
+RUN wget -qO- https://get.pnpm.io/install.sh | ENV="$HOME/.shrc" SHELL="$(which sh)" sh -
 
 COPY docs-site/package.json docs-site/pnpm-lock.yaml docs-site/pnpm-workspace.yaml ./docs-site/
 RUN --mount=type=cache,id=miniproto-docs-pnpm,target=/pnpm/store pnpm config set store-dir /pnpm/store && pnpm --dir docs-site install --frozen-lockfile
@@ -23,16 +21,20 @@ COPY docs/ ./docs/
 COPY docs-site/ ./docs-site/
 RUN pnpm --dir docs-site build
 
-FROM alpine:3.24 AS artifact
+FROM alpine:3 AS artifact
 
 WORKDIR /site
 COPY docs-site/dist/ ./
 RUN test -f index.html && test -f start/installation/index.html && test -f pagefind/pagefind.js && ! grep -q 'href="/miniproto/' index.html
 
-FROM nginxinc/nginx-unprivileged:1.31.3-alpine3.24 AS runtime-base
+FROM nginxinc/nginx-unprivileged:stable-alpine AS runtime-base
 
-LABEL org.opencontainers.image.source="https://github.com/EDM115/miniproto"
-LABEL org.opencontainers.image.description="Miniproto documentation"
+LABEL org.opencontainers.image.authors="EDM115 <docker@edm115.dev>"
+LABEL org.opencontainers.image.base.name="nginxinc/nginx-unprivileged:stable-alpine"
+LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.source="https://github.com/EDM115/miniproto.git"
+LABEL org.opencontainers.image.title="miniproto documentation"
+LABEL org.opencontainers.image.url="https://miniproto.edm115.dev"
 
 COPY docs-site/nginx.conf /etc/nginx/conf.d/default.conf
 

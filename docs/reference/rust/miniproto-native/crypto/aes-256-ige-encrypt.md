@@ -9,13 +9,11 @@ qualified_name: "miniproto_native::crypto::aes_256_ige_encrypt"
 source_path: "rust/miniproto/src/crypto.rs"
 source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L270"
 aliases: ["miniproto._native.aes_256_ige_encrypt"]
-crate: "miniproto_native"
 python_visible: true
 ---
 
 ## Provenance
 
-- Crate: `miniproto_native`
 - Rust visibility: `restricted`
 - Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L270)
 - Python exposure: `miniproto._native.aes_256_ige_encrypt` (confirmed from adjacent PyO3 attributes)

@@ -1,6 +1,6 @@
 ---
 title: "miniproto.tl.codec.TLCodecError"
-description: "Raised when TL wire data, types, or generated metadata cannot be encoded or decoded."
+description: "Raised when TL wire data, types or generated metadata cannot be encoded or decoded."
 generated: true
 editUrl: false
 language: "python"
@@ -16,4 +16,4 @@ module: "miniproto.tl.codec"
 
 Bases: <code>[ValueError](#ValueError)</code>
 
-Raised when TL wire data, types, or generated metadata cannot be encoded or decoded.
+Raised when TL wire data, types or generated metadata cannot be encoded or decoded.

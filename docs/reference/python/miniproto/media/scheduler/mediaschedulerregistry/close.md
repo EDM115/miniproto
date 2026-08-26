@@ -1,6 +1,6 @@
 ---
 title: "miniproto.media.scheduler.MediaSchedulerRegistry.close"
-description: "Close all schedulers, cancel their queues, and discard the registry map."
+description: "Close all schedulers, cancel their queues and discard the registry map."
 generated: true
 editUrl: false
 language: "python"
@@ -17,4 +17,4 @@ module: "miniproto.media.scheduler"
 close() -> None
 ```
 
-Close all schedulers, cancel their queues, and discard the registry map.
+Close all schedulers, cancel their queues and discard the registry map.

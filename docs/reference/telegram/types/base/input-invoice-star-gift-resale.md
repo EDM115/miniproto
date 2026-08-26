@@ -9,9 +9,8 @@ qualified_name: "inputInvoiceStarGiftResale"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "base"
-layer: 228
 schema_source: "tdlib"
-constructor_id: "0xc39f5324"
+constructor_id: "0xe9b0c658"
 ---
 
 # `inputInvoiceStarGiftResale`
@@ -21,7 +20,7 @@ No description provided by the pinned schema.
 ## Signature
 
 ```tl
-inputInvoiceStarGiftResale#c39f5324 flags:# ton:flags.0?true slug:string to_id:InputPeer = InputInvoice;
+inputInvoiceStarGiftResale#e9b0c658 flags:# ton:flags.0?true show_name:flags.2?true slug:string to_id:InputPeer message:flags.1?TextWithEntities = InputInvoice;
 ```
 
 ## Result type
@@ -34,14 +33,18 @@ inputInvoiceStarGiftResale#c39f5324 flags:# ton:flags.0?true slug:string to_id:I
 | --- | --- | --- | --- | --- |
 | flags | # | flag word | — | No description provided by the pinned schema. |
 | ton | flags.0?true | flags.0 | — | No description provided by the pinned schema. |
+| show_name | flags.2?true | flags.2 | — | No description provided by the pinned schema. |
 | slug | string | — | — | No description provided by the pinned schema. |
 | to_id | InputPeer | — | — | No description provided by the pinned schema. |
+| message | flags.1?TextWithEntities | flags.1 | — | No description provided by the pinned schema. |
 
 ## Flags
 
 | Parameter | Bit | Meaning |
 | --- | ---: | --- |
 | ton | 0 | Controlled by `flags`; present when this bit is set. |
+| show_name | 2 | Controlled by `flags`; present when this bit is set. |
+| message | 1 | Controlled by `flags`; present when this bit is set. |
 
 ## Python binding
 
@@ -72,13 +75,12 @@ constructor_type = InputInvoiceStarGiftResale
 
 ## Provenance
 
-- layer: 228
 - structural source: `tdlib`
 - canonical schema: https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/telegram_api.tl
 - prose merge precedence: TDLib → Telegram Desktop → Core JSON
-- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 228 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
+- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 229 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
 
 ## Source-diff notes
 
-- tdlib_vs_core: changed_count=68; core_only_count=1; overlap_count=2302; tdlib_only_count=158
-- tdlib_vs_tdesktop: changed_count=0; overlap_count=2448; tdesktop_only=null; tdlib_only=accessPointRule, ephemeral.editMessage, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret, updateEphemeralBotCallbackQuery
+- tdlib_vs_core: changed_count=78; core_only_count=18; overlap_count=2285; tdlib_only_count=195
+- tdlib_vs_tdesktop: changed_count=0; overlap_count=2470; tdesktop_only=null; tdlib_only=accessPointRule, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret

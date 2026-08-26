@@ -2,7 +2,7 @@
 
 Exports preserve behavior across the optional Rust extension and fallback
 implementations.  Individual wrappers document their backend dispatch,
-cryptographic input constraints, and validation behavior.
+cryptographic input constraints and validation behavior.
 """
 
 from miniproto.crypto.mtproto import (

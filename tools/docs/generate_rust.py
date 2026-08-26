@@ -1,6 +1,6 @@
-"""Normalize pinned rustdoc JSON and cargo-docs-md output into Rust reference pages.
+"""Normalize nightly rustdoc JSON and cargo-docs-md output into Rust reference pages.
 
-The module only reads JSON, rendered Markdown, and Rust source files.  It never imports
+The module only reads JSON, rendered Markdown and Rust source files.  It never imports
 ``miniproto`` or loads the native extension, so reference generation cannot run package code.
 """
 
@@ -10,9 +10,7 @@ import argparse
 import json
 import re
 import subprocess
-import tomllib
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -21,9 +19,6 @@ from tools.docs.model import ReferencePage, normalize_generated_markdown_paths
 
 DEFAULT_EXCLUDED_SOURCE_PATHS = ("rust/miniproto/src/generated_tl.rs",)
 """Generator-owned Rust files deliberately excluded from committed reference pages."""
-
-DEFAULT_TOOLCHAIN_FILE = Path(__file__).resolve().parents[2] / "rust/miniproto/rust-toolchain-docs.toml"
-"""Repository-local exact nightly and cargo-docs-md pin for Rust documentation only."""
 
 _DOCUMENTABLE_KINDS = frozenset({"struct", "enum", "trait", "function", "constant", "type_alias", "macro"})
 _PYFUNCTION_ATTRIBUTE = re.compile(r"#\[pyfunction(?:\((?P<options>.*?)\))?\]", re.DOTALL)
@@ -41,59 +36,13 @@ _ARGUMENT = re.compile(
 
 
 class RustDocumentationError(ValueError):
-    """Report an incomplete, incompatible, or non-deterministic Rust documentation input."""
+    """Report an incomplete, incompatible or non-deterministic Rust documentation input."""
 
 
-class RustDocumentationPending(RuntimeError):
-    """Report that an exact live Rust documentation prerequisite is not installed."""
-
-
-@dataclass(frozen=True, slots=True)
-class RustDocumentationToolchain:
-    """Describe the exact tool versions accepted for documentation generation.
-
-    Attributes:
-        nightly: Exact Rust nightly used to emit the rustdoc JSON artifact.
-        cargo_docs_md: Exact cargo-docs-md renderer version accepted by the normalizer.
-    """
-
-    nightly: str
-    cargo_docs_md: str
-
-
-def load_documentation_toolchain(path: Path = DEFAULT_TOOLCHAIN_FILE) -> RustDocumentationToolchain:
-    """Load and validate the repository's documentation-only Rust toolchain pin.
+def rustdoc_command(*, manifest_path: Path, target_dir: Path) -> tuple[str, ...]:
+    """Build the nightly command that emits private-item rustdoc JSON.
 
     Args:
-        path: TOML file that records the nightly date and cargo-docs-md version.
-
-    Returns:
-        Validated immutable exact-version toolchain description.
-
-    Raises:
-        RustDocumentationError: The pin is missing either required exact version or is malformed.
-    """
-    with path.open("rb") as stream:
-        payload = tomllib.load(stream)
-    documentation = payload.get("documentation")
-    if not isinstance(documentation, Mapping):
-        raise RustDocumentationError(f"Rust documentation toolchain lacks [documentation]: {path}")
-    nightly = str(documentation.get("nightly") or "")
-    cargo_docs_md = str(documentation.get("cargo-docs-md") or "")
-    if re.fullmatch(r"nightly-\d{4}-\d{2}-\d{2}", nightly) is None:
-        raise RustDocumentationError(f"Rust documentation nightly must be date-pinned: {nightly!r}")
-    if cargo_docs_md != "0.2.4":
-        raise RustDocumentationError(f"cargo-docs-md must be pinned to 0.2.4, not {cargo_docs_md!r}")
-    return RustDocumentationToolchain(nightly=nightly, cargo_docs_md=cargo_docs_md)
-
-
-def pinned_rustdoc_command(
-    *, toolchain: RustDocumentationToolchain, manifest_path: Path, target_dir: Path
-) -> tuple[str, ...]:
-    """Build the exact nightly command that emits private-item rustdoc JSON.
-
-    Args:
-        toolchain: Validated documentation-only nightly/version pin.
         manifest_path: Cargo manifest for the native miniproto crate.
         target_dir: Isolated artifact directory for transient rustdoc JSON output.
 
@@ -106,7 +55,7 @@ def pinned_rustdoc_command(
     """
     return (
         "cargo",
-        f"+{toolchain.nightly}",
+        "+nightly",
         "rustdoc",
         "--manifest-path",
         str(manifest_path),
@@ -122,23 +71,11 @@ def pinned_rustdoc_command(
     )
 
 
-def cargo_docs_md_install_command(toolchain: RustDocumentationToolchain) -> tuple[str, ...]:
-    """Build the non-executing installation command for the selected Markdown renderer.
-
-    Args:
-        toolchain: Validated documentation-only renderer-version pin.
-
-    Returns:
-        Cargo argv that installs exactly the declared cargo-docs-md version.
-    """
-    return ("cargo", "install", "--locked", "cargo-docs-md", "--version", toolchain.cargo_docs_md)
-
-
 def cargo_docs_md_command(*, json_directory: Path, output_directory: Path, crate: str) -> tuple[str, ...]:
     """Build the renderer command with full detail but no converter-owned site artifacts.
 
     Args:
-        json_directory: Directory containing JSON files emitted by the pinned rustdoc command.
+        json_directory: Directory containing JSON files emitted by the nightly rustdoc command.
         output_directory: Isolated staging tree for cargo-docs-md Markdown files.
         crate: Primary crate name used to resolve otherwise ambiguous links.
 
@@ -161,104 +98,53 @@ def cargo_docs_md_command(*, json_directory: Path, output_directory: Path, crate
     )
 
 
-def ensure_pinned_nightly_available(
-    toolchain: RustDocumentationToolchain, *, runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run
-) -> None:
-    """Require the exact nightly before any live rustdoc generation is attempted.
-
-    Args:
-        toolchain: Validated documentation-only nightly/version pin.
-        runner: Process runner injected by tests or callers that control subprocess execution.
-
-    Raises:
-        RustDocumentationPending: The exact dated nightly is absent from rustup.
-        RustDocumentationError: Rustup could not report the installed toolchains.
-    """
-    result = runner(("rustup", "toolchain", "list"), capture_output=True, check=False, text=True)
-    if result.returncode:
-        raise RustDocumentationError("could not enumerate installed Rust toolchains")
-    installed = {line.partition(" ")[0].strip() for line in result.stdout.splitlines() if line.strip()}
-    if not any(
-        candidate == toolchain.nightly or candidate.startswith(f"{toolchain.nightly}-") for candidate in installed
-    ):
-        raise RustDocumentationPending(
-            f"live Rust reference generation is pending: install exact {toolchain.nightly}; do not substitute stable Rust"
-        )
-
-
-def verify_cargo_docs_md_version(
-    toolchain: RustDocumentationToolchain, *, runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run
-) -> None:
-    """Require cargo-docs-md to report the exact renderer version before conversion.
-
-    Args:
-        toolchain: Validated documentation-only renderer-version pin.
-        runner: Process runner injected by tests or callers that control subprocess execution.
-
-    Raises:
-        RustDocumentationPending: The converter is missing or reports an unpinned version.
-    """
-    result = runner(("cargo", "docs-md", "--version"), capture_output=True, check=False, text=True)
-    version_output = f"{result.stdout}\n{result.stderr}"
-    if result.returncode or toolchain.cargo_docs_md not in version_output:
-        raise RustDocumentationPending(
-            f"live Rust reference generation is pending: install cargo-docs-md {toolchain.cargo_docs_md} exactly"
-        )
-
-
-def generate_pinned_rustdoc_json(
+def generate_rustdoc_json(
     *,
-    toolchain: RustDocumentationToolchain,
     manifest_path: Path,
     target_dir: Path,
     artifact_stem: str,
     runner: Callable[..., subprocess.CompletedProcess[Any]] = subprocess.run,
 ) -> Path:
-    """Emit one rustdoc JSON artifact with the exact nightly and private-item visibility.
+    """Emit one rustdoc JSON artifact with the nightly and private-item visibility.
 
     Args:
-        toolchain: Validated documentation-only nightly/version pin.
         manifest_path: Cargo manifest for the native miniproto crate.
         target_dir: Isolated Cargo target directory for transient documentation artifacts.
         artifact_stem: Rustdoc JSON file stem, normally the Rust crate name with underscores.
         runner: Process runner injected by tests or callers that control subprocess execution.
 
     Returns:
-        Existing path to the exact-nightly rustdoc JSON artifact.
+        Existing path to the nightly rustdoc JSON artifact.
 
     Raises:
-        RustDocumentationPending: The exact nightly is absent and stable substitution is forbidden.
         RustDocumentationError: Cargo fails or does not emit the expected JSON artifact.
     """
     manifest_path = manifest_path.resolve()
     target_dir = target_dir.resolve()
-    ensure_pinned_nightly_available(toolchain, runner=runner)
     result = runner(
-        pinned_rustdoc_command(toolchain=toolchain, manifest_path=manifest_path, target_dir=target_dir),
+        rustdoc_command(manifest_path=manifest_path, target_dir=target_dir),
         check=False,
         cwd=manifest_path.parent,
     )
     if result.returncode:
-        raise RustDocumentationError(f"pinned rustdoc JSON generation failed for {manifest_path}")
+        raise RustDocumentationError(f"nightly rustdoc JSON generation failed for {manifest_path}")
     artifact = target_dir / "doc" / f"{artifact_stem}.json"
     if not artifact.is_file():
-        raise RustDocumentationError(f"pinned rustdoc did not emit expected JSON artifact: {artifact}")
+        raise RustDocumentationError(f"nightly rustdoc did not emit expected JSON artifact: {artifact}")
     return artifact
 
 
 def render_rustdoc_with_cargo_docs_md(
     *,
-    toolchain: RustDocumentationToolchain,
     json_directory: Path,
     output_directory: Path,
     crate: str,
     runner: Callable[..., subprocess.CompletedProcess[Any]] = subprocess.run,
 ) -> Path:
-    """Render pinned rustdoc JSON through the exact converter without converter-owned site assets.
+    """Render nightly rustdoc JSON through cargo-docs-md without converter-owned site assets.
 
     Args:
-        toolchain: Validated documentation-only renderer-version pin.
-        json_directory: Directory containing the exact rustdoc JSON artifact.
+        json_directory: Directory containing the rustdoc JSON artifact.
         output_directory: Isolated cargo-docs-md staging tree for Markdown files.
         crate: Primary Rust crate used by the converter's cross-reference resolver.
         runner: Process runner injected by tests or callers that control subprocess execution.
@@ -267,10 +153,8 @@ def render_rustdoc_with_cargo_docs_md(
         The converter staging directory after successful full-method/source-location rendering.
 
     Raises:
-        RustDocumentationPending: The converter is absent or no longer exactly pinned.
         RustDocumentationError: cargo-docs-md fails to render the supplied JSON directory.
     """
-    verify_cargo_docs_md_version(toolchain, runner=runner)
     result = runner(
         cargo_docs_md_command(json_directory=json_directory, output_directory=output_directory, crate=crate),
         check=False,
@@ -286,7 +170,7 @@ def load_cargo_docs_md_fragments(*, rustdoc_json: Path, output_directory: Path, 
     """Index canonical item fragments from cargo-docs-md's per-module Markdown.
 
     Args:
-        rustdoc_json: Exact-nightly rustdoc JSON consumed by cargo-docs-md.
+        rustdoc_json: Nightly rustdoc JSON consumed by cargo-docs-md.
         output_directory: Converter staging root containing the crate/module indexes.
         crate: Rust crate directory name emitted by cargo-docs-md.
 
@@ -355,7 +239,7 @@ def _owning_module_id(
         parent_ids: Structural child-to-parent links, including inherent impl items.
 
     Returns:
-        Nearest containing module identifier, or ``None`` for detached items.
+        Nearest containing module identifier or ``None`` for detached items.
     """
     current: str | None = item_id
     visited: set[str] = set()
@@ -375,7 +259,7 @@ def _cargo_docs_md_item_fragment(markdown: str, *, name: str) -> str:
         name: Exact Rust declaration name used in the level-three heading.
 
     Returns:
-        Converter-owned section, or an empty string when it is absent.
+        Converter-owned section or an empty string when it is absent.
     """
     lines = markdown.splitlines()
     target = f"### `{name}`"
@@ -399,7 +283,7 @@ def _cargo_docs_md_method_fragment(markdown: str, *, parent_name: str, method_na
         method_name: Exact associated method name.
 
     Returns:
-        Converter-owned method entry, or an empty string when it is absent.
+        Converter-owned method entry or an empty string when it is absent.
     """
     lines = markdown.splitlines()
     anchor = f'<span id="{_slug(parent_name)}-{_slug(method_name)}"></span>'
@@ -425,14 +309,14 @@ def generate_rust_pages(
     reviewed_modules: Sequence[str],
     excluded_paths: Sequence[str] = DEFAULT_EXCLUDED_SOURCE_PATHS,
 ) -> tuple[ReferencePage, ...]:
-    """Generate deterministic crate, module, file, and selected-item Rust reference pages.
+    """Generate deterministic crate, module, file and selected-item Rust reference pages.
 
     Args:
-        rustdoc_json: Rustdoc JSON emitted by the exact nightly with private items included.
+        rustdoc_json: Rustdoc JSON emitted by the nightly with private items included.
         source_root: Repository root used only for source-location and PyO3-attribute inspection.
         rendered_markdown: Complete cargo-docs-md Markdown keyed by rustdoc item identifier.
         repository_url: Repository browser base URL for line-anchored source links.
-        crate: Cargo crate provenance recorded in generated frontmatter.
+        crate: Cargo crate provenance.
         reviewed_modules: Maintained module names whose public declarations are in scope.
         excluded_paths: Generator-owned source paths that must never become reference pages.
 
@@ -440,7 +324,7 @@ def generate_rust_pages(
         Deterministically path-sorted generated pages using the converter's Markdown unchanged.
 
     Raises:
-        RustDocumentationError: Selected data has missing docs, arguments, renderer bodies, or provenance.
+        RustDocumentationError: Selected data has missing docs, arguments, renderer bodies or provenance.
 
     Notes:
         This function statically reads Rust source to identify PyO3 attributes.  It does not import
@@ -501,7 +385,6 @@ def generate_rust_pages(
                 children=children.get(item_id, ()),
                 qualified_names=qualified_names,
                 rendered_markdown=rendered_markdown[item_id],
-                crate=crate,
                 source_path=source_path,
                 source_url=source_url,
             )
@@ -512,7 +395,6 @@ def generate_rust_pages(
                 item=item,
                 qualified_name=title,
                 rendered_markdown=rendered_markdown[item_id],
-                crate=crate,
                 source_path=source_path,
                 source_url=source_url,
                 line=line,
@@ -531,7 +413,6 @@ def generate_rust_pages(
                 source_path=source_path,
                 source_url=source_url,
                 body=body,
-                crate=crate,
                 python_visible=binding is not None,
                 aliases=(binding,) if binding is not None else (),
             )
@@ -549,26 +430,16 @@ def generate_rust_pages(
 
 
 def write_rust_reference_tree(
-    *,
-    output_root: Path,
-    pages: Sequence[ReferencePage],
-    toolchain: RustDocumentationToolchain,
-    source_hashes: Mapping[str, str],
+    *, output_root: Path, pages: Sequence[ReferencePage], source_hashes: Mapping[str, str]
 ) -> None:
     """Write validated normalized pages and a deterministic reference manifest.
 
     Args:
         output_root: Destination root containing only the generated Rust reference tree.
-        pages: Already normalized crate, module, file, and item pages.
-        toolchain: Exact nightly and cargo-docs-md provenance for the manifest.
+        pages: Already normalized crate, module, file and item pages.
         source_hashes: Deterministic source-file hashes collected by the outer documentation workflow.
     """
-    write_reference_tree(
-        output_root,
-        pages,
-        tool_versions={"cargo-docs-md": toolchain.cargo_docs_md, "rustdoc": toolchain.nightly},
-        source_hashes=source_hashes,
-    )
+    write_reference_tree(output_root, pages, source_hashes=source_hashes)
 
 
 def _index(payload: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
@@ -779,7 +650,7 @@ def _direct_python_binding(item: Mapping[str, Any], source_root: Path) -> str | 
         source_root: Repository root used to resolve a relative rustdoc source filename.
 
     Returns:
-        Python-qualified export name, or ``None`` when no direct PyO3 attribute is evidenced.
+        Python-qualified export name or ``None`` when no direct PyO3 attribute is evidenced.
     """
     source_path = _source_path(item)
     if not source_path:
@@ -965,7 +836,6 @@ def _module_body(
     children: Sequence[str],
     qualified_names: Mapping[str, str],
     rendered_markdown: str,
-    crate: str,
     source_path: str,
     source_url: str,
 ) -> str:
@@ -978,7 +848,6 @@ def _module_body(
         children: Selected direct child identifiers linked from this index.
         qualified_names: Stable Rust names for each selected child.
         rendered_markdown: Complete cargo-docs-md module body before unpublished-link filtering.
-        crate: Cargo crate provenance.
         source_path: Repository-relative module source path.
         source_url: Line-anchored module source browser URL.
 
@@ -994,9 +863,7 @@ def _module_body(
         item_links = "- No selected public or PyO3-visible items are defined directly in this module."
     return "\n\n".join(
         (
-            _provenance_body(
-                crate=crate, item=item, source_path=source_path, source_url=source_url, python_binding=None
-            ),
+            _provenance_body(item=item, source_path=source_path, source_url=source_url, python_binding=None),
             "## Documented items\n\n" + item_links,
             "## cargo-docs-md rendering\n\n" + filtered_markdown.strip(),
         )
@@ -1033,7 +900,6 @@ def _item_body(
     item: Mapping[str, Any],
     qualified_name: str,
     rendered_markdown: str,
-    crate: str,
     source_path: str,
     source_url: str,
     line: int,
@@ -1045,19 +911,16 @@ def _item_body(
         item: Rustdoc declaration record.
         qualified_name: Stable Rust declaration identity.
         rendered_markdown: Complete unchanged cargo-docs-md item body.
-        crate: Cargo crate provenance.
         source_path: Repository-relative declaration source path.
         source_url: Line-anchored declaration source browser URL.
         line: One-based declaration line from rustdoc source provenance.
         python_binding: Confirmed Python-visible PyO3 name, when static attributes evidence one.
 
     Returns:
-        Normalized item body with provenance, signature, arguments, and converter output.
+        Normalized item body with provenance, signature, arguments and converter output.
     """
     sections = [
-        _provenance_body(
-            crate=crate, item=item, source_path=source_path, source_url=source_url, python_binding=python_binding
-        )
+        _provenance_body(item=item, source_path=source_path, source_url=source_url, python_binding=python_binding)
     ]
     function = _function(item)
     if function is not None:
@@ -1071,17 +934,14 @@ def _item_body(
     return "\n\n".join(sections)
 
 
-def _provenance_body(
-    *, crate: str, item: Mapping[str, Any], source_path: str, source_url: str, python_binding: str | None
-) -> str:
-    """Render exact crate, source, visibility, and confirmed Python-exposure provenance.
+def _provenance_body(*, item: Mapping[str, Any], source_path: str, source_url: str, python_binding: str | None) -> str:
+    """Render exact crate, source, visibility and confirmed Python-exposure provenance.
 
     Args:
-        crate: Cargo crate provenance recorded by the documentation workflow.
         item: Rustdoc declaration record supplying source-language visibility.
         source_path: Repository-relative source file path.
         source_url: Line-anchored browser URL for the source declaration.
-        python_binding: Confirmed PyO3 export name, or ``None`` for Rust-only declarations.
+        python_binding: Confirmed PyO3 export name or ``None`` for Rust-only declarations.
 
     Returns:
         Markdown provenance section without unsupported runtime or performance claims.
@@ -1096,7 +956,6 @@ def _provenance_body(
         (
             "## Provenance",
             "",
-            f"- Crate: `{crate}`",
             f"- Rust visibility: `{visibility}`",
             f"- Source: [`{source_path}`]({source_url})",
             f"- Python exposure: {python}",
@@ -1118,7 +977,7 @@ def _file_index_pages(
         selected_ids: Items included in the committed Rust reference surface.
         index: Rustdoc items keyed by identifier.
         qualified_names: Stable Rust identities for selected items.
-        source_details: Source path, source URL, and line provenance keyed by item identifier.
+        source_details: Source path, source URL and line provenance keyed by item identifier.
         crate: Cargo crate provenance recorded in generated frontmatter.
 
     Returns:
@@ -1150,14 +1009,13 @@ def _file_index_pages(
                 source_path=source_path,
                 source_url=source_url,
                 body="\n".join(lines),
-                crate=crate,
             )
         )
     return tuple(pages)
 
 
 def _source_provenance(item: Mapping[str, Any], *, source_root: Path, repository_url: str) -> tuple[str, str, int]:
-    """Return source path, line-aware browser URL, and line for one selected Rust declaration.
+    """Return source path, line-aware browser URL and line for one selected Rust declaration.
 
     Args:
         item: Rustdoc declaration record with a local source span.
@@ -1165,7 +1023,7 @@ def _source_provenance(item: Mapping[str, Any], *, source_root: Path, repository
         repository_url: Repository browser base URL.
 
     Returns:
-        Repository-relative source path, line-anchored URL, and one-based line number.
+        Repository-relative source path, line-anchored URL and one-based line number.
 
     Raises:
         RustDocumentationError: The selected declaration lacks usable source provenance.
@@ -1184,13 +1042,13 @@ def _source_provenance(item: Mapping[str, Any], *, source_root: Path, repository
 
 
 def _source_path(item: Mapping[str, Any]) -> str:
-    """Return a normalized rustdoc span filename, or an empty string when unavailable.
+    """Return a normalized rustdoc span filename or an empty string when unavailable.
 
     Args:
         item: Rustdoc declaration record that may include a source span.
 
     Returns:
-        Slash-normalized source filename, or an empty string for spanless records.
+        Slash-normalized source filename or an empty string for spanless records.
     """
     span = item.get("span")
     if not isinstance(span, Mapping):
@@ -1255,7 +1113,7 @@ def _visibility_label(item: Mapping[str, Any]) -> str:
         item: Rustdoc declaration record containing a visibility representation.
 
     Returns:
-        Visibility label preserved from rustdoc, or ``unknown`` when it is absent.
+        Visibility label preserved from rustdoc or ``unknown`` when it is absent.
     """
     visibility = item.get("visibility")
     if isinstance(visibility, str) and visibility:
@@ -1272,7 +1130,7 @@ def _function(item: Mapping[str, Any]) -> Mapping[str, Any] | None:
         item: Rustdoc declaration record.
 
     Returns:
-        Function mapping for functions and methods, or ``None`` for other item kinds.
+        Function mapping for functions and methods or ``None`` for other item kinds.
     """
     inner = item.get("inner")
     function = inner.get("function") if isinstance(inner, Mapping) else None
@@ -1287,7 +1145,7 @@ def _function_argument_names(function: Mapping[str, Any]) -> tuple[str, ...]:
 
     Returns:
         Type/const generics followed by value arguments, excluding lifetimes,
-        receiver spellings, and anonymous placeholders.
+        receiver spellings and anonymous placeholders.
     """
     names: list[str] = []
     generics = function.get("generics")
@@ -1513,10 +1371,10 @@ def _slug(value: str) -> str:
     """Convert Rust path segments to stable lowercase collision-readable route slugs.
 
     Args:
-        value: Crate, module, declaration, or source-path segment to normalize.
+        value: Crate, module, declaration or source-path segment to normalize.
 
     Returns:
-        Route-safe slug, or ``item`` when no alphanumeric characters remain.
+        Route-safe slug or ``item`` when no alphanumeric characters remain.
     """
     slug = re.sub(r"[^a-z0-9]+", "-", value.casefold()).strip("-")
     return slug or "item"
@@ -1550,7 +1408,7 @@ def _parse_arguments(argv: Sequence[str] | None) -> argparse.Namespace:
         Parsed normalizer configuration.
     """
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--rustdoc-json", type=Path, required=True, help="Pinned-nightly rustdoc JSON artifact.")
+    parser.add_argument("--rustdoc-json", type=Path, required=True, help="Nightly rustdoc JSON artifact.")
     parser.add_argument("--source-root", type=Path, required=True, help="Repository root for source/PyO3 provenance.")
     parser.add_argument(
         "--rendered-markdown", type=Path, required=True, help="cargo-docs-md staging manifest keyed by rustdoc id."
@@ -1568,7 +1426,7 @@ def _parse_arguments(argv: Sequence[str] | None) -> argparse.Namespace:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run the static normalizer after an outer workflow produced pinned renderer artifacts.
+    """Run the static normalizer after an outer workflow produced renderer artifacts.
 
     Args:
         argv: Optional command-line arguments excluding the executable name.
@@ -1578,10 +1436,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     Raises:
         RustDocumentationError: Inputs do not provide a complete selected documentation surface.
-        RustDocumentationPending: The checked-in exact toolchain pin is absent or invalid.
     """
     arguments = _parse_arguments(argv)
-    toolchain = load_documentation_toolchain()
     pages = generate_rust_pages(
         rustdoc_json=arguments.rustdoc_json,
         source_root=arguments.source_root,
@@ -1596,7 +1452,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     write_rust_reference_tree(
         output_root=arguments.output_root,
         pages=pages,
-        toolchain=toolchain,
         source_hashes={str(path): value for path, value in source_hashes.items()},
     )
     return 0
@@ -1608,20 +1463,13 @@ if __name__ == "__main__":
 
 __all__ = [
     "DEFAULT_EXCLUDED_SOURCE_PATHS",
-    "DEFAULT_TOOLCHAIN_FILE",
     "RustDocumentationError",
-    "RustDocumentationPending",
-    "RustDocumentationToolchain",
     "cargo_docs_md_command",
-    "cargo_docs_md_install_command",
-    "ensure_pinned_nightly_available",
-    "generate_pinned_rustdoc_json",
     "generate_rust_pages",
+    "generate_rustdoc_json",
     "load_cargo_docs_md_fragments",
-    "load_documentation_toolchain",
     "main",
-    "pinned_rustdoc_command",
     "render_rustdoc_with_cargo_docs_md",
-    "verify_cargo_docs_md_version",
+    "rustdoc_command",
     "write_rust_reference_tree",
 ]

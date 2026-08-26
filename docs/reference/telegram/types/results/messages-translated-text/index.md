@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: messages.TranslatedText"
-description: "Layer 228 result-family index for 1 canonical constructors returning messages.TranslatedText from tdlib."
+description: "Layer 229 result-family index for 1 canonical constructors returning messages.TranslatedText from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -9,11 +9,10 @@ qualified_name: "telegram.types.result.messages.TranslatedText"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "results"
-layer: 228
 schema_source: "tdlib"
 ---
 
-## Layer 228 result family `messages.TranslatedText`
+## Layer 229 result family `messages.TranslatedText`
 
 Selected canonical constructors in this family: 1.
 

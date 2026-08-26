@@ -9,7 +9,6 @@ qualified_name: "chatAdminRights"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "base"
-layer: 228
 schema_source: "tdlib"
 constructor_id: "0x5fb224d5"
 ---
@@ -21,7 +20,7 @@ No description provided by the pinned schema.
 ## Signature
 
 ```tl
-chatAdminRights#5fb224d5 flags:# change_info:flags.0?true post_messages:flags.1?true edit_messages:flags.2?true delete_messages:flags.3?true ban_users:flags.4?true invite_users:flags.5?true pin_messages:flags.7?true add_admins:flags.9?true anonymous:flags.10?true manage_call:flags.11?true other:flags.12?true manage_topics:flags.13?true post_stories:flags.14?true edit_stories:flags.15?true delete_stories:flags.16?true manage_direct_messages:flags.17?true manage_ranks:flags.18?true manage_linked_peers:flags.19?true = ChatAdminRights;
+chatAdminRights#5fb224d5 flags:# change_info:flags.0?true post_messages:flags.1?true edit_messages:flags.2?true delete_messages:flags.3?true ban_users:flags.4?true invite_users:flags.5?true pin_messages:flags.7?true add_admins:flags.9?true anonymous:flags.10?true manage_call:flags.11?true other:flags.12?true manage_topics:flags.13?true post_stories:flags.14?true edit_stories:flags.15?true delete_stories:flags.16?true manage_direct_messages:flags.17?true manage_ranks:flags.18?true manage_linked_peers:flags.19?true manage_welcome_messages:flags.20?true = ChatAdminRights;
 ```
 
 ## Result type
@@ -51,6 +50,7 @@ chatAdminRights#5fb224d5 flags:# change_info:flags.0?true post_messages:flags.1?
 | manage_direct_messages | flags.17?true | flags.17 | — | No description provided by the pinned schema. |
 | manage_ranks | flags.18?true | flags.18 | — | No description provided by the pinned schema. |
 | manage_linked_peers | flags.19?true | flags.19 | — | No description provided by the pinned schema. |
+| manage_welcome_messages | flags.20?true | flags.20 | — | No description provided by the pinned schema. |
 
 ## Flags
 
@@ -74,6 +74,7 @@ chatAdminRights#5fb224d5 flags:# change_info:flags.0?true post_messages:flags.1?
 | manage_direct_messages | 17 | Controlled by `flags`; present when this bit is set. |
 | manage_ranks | 18 | Controlled by `flags`; present when this bit is set. |
 | manage_linked_peers | 19 | Controlled by `flags`; present when this bit is set. |
+| manage_welcome_messages | 20 | Controlled by `flags`; present when this bit is set. |
 
 ## Python binding
 
@@ -103,13 +104,12 @@ constructor_type = ChatAdminRights
 
 ## Provenance
 
-- layer: 228
 - structural source: `tdlib`
 - canonical schema: https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/telegram_api.tl
 - prose merge precedence: TDLib → Telegram Desktop → Core JSON
-- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 228 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
+- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 229 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
 
 ## Source-diff notes
 
-- tdlib_vs_core: changed_count=68; core_only_count=1; overlap_count=2302; tdlib_only_count=158
-- tdlib_vs_tdesktop: changed_count=0; overlap_count=2448; tdesktop_only=null; tdlib_only=accessPointRule, ephemeral.editMessage, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret, updateEphemeralBotCallbackQuery
+- tdlib_vs_core: changed_count=78; core_only_count=18; overlap_count=2285; tdlib_only_count=195
+- tdlib_vs_tdesktop: changed_count=0; overlap_count=2470; tdesktop_only=null; tdlib_only=accessPointRule, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret

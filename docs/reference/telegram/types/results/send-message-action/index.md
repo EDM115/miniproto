@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: SendMessageAction"
-description: "Layer 228 result-family index for 21 canonical constructors returning SendMessageAction from tdlib."
+description: "Layer 229 result-family index for 22 canonical constructors returning SendMessageAction from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -9,13 +9,12 @@ qualified_name: "telegram.types.result.SendMessageAction"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "results"
-layer: 228
 schema_source: "tdlib"
 ---
 
-## Layer 228 result family `SendMessageAction`
+## Layer 229 result family `SendMessageAction`
 
-Selected canonical constructors in this family: 21.
+Selected canonical constructors in this family: 22.
 
 ## Constructors
 
@@ -32,6 +31,7 @@ Selected canonical constructors in this family: 21.
 - [`sendMessageRecordRoundAction`](/reference/telegram/types/base/send-message-record-round-action/): `SendMessageAction`
 - [`sendMessageRecordVideoAction`](/reference/telegram/types/base/send-message-record-video-action/): `SendMessageAction`
 - [`sendMessageRichMessageDraftAction`](/reference/telegram/types/base/send-message-rich-message-draft-action/): `SendMessageAction`
+- [`sendMessageStopDraftAction`](/reference/telegram/types/base/send-message-stop-draft-action/): `SendMessageAction`
 - [`sendMessageTextDraftAction`](/reference/telegram/types/base/send-message-text-draft-action/): `SendMessageAction`
 - [`sendMessageTypingAction`](/reference/telegram/types/base/send-message-typing-action/): `SendMessageAction`
 - [`sendMessageUploadAudioAction`](/reference/telegram/types/base/send-message-upload-audio-action/): `SendMessageAction`

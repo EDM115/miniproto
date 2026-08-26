@@ -20,9 +20,9 @@ Client(config: ClientConfig, *, _updates_enabled: bool = True) -> None
 
 Async client facade for MTProto operations.
 
-This implementation wires lifecycle, auth, raw invocation, updates, peer/message helpers, and protocol-core media transfer primitives while keeping framework-level behavior out of the SDK.
+This implementation wires lifecycle, auth, raw invocation, updates, peer/message helpers and protocol-core media transfer primitives while keeping framework-level behavior out of the SDK.
 
-Initialize an unconnected client and its session, update, and media coordinators.
+Initialize an unconnected client and its session, update and media coordinators.
 
 **Parameters:**
 

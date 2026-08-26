@@ -23,7 +23,7 @@ Upload a source as MTProto file parts and return its input-file handle.
 **Parameters:**
 
 - **invoke** (<code>[RawInvoker](#miniproto.media.upload.RawInvoker)</code>) – Raw request callable used to save each part.
-- **source** (<code>[FileSource](#miniproto.media.upload.FileSource)</code>) – Path, bytes, readable stream, or synchronous/asynchronous byte iterable. Paths are opened by this function; caller-owned readers are not closed.
+- **source** (<code>[FileSource](#miniproto.media.upload.FileSource)</code>) – Path, bytes, readable stream or synchronous/asynchronous byte iterable. Paths are opened by this function; caller-owned readers are not closed.
 - **file_name** (<code>[str](#str) | None</code>) – Optional override for the Telegram file name.
 - **part_size** (<code>[int](#int)</code>) – KiB-aligned part size in bytes, at most 512 KiB.
 - **concurrency** (<code>[int](#int)</code>) – Maximum in-flight save requests and bounded read-ahead queue slots.
@@ -49,4 +49,4 @@ Upload a source as MTProto file parts and return its input-file handle.
 The checksum covers exactly the bytes read for small files. Seekable callers
 are rewound to their initial offset before uploading and left at their final
 read position; one-shot streams and iterables are consumed into an owned
-temporary spool that is closed on success, failure, or cancellation.
+temporary spool that is closed on success, failure or cancellation.

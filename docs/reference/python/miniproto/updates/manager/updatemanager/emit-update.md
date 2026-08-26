@@ -20,7 +20,7 @@ emit_update(update: Update) -> None
 
 Offer a normalized update to consumers, then invoke matching handlers sequentially.
 
-If the public queue rejects the item under a dropping overflow policy, handlers are not invoked. Matching registered types are visited in registration-mapping order, and each handler is awaited before the next one when it returns an awaitable.
+If the public queue rejects the item under a dropping overflow policy, handlers are not invoked. Matching registered types are visited in registration-mapping order and each handler is awaited before the next one when it returns an awaitable.
 
 **Parameters:**
 

@@ -1,6 +1,6 @@
 ---
 title: "Telegram functions: communities"
-description: "Layer 228 index of 9 canonical Telegram functions in the communities namespace from tdlib."
+description: "Layer 229 index of 9 canonical Telegram functions in the communities namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -9,11 +9,10 @@ qualified_name: "telegram.functions.communities"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "communities"
-layer: 228
 schema_source: "tdlib"
 ---
 
-## Layer 228 communities functions
+## Layer 229 communities functions
 
 Selected canonical functions in this namespace: 9.
 

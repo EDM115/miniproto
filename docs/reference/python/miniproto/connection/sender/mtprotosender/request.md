@@ -29,7 +29,7 @@ defaults to ``True``.
 transport loss; defaults to ``False`` to avoid duplicating
 unknown-side-effect RPCs.
 - **request_timeout** (<code>[float](#float) | None</code>) – Optional caller wait bound in seconds. ``None``
-waits until a result, lifecycle failure, or cancellation.
+waits until a result, lifecycle failure or cancellation.
 - **quick_ack** (<code>[bool](#bool)</code>) – Request a transport quick ACK for the encrypted attempt;
 defaults to ``False`` and never completes this RPC by itself.
 - **quick_ack_callback** (<code>[Callable](#collections.abc.Callable)[[[QuickAckReceipt](#miniproto.connection.sender.QuickAckReceipt)], None] | None</code>) – Optional synchronous callback receiving the first

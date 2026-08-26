@@ -16,7 +16,7 @@ MANIFEST_SCHEMA_VERSION = 1
 
 @dataclass(frozen=True, slots=True)
 class ReferenceTreeDiff:
-    """Describe added, removed, and byte-changed generated files.
+    """Describe added, removed and byte-changed generated files.
 
     Attributes:
         added: Files present in the expected tree but absent from the actual tree.
@@ -37,7 +37,6 @@ class ReferenceTreeDiff:
 def build_reference_manifest(
     pages: Iterable[ReferencePage],
     *,
-    tool_versions: Mapping[str, str],
     source_hashes: Mapping[str, str],
     artifacts: Mapping[str, str | bytes] | None = None,
 ) -> str:
@@ -45,7 +44,6 @@ def build_reference_manifest(
 
     Args:
         pages: Generated pages from every language extractor.
-        tool_versions: Exact generator and upstream extractor versions.
         source_hashes: SHA-256 values for immutable generator inputs.
         artifacts: Additional generated non-Markdown artifacts keyed by reference-relative path.
 
@@ -53,7 +51,7 @@ def build_reference_manifest(
         UTF-8 JSON text with stable ordering and a final newline.
 
     Raises:
-        ValueError: Pages collide by path, route, or language/kind/qualified-name identity.
+        ValueError: Pages collide by path, route or language/kind/qualified-name identity.
     """
     ordered_pages = _validated_pages(pages)
     normalized_artifacts = _validated_artifacts(artifacts or {}, page_paths={page.path for page in ordered_pages})
@@ -73,7 +71,6 @@ def build_reference_manifest(
         )
     payload = {
         "schema_version": MANIFEST_SCHEMA_VERSION,
-        "tools": dict(sorted(tool_versions.items())),
         "sources": dict(sorted(source_hashes.items())),
         "artifacts": [
             {"path": path, "sha256": hashlib.sha256(content).hexdigest()}
@@ -92,7 +89,6 @@ def write_reference_tree(
     output: Path,
     pages: Iterable[ReferencePage],
     *,
-    tool_versions: Mapping[str, str],
     source_hashes: Mapping[str, str],
     artifacts: Mapping[str, str | bytes] | None = None,
 ) -> None:
@@ -101,7 +97,6 @@ def write_reference_tree(
     Args:
         output: Task-owned empty or absent staging directory.
         pages: Complete validated generated page collection.
-        tool_versions: Exact generator and extractor versions.
         source_hashes: Hashes for generator inputs.
         artifacts: Additional generated non-Markdown artifacts keyed by reference-relative path.
 
@@ -121,9 +116,7 @@ def write_reference_tree(
         destination = output / Path(relative_path)
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(content)
-    manifest = build_reference_manifest(
-        ordered_pages, tool_versions=tool_versions, source_hashes=source_hashes, artifacts=normalized_artifacts
-    )
+    manifest = build_reference_manifest(ordered_pages, source_hashes=source_hashes, artifacts=normalized_artifacts)
     (output / MANIFEST_NAME).write_bytes(manifest.encode("utf-8"))
 
 
@@ -159,7 +152,7 @@ def _validated_pages(pages: Iterable[ReferencePage]) -> tuple[ReferencePage, ...
         Pages sorted by relative Markdown path.
 
     Raises:
-        ValueError: Two pages collide by path, route, or source identity.
+        ValueError: Two pages collide by path, route or source identity.
     """
     ordered = tuple(sorted(pages, key=lambda page: page.path))
     seen_paths: set[str] = set()
@@ -180,7 +173,7 @@ def _validated_pages(pages: Iterable[ReferencePage]) -> tuple[ReferencePage, ...
 
 
 def _validated_artifacts(artifacts: Mapping[str, str | bytes], *, page_paths: set[str]) -> dict[str, bytes]:
-    """Validate, normalize, and encode additional generated reference artifacts.
+    """Validate, normalize and encode additional generated reference artifacts.
 
     Args:
         artifacts: Candidate non-Markdown artifacts keyed by reference-relative path.
@@ -190,7 +183,7 @@ def _validated_artifacts(artifacts: Mapping[str, str | bytes], *, page_paths: se
         Lexicographically ordered POSIX paths mapped to exact bytes.
 
     Raises:
-        ValueError: An artifact path is unsafe, collides with a page or manifest, or has an unsupported value.
+        ValueError: An artifact path is unsafe, collides with a page or manifest or has an unsupported value.
     """
     normalized: dict[str, bytes] = {}
     for raw_path, raw_content in sorted(artifacts.items()):

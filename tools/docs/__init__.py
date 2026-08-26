@@ -1,1 +1,1 @@
-"""Documentation extraction, validation, and site-build tooling."""
+"""Documentation extraction, validation and site-build tooling."""

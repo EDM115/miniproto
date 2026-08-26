@@ -1,9 +1,9 @@
 """Deterministic runtime acceptance benchmarks and host-independent invariants.
 
 The workload uses local fakes and controlled in-process components to catch
-protocol, resource-accounting, cancellation, and fairness regressions. It is
+protocol, resource-accounting, cancellation and fairness regressions. It is
 not a substitute for credentialed live acceptance: it cannot prove Telegram
-network behavior, account permissions, datacenter routing, or production load.
+network behavior, account permissions, datacenter routing or production load.
 """
 
 from __future__ import annotations
@@ -103,7 +103,7 @@ class _BackpressureInvoker:
     requests: int = 0
 
     async def __call__(self, request: object, **kwargs: object) -> object:
-        """Delay one upload-file request, track overlap, and return its byte slice.
+        """Delay one upload-file request, track overlap and return its byte slice.
 
         Args:
             request: Generated request expected to be ``UploadGetFile``.
@@ -132,10 +132,10 @@ def parse_args(argv: Sequence[str] | None = None, env: Mapping[str, str] | None 
     Args:
         argv: Optional argument sequence; ``None`` uses process arguments.
         env: Optional environment mapping for reproducible tests; ``None`` uses
-            :data:`os.environ` for mode, sample, JSON, and loop-lag defaults.
+            :data:`os.environ` for mode, sample, JSON and loop-lag defaults.
 
     Returns:
-        Parsed mode, optional sample override/output path, and loop-lag flag.
+        Parsed mode, optional sample override/output path and loop-lag flag.
 
     Raises:
         ValueError: ``MINIPROTO_BENCH_SAMPLES`` is configured but is not an integer.
@@ -226,13 +226,13 @@ def evaluate_acceptance_invariants(results: Sequence[Mapping[str, Any]]) -> list
 
     Returns:
         Structured failures for unmet fixed invariants: pending-slot cleanup,
-        iterator prefetch bound, scheduler fairness/accounting, and reconnect
+        iterator prefetch bound, scheduler fairness/accounting and reconnect
         cleanup. An empty list means only these local invariants held.
 
     Notes:
         No host-dependent performance threshold is enforced here. Passing does
         not certify live Telegram acceptance, throughput, latency, credentials,
-        datacenter routing, or production load behavior.
+        datacenter routing or production load behavior.
     """
     by_name = {str(result.get("name")): result for result in results}
     failures: list[dict[str, str]] = []
@@ -281,7 +281,7 @@ def evaluate_acceptance_invariants(results: Sequence[Mapping[str, Any]]) -> list
 
 
 async def run_acceptance_benchmark(profile: BenchmarkProfile, *, probe_loop_lag: bool) -> dict[str, Any]:
-    """Run the deterministic runtime, media, reconnect, memory, and scheduling set.
+    """Run the deterministic runtime, media, reconnect, memory and scheduling set.
 
     Args:
         profile: Resolved workload dimensions and sampling counts.
@@ -644,7 +644,7 @@ async def _measured_result[T](
     samples: int,
     details: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Warm, time, and summarize one awaitable operation without changing its workload.
+    """Warm, time and summarize one awaitable operation without changing its workload.
 
     Args:
         name: Stable benchmark result name.
@@ -674,7 +674,7 @@ async def _measured_result[T](
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run the selected deterministic suite, optionally write JSON, and return CI status.
+    """Run the selected deterministic suite, optionally write JSON and return CI status.
 
     Args:
         argv: Optional benchmark CLI arguments; ``None`` uses process arguments.

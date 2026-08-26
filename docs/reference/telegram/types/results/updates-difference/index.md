@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: updates.Difference"
-description: "Layer 228 result-family index for 4 canonical constructors returning updates.Difference from tdlib."
+description: "Layer 229 result-family index for 4 canonical constructors returning updates.Difference from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -9,11 +9,10 @@ qualified_name: "telegram.types.result.updates.Difference"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "results"
-layer: 228
 schema_source: "tdlib"
 ---
 
-## Layer 228 result family `updates.Difference`
+## Layer 229 result family `updates.Difference`
 
 Selected canonical constructors in this family: 4.
 

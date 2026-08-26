@@ -200,7 +200,7 @@ def test_python_reference_ignores_unresolved_and_ordinary_import_aliases(tmp_pat
 
 
 def test_python_reference_indexes_and_splits_every_static_all_export(tmp_path: Path) -> None:
-    """Require constants, type aliases, and module aliases to remain visible.
+    """Require constants, type aliases and module aliases to remain visible.
 
     Args:
         tmp_path: Isolated directory in which to create the public-surface fixture.

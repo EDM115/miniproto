@@ -33,7 +33,7 @@ Encrypt and authenticate session bytes with AES-256-GCM.
 
 **Raises:**
 
-- <code>[ValueError](#ValueError)</code> – If the key or nonce is invalid, or the backend rejects
+- <code>[ValueError](#ValueError)</code> – If the key or nonce is invalid or the backend rejects
 encryption.
 
 Uses Rust only when that optional session-crypto symbol exists; otherwise

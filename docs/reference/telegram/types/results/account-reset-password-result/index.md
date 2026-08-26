@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: account.ResetPasswordResult"
-description: "Layer 228 result-family index for 3 canonical constructors returning account.ResetPasswordResult from tdlib."
+description: "Layer 229 result-family index for 3 canonical constructors returning account.ResetPasswordResult from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -9,11 +9,10 @@ qualified_name: "telegram.types.result.account.ResetPasswordResult"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "results"
-layer: 228
 schema_source: "tdlib"
 ---
 
-## Layer 228 result family `account.ResetPasswordResult`
+## Layer 229 result family `account.ResetPasswordResult`
 
 Selected canonical constructors in this family: 3.
 

@@ -1,4 +1,4 @@
-# THOUGHTS — Things Heard, Observed, Unclear, Guessed, Hacked, Tracked, or Suspected : A living document about non-trivial details
+# THOUGHTS — Things Heard, Observed, Unclear, Guessed, Hacked, Tracked or Suspected : A living document about non-trivial details
 
 This document will serve as a scratchpad for things encountered during development.  
 You will find here notes about undocumented stuff, questions about implementation, random ideas that don't fit quite yet the PLAN, ...  
@@ -14,10 +14,10 @@ Information already present elsewhere (README, AGENTS, PLAN, PROGRESS, plans fol
 Currently, uploads are -/+ on-par with top libs but downloads are 3x worst.  
 Before I can actually come up with a fix for that, I had an idea.  
 Every user can open multiple sessions, right ? (ex phone and laptop). Bots too afaik.  
-Wouldn't it be possible to just split the download across multiple sessions ? The sole requirements is to see if FloodWait's are correlated to a session or account, and to which degree (ex being rate-limited on session1 doesn't auto rate-limit you on session2 but increases your likelihood so you don't just open 400 sessions at once).  
+Wouldn't it be possible to just split the download across multiple sessions ? The sole requirements is to see if FloodWait's are correlated to a session or account and to which degree (ex being rate-limited on session1 doesn't auto rate-limit you on session2 but increases your likelihood so you don't just open 400 sessions at once).  
 Since we download a file in chunks, we could just create a pool of multiple sessions (workers). We would need to check first the file size, for ex a file < 100 MiB might not require more than 1 session but a 2 GiB might benefit from 4, idk.  
-Then, we have the queue of all chunks. Let's say we have 3 sessions in the pool. We split equally the chunks to all 3 sessions. There's actually 2 sub-queues : one that is the worker's immediate pool that it can grab into, containing let's say 25 chunks, and a secondary pool with the rest of its work, planned for later. We would also need to know if requesting non-contiguous chunks is worst in perf than same-block chunks (read : do we randomize the queue or keep it sorted).  
-Then, there's an orchestrator that distributes the content of the secondary queue into the worker's primary queues as they ingest and complete work. It monitors for FloodWait's and pauses the primary queue ingestion when a worker encounters it, and moves parts of its secondary queue equally to other's secondary queues to level the work time across all workers.
+Then, we have the queue of all chunks. Let's say we have 3 sessions in the pool. We split equally the chunks to all 3 sessions. There's actually 2 sub-queues : one that is the worker's immediate pool that it can grab into, containing let's say 25 chunks and a secondary pool with the rest of its work, planned for later. We would also need to know if requesting non-contiguous chunks is worst in perf than same-block chunks (read : do we randomize the queue or keep it sorted).  
+Then, there's an orchestrator that distributes the content of the secondary queue into the worker's primary queues as they ingest and complete work. It monitors for FloodWait's and pauses the primary queue ingestion when a worker encounters it and moves parts of its secondary queue equally to other's secondary queues to level the work time across all workers.
 When worker2 have no more work left in the secondary queue and worker1 is in rate-limit, any task of worker1's secondary queue can be split equally by time it'll take on other worker's secondary queues. If worker2 have no more tasks at all, it can ingest remaining tasks from all other queues given that it doesn't perform worse than potential non-contiguous blocks penalties.  
 Uploads will probably never benefit from this as I don't believe you can upload chunks of the same file from multiple sessions.  
 This behavior wouldn't be the default but rather an option that users can toggle on or not.
@@ -89,7 +89,7 @@ Status (verified 2026-08-18): Implemented as opt-in `Client.download_media(..., 
 
 ## 2026-08-19 — GPT-5.6 Sol — Codex — "Release packaging boundary"
 
-- A release must build the Cargo source package exactly once, attest every wheel plus the Python sdist and `.crate`, and publish only from a separate run-ID-driven workflow after verifying the source run, commit, version, checksums, and attestations. For now the crates.io package is the PyO3 accelerator published for provenance and version parity; direct `use miniproto_native::...` consumption is explicitly deferred until its Rust API and packaging contract are designed.
+- A release must build the Cargo source package exactly once, attest every wheel plus the Python sdist and `.crate` and publish only from a separate run-ID-driven workflow after verifying the source run, commit, version, checksums and attestations. For now the crates.io package is the PyO3 accelerator published for provenance and version parity; direct `use miniproto_native::...` consumption is explicitly deferred until its Rust API and packaging contract are designed.
 
 ## 2026-08-20 — GPT-5.6 Sol — Codex — "Independent protocol review triage"
 

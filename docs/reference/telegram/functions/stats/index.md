@@ -1,6 +1,6 @@
 ---
 title: "Telegram functions: stats"
-description: "Layer 228 index of 8 canonical Telegram functions in the stats namespace from tdlib."
+description: "Layer 229 index of 8 canonical Telegram functions in the stats namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -9,11 +9,10 @@ qualified_name: "telegram.functions.stats"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "stats"
-layer: 228
 schema_source: "tdlib"
 ---
 
-## Layer 228 stats functions
+## Layer 229 stats functions
 
 Selected canonical functions in this namespace: 8.
 

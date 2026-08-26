@@ -30,4 +30,4 @@ Validate and decode an unencrypted MTProto envelope.
 
 **Raises:**
 
-- <code>[ValueError](#ValueError)</code> – If the packet is too short, nonzero-authenticated, or malformed.
+- <code>[ValueError](#ValueError)</code> – If the packet is too short, nonzero-authenticated or malformed.

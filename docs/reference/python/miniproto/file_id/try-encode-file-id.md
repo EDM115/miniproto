@@ -22,8 +22,8 @@ Best-effort variant of :func:`encode_file_id`.
 
 **Parameters:**
 
-- **media** (<code>[Media](#miniproto.types.Media) | [object](#object) | None</code>) – Candidate media, or ``None``.
+- **media** (<code>[Media](#miniproto.types.Media) | [object](#object) | None</code>) – Candidate media or ``None``.
 
 **Returns:**
 
-- <code>[str](#str) | None</code> – The encoded local ID, or ``None`` for absent or unsupported media.
+- <code>[str](#str) | None</code> – The encoded local ID or ``None`` for absent or unsupported media.

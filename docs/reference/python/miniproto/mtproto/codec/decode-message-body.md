@@ -26,8 +26,8 @@ Decode recognized MTProto service bodies, preserving unknown data as a view.
 
 **Returns:**
 
-- <code>[ByteBuffer](#miniproto.mtproto.codec.ByteBuffer) | [object](#object)</code> – Service-body dataclass, ping tuple, RPC error/result, or the original ``ByteBuffer`` input for an unknown constructor.
+- <code>[ByteBuffer](#miniproto.mtproto.codec.ByteBuffer) | [object](#object)</code> – Service-body dataclass, ping tuple, RPC error/result or the original ``ByteBuffer`` input for an unknown constructor.
 
 **Raises:**
 
-- <code>[ValueError](#ValueError)</code> – If a recognized body is truncated, malformed, or has trailing bytes.
+- <code>[ValueError](#ValueError)</code> – If a recognized body is truncated, malformed or has trailing bytes.

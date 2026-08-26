@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: MessagesFilter"
-description: "Layer 228 result-family index for 18 canonical constructors returning MessagesFilter from tdlib."
+description: "Layer 229 result-family index for 18 canonical constructors returning MessagesFilter from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -9,11 +9,10 @@ qualified_name: "telegram.types.result.MessagesFilter"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "results"
-layer: 228
 schema_source: "tdlib"
 ---
 
-## Layer 228 result family `MessagesFilter`
+## Layer 229 result family `MessagesFilter`
 
 Selected canonical constructors in this family: 18.
 

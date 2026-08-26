@@ -23,7 +23,7 @@ Point-in-time process and tracemalloc memory counters.
 **Attributes:**
 
 - [**timestamp**](#miniproto.observability.ResourceSnapshot.timestamp) (<code>[float](#float)</code>) – Wall-clock capture time in seconds since the epoch.
-- [**rss_bytes**](#miniproto.observability.ResourceSnapshot.rss_bytes) (<code>[int](#int) | None</code>) – Reported RSS on Windows or macOS, or lifetime peak RSS on Unix; ``None`` if unavailable.
+- [**rss_bytes**](#miniproto.observability.ResourceSnapshot.rss_bytes) (<code>[int](#int) | None</code>) – Reported RSS on Windows or macOS or lifetime peak RSS on Unix; ``None`` if unavailable.
 - [**traced_current_bytes**](#miniproto.observability.ResourceSnapshot.traced_current_bytes) (<code>[int](#int) | None</code>) – Current tracemalloc allocation bytes, if tracing.
 - [**traced_peak_bytes**](#miniproto.observability.ResourceSnapshot.traced_peak_bytes) (<code>[int](#int) | None</code>) – Peak tracemalloc allocation bytes, if tracing.
 - [**gc_objects**](#miniproto.observability.ResourceSnapshot.gc_objects) (<code>[int](#int)</code>) – Number of objects tracked by the garbage collector.

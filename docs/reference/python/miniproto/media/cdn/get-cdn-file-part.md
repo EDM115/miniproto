@@ -1,6 +1,6 @@
 ---
 title: "miniproto.media.cdn.get_cdn_file_part"
-description: "Fetch, decrypt, and hash-verify one CDN file range."
+description: "Fetch, decrypt and hash-verify one CDN file range."
 generated: true
 editUrl: false
 language: "python"
@@ -17,7 +17,7 @@ module: "miniproto.media.cdn"
 get_cdn_file_part(origin_invoke: RawInvoker, cdn_invoke: RawInvoker, redirect: CdnRedirect, *, offset: int, limit: int, request_timeout: float | None = None) -> bytes
 ```
 
-Fetch, decrypt, and hash-verify one CDN file range.
+Fetch, decrypt and hash-verify one CDN file range.
 
 **Parameters:**
 
@@ -35,6 +35,6 @@ Fetch, decrypt, and hash-verify one CDN file range.
 **Raises:**
 
 - <code>[CdnIntegrityError](#miniproto.media.cdn.CdnIntegrityError)</code> – The range lacks coverage, has an invalid/short declared
-hash range, or its digest mismatches.
+hash range or its digest mismatches.
 - <code>[CdnError](#miniproto.media.cdn.CdnError)</code> – Telegram returns an unsupported CDN response.
 - <code>[CancelledError](#asyncio.CancelledError)</code> – The caller cancels the awaited transfer.

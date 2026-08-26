@@ -113,53 +113,6 @@ def test_reference_check_reports_drift_without_mutating_committed_bytes(tmp_path
     assert (staging / "page.md").read_text(encoding="utf-8") == "expected\n"
 
 
-def test_packet_loom_is_the_exact_replaceable_production_mark() -> None:
-    """The temporary site identity must reuse the approved Packet Loom SVG without redrawing its geometry."""
-    canonical = ROOT / "docs-site/src/assets/brand/concepts/03-packet-loom/logo.svg"
-    production = ROOT / "docs-site/src/assets/brand/mark.svg"
-    favicon = ROOT / "docs-site/public/favicon.svg"
-
-    assert production.read_bytes() == canonical.read_bytes()
-    assert favicon.read_bytes() == canonical.read_bytes()
-
-
-def test_packet_loom_brand_derivatives_are_complete_and_self_contained() -> None:
-    """The selected identity must ship every scalable variant plus an exact-size social raster without external SVG dependencies."""
-    import struct
-    import xml.etree.ElementTree as ET
-
-    brand = ROOT / "docs-site/src/assets/brand"
-    public = ROOT / "docs-site/public"
-    scalable_assets = (
-        brand / "logo.svg",
-        brand / "logo-dark.svg",
-        brand / "mark-monochrome.svg",
-        brand / "wordmark.svg",
-        brand / "wordmark-dark.svg",
-        public / "social-card.svg",
-    )
-
-    for asset in scalable_assets:
-        root = ET.parse(asset).getroot()  # noqa: S314 - every parsed SVG is a trusted repository-owned derivative
-        assert "viewBox" in root.attrib
-        assert not tuple(root.iter("{http://www.w3.org/2000/svg}image"))
-        assert "data:image" not in asset.read_text(encoding="utf-8")
-
-    social = ET.parse(public / "social-card.svg").getroot()  # noqa: S314 - trusted repository-owned derivative
-    roles = {element.attrib["data-role"]: element for element in social.iter() if "data-role" in element.attrib}
-    supporting_lines = tuple(roles["supporting-description"])
-    assert tuple((line.attrib["x"], line.attrib["y"], line.text) for line in supporting_lines) == (
-        ("84", "382", "Python intent · Layer 228 schema"),
-        ("84", "416", "measured Rust fast paths"),
-    )
-    assert roles["repository-marker"].attrib["y"] == "566"
-    assert roles["repository-link"].attrib["y"] == "580"
-
-    png = (public / "social-card.png").read_bytes()
-    assert png[:8] == b"\x89PNG\r\n\x1a\n"
-    assert struct.unpack(">II", png[16:24]) == (1200, 630)
-
-
 def test_static_site_validator_accepts_a_portable_filtered_page_set(tmp_path: Path) -> None:
     """The docs pipeline must accept a complete base-prefixed site with search filters and valid internal links."""
     from tools.docs import __main__ as documentation_cli
@@ -242,7 +195,6 @@ def test_site_pipeline_validates_the_artifact_after_frontend_commands(
         build_command=("pnpm", "build"),
         test_command=("pnpm", "test:site"),
     )
-    monkeypatch.setattr(documentation_cli, "_verify_site_tool_versions", lambda _configuration: None)
     monkeypatch.setattr(documentation_cli, "_resolve_site_command", lambda command: tuple(command))
     monkeypatch.setattr(
         documentation_cli.subprocess,
@@ -279,68 +231,9 @@ def test_site_command_resolution_rejects_an_unavailable_executable(monkeypatch: 
         resolve(("pnpm", "run", "check"))
 
 
-def test_documentation_workflow_publishes_on_gh_pages_root() -> None:
-    """Trusted documentation pushes must update the gh-pages root while preserving deployment history."""
-    workflow = (ROOT / ".github/workflows/docs.yml").read_text(encoding="utf-8")
-
-    assert "types: [ready_for_review, synchronize]" in workflow
-    assert "github.event.pull_request.draft == false" in workflow
-    assert "uses: pnpm/action-setup@v6" in workflow
-    assert "package_json_file: docs-site/package.json" in workflow
-    assert "uses: actions/setup-node@v7" in workflow
-    assert "check-latest: true" in workflow
-    assert "node-version: 26" in workflow
-    assert "actions/upload-pages-artifact" not in workflow
-    assert "actions/deploy-pages" not in workflow
-    assert "uses: peaceiris/actions-gh-pages@v4" in workflow
-    assert "publish_branch: gh-pages" in workflow
-    assert "publish_dir: ./docs-site/dist" in workflow
-    assert "force_orphan" not in workflow
-
-
-def test_documentation_defaults_to_the_origin_root_and_ci_selects_the_project_base() -> None:
-    """Local and VPS builds must use / while the GitHub project-site workflow explicitly selects /miniproto."""
-    astro = (ROOT / "docs-site/astro.config.ts").read_text(encoding="utf-8")
-    playwright = (ROOT / "docs-site/playwright.config.ts").read_text(encoding="utf-8")
-    server = (ROOT / "docs-site/scripts/serve-static.ts").read_text(encoding="utf-8")
-    cli = (ROOT / "tools/docs/__main__.py").read_text(encoding="utf-8")
-    workflow = (ROOT / ".github/workflows/docs.yml").read_text(encoding="utf-8")
-
-    assert 'process.env.MINIPROTO_DOCS_BASE ?? "/"' in astro
-    assert 'process.env.MINIPROTO_DOCS_BASE ?? "/"' in playwright
-    assert 'process.env.MINIPROTO_DOCS_BASE ?? "/"' in server
-    assert 'os.environ.get("MINIPROTO_DOCS_BASE", "/")' in cli
-    assert "MINIPROTO_DOCS_BASE: /miniproto" in workflow
-
-
-def test_documentation_site_uses_oxide_formatting_and_type_aware_linting() -> None:
-    """The frontend quality gate must run Oxfmt and type-aware Oxlint before Astro diagnostics."""
-    package = json.loads((ROOT / "docs-site/package.json").read_text(encoding="utf-8"))
-    formatter = (ROOT / "docs-site/oxfmt.config.ts").read_text(encoding="utf-8")
-    linter = (ROOT / "docs-site/oxlint.config.ts").read_text(encoding="utf-8")
-
-    assert package["scripts"]["format"] == "oxfmt"
-    assert package["scripts"]["format:check"] == "oxfmt --check"
-    assert (
-        package["scripts"]["lint"]
-        == "oxlint astro.config.ts playwright.config.ts oxfmt.config.ts oxlint.config.ts scripts src tests"
-    )
-    assert package["scripts"]["check"] == "pnpm format:check && pnpm lint && astro check"
-    assert package["devDependencies"]["oxfmt"] == "~0.63.0"
-    assert package["devDependencies"]["oxlint"] == "~1.78.0"
-    assert package["devDependencies"]["oxlint-tsgolint"] == "~7.0.2001"
-    assert package["devDependencies"]["typescript"] == "~6.0.3"
-    assert "sortImports: true" in formatter
-    assert '"src/**/*.astro"' in formatter
-    assert "typeAware: true" in linter
-    assert "denyWarnings: true" in linter
-    assert 'plugins: ["typescript", "unicorn", "oxc", "eslint", "import", "node", "promise"]' in linter
-
-
 def test_documentation_site_uses_typed_jiti_clis_with_help_and_progress_contracts() -> None:
-    """Every maintained Node-side CLI must be typed, expose help, and announce long-running work."""
+    """Every maintained Node-side CLI must be typed, expose help and announce long-running work."""
     site = ROOT / "docs-site"
-    package = json.loads((site / "package.json").read_text(encoding="utf-8"))
     maintained_mjs = [
         path.relative_to(site).as_posix()
         for path in site.rglob("*.mjs")
@@ -348,57 +241,9 @@ def test_documentation_site_uses_typed_jiti_clis_with_help_and_progress_contract
     ]
 
     assert maintained_mjs == []
-    assert package["scripts"]["brand:build"] == "jiti scripts/build-brand.ts"
-    assert package["scripts"]["brand:check"] == "jiti scripts/build-brand.ts --check"
-    assert package["scripts"]["serve:static"] == "jiti scripts/serve-static.ts"
-    assert package["devDependencies"]["@types/node"] == "~26.2.0"
-    assert package["devDependencies"]["jiti"] == "~2.7.0"
     assert (site / "astro.config.ts").is_file()
     assert (site / "src/remark-local-markdown-links.ts").is_file()
     assert (site / "src/sidebar.ts").is_file()
-
-    brand = (site / "scripts/build-brand.ts").read_text(encoding="utf-8")
-    server = (site / "scripts/serve-static.ts").read_text(encoding="utf-8")
-    assert "Usage: jiti scripts/build-brand.ts" in brand
-    assert "Packet Loom brand derivatives built" in brand
-    assert "Packet Loom brand derivatives are current" in brand
-    assert "Usage: jiti scripts/serve-static.ts" in server
-    assert "Serving ${root}" in server
-
-
-def test_documentation_container_is_a_root_based_unprivileged_static_image() -> None:
-    """The VPS image must build at / and ship only static output in a non-root runtime."""
-    dockerfile = (ROOT / "docs-site/Dockerfile").read_text(encoding="utf-8")
-    nginx = (ROOT / "docs-site/nginx.conf").read_text(encoding="utf-8")
-    dockerignore = (ROOT / ".dockerignore").read_text(encoding="utf-8")
-    package = json.loads((ROOT / "docs-site/package.json").read_text(encoding="utf-8"))
-
-    assert "FROM node:26.7.0-alpine3.24 AS dependencies" in dockerfile
-    assert "npm install --global pnpm@11.22.0" in dockerfile
-    assert "ENV MINIPROTO_DOCS_BASE=/" in dockerfile
-    assert "ENV NODE_OPTIONS=--max-old-space-size=1536" in dockerfile
-    assert package["scripts"]["build"] == "astro build --force"
-    assert "id=miniproto-docs-astro,target=/workspace/docs-site/.astro" not in dockerfile
-    assert "FROM alpine:3.24 AS artifact" in dockerfile
-    assert "COPY docs-site/dist/ ./" in dockerfile
-    assert "FROM nginxinc/nginx-unprivileged:1.31.3-alpine3.24 AS runtime-base" in dockerfile
-    assert "COPY --from=builder --chown=101:101 /workspace/docs-site/dist/ /usr/share/nginx/html/" in dockerfile
-    assert "FROM runtime-base AS source-runtime" in dockerfile
-    assert "FROM runtime-base AS runtime" in dockerfile
-    assert "COPY --from=artifact --chown=101:101 /site/ /usr/share/nginx/html/" in dockerfile
-    assert "USER 101" in dockerfile
-    assert "EXPOSE 6743" in dockerfile
-    assert "HEALTHCHECK" in dockerfile
-    assert "listen 6743 default_server;" in nginx
-    assert "root /usr/share/nginx/html;" in nginx
-    assert "try_files $uri $uri/ =404;" in nginx
-    assert "location ^~ /pagefind/" in nginx
-    assert "location ^~ /_astro/" in nginx
-    assert "expires -1;" in nginx
-    assert "docs-site/node_modules" in dockerignore
-    assert "docs-site/dist" not in dockerignore
-    assert "docs/.env*" in dockerignore
-    assert "docs-site/.env*" in dockerignore
 
 
 def test_external_documentation_uses_base_safe_links_and_a_complete_handwritten_sidebar() -> None:

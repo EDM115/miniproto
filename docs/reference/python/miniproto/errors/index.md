@@ -33,11 +33,11 @@ Redaction-safe public exceptions and Telegram RPC error classification.
 - [`InternalServerError`](./internalservererror/) — Classified retryable server failure, normally a 5xx RPC code.
 - [`FloodWait`](./floodwait/) — Telegram pacing failure that exposes the required wait duration in seconds.
 - [`AuthError`](./autherror/) — Base exception for authentication and authorization flow failures.
-- [`InvalidCode`](./invalidcode/) — Authentication flow failure for a missing, expired, or invalid phone code.
+- [`InvalidCode`](./invalidcode/) — Authentication flow failure for a missing, expired or invalid phone code.
 - [`PasswordRequired`](./passwordrequired/) — Authentication flow requires a configured two-factor password.
 - [`PasswordInvalid`](./passwordinvalid/) — Authentication flow received an invalid two-factor password.
 - [`SignUpRequired`](./signuprequired/) — Authentication flow requires creating a Telegram account first.
-- [`AuthKeyNotFound`](./authkeynotfound/) — Authentication key is invalid, unregistered, or no longer available.
+- [`AuthKeyNotFound`](./authkeynotfound/) — Authentication key is invalid, unregistered or no longer available.
 - [`AuthKeyRegenerationRequired`](./authkeyregenerationrequired/) — Authentication key is duplicated or unsynchronized and must be replaced.
 - [`InvalidDatacenter`](./invaliddatacenter/) — Telegram rejects the current data centre, commonly before a migration hint.
 - [`DatacenterMigration`](./datacentermigration/) — Telegram directs the request to ``dc_id`` for a named migration kind.

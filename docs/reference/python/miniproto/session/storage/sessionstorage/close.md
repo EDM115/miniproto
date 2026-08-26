@@ -1,6 +1,6 @@
 ---
 title: "miniproto.session.storage.SessionStorage.close"
-description: "Close this storage instance to later load, save, mutate, and clear operations."
+description: "Close this storage instance to later load, save, mutate and clear operations."
 generated: true
 editUrl: false
 language: "python"
@@ -18,6 +18,6 @@ module: "miniproto.session.storage"
 close() -> None
 ```
 
-Close this storage instance to later load, save, mutate, and clear operations.
+Close this storage instance to later load, save, mutate and clear operations.
 
 ``sibling`` and ``domain_revisions`` remain available after closure.

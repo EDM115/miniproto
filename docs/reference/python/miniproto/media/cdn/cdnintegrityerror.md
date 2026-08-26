@@ -19,6 +19,6 @@ Bases: <code>[CdnError](#miniproto.media.cdn.CdnError)</code>
 Raised when a CDN range lacks valid ``FileHash`` coverage or verification fails.
 
 This includes missing hash metadata, non-positive declared ``FileHash.limit``,
-a response shorter than that declared limit, and SHA-256 mismatches. The
+a response shorter than that declared limit and SHA-256 mismatches. The
 declared limit controls exactly how many decrypted bytes form each verified
 range; it is not assumed to be a fixed-size block.

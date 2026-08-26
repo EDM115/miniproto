@@ -8,13 +8,11 @@ kind: "module"
 qualified_name: "miniproto_native::tl"
 source_path: "rust/miniproto/src/tl.rs"
 source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L1"
-crate: "miniproto_native"
 python_visible: false
 ---
 
 ## Provenance
 
-- Crate: `miniproto_native`
 - Rust visibility: `crate`
 - Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L1)
 - Python exposure: Not evidenced by static PyO3 attributes.
@@ -60,9 +58,9 @@ The primitive Python-visible `tl_*` functions mirror the pure-Python fallback AP
 `tl_fast_encode` and `tl_fast_decode` are native-only optional accelerators: Python callers
 receive `None` when a selected generated fast path is unavailable and use their fallback path.
 They return `ValueError` or `MemoryError` for malformed wire input or failed allocation, release
-the GIL only for large primitive-vector work, and do not expose unsafe Rust operations.
+the GIL only for large primitive-vector work and do not expose unsafe Rust operations.
 Incompatible Python-to-Rust values instead fail during PyO3 conversion with its original
-`TypeError`, `OverflowError`, or source exception before these algorithms run.
+`TypeError`, `OverflowError` or source exception before these algorithms run.
 `generated_tl.rs` is trusted, build-time-generated metadata consumed—not hand-maintained—by
 this module. Descriptor indices and bit positions are code-generation invariants rather than
 values validated on every hot-path call.
@@ -210,7 +208,7 @@ values validated on every hot-path call.
 | [`decode_i32_vector`](#decode-i32-vector) | fn | Decodes a generic TL vector of signed 32-bit values at `offset`. |
 | [`encode_i64_vector`](#encode-i64-vector) | fn | Serializes signed 64-bit values as a generic boxed TL vector. |
 | [`decode_i64_vector`](#decode-i64-vector) | fn | Decodes a generic TL vector of signed 64-bit values at `offset`. |
-| [`decode_vector_layout`](#decode-vector-layout) | fn | Validates a generic vector header and returns its count, payload start, and next offset. |
+| [`decode_vector_layout`](#decode-vector-layout) | fn | Validates a generic vector header and returns its count, payload start and next offset. |
 | [`normalize_vector_offset`](#normalize-vector-offset) | fn | Converts the Python-facing signed offset to a safe Rust index. |
 | [`validate_vector_allocation`](#validate-vector-allocation) | fn | Checks that a decoded vector's requested allocation fits the platform's `isize` limit. |
 | [`checked_vector_capacity`](#checked-vector-capacity) | fn | Computes encoder capacity including the eight-byte TL vector header. |
@@ -430,8 +428,8 @@ Attempts Python `tl_fast_encode` for a generated constructor.
 
 `values` must have the generated constructor's exact tuple arity; `boxed` controls whether the
 constructor id is emitted. Returns `None` if no native encoder exists, encoded bytes on
-success, or a Python exception for incompatible values or generated metadata. PyO3 conversion
-failures from tuple lookup/extraction propagate as `TypeError`, `OverflowError`, or the source
+success or a Python exception for incompatible values or generated metadata. PyO3 conversion
+failures from tuple lookup/extraction propagate as `TypeError`, `OverflowError` or the source
 Python exception; algorithm and descriptor validation failures intentionally use `ValueError`.
 
 # Arguments
@@ -490,7 +488,7 @@ fn encode_fast_value(output: &mut Vec<u8>, value: &Bound<'_, PyAny>, wire_type: 
 
 Appends one generated field value to a fast-path TL output buffer.
 
-Returns a Python exception for incompatible Python values, unrepresentable sizes, or an
+Returns a Python exception for incompatible Python values, unrepresentable sizes or an
 encode-only generated object mismatch.
 
 # Arguments
@@ -565,7 +563,7 @@ fn decode_tl_bytes_slice(data: &[u8], offset: usize) -> PyResult<(&[u8], usize)>
 
 Borrows one padded TL bytes payload and returns it with its next aligned offset.
 
-Returns `ValueError` if the length prefix, payload, padding, or offset is malformed.
+Returns `ValueError` if the length prefix, payload, padding or offset is malformed.
 
 # Arguments
 
@@ -1113,7 +1111,7 @@ fn decode_tl_bytes(data: &[u8], offset: usize) -> PyResult<(Vec<u8>, usize)>
 
 Parses and copies one padded TL bytes value, returning it and its next aligned offset.
 
-Returns `ValueError` for missing length, payload, or padding bytes.
+Returns `ValueError` for missing length, payload or padding bytes.
 
 # Arguments
 
@@ -1180,7 +1178,7 @@ fn decode_i32_vector(data: &[u8], offset: usize) -> PyResult<(Vec<i32>, usize)>
 
 Decodes a generic TL vector of signed 32-bit values at `offset`.
 
-Returns values with the next offset, or Python errors for malformed sizes or allocation failure.
+Returns values with the next offset or Python errors for malformed sizes or allocation failure.
 
 # Arguments
 
@@ -1213,7 +1211,7 @@ fn decode_i64_vector(data: &[u8], offset: usize) -> PyResult<(Vec<i64>, usize)>
 
 Decodes a generic TL vector of signed 64-bit values at `offset`.
 
-Returns values with the next offset, or Python errors for malformed sizes or allocation failure.
+Returns values with the next offset or Python errors for malformed sizes or allocation failure.
 
 # Arguments
 
@@ -1228,9 +1226,9 @@ fn decode_vector_layout(data: &[u8], offset: usize, element_width: usize) -> PyR
 
 *Defined in `rust/miniproto/src/tl.rs:979-1014`*
 
-Validates a generic vector header and returns its count, payload start, and next offset.
+Validates a generic vector header and returns its count, payload start and next offset.
 
-Returns `ValueError` for a wrong constructor, negative/excessive count, or arithmetic overflow.
+Returns `ValueError` for a wrong constructor, negative/excessive count or arithmetic overflow.
 The subtraction used to calculate remaining bytes cannot underflow: the preceding checked
 header slice exists only when `payload_offset <= data.len()`. This function has no panic path
 for externally supplied `data`; its `expect` calls follow exact-width checked slices.

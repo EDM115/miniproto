@@ -1,6 +1,6 @@
 ---
 title: "Telegram functions: premium"
-description: "Layer 228 index of 5 canonical Telegram functions in the premium namespace from tdlib."
+description: "Layer 229 index of 5 canonical Telegram functions in the premium namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -9,11 +9,10 @@ qualified_name: "telegram.functions.premium"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "premium"
-layer: 228
 schema_source: "tdlib"
 ---
 
-## Layer 228 premium functions
+## Layer 229 premium functions
 
 Selected canonical functions in this namespace: 5.
 

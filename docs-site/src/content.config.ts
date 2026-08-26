@@ -49,13 +49,11 @@ const generatedMetadata = z
     aliases: z.array(z.string().min(1)).default([]),
     module: z.string().min(1).optional(),
     namespace: z.string().min(1).optional(),
-    layer: z.number().int().positive().optional(),
     schema_source: z.string().min(1).optional(),
     constructor_id: z
       .string()
       .regex(/^0x[0-9a-f]{8}$/i)
       .optional(),
-    crate: z.string().min(1).optional(),
     python_visible: z.boolean().optional(),
   })
   .superRefine((data, context) => {
@@ -96,14 +94,6 @@ const generatedMetadata = z
     }
 
     if (data.language === "telegram") {
-      if (data.layer === undefined) {
-        context.addIssue({
-          code: "custom",
-          path: ["layer"],
-          message: "Generated Telegram documentation requires layer.",
-        });
-      }
-
       if (data.schema_source === undefined) {
         context.addIssue({
           code: "custom",
@@ -111,14 +101,6 @@ const generatedMetadata = z
           message: "Generated Telegram documentation requires schema_source.",
         });
       }
-    }
-
-    if (data.language === "rust" && data.crate === undefined) {
-      context.addIssue({
-        code: "custom",
-        path: ["crate"],
-        message: "Generated Rust documentation requires crate.",
-      });
     }
   });
 

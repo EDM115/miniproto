@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: contacts.Contacts"
-description: "Layer 228 result-family index for 2 canonical constructors returning contacts.Contacts from tdlib."
+description: "Layer 229 result-family index for 2 canonical constructors returning contacts.Contacts from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -9,11 +9,10 @@ qualified_name: "telegram.types.result.contacts.Contacts"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "results"
-layer: 228
 schema_source: "tdlib"
 ---
 
-## Layer 228 result family `contacts.Contacts`
+## Layer 229 result family `contacts.Contacts`
 
 Selected canonical constructors in this family: 2.
 

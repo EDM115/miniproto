@@ -1,6 +1,6 @@
 ---
 title: "Telegram types: smsjobs"
-description: "Layer 228 index of 2 canonical Telegram types in the smsjobs namespace from tdlib."
+description: "Layer 229 index of 2 canonical Telegram types in the smsjobs namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -9,11 +9,10 @@ qualified_name: "telegram.types.smsjobs"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "smsjobs"
-layer: 228
 schema_source: "tdlib"
 ---
 
-## Layer 228 smsjobs types
+## Layer 229 smsjobs types
 
 Selected canonical types in this namespace: 2.
 

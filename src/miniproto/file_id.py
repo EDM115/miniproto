@@ -48,7 +48,7 @@ class DecodedFileId:
         """Build a ``Media`` value retaining the encoded file location.
 
         Returns:
-            A media value with the file reference, access hash, and matching input location.
+            A media value with the file reference, access hash and matching input location.
         """
         location: object
         if self.kind == "photo":
@@ -120,7 +120,7 @@ def encode_file_id(media: Media | object) -> str:
     """Encode supported Telegram media or input locations into a local file ID.
 
     Args:
-        media: A ``Media`` value, supported generated media object, or input file location.
+        media: A ``Media`` value, supported generated media object or input file location.
 
     Returns:
         Canonical URL-safe ``mpf1_`` identifier containing the reusable location fields.
@@ -154,10 +154,10 @@ def try_encode_file_id(media: Media | object | None) -> str | None:
     """Best-effort variant of :func:`encode_file_id`.
 
     Args:
-        media: Candidate media, or ``None``.
+        media: Candidate media or ``None``.
 
     Returns:
-        The encoded local ID, or ``None`` for absent or unsupported media.
+        The encoded local ID or ``None`` for absent or unsupported media.
     """
     if media is None:
         return None
@@ -177,7 +177,7 @@ def decode_file_id(file_id: str) -> DecodedFileId:
         Parsed reusable media fields.
 
     Raises:
-        ValueError: If the prefix, payload encoding, or required fields are invalid.
+        ValueError: If the prefix, payload encoding or required fields are invalid.
     """
     if not is_file_id(file_id):
         raise ValueError("not a miniproto file id")
@@ -244,7 +244,7 @@ def _decoded_from_media(media: Media | object) -> DecodedFileId:
     """Extract reusable fields from supported public media shapes.
 
     Args:
-        media: Media wrapper, generated media object, or supported input location.
+        media: Media wrapper, generated media object or supported input location.
     """
     if isinstance(media, Media):
         if media.location is not None:

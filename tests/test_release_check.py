@@ -147,8 +147,7 @@ def test_offline_stage_order_uses_check_only_commands_and_marks_future_docs_pend
     assert cargo_fmt is not None and cargo_fmt[-1] == "--check"
     assert cargo_clippy is not None and cargo_clippy[-2:] == ("-D", "warnings")
     assert (
-        next(stage for stage in stages if stage.name == "docs").pending_reason
-        == "Wave 5 documentation tooling is not present"
+        next(stage for stage in stages if stage.name == "docs").pending_reason == "Documentation tooling is not present"
     )
 
 
@@ -222,18 +221,13 @@ def test_release_stage_runner_prints_live_progress_for_running_pending_and_faile
 
 
 def test_pending_stage_is_reported_without_invoking_runner(tmp_path: Path) -> None:
-    stage = Stage("docs", None, pending_reason="Wave 5 documentation tooling is not present")
+    stage = Stage("docs", None, pending_reason="Documentation tooling is not present")
 
     report = run_stages((stage,), ReleaseConfig("offline", False, tmp_path), runner=lambda *_: 99)
 
     assert report["exit_code"] == 0
     assert report["stages"] == [
-        {
-            "name": "docs",
-            "status": "pending",
-            "duration_seconds": 0.0,
-            "reason": "Wave 5 documentation tooling is not present",
-        }
+        {"name": "docs", "status": "pending", "duration_seconds": 0.0, "reason": "Documentation tooling is not present"}
     ]
 
 

@@ -22,8 +22,8 @@ Recursively convert supported observability values into JSON-compatible shapes.
 
 **Parameters:**
 
-- **value** (<code>[object](#object)</code>) – Snapshot, event, mapping, list, tuple, or leaf value.
+- **value** (<code>[object](#object)</code>) – Snapshot, event, mapping, list, tuple or leaf value.
 
 **Returns:**
 
-- <code>[object](#object)</code> – Dataclasses as dictionaries, mappings with string keys, sequences as lists, or the leaf unchanged.
+- <code>[object](#object)</code> – Dataclasses as dictionaries, mappings with string keys, sequences as lists or the leaf unchanged.

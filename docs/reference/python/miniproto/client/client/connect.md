@@ -24,4 +24,4 @@ The method is serialized with ``disconnect`` and is safe to call repeatedly. If 
 
 **Raises:**
 
-- <code>[Exception](#Exception)</code> – Propagates storage, sender, or update-manager startup failures.
+- <code>[Exception](#Exception)</code> – Propagates storage, sender or update-manager startup failures.

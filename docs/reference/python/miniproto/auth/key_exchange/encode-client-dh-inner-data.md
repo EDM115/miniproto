@@ -22,4 +22,4 @@ Serialize ``client_DH_inner_data`` before temporary AES-IGE encryption.
 
 **Parameters:**
 
-- **inner** (<code>[ClientDHInnerData](#miniproto.auth.key_exchange.ClientDHInnerData)</code>) – Client DH nonces, retry identifier, and public value to encode.
+- **inner** (<code>[ClientDHInnerData](#miniproto.auth.key_exchange.ClientDHInnerData)</code>) – Client DH nonces, retry identifier and public value to encode.

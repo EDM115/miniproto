@@ -20,7 +20,7 @@ edit_message(peer: Peer | str | int, message_id: int, text: str, *, parse_mode: 
 
 Edit a message's text and optional media settings, returning the updated message.
 
-Explicit ``entities`` take precedence over ``parse_mode``. Request timeout, flood-wait, and retry arguments follow ``invoke`` semantics.
+Explicit ``entities`` take precedence over ``parse_mode``. Request timeout, flood-wait and retry arguments follow ``invoke`` semantics.
 
 **Parameters:**
 

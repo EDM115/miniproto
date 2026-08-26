@@ -30,4 +30,4 @@ numeric status classes. Unknown errors are returned unchanged.
 **Returns:**
 
 - <code>[RpcError](#miniproto.errors.RpcError)</code> – The same instance when no classification applies, otherwise a specific
-- <code>[RpcError](#miniproto.errors.RpcError)</code> – error that preserves message, code, request, and context.
+- <code>[RpcError](#miniproto.errors.RpcError)</code> – error that preserves message, code, request and context.

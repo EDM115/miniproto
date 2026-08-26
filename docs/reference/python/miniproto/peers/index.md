@@ -1,6 +1,6 @@
 ---
 title: "miniproto.peers"
-description: "Resolve, normalize, and persist Telegram peers with revision-aware indexes."
+description: "Resolve, normalize and persist Telegram peers with revision-aware indexes."
 generated: true
 editUrl: false
 language: "python"
@@ -13,7 +13,7 @@ module: "miniproto.peers"
 
 ## `miniproto.peers`
 
-Resolve, normalize, and persist Telegram peers with revision-aware indexes.
+Resolve, normalize and persist Telegram peers with revision-aware indexes.
 
 ## Public objects
 

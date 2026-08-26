@@ -1,7 +1,7 @@
-"""Build, execute, resume, and aggregate opt-in live media benchmark matrices.
+"""Build, execute, resume and aggregate opt-in live media benchmark matrices.
 
 Each cell fixes lanes, a MiB byte window, byte-sized chunks, launch timing,
-destination, cache warmth, and repeat label. The module writes durable raw/log
+destination, cache warmth and repeat label. The module writes durable raw/log
 artifacts so interrupted runs can resume completed cells, but actual live
 execution remains explicitly gated by ``MINIPROTO_LIVE_BENCH=1``.
 """
@@ -145,7 +145,7 @@ def run_matrix(cells: Sequence[MatrixCell], output: Path, *, execute: MatrixExec
 
     A complete raw JSON report skips only when resuming and its cell was not
     listed as previously failed. Failed or missing cells invoke ``execute``;
-    status, aggregate JSON, and Markdown comparison are regenerated afterward.
+    status, aggregate JSON and Markdown comparison are regenerated afterward.
 
     Returns:
         Matrix-schema status containing completed cell IDs and failure records.
@@ -290,7 +290,7 @@ def subprocess_executor(cell: MatrixCell, raw_path: Path, log_path: Path) -> int
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
-    """Parse live-matrix mode, artifact directory, and opt-in resume arguments.
+    """Parse live-matrix mode, artifact directory and opt-in resume arguments.
 
     Args:
         argv: Optional argument vector; ``None`` uses process command-line arguments.
@@ -317,7 +317,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     Returns:
         ``2`` unless ``MINIPROTO_LIVE_BENCH=1`` is set, ``1`` when any cell
-        fails, and ``0`` only when every selected cell completes successfully.
+        fails and ``0`` only when every selected cell completes successfully.
 
     Args:
         argv: Optional argument vector; ``None`` uses process command-line arguments.
@@ -390,10 +390,10 @@ def _throughput_mib(report: Mapping[str, Any], throughput: Mapping[str, Any]) ->
 
 
 def _markdown_table(rows: Sequence[Mapping[str, Any]]) -> str:
-    """Render aggregate rows with their documented MiB, byte, and millisecond units.
+    """Render aggregate rows with their documented MiB, byte and millisecond units.
 
     Args:
-        rows: Aggregate rows with throughput, RSS, and loop-lag measurements.
+        rows: Aggregate rows with throughput, RSS and loop-lag measurements.
     """
     lines = [
         "# Benchmark matrix comparison",

@@ -23,7 +23,7 @@ def compute_check_password(
         An empty password check when no password is configured, otherwise a freshly randomized SRP proof.
 
     Raises:
-        ValueError: If Telegram supplies unsupported, incomplete, or cryptographically invalid SRP parameters.
+        ValueError: If Telegram supplies unsupported, incomplete or cryptographically invalid SRP parameters.
     """
     if not getattr(password_state, "has_password", False) or password_state.current_algo is None:
         return types.InputCheckPasswordEmpty()
@@ -67,7 +67,7 @@ def _password_hash(password: str, algo: types.PasswordKdfAlgoSHA256SHA256PBKDF2H
 
     Args:
         password: Plain-text password used only for local SRP derivation.
-        algo: Telegram-supported KDF parameters containing salts, modulus, and generator.
+        algo: Telegram-supported KDF parameters containing salts, modulus and generator.
     """
     password_bytes = password.encode("utf-8")
     hash1 = sha256_digest(algo.salt1 + password_bytes + algo.salt1)

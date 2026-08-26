@@ -9,13 +9,11 @@ qualified_name: "miniproto_native::crypto::mtproto_encrypt_payload"
 source_path: "rust/miniproto/src/crypto.rs"
 source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L207"
 aliases: ["miniproto._native.mtproto_encrypt_payload"]
-crate: "miniproto_native"
 python_visible: true
 ---
 
 ## Provenance
 
-- Crate: `miniproto_native`
 - Rust visibility: `restricted`
 - Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L207)
 - Python exposure: `miniproto._native.mtproto_encrypt_payload` (confirmed from adjacent PyO3 attributes)

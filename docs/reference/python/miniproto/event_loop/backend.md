@@ -21,7 +21,7 @@ Load and return the optimized backend module when it is available.
 
 **Returns:**
 
-- <code>[ModuleType](#types.ModuleType) | None</code> – The cached import of the platform-selected backend, or ``None`` when
+- <code>[ModuleType](#types.ModuleType) | None</code> – The cached import of the platform-selected backend or ``None`` when
 - <code>[ModuleType](#types.ModuleType) | None</code> – that package is not installed.
 
 **Raises:**

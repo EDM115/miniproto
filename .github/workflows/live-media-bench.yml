@@ -8,7 +8,7 @@ on:
         required: true
         default: smoke
         type: choice
-        options: [smoke, matrix, tglib]
+        options: [smoke, matrix]
       runner:
         description: Operating system runner
         required: true
@@ -34,11 +34,11 @@ on:
         type: choice
         options: [download, upload, both]
       file_id:
-        description: Explicit pre-uploaded file ID; required by matrix/tglib and download-only smoke
+        description: Explicit pre-uploaded file ID; required by matrix and download-only smoke
         required: false
         default: ""
       size:
-        description: Smoke payload size or expected tglib fixture size
+        description: Smoke payload size
         required: true
         default: telegram-default
       dc_id:
@@ -72,7 +72,6 @@ jobs:
         runner: ${{ fromJSON(inputs.runner == 'both' && '["linux","windows"]' || format('["{0}"]', inputs.runner)) }}
     env:
       MINIPROTO_LIVE_BENCH: "1"
-      MINIPROTO_TGLIB_BENCH: "1"
       MINIPROTO_INTEGRATION: "1"
       MINIPROTO_REAL_INTEGRATION: "1"
       MINIPROTO_API_ID: ${{ secrets.MINIPROTO_API_ID }}
@@ -96,10 +95,6 @@ jobs:
       MINIPROTO_LIVE_BENCH_SIZE: ${{ inputs.size }}
       MINIPROTO_LIVE_BENCH_DC_ID: ${{ inputs.dc_id }}
       MINIPROTO_LIVE_BENCH_REPEAT: ${{ inputs.repeat }}
-      MINIPROTO_TGLIB_FILE_ID: ${{ inputs.file_id }}
-      MINIPROTO_TGLIB_PEER: ${{ inputs.peer || secrets.MINIPROTO_LIVE_BENCH_BOT_PEER }}
-      MINIPROTO_TGLIB_DC_ID: ${{ inputs.dc_id }}
-      MINIPROTO_TGLIB_SIZE: ${{ inputs.size == 'telegram-default' && '2097152000' || inputs.size }}
       PYTHONUNBUFFERED: "1"
     steps:
       - uses: actions/checkout@v7
@@ -141,11 +136,8 @@ jobs:
       - name: Validate non-interactive inputs
         shell: pwsh
         run: |
-          if ("${{ inputs.mode }}" -in @("matrix", "tglib") -and [string]::IsNullOrWhiteSpace("${{ inputs.file_id }}")) {
-            throw "matrix and tglib modes require an explicit pre-uploaded file_id"
-          }
-          if ("${{ inputs.mode }}" -eq "tglib" -and [string]::IsNullOrWhiteSpace($env:MINIPROTO_TGLIB_PEER)) {
-            throw "tglib mode requires a bot destination peer"
+          if ("${{ inputs.mode }}" -eq "matrix" -and [string]::IsNullOrWhiteSpace("${{ inputs.file_id }}")) {
+            throw "matrix mode require an explicit pre-uploaded file_id"
           }
           if ("${{ inputs.mode }}" -eq "smoke" -and "${{ inputs.operation }}" -eq "download" -and [string]::IsNullOrWhiteSpace("${{ inputs.file_id }}")) {
             throw "download-only smoke mode requires an explicit pre-uploaded file_id"
@@ -171,8 +163,6 @@ jobs:
             & uv @Arguments 2>&1 | Tee-Object -FilePath "$Output/benchmark.log"
           } elseif ("${{ inputs.mode }}" -eq "matrix") {
             & uv run miniproto-bench-matrix --mode "${{ inputs.matrix_profile }}" --output "$Output/matrix" 2>&1 | Tee-Object -FilePath "$Output/benchmark.log"
-          } else {
-            & uv run miniproto-bench-tglib --file-id "${{ inputs.file_id }}" --peer $env:MINIPROTO_TGLIB_PEER --dc-id "${{ inputs.dc_id }}" --size $env:MINIPROTO_TGLIB_SIZE --compat-json "$Output/results.json" --json "$Output/miniproto.json" --work-dir "$Output/work" 2>&1 | Tee-Object -FilePath "$Output/benchmark.log"
           }
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 

@@ -28,4 +28,4 @@ Gap recovery and cursor mutation are serialized under the manager's state lock. 
 
 **Raises:**
 
-- <code>[Exception](#Exception)</code> – Propagates storage, RPC, gap-recovery, queue, and handler failures.
+- <code>[Exception](#Exception)</code> – Propagates storage, RPC, gap-recovery, queue and handler failures.

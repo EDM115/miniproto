@@ -1,6 +1,6 @@
 ---
 title: "miniproto.media"
-description: "Public media-transfer APIs for downloading, uploading, CDN decryption, and range caching."
+description: "Public media-transfer APIs for downloading, uploading, CDN decryption and range caching."
 generated: true
 editUrl: false
 language: "python"
@@ -13,14 +13,14 @@ module: "miniproto.media"
 
 ## `miniproto.media`
 
-Public media-transfer APIs for downloading, uploading, CDN decryption, and range caching.
+Public media-transfer APIs for downloading, uploading, CDN decryption and range caching.
 
 The exports intentionally group high-level download and upload helpers with the
-typed results, source/destination aliases, and CDN integrity errors they use.
+typed results, source/destination aliases and CDN integrity errors they use.
 
 ## Public objects
 
-- [`CdnError`](./cdn/cdnerror/) — Raised when a CDN response cannot be reuploaded, decrypted, or interpreted.
+- [`CdnError`](./cdn/cdnerror/) — Raised when a CDN response cannot be reuploaded, decrypted or interpreted.
 - [`CdnIntegrityError`](./cdn/cdnintegrityerror/) — Raised when a CDN range lacks valid ``FileHash`` coverage or verification fails.
 - [`CdnRedirect`](./cdn/cdnredirect/) — Validated information supplied by Telegram when a file moves to its CDN.
 - [`decrypt_cdn_chunk`](./cdn/decrypt-cdn-chunk/) — Decrypt a CDN ciphertext range with the counter aligned to its file offset.
@@ -34,8 +34,8 @@ typed results, source/destination aliases, and CDN integrity errors they use.
 - [`MediaDownloadError`](./download/mediadownloaderror/) — Raised when a requested media range cannot be downloaded or materialized.
 - [`MediaDownloadResult`](./download/mediadownloadresult/) — Completed materialized-download metadata and optional in-memory payload.
 - [`MediaIntegrityError`](./download/mediaintegrityerror/) — Raised when declared file hashes or download-range invariants are violated.
-- [`download_file`](./download/download-file/) — Download media into memory, a path, or a caller-owned binary stream.
-- [`download_location_from_media`](./download/download-location-from-media/) — Resolve a media model, raw Telegram object, file ID, or input location for download.
+- [`download_file`](./download/download-file/) — Download media into memory, a path or a caller-owned binary stream.
+- [`download_location_from_media`](./download/download-location-from-media/) — Resolve a media model, raw Telegram object, file ID or input location for download.
 - [`download_media`](./download/download-media/) — Resolve media and materialize it through :func:`download_file`.
 - [`iter_download`](./download/iter-download/) — Stream an exact media range as ordered, bounded byte chunks.
 - [`iter_download_media`](./download/iter-download-media/) — Resolve a supported media object and stream it through :func:`iter_download`.

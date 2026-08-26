@@ -34,7 +34,7 @@ def parse_message_text(text: str, parse_mode: str | None = None) -> ParsedMessag
     Args:
         text: Source message text, with backslashes escaping the next character.
         parse_mode: ``markdown``/``markdown-lite``/``md`` enables parsing;
-            ``None``, ``plain``, ``text``, and ``none`` preserve text verbatim.
+            ``None``, ``plain``, ``text`` and ``none`` preserve text verbatim.
 
     Returns:
         Rendered text and entities whose offsets and lengths use UTF-16 code units.
@@ -175,7 +175,7 @@ def _entity(kind: str, offset: int, length: int) -> object:
     """Create the MTProto entity for a supported lightweight markup kind.
 
     Args:
-        kind: Supported delimiter kind: bold, italic, code, or pre.
+        kind: Supported delimiter kind: bold, italic, code or pre.
         offset: UTF-16 start offset in the rendered text.
         length: UTF-16 entity length.
     """
@@ -237,7 +237,7 @@ def _find_message_result(result: object) -> types.Message | None:
 
 
 def _message_from_raw(raw: types.Message, *, fallback_peer: Peer, fallback_entities: tuple[object, ...]) -> Message:
-    """Build a message model while preserving raw media, date, and entity defaults.
+    """Build a message model while preserving raw media, date and entity defaults.
 
     Args:
         raw: Concrete Telegram message object.

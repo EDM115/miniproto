@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: RichText"
-description: "Layer 228 result-family index for 30 canonical constructors returning RichText from tdlib."
+description: "Layer 229 result-family index for 31 canonical constructors returning RichText from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -9,13 +9,12 @@ qualified_name: "telegram.types.result.RichText"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "results"
-layer: 228
 schema_source: "tdlib"
 ---
 
-## Layer 228 result family `RichText`
+## Layer 229 result family `RichText`
 
-Selected canonical constructors in this family: 30.
+Selected canonical constructors in this family: 31.
 
 ## Constructors
 
@@ -26,6 +25,7 @@ Selected canonical constructors in this family: 30.
 - [`textBankCard`](/reference/telegram/types/base/text-bank-card/): `RichText`
 - [`textBold`](/reference/telegram/types/base/text-bold/): `RichText`
 - [`textBotCommand`](/reference/telegram/types/base/text-bot-command/): `RichText`
+- [`textButton`](/reference/telegram/types/base/text-button/): `RichText`
 - [`textCashtag`](/reference/telegram/types/base/text-cashtag/): `RichText`
 - [`textConcat`](/reference/telegram/types/base/text-concat/): `RichText`
 - [`textCustomEmoji`](/reference/telegram/types/base/text-custom-emoji/): `RichText`

@@ -1,6 +1,6 @@
 ---
 title: "Telegram functions: auth"
-description: "Layer 228 index of 26 canonical Telegram functions in the auth namespace from tdlib."
+description: "Layer 229 index of 29 canonical Telegram functions in the auth namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -9,13 +9,12 @@ qualified_name: "telegram.functions.auth"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "auth"
-layer: 228
 schema_source: "tdlib"
 ---
 
-## Layer 228 auth functions
+## Layer 229 auth functions
 
-Selected canonical functions in this namespace: 26.
+Selected canonical functions in this namespace: 29.
 
 ## Declarations
 
@@ -28,11 +27,14 @@ Selected canonical functions in this namespace: 26.
 - [`auth.dropTempAuthKeys`](/reference/telegram/functions/auth/drop-temp-auth-keys/): `Bool`
 - [`auth.exportAuthorization`](/reference/telegram/functions/auth/export-authorization/): `auth.ExportedAuthorization`
 - [`auth.exportLoginToken`](/reference/telegram/functions/auth/export-login-token/): `auth.LoginToken`
+- [`auth.finishFirebasePnvLogin`](/reference/telegram/functions/auth/finish-firebase-pnv-login/): `auth.Authorization`
 - [`auth.finishPasskeyLogin`](/reference/telegram/functions/auth/finish-passkey-login/): `auth.Authorization`
+- [`auth.firebasePnvSignUp`](/reference/telegram/functions/auth/firebase-pnv-sign-up/): `auth.Authorization`
 - [`auth.importAuthorization`](/reference/telegram/functions/auth/import-authorization/): `auth.Authorization`
 - [`auth.importBotAuthorization`](/reference/telegram/functions/auth/import-bot-authorization/): `auth.Authorization`
 - [`auth.importLoginToken`](/reference/telegram/functions/auth/import-login-token/): `auth.LoginToken`
 - [`auth.importWebTokenAuthorization`](/reference/telegram/functions/auth/import-web-token-authorization/): `auth.Authorization`
+- [`auth.initFirebasePnvLogin`](/reference/telegram/functions/auth/init-firebase-pnv-login/): `auth.FirebasePnvIntent`
 - [`auth.initPasskeyLogin`](/reference/telegram/functions/auth/init-passkey-login/): `auth.PasskeyLoginOptions`
 - [`auth.logOut`](/reference/telegram/functions/auth/log-out/): `auth.LoggedOut`
 - [`auth.recoverPassword`](/reference/telegram/functions/auth/recover-password/): `auth.Authorization`

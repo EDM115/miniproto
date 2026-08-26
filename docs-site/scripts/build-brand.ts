@@ -14,7 +14,7 @@ const options = new Set(process.argv.slice(2));
 const checking = options.has("--check");
 if (options.has("--help") || options.has("-h")) {
   console.log("Usage: jiti scripts/build-brand.ts [--check]");
-  console.log("Build or verify the Packet Loom production SVG and social-card derivatives.");
+  console.log("Build or verify the production SVG and social-card derivatives.");
   console.log("");
   console.log("Options:");
   console.log("  --check  Verify every committed derivative without writing files.");
@@ -33,7 +33,7 @@ const geometry = source
   .slice(source.indexOf('<g fill="#04474C">'), source.lastIndexOf("</svg>"))
   .trim();
 if (!geometry.startsWith("<g") || !geometry.endsWith("/>")) {
-  throw new Error("Could not isolate the canonical Packet Loom geometry.");
+  throw new Error("Could not isolate the canonical geometry.");
 }
 
 const darkMark = source.replaceAll("#04474C", "#F8FFF5");
@@ -91,9 +91,9 @@ if (drift.length > 0) {
   throw new Error(`Brand derivatives are stale:\n${drift.map((file) => `- ${file}`).join("\n")}`);
 }
 if (checking) {
-  console.log(`Packet Loom brand derivatives are current (${outputs.size + 1} files).`);
+  console.log(`Brand derivatives are current (${outputs.size + 1} files).`);
 } else {
-  console.log(`Packet Loom brand derivatives built (${outputs.size} files).`);
+  console.log(`Brand derivatives built (${outputs.size} files).`);
 }
 
 /** Validate the committed raster portably without rerendering fonts through a platform-specific SVG engine. */
@@ -123,8 +123,8 @@ function buildWordmark({
 }): string {
   const text = dark ? "#F8FFF5" : "#04474C";
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="440" viewBox="0 -6.5 1080 440" role="img" aria-labelledby="title description">
-  <title id="title">miniproto Packet Loom wordmark</title>
-  <desc id="description">The Packet Loom tile mark followed by the miniproto name.</desc>
+  <title id="title">miniproto wordmark</title>
+  <desc id="description">The tile mark followed by the miniproto name.</desc>
   <defs><style>@font-face{font-family:MiniprotoNunito;src:url(data:font/woff2;base64,${font}) format('woff2');font-style:normal;font-weight:800}.wordmark{font-family:MiniprotoNunito,sans-serif;font-size:150px;font-weight:800;letter-spacing:-5px}</style></defs>
   <g aria-hidden="true">${markGeometry}</g>
   <text class="wordmark" x="480" y="282" fill="${text}">miniproto</text>
@@ -141,14 +141,14 @@ function buildSocialCard({
 }): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title description">
   <title id="title">miniproto documentation</title>
-  <desc id="description">Packet Loom branding with the miniproto product promise and Alpha status.</desc>
+  <desc id="description">Branding with the miniproto product promise and Alpha status.</desc>
   <defs><style>@font-face{font-family:MiniprotoNunito;src:url(data:font/woff2;base64,${font}) format('woff2');font-style:normal;font-weight:800}.display{font-family:MiniprotoNunito,sans-serif;font-weight:800}</style></defs>
   <rect width="1200" height="630" fill="#082E2C"/>
   <path d="M0 516H1200" stroke="#C7F406" stroke-opacity=".18"/>
   <text class="display" x="78" y="126" fill="#C7F406" font-size="30" letter-spacing="1.5">0.1.0 ALPHA</text>
   <text class="display" x="78" y="258" fill="#F8FFF5" font-size="104" letter-spacing="-4">miniproto</text>
   <text x="84" y="324" fill="#C1D6CF" font-family="system-ui,sans-serif" font-size="31">MTProto, without the framework tax.</text>
-  <text data-role="supporting-description" fill="#8EA9A2" font-family="system-ui,sans-serif" font-size="22"><tspan x="84" y="382">Python intent · Layer 228 schema</tspan><tspan x="84" y="416">measured Rust fast paths</tspan></text>
+  <text data-role="supporting-description" fill="#8EA9A2" font-family="system-ui,sans-serif" font-size="22"><tspan x="84" y="382">Python intent · Layer 229 schema</tspan><tspan x="84" y="416">measured Rust fast paths</tspan></text>
   <g aria-hidden="true" transform="translate(718 90) scale(.98)">${markGeometry}</g>
   <rect data-role="repository-marker" x="78" y="566" width="14" height="14" rx="4" fill="#C7F406"/>
   <text data-role="repository-link" x="110" y="580" fill="#C1D6CF" font-family="ui-monospace,monospace" font-size="18">github.com/EDM115/miniproto</text>

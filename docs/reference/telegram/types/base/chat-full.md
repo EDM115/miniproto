@@ -9,7 +9,6 @@ qualified_name: "chatFull"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "base"
-layer: 228
 schema_source: "tdlib"
 constructor_id: "0x2633421b"
 ---
@@ -21,7 +20,7 @@ No description provided by the pinned schema.
 ## Signature
 
 ```tl
-chatFull#2633421b flags:# can_set_username:flags.7?true has_scheduled:flags.8?true translations_disabled:flags.19?true id:long about:string participants:ChatParticipants chat_photo:flags.2?Photo notify_settings:PeerNotifySettings exported_invite:flags.13?ExportedChatInvite bot_info:flags.3?Vector<BotInfo> pinned_msg_id:flags.6?int folder_id:flags.11?int call:flags.12?InputGroupCall ttl_period:flags.14?int groupcall_default_join_as:flags.15?Peer theme_emoticon:flags.16?string requests_pending:flags.17?int recent_requesters:flags.17?Vector<long> available_reactions:flags.18?ChatReactions reactions_limit:flags.20?int = ChatFull;
+chatFull#2633421b flags:# can_set_username:flags.7?true has_scheduled:flags.8?true translations_disabled:flags.19?true has_welcome_messages:flags.21?true id:long about:string participants:ChatParticipants chat_photo:flags.2?Photo notify_settings:PeerNotifySettings exported_invite:flags.13?ExportedChatInvite bot_info:flags.3?Vector<BotInfo> pinned_msg_id:flags.6?int folder_id:flags.11?int call:flags.12?InputGroupCall ttl_period:flags.14?int groupcall_default_join_as:flags.15?Peer theme_emoticon:flags.16?string requests_pending:flags.17?int recent_requesters:flags.17?Vector<long> available_reactions:flags.18?ChatReactions reactions_limit:flags.20?int = ChatFull;
 ```
 
 ## Result type
@@ -36,6 +35,7 @@ chatFull#2633421b flags:# can_set_username:flags.7?true has_scheduled:flags.8?tr
 | can_set_username | flags.7?true | flags.7 | — | No description provided by the pinned schema. |
 | has_scheduled | flags.8?true | flags.8 | — | No description provided by the pinned schema. |
 | translations_disabled | flags.19?true | flags.19 | — | No description provided by the pinned schema. |
+| has_welcome_messages | flags.21?true | flags.21 | — | No description provided by the pinned schema. |
 | id | long | — | — | No description provided by the pinned schema. |
 | about | string | — | — | No description provided by the pinned schema. |
 | participants | ChatParticipants | — | — | No description provided by the pinned schema. |
@@ -61,6 +61,7 @@ chatFull#2633421b flags:# can_set_username:flags.7?true has_scheduled:flags.8?tr
 | can_set_username | 7 | Controlled by `flags`; present when this bit is set. |
 | has_scheduled | 8 | Controlled by `flags`; present when this bit is set. |
 | translations_disabled | 19 | Controlled by `flags`; present when this bit is set. |
+| has_welcome_messages | 21 | Controlled by `flags`; present when this bit is set. |
 | chat_photo | 2 | Controlled by `flags`; present when this bit is set. |
 | exported_invite | 13 | Controlled by `flags`; present when this bit is set. |
 | bot_info | 3 | Controlled by `flags`; present when this bit is set. |
@@ -104,13 +105,12 @@ constructor_type = ChatFull
 
 ## Provenance
 
-- layer: 228
 - structural source: `tdlib`
 - canonical schema: https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/telegram_api.tl
 - prose merge precedence: TDLib → Telegram Desktop → Core JSON
-- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 228 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
+- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 229 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
 
 ## Source-diff notes
 
-- tdlib_vs_core: changed_count=68; core_only_count=1; overlap_count=2302; tdlib_only_count=158
-- tdlib_vs_tdesktop: changed_count=0; overlap_count=2448; tdesktop_only=null; tdlib_only=accessPointRule, ephemeral.editMessage, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret, updateEphemeralBotCallbackQuery
+- tdlib_vs_core: changed_count=78; core_only_count=18; overlap_count=2285; tdlib_only_count=195
+- tdlib_vs_tdesktop: changed_count=0; overlap_count=2470; tdesktop_only=null; tdlib_only=accessPointRule, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret

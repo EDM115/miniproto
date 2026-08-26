@@ -8,13 +8,11 @@ kind: "function"
 qualified_name: "miniproto_native::transport::register"
 source_path: "rust/miniproto/src/transport.rs"
 source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L41"
-crate: "miniproto_native"
 python_visible: false
 ---
 
 ## Provenance
 
-- Crate: `miniproto_native`
 - Rust visibility: `public`
 - Source: [`rust/miniproto/src/transport.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L41)
 - Python exposure: Not evidenced by static PyO3 attributes.

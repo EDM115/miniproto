@@ -1,1 +1,1 @@
-"""Test support utilities."""
+"""Test support utilities"""

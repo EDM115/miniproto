@@ -1,5 +1,5 @@
 {
-  "layer": 228,
+  "layer": 229,
   "relationships": [
     {
       "relation": "accepts_type_family",
@@ -4340,7 +4340,23 @@
     {
       "relation": "accepts_type_family",
       "source": {
-        "constructor_id": "0xa3c0d511",
+        "constructor_id": "0x734f9721",
+        "kind": "function",
+        "path": "telegram/functions/ephemeral/delete-all-welcome-messages.md",
+        "qualified_name": "ephemeral.deleteAllWelcomeMessages"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/input-peer/index.md",
+        "qualified_name": "InputPeer",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "accepts_type_family",
+      "source": {
+        "constructor_id": "0x92f6e797",
         "kind": "function",
         "path": "telegram/functions/ephemeral/delete-message.md",
         "qualified_name": "ephemeral.deleteMessage"
@@ -4356,7 +4372,7 @@
     {
       "relation": "accepts_type_family",
       "source": {
-        "constructor_id": "0xa3c0d511",
+        "constructor_id": "0x92f6e797",
         "kind": "function",
         "path": "telegram/functions/ephemeral/delete-message.md",
         "qualified_name": "ephemeral.deleteMessage"
@@ -4372,7 +4388,23 @@
     {
       "relation": "accepts_type_family",
       "source": {
-        "constructor_id": "0x13f250ee",
+        "constructor_id": "0xe882a9e1",
+        "kind": "function",
+        "path": "telegram/functions/ephemeral/delete-welcome-message.md",
+        "qualified_name": "ephemeral.deleteWelcomeMessage"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/input-peer/index.md",
+        "qualified_name": "InputPeer",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "accepts_type_family",
+      "source": {
+        "constructor_id": "0xcf9c725b",
         "kind": "function",
         "path": "telegram/functions/ephemeral/edit-message.md",
         "qualified_name": "ephemeral.editMessage"
@@ -4388,7 +4420,7 @@
     {
       "relation": "accepts_type_family",
       "source": {
-        "constructor_id": "0x13f250ee",
+        "constructor_id": "0xcf9c725b",
         "kind": "function",
         "path": "telegram/functions/ephemeral/edit-message.md",
         "qualified_name": "ephemeral.editMessage"
@@ -4404,7 +4436,23 @@
     {
       "relation": "accepts_type_family",
       "source": {
-        "constructor_id": "0x13f250ee",
+        "constructor_id": "0xcf9c725b",
+        "kind": "function",
+        "path": "telegram/functions/ephemeral/edit-message.md",
+        "qualified_name": "ephemeral.editMessage"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/input-rich-message/index.md",
+        "qualified_name": "InputRichMessage",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "accepts_type_family",
+      "source": {
+        "constructor_id": "0xcf9c725b",
         "kind": "function",
         "path": "telegram/functions/ephemeral/edit-message.md",
         "qualified_name": "ephemeral.editMessage"
@@ -4420,7 +4468,7 @@
     {
       "relation": "accepts_type_family",
       "source": {
-        "constructor_id": "0x13f250ee",
+        "constructor_id": "0xcf9c725b",
         "kind": "function",
         "path": "telegram/functions/ephemeral/edit-message.md",
         "qualified_name": "ephemeral.editMessage"
@@ -4436,7 +4484,7 @@
     {
       "relation": "accepts_type_family",
       "source": {
-        "constructor_id": "0x13f250ee",
+        "constructor_id": "0xcf9c725b",
         "kind": "function",
         "path": "telegram/functions/ephemeral/edit-message.md",
         "qualified_name": "ephemeral.editMessage"
@@ -4468,6 +4516,22 @@
     {
       "relation": "accepts_type_family",
       "source": {
+        "constructor_id": "0xdb9ac18d",
+        "kind": "function",
+        "path": "telegram/functions/ephemeral/get-welcome-messages.md",
+        "qualified_name": "ephemeral.getWelcomeMessages"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/input-peer/index.md",
+        "qualified_name": "InputPeer",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "accepts_type_family",
+      "source": {
         "constructor_id": "0x8704f2bf",
         "kind": "function",
         "path": "telegram/functions/ephemeral/report-message.md",
@@ -4484,7 +4548,7 @@
     {
       "relation": "accepts_type_family",
       "source": {
-        "constructor_id": "0x68cbd09f",
+        "constructor_id": "0xba8d5f35",
         "kind": "function",
         "path": "telegram/functions/ephemeral/send-message.md",
         "qualified_name": "ephemeral.sendMessage"
@@ -4500,7 +4564,7 @@
     {
       "relation": "accepts_type_family",
       "source": {
-        "constructor_id": "0x68cbd09f",
+        "constructor_id": "0xba8d5f35",
         "kind": "function",
         "path": "telegram/functions/ephemeral/send-message.md",
         "qualified_name": "ephemeral.sendMessage"
@@ -4516,7 +4580,7 @@
     {
       "relation": "accepts_type_family",
       "source": {
-        "constructor_id": "0x68cbd09f",
+        "constructor_id": "0xba8d5f35",
         "kind": "function",
         "path": "telegram/functions/ephemeral/send-message.md",
         "qualified_name": "ephemeral.sendMessage"
@@ -4532,7 +4596,7 @@
     {
       "relation": "accepts_type_family",
       "source": {
-        "constructor_id": "0x68cbd09f",
+        "constructor_id": "0xba8d5f35",
         "kind": "function",
         "path": "telegram/functions/ephemeral/send-message.md",
         "qualified_name": "ephemeral.sendMessage"
@@ -4548,7 +4612,7 @@
     {
       "relation": "accepts_type_family",
       "source": {
-        "constructor_id": "0x68cbd09f",
+        "constructor_id": "0xba8d5f35",
         "kind": "function",
         "path": "telegram/functions/ephemeral/send-message.md",
         "qualified_name": "ephemeral.sendMessage"
@@ -4564,7 +4628,7 @@
     {
       "relation": "accepts_type_family",
       "source": {
-        "constructor_id": "0x68cbd09f",
+        "constructor_id": "0xba8d5f35",
         "kind": "function",
         "path": "telegram/functions/ephemeral/send-message.md",
         "qualified_name": "ephemeral.sendMessage"
@@ -4580,7 +4644,7 @@
     {
       "relation": "accepts_type_family",
       "source": {
-        "constructor_id": "0x68cbd09f",
+        "constructor_id": "0xba8d5f35",
         "kind": "function",
         "path": "telegram/functions/ephemeral/send-message.md",
         "qualified_name": "ephemeral.sendMessage"
@@ -14292,6 +14356,22 @@
     {
       "relation": "constructor_result_family",
       "source": {
+        "constructor_id": "0xdf5ac00c",
+        "kind": "type",
+        "path": "telegram/types/auth/firebase-pnv-intent.md",
+        "qualified_name": "auth.firebasePnvIntent"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/auth-firebase-pnv-intent/index.md",
+        "qualified_name": "auth.FirebasePnvIntent",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
         "constructor_id": "0xc3a2835f",
         "kind": "type",
         "path": "telegram/types/auth/logged-out.md",
@@ -15630,6 +15710,102 @@
         "kind": "result_family",
         "path": "telegram/types/results/business-work-hours/index.md",
         "qualified_name": "BusinessWorkHours",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0xc9dd90e9",
+        "kind": "type",
+        "path": "telegram/types/base/button-type-default.md",
+        "qualified_name": "buttonTypeDefault"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/button-type/index.md",
+        "qualified_name": "ButtonType",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x9beee140",
+        "kind": "type",
+        "path": "telegram/types/base/button-type-request-geo-location.md",
+        "qualified_name": "buttonTypeRequestGeoLocation"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/button-type/index.md",
+        "qualified_name": "ButtonType",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x4f58a237",
+        "kind": "type",
+        "path": "telegram/types/base/button-type-request-peer.md",
+        "qualified_name": "buttonTypeRequestPeer"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/button-type/index.md",
+        "qualified_name": "ButtonType",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0xdf3d36f9",
+        "kind": "type",
+        "path": "telegram/types/base/button-type-request-phone.md",
+        "qualified_name": "buttonTypeRequestPhone"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/button-type/index.md",
+        "qualified_name": "ButtonType",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0xaacfff84",
+        "kind": "type",
+        "path": "telegram/types/base/button-type-request-poll.md",
+        "qualified_name": "buttonTypeRequestPoll"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/button-type/index.md",
+        "qualified_name": "ButtonType",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0xc01a597a",
+        "kind": "type",
+        "path": "telegram/types/base/button-type-simple-web-view.md",
+        "qualified_name": "buttonTypeSimpleWebView"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/button-type/index.md",
+        "qualified_name": "ButtonType",
         "selected_layer": true
       }
     },
@@ -18788,7 +18964,39 @@
     {
       "relation": "constructor_result_family",
       "source": {
-        "constructor_id": "0xd9c6dc1a",
+        "constructor_id": "0x104fc872",
+        "kind": "type",
+        "path": "telegram/types/ephemeral/welcome-messages.md",
+        "qualified_name": "ephemeral.welcomeMessages"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/ephemeral-welcome-messages/index.md",
+        "qualified_name": "ephemeral.WelcomeMessages",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x59ffdb31",
+        "kind": "type",
+        "path": "telegram/types/ephemeral/welcome-messages-not-modified.md",
+        "qualified_name": "ephemeral.welcomeMessagesNotModified"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/ephemeral-welcome-messages/index.md",
+        "qualified_name": "ephemeral.WelcomeMessages",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0xdd27bee9",
         "kind": "type",
         "path": "telegram/types/base/ephemeral-message.md",
         "qualified_name": "ephemeralMessage"
@@ -19796,6 +20004,166 @@
     {
       "relation": "constructor_result_family",
       "source": {
+        "constructor_id": "0x48bad7a5",
+        "kind": "type",
+        "path": "telegram/types/base/inline-button-type-buy.md",
+        "qualified_name": "inlineButtonTypeBuy"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/inline-button-type/index.md",
+        "qualified_name": "InlineButtonType",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x2955bc38",
+        "kind": "type",
+        "path": "telegram/types/base/inline-button-type-callback.md",
+        "qualified_name": "inlineButtonTypeCallback"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/inline-button-type/index.md",
+        "qualified_name": "InlineButtonType",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0xb41d3272",
+        "kind": "type",
+        "path": "telegram/types/base/inline-button-type-copy.md",
+        "qualified_name": "inlineButtonTypeCopy"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/inline-button-type/index.md",
+        "qualified_name": "InlineButtonType",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0xa438619d",
+        "kind": "type",
+        "path": "telegram/types/base/inline-button-type-disabled.md",
+        "qualified_name": "inlineButtonTypeDisabled"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/inline-button-type/index.md",
+        "qualified_name": "InlineButtonType",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x5cd3709d",
+        "kind": "type",
+        "path": "telegram/types/base/inline-button-type-game.md",
+        "qualified_name": "inlineButtonTypeGame"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/inline-button-type/index.md",
+        "qualified_name": "InlineButtonType",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x93773ff5",
+        "kind": "type",
+        "path": "telegram/types/base/inline-button-type-switch-inline.md",
+        "qualified_name": "inlineButtonTypeSwitchInline"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/inline-button-type/index.md",
+        "qualified_name": "InlineButtonType",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0xeca4f8d4",
+        "kind": "type",
+        "path": "telegram/types/base/inline-button-type-url.md",
+        "qualified_name": "inlineButtonTypeUrl"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/inline-button-type/index.md",
+        "qualified_name": "InlineButtonType",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0xbfd02da2",
+        "kind": "type",
+        "path": "telegram/types/base/inline-button-type-url-auth.md",
+        "qualified_name": "inlineButtonTypeUrlAuth"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/inline-button-type/index.md",
+        "qualified_name": "InlineButtonType",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x3fa33fcf",
+        "kind": "type",
+        "path": "telegram/types/base/inline-button-type-user-profile.md",
+        "qualified_name": "inlineButtonTypeUserProfile"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/inline-button-type/index.md",
+        "qualified_name": "InlineButtonType",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x3bcab5b4",
+        "kind": "type",
+        "path": "telegram/types/base/inline-button-type-web-view.md",
+        "qualified_name": "inlineButtonTypeWebView"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/inline-button-type/index.md",
+        "qualified_name": "InlineButtonType",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
         "constructor_id": "0x0e3b2d0c",
         "kind": "type",
         "path": "telegram/types/base/inline-query-peer-type-bot-pm.md",
@@ -20334,6 +20702,22 @@
         "kind": "result_family",
         "path": "telegram/types/results/input-business-recipients/index.md",
         "qualified_name": "InputBusinessRecipients",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x3fe268fe",
+        "kind": "type",
+        "path": "telegram/types/base/input-button-type-request-peer.md",
+        "qualified_name": "inputButtonTypeRequestPeer"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/button-type/index.md",
+        "qualified_name": "ButtonType",
         "selected_layer": true
       }
     },
@@ -20996,6 +21380,38 @@
     {
       "relation": "constructor_result_family",
       "source": {
+        "constructor_id": "0x9961bcb4",
+        "kind": "type",
+        "path": "telegram/types/base/input-inline-button-type-url-auth.md",
+        "qualified_name": "inputInlineButtonTypeUrlAuth"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/inline-button-type/index.md",
+        "qualified_name": "InlineButtonType",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x53f3ce5a",
+        "kind": "type",
+        "path": "telegram/types/base/input-inline-button-type-user-profile.md",
+        "qualified_name": "inputInlineButtonTypeUserProfile"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/inline-button-type/index.md",
+        "qualified_name": "InlineButtonType",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
         "constructor_id": "0xf4997e42",
         "kind": "type",
         "path": "telegram/types/base/input-invoice-business-bot-transfer-stars.md",
@@ -21172,7 +21588,7 @@
     {
       "relation": "constructor_result_family",
       "source": {
-        "constructor_id": "0xc39f5324",
+        "constructor_id": "0xe9b0c658",
         "kind": "type",
         "path": "telegram/types/base/input-invoice-star-gift-resale.md",
         "qualified_name": "inputInvoiceStarGiftResale"
@@ -21230,54 +21646,6 @@
         "kind": "result_family",
         "path": "telegram/types/results/input-invoice/index.md",
         "qualified_name": "InputInvoice",
-        "selected_layer": true
-      }
-    },
-    {
-      "relation": "constructor_result_family",
-      "source": {
-        "constructor_id": "0x02b78156",
-        "kind": "type",
-        "path": "telegram/types/base/input-keyboard-button-request-peer.md",
-        "qualified_name": "inputKeyboardButtonRequestPeer"
-      },
-      "target": {
-        "constructor_id": null,
-        "kind": "result_family",
-        "path": "telegram/types/results/keyboard-button/index.md",
-        "qualified_name": "KeyboardButton",
-        "selected_layer": true
-      }
-    },
-    {
-      "relation": "constructor_result_family",
-      "source": {
-        "constructor_id": "0x68013e72",
-        "kind": "type",
-        "path": "telegram/types/base/input-keyboard-button-url-auth.md",
-        "qualified_name": "inputKeyboardButtonUrlAuth"
-      },
-      "target": {
-        "constructor_id": null,
-        "kind": "result_family",
-        "path": "telegram/types/results/keyboard-button/index.md",
-        "qualified_name": "KeyboardButton",
-        "selected_layer": true
-      }
-    },
-    {
-      "relation": "constructor_result_family",
-      "source": {
-        "constructor_id": "0x7d5e07c7",
-        "kind": "type",
-        "path": "telegram/types/base/input-keyboard-button-user-profile.md",
-        "qualified_name": "inputKeyboardButtonUserProfile"
-      },
-      "target": {
-        "constructor_id": null,
-        "kind": "result_family",
-        "path": "telegram/types/results/keyboard-button/index.md",
-        "qualified_name": "KeyboardButton",
         "selected_layer": true
       }
     },
@@ -23412,7 +23780,7 @@
     {
       "relation": "constructor_result_family",
       "source": {
-        "constructor_id": "0xe2b23b51",
+        "constructor_id": "0xa937c7be",
         "kind": "type",
         "path": "telegram/types/base/input-send-message-rich-message-draft-action.md",
         "qualified_name": "inputSendMessageRichMessageDraftAction"
@@ -24356,138 +24724,10 @@
     {
       "relation": "constructor_result_family",
       "source": {
-        "constructor_id": "0x7d170cff",
+        "constructor_id": "0x2f67a72f",
         "kind": "type",
         "path": "telegram/types/base/keyboard-button.md",
         "qualified_name": "keyboardButton"
-      },
-      "target": {
-        "constructor_id": null,
-        "kind": "result_family",
-        "path": "telegram/types/results/keyboard-button/index.md",
-        "qualified_name": "KeyboardButton",
-        "selected_layer": true
-      }
-    },
-    {
-      "relation": "constructor_result_family",
-      "source": {
-        "constructor_id": "0x3fa53905",
-        "kind": "type",
-        "path": "telegram/types/base/keyboard-button-buy.md",
-        "qualified_name": "keyboardButtonBuy"
-      },
-      "target": {
-        "constructor_id": null,
-        "kind": "result_family",
-        "path": "telegram/types/results/keyboard-button/index.md",
-        "qualified_name": "KeyboardButton",
-        "selected_layer": true
-      }
-    },
-    {
-      "relation": "constructor_result_family",
-      "source": {
-        "constructor_id": "0xe62bc960",
-        "kind": "type",
-        "path": "telegram/types/base/keyboard-button-callback.md",
-        "qualified_name": "keyboardButtonCallback"
-      },
-      "target": {
-        "constructor_id": null,
-        "kind": "result_family",
-        "path": "telegram/types/results/keyboard-button/index.md",
-        "qualified_name": "KeyboardButton",
-        "selected_layer": true
-      }
-    },
-    {
-      "relation": "constructor_result_family",
-      "source": {
-        "constructor_id": "0xbcc4af10",
-        "kind": "type",
-        "path": "telegram/types/base/keyboard-button-copy.md",
-        "qualified_name": "keyboardButtonCopy"
-      },
-      "target": {
-        "constructor_id": null,
-        "kind": "result_family",
-        "path": "telegram/types/results/keyboard-button/index.md",
-        "qualified_name": "KeyboardButton",
-        "selected_layer": true
-      }
-    },
-    {
-      "relation": "constructor_result_family",
-      "source": {
-        "constructor_id": "0x89c590f9",
-        "kind": "type",
-        "path": "telegram/types/base/keyboard-button-game.md",
-        "qualified_name": "keyboardButtonGame"
-      },
-      "target": {
-        "constructor_id": null,
-        "kind": "result_family",
-        "path": "telegram/types/results/keyboard-button/index.md",
-        "qualified_name": "KeyboardButton",
-        "selected_layer": true
-      }
-    },
-    {
-      "relation": "constructor_result_family",
-      "source": {
-        "constructor_id": "0xaa40f94d",
-        "kind": "type",
-        "path": "telegram/types/base/keyboard-button-request-geo-location.md",
-        "qualified_name": "keyboardButtonRequestGeoLocation"
-      },
-      "target": {
-        "constructor_id": null,
-        "kind": "result_family",
-        "path": "telegram/types/results/keyboard-button/index.md",
-        "qualified_name": "KeyboardButton",
-        "selected_layer": true
-      }
-    },
-    {
-      "relation": "constructor_result_family",
-      "source": {
-        "constructor_id": "0x5b0f15f5",
-        "kind": "type",
-        "path": "telegram/types/base/keyboard-button-request-peer.md",
-        "qualified_name": "keyboardButtonRequestPeer"
-      },
-      "target": {
-        "constructor_id": null,
-        "kind": "result_family",
-        "path": "telegram/types/results/keyboard-button/index.md",
-        "qualified_name": "KeyboardButton",
-        "selected_layer": true
-      }
-    },
-    {
-      "relation": "constructor_result_family",
-      "source": {
-        "constructor_id": "0x417efd8f",
-        "kind": "type",
-        "path": "telegram/types/base/keyboard-button-request-phone.md",
-        "qualified_name": "keyboardButtonRequestPhone"
-      },
-      "target": {
-        "constructor_id": null,
-        "kind": "result_family",
-        "path": "telegram/types/results/keyboard-button/index.md",
-        "qualified_name": "KeyboardButton",
-        "selected_layer": true
-      }
-    },
-    {
-      "relation": "constructor_result_family",
-      "source": {
-        "constructor_id": "0x7a11d782",
-        "kind": "type",
-        "path": "telegram/types/base/keyboard-button-request-poll.md",
-        "qualified_name": "keyboardButtonRequestPoll"
       },
       "target": {
         "constructor_id": null,
@@ -24516,22 +24756,6 @@
     {
       "relation": "constructor_result_family",
       "source": {
-        "constructor_id": "0xe15c4370",
-        "kind": "type",
-        "path": "telegram/types/base/keyboard-button-simple-web-view.md",
-        "qualified_name": "keyboardButtonSimpleWebView"
-      },
-      "target": {
-        "constructor_id": null,
-        "kind": "result_family",
-        "path": "telegram/types/results/keyboard-button/index.md",
-        "qualified_name": "KeyboardButton",
-        "selected_layer": true
-      }
-    },
-    {
-      "relation": "constructor_result_family",
-      "source": {
         "constructor_id": "0x4fdd3430",
         "kind": "type",
         "path": "telegram/types/base/keyboard-button-style.md",
@@ -24548,80 +24772,32 @@
     {
       "relation": "constructor_result_family",
       "source": {
-        "constructor_id": "0x991399fc",
+        "constructor_id": "0x11c1a322",
         "kind": "type",
-        "path": "telegram/types/base/keyboard-button-switch-inline.md",
-        "qualified_name": "keyboardButtonSwitchInline"
+        "path": "telegram/types/base/keyboard-inline-button.md",
+        "qualified_name": "keyboardInlineButton"
       },
       "target": {
         "constructor_id": null,
         "kind": "result_family",
-        "path": "telegram/types/results/keyboard-button/index.md",
-        "qualified_name": "KeyboardButton",
+        "path": "telegram/types/results/keyboard-inline-button/index.md",
+        "qualified_name": "KeyboardInlineButton",
         "selected_layer": true
       }
     },
     {
       "relation": "constructor_result_family",
       "source": {
-        "constructor_id": "0xd80c25ec",
+        "constructor_id": "0x19420af6",
         "kind": "type",
-        "path": "telegram/types/base/keyboard-button-url.md",
-        "qualified_name": "keyboardButtonUrl"
+        "path": "telegram/types/base/keyboard-inline-button-row.md",
+        "qualified_name": "keyboardInlineButtonRow"
       },
       "target": {
         "constructor_id": null,
         "kind": "result_family",
-        "path": "telegram/types/results/keyboard-button/index.md",
-        "qualified_name": "KeyboardButton",
-        "selected_layer": true
-      }
-    },
-    {
-      "relation": "constructor_result_family",
-      "source": {
-        "constructor_id": "0xf51006f9",
-        "kind": "type",
-        "path": "telegram/types/base/keyboard-button-url-auth.md",
-        "qualified_name": "keyboardButtonUrlAuth"
-      },
-      "target": {
-        "constructor_id": null,
-        "kind": "result_family",
-        "path": "telegram/types/results/keyboard-button/index.md",
-        "qualified_name": "KeyboardButton",
-        "selected_layer": true
-      }
-    },
-    {
-      "relation": "constructor_result_family",
-      "source": {
-        "constructor_id": "0xc0fd5d09",
-        "kind": "type",
-        "path": "telegram/types/base/keyboard-button-user-profile.md",
-        "qualified_name": "keyboardButtonUserProfile"
-      },
-      "target": {
-        "constructor_id": null,
-        "kind": "result_family",
-        "path": "telegram/types/results/keyboard-button/index.md",
-        "qualified_name": "KeyboardButton",
-        "selected_layer": true
-      }
-    },
-    {
-      "relation": "constructor_result_family",
-      "source": {
-        "constructor_id": "0xe846b1a0",
-        "kind": "type",
-        "path": "telegram/types/base/keyboard-button-web-view.md",
-        "qualified_name": "keyboardButtonWebView"
-      },
-      "target": {
-        "constructor_id": null,
-        "kind": "result_family",
-        "path": "telegram/types/results/keyboard-button/index.md",
-        "qualified_name": "KeyboardButton",
+        "path": "telegram/types/results/keyboard-inline-button-row/index.md",
+        "qualified_name": "KeyboardInlineButtonRow",
         "selected_layer": true
       }
     },
@@ -25096,6 +25272,22 @@
         "kind": "type",
         "path": "telegram/types/base/message-action-chat-joined-by-request.md",
         "qualified_name": "messageActionChatJoinedByRequest"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/message-action/index.md",
+        "qualified_name": "MessageAction",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x4a8bfe80",
+        "kind": "type",
+        "path": "telegram/types/base/message-action-chat-joined-via-community.md",
+        "qualified_name": "messageActionChatJoinedViaCommunity"
       },
       "target": {
         "constructor_id": null,
@@ -25780,7 +25972,7 @@
     {
       "relation": "constructor_result_family",
       "source": {
-        "constructor_id": "0xe6c31522",
+        "constructor_id": "0x7e1c1187",
         "kind": "type",
         "path": "telegram/types/base/message-action-star-gift-unique.md",
         "qualified_name": "messageActionStarGiftUnique"
@@ -28772,7 +28964,7 @@
     {
       "relation": "constructor_result_family",
       "source": {
-        "constructor_id": "0x263d7c26",
+        "constructor_id": "0x66d1670b",
         "kind": "type",
         "path": "telegram/types/base/page-block-blockquote.md",
         "qualified_name": "pageBlockBlockquote"
@@ -28792,6 +28984,22 @@
         "kind": "type",
         "path": "telegram/types/base/page-block-blockquote-blocks.md",
         "qualified_name": "pageBlockBlockquoteBlocks"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/page-block/index.md",
+        "qualified_name": "PageBlock",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x6d640318",
+        "kind": "type",
+        "path": "telegram/types/base/page-block-button-row.md",
+        "qualified_name": "pageBlockButtonRow"
       },
       "target": {
         "constructor_id": null,
@@ -28872,6 +29080,22 @@
         "kind": "type",
         "path": "telegram/types/base/page-block-divider.md",
         "qualified_name": "pageBlockDivider"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/page-block/index.md",
+        "qualified_name": "PageBlock",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x38fa3ba3",
+        "kind": "type",
+        "path": "telegram/types/base/page-block-document.md",
+        "qualified_name": "pageBlockDocument"
       },
       "target": {
         "constructor_id": null,
@@ -29326,6 +29550,22 @@
         "kind": "result_family",
         "path": "telegram/types/results/page-block/index.md",
         "qualified_name": "PageBlock",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x692a5488",
+        "kind": "type",
+        "path": "telegram/types/base/page-button.md",
+        "qualified_name": "pageButton"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/page-button/index.md",
+        "qualified_name": "PageButton",
         "selected_layer": true
       }
     },
@@ -32020,7 +32260,7 @@
     {
       "relation": "constructor_result_family",
       "source": {
-        "constructor_id": "0x48a30254",
+        "constructor_id": "0xb2b15770",
         "kind": "type",
         "path": "telegram/types/base/reply-inline-markup.md",
         "qualified_name": "replyInlineMarkup"
@@ -32302,6 +32542,22 @@
         "kind": "result_family",
         "path": "telegram/types/results/restriction-reason/index.md",
         "qualified_name": "RestrictionReason",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x03c610bd",
+        "kind": "type",
+        "path": "telegram/types/base/rich-button-style.md",
+        "qualified_name": "richButtonStyle"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/rich-button-style/index.md",
+        "qualified_name": "RichButtonStyle",
         "selected_layer": true
       }
     },
@@ -33204,7 +33460,7 @@
     {
       "relation": "constructor_result_family",
       "source": {
-        "constructor_id": "0xa2cb24f9",
+        "constructor_id": "0x52564893",
         "kind": "type",
         "path": "telegram/types/base/send-message-rich-message-draft-action.md",
         "qualified_name": "sendMessageRichMessageDraftAction"
@@ -33220,7 +33476,23 @@
     {
       "relation": "constructor_result_family",
       "source": {
-        "constructor_id": "0x376d975c",
+        "constructor_id": "0xfbf902b0",
+        "kind": "type",
+        "path": "telegram/types/base/send-message-stop-draft-action.md",
+        "qualified_name": "sendMessageStopDraftAction"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/send-message-action/index.md",
+        "qualified_name": "SendMessageAction",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x3630b85a",
         "kind": "type",
         "path": "telegram/types/base/send-message-text-draft-action.md",
         "qualified_name": "sendMessageTextDraftAction"
@@ -35252,6 +35524,22 @@
     {
       "relation": "constructor_result_family",
       "source": {
+        "constructor_id": "0xafc79cd6",
+        "kind": "type",
+        "path": "telegram/types/base/text-button.md",
+        "qualified_name": "textButton"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/rich-text/index.md",
+        "qualified_name": "RichText",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
         "constructor_id": "0x7b9e1801",
         "kind": "type",
         "path": "telegram/types/base/text-cashtag.md",
@@ -37012,7 +37300,7 @@
     {
       "relation": "constructor_result_family",
       "source": {
-        "constructor_id": "0x9b380762",
+        "constructor_id": "0x7c1079d6",
         "kind": "type",
         "path": "telegram/types/base/update-ephemeral-bot-callback-query.md",
         "qualified_name": "updateEphemeralBotCallbackQuery"
@@ -41908,10 +42196,42 @@
     {
       "relation": "returns_type_family",
       "source": {
+        "constructor_id": "0x2c85094c",
+        "kind": "function",
+        "path": "telegram/functions/auth/finish-firebase-pnv-login.md",
+        "qualified_name": "auth.finishFirebasePnvLogin"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/auth-authorization/index.md",
+        "qualified_name": "auth.Authorization",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
         "constructor_id": "0x9857ad07",
         "kind": "function",
         "path": "telegram/functions/auth/finish-passkey-login.md",
         "qualified_name": "auth.finishPasskeyLogin"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/auth-authorization/index.md",
+        "qualified_name": "auth.Authorization",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0x783f6b56",
+        "kind": "function",
+        "path": "telegram/functions/auth/firebase-pnv-sign-up.md",
+        "qualified_name": "auth.firebasePnvSignUp"
       },
       "target": {
         "constructor_id": null,
@@ -41982,6 +42302,22 @@
         "kind": "result_family",
         "path": "telegram/types/results/auth-authorization/index.md",
         "qualified_name": "auth.Authorization",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0x777df37a",
+        "kind": "function",
+        "path": "telegram/functions/auth/init-firebase-pnv-login.md",
+        "qualified_name": "auth.initFirebasePnvLogin"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/auth-firebase-pnv-intent/index.md",
+        "qualified_name": "auth.FirebasePnvIntent",
         "selected_layer": true
       }
     },
@@ -44468,7 +44804,23 @@
     {
       "relation": "returns_type_family",
       "source": {
-        "constructor_id": "0xa3c0d511",
+        "constructor_id": "0x734f9721",
+        "kind": "function",
+        "path": "telegram/functions/ephemeral/delete-all-welcome-messages.md",
+        "qualified_name": "ephemeral.deleteAllWelcomeMessages"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/bool/index.md",
+        "qualified_name": "Bool",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0x92f6e797",
         "kind": "function",
         "path": "telegram/functions/ephemeral/delete-message.md",
         "qualified_name": "ephemeral.deleteMessage"
@@ -44484,7 +44836,23 @@
     {
       "relation": "returns_type_family",
       "source": {
-        "constructor_id": "0x13f250ee",
+        "constructor_id": "0xe882a9e1",
+        "kind": "function",
+        "path": "telegram/functions/ephemeral/delete-welcome-message.md",
+        "qualified_name": "ephemeral.deleteWelcomeMessage"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/bool/index.md",
+        "qualified_name": "Bool",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0xcf9c725b",
         "kind": "function",
         "path": "telegram/functions/ephemeral/edit-message.md",
         "qualified_name": "ephemeral.editMessage"
@@ -44516,6 +44884,22 @@
     {
       "relation": "returns_type_family",
       "source": {
+        "constructor_id": "0xdb9ac18d",
+        "kind": "function",
+        "path": "telegram/functions/ephemeral/get-welcome-messages.md",
+        "qualified_name": "ephemeral.getWelcomeMessages"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/ephemeral-welcome-messages/index.md",
+        "qualified_name": "ephemeral.WelcomeMessages",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
         "constructor_id": "0x8704f2bf",
         "kind": "function",
         "path": "telegram/functions/ephemeral/report-message.md",
@@ -44532,7 +44916,7 @@
     {
       "relation": "returns_type_family",
       "source": {
-        "constructor_id": "0x68cbd09f",
+        "constructor_id": "0xba8d5f35",
         "kind": "function",
         "path": "telegram/functions/ephemeral/send-message.md",
         "qualified_name": "ephemeral.sendMessage"

@@ -19,7 +19,7 @@ MediaTransfer(registry: MediaSchedulerRegistry, *, transfer_id: str, dc_id: int,
 
 A caller-owned transfer registration that can acquire fair media permits.
 
-Register this transfer using its direction, priority, and size class.
+Register this transfer using its direction, priority and size class.
 
 **Parameters:**
 
@@ -27,5 +27,5 @@ Register this transfer using its direction, priority, and size class.
 - **transfer_id** (<code>[str](#str)</code>) – Unique registry-generated transfer name.
 - **dc_id** (<code>[int](#int)</code>) – Initial data-centre binding.
 - **direction** (<code>[MediaDirection](#miniproto.media.scheduler.MediaDirection)</code>) – Upload or download scheduler direction.
-- **total_size** (<code>[int](#int) | None</code>) – Known total bytes, or ``None`` to classify as large.
+- **total_size** (<code>[int](#int) | None</code>) – Known total bytes or ``None`` to classify as large.
 - **priority** (<code>[MediaPriority](#miniproto.media.scheduler.MediaPriority)</code>) – Default foreground or background request priority.

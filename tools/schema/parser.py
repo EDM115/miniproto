@@ -41,18 +41,18 @@ _KNOWN_CONSTRUCTOR_ID_ALIAS_PAIRS = frozenset(
 
 @dataclass(frozen=True, slots=True)
 class TLParameter:
-    """Parsed TL parameter, including flag, vector, bare, and template metadata.
+    """Parsed TL parameter, including flag, vector, bare and template metadata.
 
     Attributes:
         name: Original parameter token name from the TL declaration, including special marker spellings where applicable.
         python_name: Generated Python attribute spelling used by the public raw class surface.
         type: TL type spelling after any optional ``flag.bit?`` prefix is separated into flag metadata.
-        flag: Name of the flags-marker parameter controlling this field's presence, or ``None`` when unconditional.
-        flag_index: Zero-based bit index in ``flag`` that controls this optional field, or ``None`` when not flag-gated.
+        flag: Name of the flags-marker parameter controlling this field's presence or ``None`` when unconditional.
+        flag_index: Zero-based bit index in ``flag`` that controls this optional field or ``None`` when not flag-gated.
         is_optional: Whether the source type uses a ``flag.bit?`` conditional prefix.
         is_true_flag: Whether the optional field has TL type ``true`` and is represented by its presence bit alone.
         is_vector: Whether ``type`` is a supported TL vector spelling.
-        vector_item_type: Parsed element type for a vector field, or ``None`` for non-vectors.
+        vector_item_type: Parsed element type for a vector field or ``None`` for non-vectors.
         is_generic: Whether the parameter carries a TL generic/type-variable spelling.
         is_bare: Whether the token is a constructor-ID-free bare parameter rather than a regular named field.
         is_template: Whether the parameter was declared in braces as a TL template parameter.
@@ -81,7 +81,7 @@ class TLEntry:
     Attributes:
         kind: Schema section, ``"type"`` for constructors or ``"function"`` for methods.
         name: Fully qualified TL declaration name as it appears before the constructor ID.
-        namespace: Dotted-name prefix, or ``None`` when the declaration has no namespace.
+        namespace: Dotted-name prefix or ``None`` when the declaration has no namespace.
         short_name: Final component of ``name`` after removing any namespace.
         python_class_name: Deterministic public Python class name derived from the TL declaration name.
         constructor_id: Unsigned 32-bit TL constructor identifier used on the wire.
@@ -89,7 +89,7 @@ class TLEntry:
         result_type: TL result type written to the right of the declaration's equals sign.
         params: Parsed declaration-body parameters in source order, including non-public markers and templates.
         source_line: Complete original TL line or deterministic equivalent reconstructed from normalized JSON.
-        line_number: One-based source line, or the deterministic normalized-JSON position used for diagnostics.
+        line_number: One-based source line or the deterministic normalized-JSON position used for diagnostics.
         comments: Contiguous declaration comments with their TL comment prefixes removed.
     """
 
@@ -131,7 +131,7 @@ class TLIgnoredDeclaration:
         name: Leading declaration token retained for diagnostics and provenance.
         source_line: Complete trimmed source declaration that the parser intentionally did not turn into a constructor.
         line_number: One-based source line of the ignored declaration.
-        classification: Parser-approved exclusion reason: ``"primitive"``, ``"alias"``, or ``"test_combinator"``.
+        classification: Parser-approved exclusion reason: ``"primitive"``, ``"alias"`` or ``"test_combinator"``.
     """
 
     kind: SchemaKind
@@ -195,10 +195,10 @@ def parse_schema(text: str) -> TLSchema:
         text: Complete TL declaration text.
 
     Returns:
-        Parsed schema with entries, RPC errors, and known ignored declarations.
+        Parsed schema with entries, RPC errors and known ignored declarations.
 
     Raises:
-        TLSchemaParseError: A declaration, comment, or collision is unsupported or invalid.
+        TLSchemaParseError: A declaration, comment or collision is unsupported or invalid.
     """
     kind: SchemaKind = "type"
     entries: list[TLEntry] = []
@@ -287,7 +287,7 @@ def schema_to_tl(schema: TLSchema) -> str:
         schema: Parsed schema whose entries retain their source declarations.
 
     Returns:
-        Constructor declarations, a function delimiter, and function declarations.
+        Constructor declarations, a function delimiter and function declarations.
     """
     lines: list[str] = [entry.source_line for entry in schema.constructors]
     lines.append("---functions---")
@@ -337,12 +337,12 @@ def _parse_json_entry(item: object, *, kind: SchemaKind, line_number: int) -> TL
     """Convert one normalized JSON declaration to a schema entry.
 
     Args:
-        item: JSON declaration object containing the kind-specific name, constructor ID, result type, and parameter array.
+        item: JSON declaration object containing the kind-specific name, constructor ID, result type and parameter array.
         kind: Constructor or function category selecting JSON field names.
         line_number: Synthetic source position for diagnostics.
 
     Raises:
-        TLSchemaParseError: The declaration is not an object or lacks a valid name, constructor ID, result type, or parameter array.
+        TLSchemaParseError: The declaration is not an object or lacks a valid name, constructor ID, result type or parameter array.
     """
     if not isinstance(item, Mapping):
         raise TLSchemaParseError(f"JSON schema entry {line_number}: expected object")
@@ -585,13 +585,13 @@ def _validate_entry_comments(entry: TLEntry) -> None:
 
 
 def _validate_unique_entries(entries: Sequence[TLEntry]) -> None:
-    """Reject duplicate names, generated class names, and unapproved constructor-ID collisions.
+    """Reject duplicate names, generated class names and unapproved constructor-ID collisions.
 
     Args:
         entries: Parsed entries to validate in source order.
 
     Raises:
-        TLSchemaParseError: Names, generated class names, or constructor IDs collide outside the explicit alias allowlist.
+        TLSchemaParseError: Names, generated class names or constructor IDs collide outside the explicit alias allowlist.
     """
     seen: dict[tuple[SchemaKind, str], int] = {}
     class_names: dict[tuple[SchemaKind, str], int] = {}

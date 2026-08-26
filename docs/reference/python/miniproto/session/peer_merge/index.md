@@ -22,4 +22,4 @@ Merge durable peer cache entries without discarding richer known metadata.
 - [`merge_peer_entry`](./merge-peer-entry/) — Prefer fresh fields while retaining existing hashes and populated metadata.
 - [`merge_peer_entries`](./merge-peer-entries/) — Merge peer collections into canonical map insertion order.
 - [`merge_peer_entry_map`](./merge-peer-entry-map/) — Merge peer collections into a map keyed by kind and Telegram ID.
-- [`merge_peer_entry_map_with_metadata`](./merge-peer-entry-map-with-metadata/) — Merge entries and report affected, canonical, and newly appended keys.
+- [`merge_peer_entry_map_with_metadata`](./merge-peer-entry-map-with-metadata/) — Merge entries and report affected, canonical and newly appended keys.

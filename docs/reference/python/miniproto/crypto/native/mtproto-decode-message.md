@@ -1,6 +1,6 @@
 ---
 title: "miniproto.crypto.native.mtproto_decode_message"
-description: "Decrypt, authenticate, and parse an MTProto encrypted message."
+description: "Decrypt, authenticate and parse an MTProto encrypted message."
 generated: true
 editUrl: false
 language: "python"
@@ -18,7 +18,7 @@ module: "miniproto.crypto.native"
 mtproto_decode_message(auth_key: bytes, packet: BytesLike, *, client_to_server: bool = False) -> tuple[bytes, int, int, int, int, bytes, bytes]
 ```
 
-Decrypt, authenticate, and parse an MTProto encrypted message.
+Decrypt, authenticate and parse an MTProto encrypted message.
 
 **Parameters:**
 
@@ -34,7 +34,7 @@ and block-aligned ciphertext.
 **Raises:**
 
 - <code>[ValueError](#ValueError)</code> – If the packet is malformed, keys mismatch, lengths are
-invalid, or padding violates MTProto 2.0 constraints.
+invalid or padding violates MTProto 2.0 constraints.
 
 This checks the packet's auth-key identifier and message key, but transport
-ordering, replay handling, and message semantics remain the caller's job.
+ordering, replay handling and message semantics remain the caller's job.

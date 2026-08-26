@@ -26,4 +26,4 @@ Return the age of the oldest queued acknowledgement.
 
 **Returns:**
 
-- <code>[float](#float)</code> – Nonnegative age in seconds, or ``0.0`` when the queue is empty.
+- <code>[float](#float)</code> – Nonnegative age in seconds or ``0.0`` when the queue is empty.

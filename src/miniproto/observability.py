@@ -1,4 +1,4 @@
-"""Structured logging, lightweight metrics, and process-memory observation helpers."""
+"""Structured logging, lightweight metrics and process-memory observation helpers."""
 
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ class MetricsSink(Protocol):
 
 @dataclass(frozen=True, slots=True)
 class MetricEvent:
-    """Immutable metric event recorded with a unit, attributes, and wall-clock timestamp.
+    """Immutable metric event recorded with a unit, attributes and wall-clock timestamp.
 
     Attributes:
         name: Metric name.
@@ -89,7 +89,7 @@ class ResourceSnapshot:
 
     Attributes:
         timestamp: Wall-clock capture time in seconds since the epoch.
-        rss_bytes: Reported RSS on Windows or macOS, or lifetime peak RSS on Unix; ``None`` if unavailable.
+        rss_bytes: Reported RSS on Windows or macOS or lifetime peak RSS on Unix; ``None`` if unavailable.
         traced_current_bytes: Current tracemalloc allocation bytes, if tracing.
         traced_peak_bytes: Peak tracemalloc allocation bytes, if tracing.
         gc_objects: Number of objects tracked by the garbage collector.
@@ -104,7 +104,7 @@ class ResourceSnapshot:
 
 @dataclass(frozen=True, slots=True)
 class MemoryDelta:
-    """Start, end, and peak resource snapshots for one monitored interval.
+    """Start, end and peak resource snapshots for one monitored interval.
 
     Attributes:
         start: First captured resource snapshot.
@@ -118,7 +118,7 @@ class MemoryDelta:
 
     @property
     def rss_delta_bytes(self) -> int | None:
-        """Return end minus start reported RSS, or ``None`` when unavailable.
+        """Return end minus start reported RSS or ``None`` when unavailable.
 
         On Unix this is growth in the process lifetime peak reported by ``getrusage``,
         rather than current resident-memory growth.
@@ -129,7 +129,7 @@ class MemoryDelta:
 
     @property
     def traced_delta_bytes(self) -> int | None:
-        """Return end minus start traced allocation bytes, or ``None`` when unavailable."""
+        """Return end minus start traced allocation bytes or ``None`` when unavailable."""
         if self.start.traced_current_bytes is None or self.end.traced_current_bytes is None:
             return None
         return self.end.traced_current_bytes - self.start.traced_current_bytes
@@ -192,7 +192,7 @@ class MemoryMonitor:
         """Capture the final snapshot and summarize the monitored interval.
 
         Returns:
-            Start, end, and highest-observed snapshot data.
+            Start, end and highest-observed snapshot data.
         """
         end = self.sample()
         if len(self._snapshots) == 1:
@@ -299,7 +299,7 @@ def emit_event(logger: logging.Logger, level: int, event: str, **fields: object)
 
 
 def set_metrics_sink(sink: MetricsSink | None) -> None:
-    """Set the process-global metrics destination, or disable metric recording.
+    """Set the process-global metrics destination or disable metric recording.
 
     Args:
         sink: Metrics sink to use; ``None`` disables the global sink.
@@ -331,7 +331,7 @@ def record_metric(
 
 
 def resource_snapshot() -> ResourceSnapshot:
-    """Capture current RSS, active tracemalloc counters, and GC object count.
+    """Capture current RSS, active tracemalloc counters and GC object count.
 
     Returns:
         A point-in-time resource snapshot; RSS may be unavailable on some platforms.
@@ -353,7 +353,7 @@ def process_rss_bytes() -> int | None:
     """Return this process's reported RSS/working-set byte count when available.
 
     Returns:
-        Platform-reported byte count, or ``None`` when the platform cannot provide it.
+        Platform-reported byte count or ``None`` when the platform cannot provide it.
     """
     if sys.platform == "win32":
         return _windows_rss_bytes()
@@ -421,10 +421,10 @@ def to_jsonable(value: object) -> object:
     """Recursively convert supported observability values into JSON-compatible shapes.
 
     Args:
-        value: Snapshot, event, mapping, list, tuple, or leaf value.
+        value: Snapshot, event, mapping, list, tuple or leaf value.
 
     Returns:
-        Dataclasses as dictionaries, mappings with string keys, sequences as lists, or the leaf unchanged.
+        Dataclasses as dictionaries, mappings with string keys, sequences as lists or the leaf unchanged.
     """
     if isinstance(value, ResourceSnapshot | MemoryDelta | MetricEvent):
         return asdict(value)

@@ -21,4 +21,4 @@ Extract peer-bearing raw objects and merge their cache entries durably.
 
 **Parameters:**
 
-- **raw** (<code>[object](#object)</code>) – Raw Telegram object, container, or sequence that may expose users/chats.
+- **raw** (<code>[object](#object)</code>) – Raw Telegram object, container or sequence that may expose users/chats.

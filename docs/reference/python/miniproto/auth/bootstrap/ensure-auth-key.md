@@ -21,7 +21,7 @@ Ensure that ``storage`` contains a usable MTProto key and DC options.
 
 Existing keys are preserved. When no key is present, this performs Telegram's
 unencrypted authorization-key exchange, then atomically stores its key, salt,
-server-time offset, and resolved data-center options.
+server-time offset and resolved data-center options.
 
 **Parameters:**
 

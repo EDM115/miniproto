@@ -20,7 +20,7 @@ QuickAckReceipt(token: int, latency_ms: float, attempt: int) -> None
 
 Early transport-acknowledgement metadata for one encrypted send attempt.
 
-A receipt confirms only that Telegram accepted the encrypted transport packet; it does not complete the RPC or replace the later result, error, or MTProto service acknowledgement.
+A receipt confirms only that Telegram accepted the encrypted transport packet; it does not complete the RPC or replace the later result, error or MTProto service acknowledgement.
 
 **Parameters:**
 

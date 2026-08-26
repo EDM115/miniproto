@@ -62,7 +62,7 @@ export function buildDocumentationSidebar({ docsRoot }: { docsRoot: string }): S
       items: [
         ...projectPages.toSorted(compareIndexFirst),
         {
-          label: "Codebase Map",
+          label: "Codebase map",
           collapsed: true,
           items: codebasePages.toSorted(compareIndexFirst),
         },
@@ -72,17 +72,17 @@ export function buildDocumentationSidebar({ docsRoot }: { docsRoot: string }): S
       label: "Reference",
       collapsed: true,
       items: [
-        { label: "Reference Overview", link: "/reference/" },
+        { label: "Reference overview", link: "/reference/" },
         { label: "Python API", link: "/reference/python/miniproto/" },
         { label: "Rust API", link: "/reference/rust/miniproto-native/" },
         {
-          label: "Telegram Raw API",
+          label: "Telegram raw API",
           collapsed: true,
           items: [
             { label: "Overview", link: "/reference/telegram/" },
             { label: "Functions", link: "/reference/telegram/functions/" },
             { label: "Types", link: "/reference/telegram/types/" },
-            { label: "RPC Errors", link: "/reference/telegram/errors/" },
+            { label: "RPC errors", link: "/reference/telegram/errors/" },
           ],
         },
       ],

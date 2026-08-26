@@ -30,4 +30,4 @@ Decode an ``mpf1_`` file ID without contacting Telegram.
 
 **Raises:**
 
-- <code>[ValueError](#ValueError)</code> – If the prefix, payload encoding, or required fields are invalid.
+- <code>[ValueError](#ValueError)</code> – If the prefix, payload encoding or required fields are invalid.

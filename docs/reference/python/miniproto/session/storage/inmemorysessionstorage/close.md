@@ -1,6 +1,6 @@
 ---
 title: "miniproto.session.storage.InMemorySessionStorage.close"
-description: "Close load, save, mutate, and clear; sibling lookup and revisions remain available."
+description: "Close load, save, mutate and clear; sibling lookup and revisions remain available."
 generated: true
 editUrl: false
 language: "python"
@@ -18,4 +18,4 @@ module: "miniproto.session.storage"
 close() -> None
 ```
 
-Close load, save, mutate, and clear; sibling lookup and revisions remain available.
+Close load, save, mutate and clear; sibling lookup and revisions remain available.

@@ -1,6 +1,6 @@
 ---
 title: "miniproto.mtproto.state.MTProtoState"
-description: "Track one authorization key's MTProto session, timing, and acknowledgement state."
+description: "Track one authorization key's MTProto session, timing and acknowledgement state."
 generated: true
 editUrl: false
 language: "python"
@@ -18,7 +18,7 @@ module: "miniproto.mtproto.state"
 MTProtoState(auth_key: bytes, server_salt: int = 0, session_id: int = (lambda: secrets.randbits(64))(), time_offset: float = 0.0, duplicate_window: int = 8192, _last_msg_id: int = 0, _content_related_count: int = 0, _seen_msg_ids: OrderedDict[int, None] = OrderedDict(), _pending_acks: OrderedDict[int, float] = OrderedDict(), _time_trusted: bool = False) -> None
 ```
 
-Track one authorization key's MTProto session, timing, and acknowledgement state.
+Track one authorization key's MTProto session, timing and acknowledgement state.
 
 **Attributes:**
 

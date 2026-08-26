@@ -26,7 +26,7 @@ Import a portable session into a disconnected client.
 - **format** (<code>[SessionStringFormat](#miniproto.session.strings.SessionStringFormat)</code>) – Expected input dialect or ``"auto"`` for detection.
 - **passphrase** (<code>[str](#str) | [bytes](#bytes) | None</code>) – Optional passphrase required to decode a protected string.
 - **replace** (<code>[bool](#bool)</code>) – Whether a nonempty target storage may be overwritten, defaulting to ``False``.
-- **allow_mismatch** (<code>[bool](#bool)</code>) – Whether to bypass Pyrogram API, test-mode, and account-kind compatibility checks.
+- **allow_mismatch** (<code>[bool](#bool)</code>) – Whether to bypass Pyrogram API, test-mode and account-kind compatibility checks.
 
 <details class="security" open markdown="1">
 <summary>Security</summary>

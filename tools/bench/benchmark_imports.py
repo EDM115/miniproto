@@ -32,7 +32,7 @@ def summarize(samples: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
 
     Returns:
         Median timing in seconds, median memory counters in bytes, imported raw
-        module names, and the unmodified individual samples.
+        module names and the unmodified individual samples.
 
     Raises:
         statistics.StatisticsError: ``samples`` is empty.

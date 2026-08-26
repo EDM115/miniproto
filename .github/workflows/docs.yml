@@ -20,7 +20,7 @@ env:
 
 jobs:
   build:
-    name: Generate, build, and test documentation
+    name: Generate, build and test documentation
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     steps:
@@ -45,17 +45,17 @@ jobs:
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          toolchain: nightly-2026-08-25
+          toolchain: nightly
 
-      - name: Install pinned Rust documentation renderer
-        run: cargo install cargo-docs-md --version 0.2.4 --locked
+      - name: Install Rust documentation renderer
+        run: cargo install cargo-docs-md --locked
 
       - name: Install locked Python and frontend dependencies
         run: |
           uv sync --extra dev,docs --frozen
           pnpm --dir docs-site install --frozen-lockfile
 
-      - name: Check committed references, static site, search, and browser acceptance
+      - name: Check committed references, static site, search and browser acceptance
         run: uv run miniproto-docs --check --build --skip-install
 
       - name: Upload portable static artifact

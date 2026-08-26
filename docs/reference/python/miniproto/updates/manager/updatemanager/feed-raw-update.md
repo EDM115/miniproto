@@ -20,7 +20,7 @@ feed_raw_update(raw_update: object) -> None
 
 Offer a raw Telegram update to the bounded background-processing queue.
 
-Queue-full behavior is controlled by ``ClientConfig.update_queue_overflow``: ``"raise"`` propagates ``asyncio.QueueFull``, ``"drop_newest"`` discards this update, and ``"drop_oldest"`` replaces the oldest queued update.
+Queue-full behavior is controlled by ``ClientConfig.update_queue_overflow``: ``"raise"`` propagates ``asyncio.QueueFull``, ``"drop_newest"`` discards this update and ``"drop_oldest"`` replaces the oldest queued update.
 
 **Parameters:**
 

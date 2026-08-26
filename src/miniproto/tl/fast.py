@@ -45,7 +45,7 @@ def decode_fast(
         boxed: Whether the input includes a constructor identifier.
 
     Returns:
-        Decoded field values and next offset, or ``None`` when no fast path applies.
+        Decoded field values and next offset or ``None`` when no fast path applies.
     """
     if _native_decode is None or isinstance(data, memoryview):
         return None

@@ -9,13 +9,11 @@ qualified_name: "miniproto_native::crypto::pq_factorize"
 source_path: "rust/miniproto/src/crypto.rs"
 source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L475"
 aliases: ["miniproto._native.pq_factorize"]
-crate: "miniproto_native"
 python_visible: true
 ---
 
 ## Provenance
 
-- Crate: `miniproto_native`
 - Rust visibility: `restricted`
 - Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L475)
 - Python exposure: `miniproto._native.pq_factorize` (confirmed from adjacent PyO3 attributes)

@@ -1,6 +1,6 @@
 ---
 title: "miniproto.session.peer_merge.merge_peer_entry_map_with_metadata"
-description: "Merge entries and report affected, canonical, and newly appended keys."
+description: "Merge entries and report affected, canonical and newly appended keys."
 generated: true
 editUrl: false
 language: "python"
@@ -17,7 +17,7 @@ module: "miniproto.session.peer_merge"
 merge_peer_entry_map_with_metadata(existing: Iterable[PeerCacheEntry], incoming: Iterable[PeerCacheEntry]) -> PeerEntryMapMerge
 ```
 
-Merge entries and report affected, canonical, and newly appended keys.
+Merge entries and report affected, canonical and newly appended keys.
 
 Self entries replace an equivalent user key, preserving the cache's single
 canonical representation for the authenticated account.

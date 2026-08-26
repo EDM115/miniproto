@@ -9,13 +9,11 @@ qualified_name: "miniproto_native::crypto::mtproto_auth_key_id"
 source_path: "rust/miniproto/src/crypto.rs"
 source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L131"
 aliases: ["miniproto._native.mtproto_auth_key_id"]
-crate: "miniproto_native"
 python_visible: true
 ---
 
 ## Provenance
 
-- Crate: `miniproto_native`
 - Rust visibility: `restricted`
 - Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L131)
 - Python exposure: `miniproto._native.mtproto_auth_key_id` (confirmed from adjacent PyO3 attributes)

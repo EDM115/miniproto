@@ -9,13 +9,11 @@ qualified_name: "miniproto_native::tl::tl_fast_encode"
 source_path: "rust/miniproto/src/tl.rs"
 source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L143"
 aliases: ["miniproto._native.tl_fast_encode"]
-crate: "miniproto_native"
 python_visible: true
 ---
 
 ## Provenance
 
-- Crate: `miniproto_native`
 - Rust visibility: `restricted`
 - Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L143)
 - Python exposure: `miniproto._native.tl_fast_encode` (confirmed from adjacent PyO3 attributes)
@@ -46,8 +44,8 @@ Attempts Python `tl_fast_encode` for a generated constructor.
 
 `values` must have the generated constructor's exact tuple arity; `boxed` controls whether the
 constructor id is emitted. Returns `None` if no native encoder exists, encoded bytes on
-success, or a Python exception for incompatible values or generated metadata. PyO3 conversion
-failures from tuple lookup/extraction propagate as `TypeError`, `OverflowError`, or the source
+success or a Python exception for incompatible values or generated metadata. PyO3 conversion
+failures from tuple lookup/extraction propagate as `TypeError`, `OverflowError` or the source
 Python exception; algorithm and descriptor validation failures intentionally use `ValueError`.
 
 # Arguments

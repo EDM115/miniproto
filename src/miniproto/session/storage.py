@@ -63,7 +63,7 @@ class SessionStorage(Protocol):
     """Async session persistence contract with atomic synchronous transforms."""
 
     async def load(self) -> Mapping[str, Any] | None:
-        """Load a detached snapshot, or ``None`` when no session is stored."""
+        """Load a detached snapshot or ``None`` when no session is stored."""
         ...
 
     async def save(self, data: SessionPayload) -> None:
@@ -93,7 +93,7 @@ class SessionStorage(Protocol):
         ...
 
     async def close(self) -> None:
-        """Close this storage instance to later load, save, mutate, and clear operations.
+        """Close this storage instance to later load, save, mutate and clear operations.
 
         ``sibling`` and ``domain_revisions`` remain available after closure.
         """
@@ -201,7 +201,7 @@ class InMemorySessionStorage:
         _emit_storage_event("session.clear", started, outcome="success", backend="memory")
 
     async def close(self) -> None:
-        """Close load, save, mutate, and clear; sibling lookup and revisions remain available."""
+        """Close load, save, mutate and clear; sibling lookup and revisions remain available."""
         with self._lock:
             self._closed = True
 
@@ -225,7 +225,7 @@ class EncryptedSQLiteSessionStorage:
 
         Args:
             path: SQLite database path created lazily on first write.
-            key: Secret bytes/text, or ``None`` to read ``MINIPROTO_SESSION_KEY``.
+            key: Secret bytes/text or ``None`` to read ``MINIPROTO_SESSION_KEY``.
 
         Raises:
             ValueError: If no key is supplied or its material is under 16 bytes.
@@ -348,7 +348,7 @@ class EncryptedSQLiteSessionStorage:
         _emit_storage_event("session.clear", started, outcome="success", backend="sqlite")
 
     async def close(self) -> None:
-        """Close load, save, mutate, and clear after queued worker work reaches the lock.
+        """Close load, save, mutate and clear after queued worker work reaches the lock.
 
         ``sibling`` and ``domain_revisions`` remain usable after closure.
         """
@@ -545,7 +545,7 @@ class EncryptedSQLiteSessionStorage:
 
         Args:
             plaintext: Serialized domain bytes to protect with fresh nonce and MAC.
-            domain: Logical row name to authenticate, or ``None`` only for a version-1 legacy fixture.
+            domain: Logical row name to authenticate or ``None`` only for a version-1 legacy fixture.
         """
         version = _ENVELOPE_VERSION if domain is not None else _LEGACY_ENVELOPE_VERSION
         nonce = secrets.token_bytes(_NONCE_SIZE)
@@ -567,11 +567,11 @@ class EncryptedSQLiteSessionStorage:
         return json.dumps(envelope, sort_keys=True, separators=(",", ":")).encode()
 
     def _decrypt(self, envelope_bytes: bytes, *, domain: str | None = None) -> Mapping[str, Any]:
-        """Authenticate, decrypt, and deserialize one versioned domain envelope.
+        """Authenticate, decrypt and deserialize one versioned domain envelope.
 
         Args:
             envelope_bytes: Versioned JSON envelope bytes read from SQLite.
-            domain: Expected logical domain for a version-2 row, or ``None`` for the legacy record.
+            domain: Expected logical domain for a version-2 row or ``None`` for the legacy record.
         """
         envelope = _decode_envelope(envelope_bytes)
         version = int(envelope["version"])
@@ -601,7 +601,7 @@ def _validate_sibling_name(name: str) -> None:
         name: Candidate sibling identifier to validate.
     """
     if _SIBLING_NAME_RE.fullmatch(name) is None:
-        raise ValueError("session sibling name must contain only letters, numbers, '.', '_', or '-'")
+        raise ValueError("session sibling name must contain only letters, numbers, '.', '_' or '-'")
 
 
 def serialize_session_data(data: SessionPayload) -> bytes:
@@ -627,7 +627,7 @@ def deserialize_session_data(payload: bytes) -> dict[str, Any]:
         payload: Versioned canonical JSON bytes.
 
     Raises:
-        SessionEnvelopeError: If encoding, version, or top-level shape is invalid.
+        SessionEnvelopeError: If encoding, version or top-level shape is invalid.
     """
     try:
         document = json.loads(payload.decode())
@@ -676,7 +676,7 @@ def _split_session_domains(data: SessionPayload) -> dict[str, Mapping[str, Any]]
 
 
 def _split_session_record_mapping_domains(payload: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
-    """Split canonical record fields into auth, peers, update, and metadata domains.
+    """Split canonical record fields into auth, peers, update and metadata domains.
 
     Args:
         payload: Canonical session-record mapping to partition.
@@ -726,7 +726,7 @@ def _canonical_session_domains(data: SessionPayload | None) -> dict[str, bytes]:
 
 
 def _changed_domain_plaintexts(old_domains: Mapping[str, bytes], new_domains: Mapping[str, bytes]) -> set[str]:
-    """Return domains whose serialized plaintext changed, appeared, or disappeared.
+    """Return domains whose serialized plaintext changed, appeared or disappeared.
 
     Args:
         old_domains: Previous domain plaintexts keyed by domain.
@@ -782,7 +782,7 @@ def _encode_json_value(value: object) -> object:
     """Recursively encode supported session values with bytes/date type markers.
 
     Args:
-        value: Supported scalar, collection, datetime, dataclass, or session model value.
+        value: Supported scalar, collection, datetime, dataclass or session model value.
     """
     if isinstance(value, bytes | bytearray | memoryview):
         return {_JSON_TYPE_KEY: "bytes", "value": _b64encode(bytes(value))}
@@ -806,7 +806,7 @@ def _decode_json_value(value: object) -> object:
     """Recursively restore JSON values and registered bytes/date type markers.
 
     Args:
-        value: Decoded JSON scalar, list, or mapping to restore recursively.
+        value: Decoded JSON scalar, list or mapping to restore recursively.
     """
     if isinstance(value, list):
         return [_decode_json_value(item) for item in value]
@@ -874,13 +874,13 @@ def _derive_keys(key_material: bytes) -> tuple[bytes, bytes]:
 
 
 def _mac_input(nonce: bytes, ciphertext: bytes, *, version: int, domain: str | None) -> bytes:
-    """Bind envelope version, optional domain, nonce, and ciphertext into the authenticated input.
+    """Bind envelope version, optional domain, nonce and ciphertext into the authenticated input.
 
     Args:
         nonce: Fresh envelope nonce.
         ciphertext: Encrypted domain bytes authenticated by the MAC.
         version: Envelope format version selecting legacy or domain-bound input.
-        domain: Logical domain authenticated by version 2, or ``None`` for version 1.
+        domain: Logical domain authenticated by version 2 or ``None`` for version 1.
     """
     prefix = _MAC_CONTEXT + version.to_bytes(2, "big")
     if version == _ENVELOPE_VERSION:

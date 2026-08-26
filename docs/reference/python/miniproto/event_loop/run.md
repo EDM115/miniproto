@@ -36,7 +36,7 @@ default; known backend/debug incompatibilities use the stdlib loop.
 <details class="notes" open markdown="1">
 <summary>Notes</summary>
 
-The runner creates, closes, and clears its loop. It must not be called
+The runner creates, closes and clears its loop. It must not be called
 while another event loop is running in this thread.
 
 </details>

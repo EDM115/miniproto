@@ -1,7 +1,7 @@
 """Stateful MTProto TCP transport framing.
 
 The codec is deliberately independent from sockets: callers may feed arbitrary
-fragments, and every complete frame is drained before another read is needed.
+fragments and every complete frame is drained before another read is needed.
 """
 
 from __future__ import annotations
@@ -151,7 +151,7 @@ class PythonFrameCodec:
             data: Newly received wire bytes.
 
         Returns:
-            Every complete payload, quick-ACK, or transport-error event decoded
+            Every complete payload, quick-ACK or transport-error event decoded
             from the accumulated input, in wire order.
 
         Raises:
@@ -228,7 +228,7 @@ class PythonFrameCodec:
         return bytes(output)
 
     def _parse_one(self) -> tuple[FrameEvent, int] | None:
-        """Parse one buffered frame, or return ``None`` while more bytes are needed."""
+        """Parse one buffered frame or return ``None`` while more bytes are needed."""
         if self._mode == "tcp_abridged":
             return self._parse_abridged()
         return self._parse_intermediate(padded=self._mode == "tcp_padded_intermediate")
@@ -296,7 +296,7 @@ class PythonFrameCodec:
         return self._payload_event(payload, padded=padded, quick_ack_requested=quick_ack_requested), frame_length
 
     def _payload_event(self, payload: bytes, *, padded: bool, quick_ack_requested: bool = False) -> FrameEvent:
-        """Classify a complete payload-sized frame as data, ACK, or error.
+        """Classify a complete payload-sized frame as data, ACK or error.
 
         Args:
             payload: Frame bytes after the transport length header.

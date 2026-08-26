@@ -1,4 +1,4 @@
-"""Prepare, send, decode, retry, and persist low-level Telegram RPC state."""
+"""Prepare, send, decode, retry and persist low-level Telegram RPC state."""
 
 from __future__ import annotations
 
@@ -254,7 +254,7 @@ def validate_result_type(result: object, expected_type: str | None, raw_request:
 
     Args:
         result: Decoded RPC result to validate.
-        expected_type: Declared TL result type, or ``None`` when unavailable.
+        expected_type: Declared TL result type or ``None`` when unavailable.
         raw_request: Original request attached to a mismatch error for diagnostics.
 
     Raises:
@@ -326,7 +326,7 @@ def should_sleep_for_flood_wait(error: FloodWait, threshold: int | None) -> bool
 
     Args:
         error: Classified Telegram flood-wait response.
-        threshold: Maximum automatically slept duration in seconds, or ``None`` to disable it.
+        threshold: Maximum automatically slept duration in seconds or ``None`` to disable it.
     """
     return threshold is not None and error.seconds <= threshold
 
@@ -461,7 +461,7 @@ def load_session_record(payload: Mapping[str, Any] | None, default_dc_id: int) -
     """Load current structured or legacy session data into a ``SessionRecord``.
 
     Args:
-        payload: Stored session mapping, or ``None`` for a new session.
+        payload: Stored session mapping or ``None`` for a new session.
         default_dc_id: Fallback Telegram DC for empty or legacy mappings.
 
     Returns:
@@ -487,14 +487,14 @@ async def build_sender_from_session(
     allow_media_only: bool = False,
     require_cdn: bool = False,
 ) -> RawSender:
-    """Build a sender for the session DC, or -- with overrides -- a media DC.
+    """Build a sender for the session DC or -- with overrides -- a media DC.
 
     ``dc_id_override``/``auth_key_override`` support cross-DC media transfers:
     the caller supplies a per-DC auth key (created via key exchange with the
     target DC) without ever touching the main session's DC or key.
 
     Args:
-        config: Client transport, retry, and default-DC configuration.
+        config: Client transport, retry and default-DC configuration.
         storage: Session storage containing authorization key and DC options.
         factory: Optional synchronous or asynchronous sender factory, bypassing built-in construction.
         fresh_session_id: Compatibility flag; all built-in senders always receive a new random session ID.

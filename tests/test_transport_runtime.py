@@ -1022,7 +1022,7 @@ def test_sender_unsafe_send_failure_is_ambiguous_and_does_not_replay() -> None:
         )
         sender._transport = _SendExplodingTransport()
         future: asyncio.Future[object] = asyncio.get_running_loop().create_future()
-        pending = PendingRequest(body=b"request", content_related=True, future=future)
+        pending = PendingRequest(body=b"request!", content_related=True, future=future)
         with pytest.raises(AmbiguousRpcResult):
             await sender._send_pending(pending)
         assert sender.sender_state.pending_count == 0
@@ -1178,7 +1178,7 @@ def test_sender_cancellation_during_alias_replacement_cleans_all_aliases() -> No
         transport = _BlockingSendTransport()
         sender._transport = transport
         future: asyncio.Future[object] = asyncio.get_running_loop().create_future()
-        pending = PendingRequest(body=b"request", content_related=True, future=future, retry_safe=True, aliases={111})
+        pending = PendingRequest(body=b"request!", content_related=True, future=future, retry_safe=True, aliases={111})
         sender._pending[111] = pending
         task = asyncio.create_task(sender._send_pending(pending, fail_future_on_error=False))
         await transport.started.wait()
@@ -1672,7 +1672,7 @@ def test_sender_rejects_requests_beyond_pending_rpc_limit() -> None:
                     break
                 await asyncio.sleep(0.01)
             with pytest.raises(PendingRpcLimitExceeded):
-                await sender.request(b"three", request_timeout=5.0)
+                await sender.request(b"three!!!", request_timeout=5.0)
             first.cancel()
             second.cancel()
             await asyncio.gather(first, second, return_exceptions=True)
@@ -1811,7 +1811,7 @@ def test_sender_public_request_releases_slot_after_connect_exception() -> None:
             max_pending_rpcs=1,
         )
         with pytest.raises(OSError, match="connect failed"):
-            await sender.request(b"request")
+            await sender.request(b"request!")
         assert sender.sender_state.pending_count == 0
 
     event_loop.run(run())
@@ -1830,7 +1830,7 @@ def test_sender_public_request_releases_slot_during_transport_send(failure: str)
         sender._transport = cast(Any, transport)
         receive_task = asyncio.create_task(_wait_forever())
         sender._receive_task = receive_task
-        request = asyncio.create_task(sender.request(b"request"))
+        request = asyncio.create_task(sender.request(b"request!"))
         try:
             if failure == "cancel":
                 assert isinstance(transport, _BlockingSendTransport)
@@ -1925,7 +1925,7 @@ def test_sender_public_safe_reconnect_exhaustion_releases_slot(monkeypatch: pyte
         monkeypatch.setattr(sender, "_reconnect", fail_reconnect)
         try:
             with pytest.raises(OSError, match="reconnect exhausted"):
-                await sender.request(b"safe-read", retry_safe=True)
+                await sender.request(b"safe-read!!!", retry_safe=True)
             assert sender.sender_state.pending_count == 0
             assert sender._pending == {}
         finally:
@@ -2020,13 +2020,13 @@ def test_sender_pending_rpc_metrics_are_logical_numeric_transitions(caplog: pyte
                     MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID),
                     max_pending_rpcs=1,
                 )
-                held = asyncio.create_task(sender.request(b"private-payload"))
+                held = asyncio.create_task(sender.request(b"private-payload!"))
                 for _ in range(100):
                     if sender.sender_state.pending_count == 1:
                         break
                     await asyncio.sleep(0.01)
                 with pytest.raises(PendingRpcLimitExceeded):
-                    await sender.request(b"another-private-payload")
+                    await sender.request(b"another-private-payload!")
                 held.cancel()
                 await asyncio.gather(held, return_exceptions=True)
                 await sender.disconnect()
@@ -2071,7 +2071,7 @@ def test_sender_raising_metrics_sink_preserves_connect_error_and_releases_slot()
         )
         try:
             with pytest.raises(OSError, match="original connect failure"):
-                await sender.request(b"request")
+                await sender.request(b"request!")
             assert sender.sender_state.pending_count == 0
             assert sink.names == ["sender.pending_rpcs", "sender.pending_rpcs", "sender.request.duration"]
         finally:
@@ -2123,7 +2123,7 @@ def test_sender_raising_metrics_sink_preserves_cancellation_and_releases_slot() 
         sender._transport = cast(Any, transport)
         receive_task = asyncio.create_task(_wait_forever())
         sender._receive_task = receive_task
-        request = asyncio.create_task(sender.request(b"request"))
+        request = asyncio.create_task(sender.request(b"request!"))
         try:
             await asyncio.sleep(0)
             assert not request.done()
@@ -2390,7 +2390,7 @@ def test_sender_public_request_fails_and_releases_slot_after_protocol_validation
         sender._transport = transport
         receive_task = asyncio.create_task(sender._receive_loop())
         sender._receive_task = receive_task
-        request = asyncio.create_task(sender.request(b"preserved-request"))
+        request = asyncio.create_task(sender.request(b"preserved-request!!!"))
         await transport.sent.wait()
         await receive_task
         with pytest.raises(ProtocolValidationError):
@@ -2414,7 +2414,7 @@ def test_sender_generic_fatal_receive_failure_releases_public_request_slot() -> 
         sender._transport = transport
         receive_task = asyncio.create_task(sender._receive_loop())
         sender._receive_task = receive_task
-        request = asyncio.create_task(sender.request(b"request"))
+        request = asyncio.create_task(sender.request(b"request!"))
         await transport.sent.wait()
         await receive_task
         with pytest.raises(ValueError, match="unexpected decode failure"):

@@ -22,4 +22,4 @@ Build a ``Media`` value retaining the encoded file location.
 
 **Returns:**
 
-- <code>[Media](#miniproto.types.Media)</code> – A media value with the file reference, access hash, and matching input location.
+- <code>[Media](#miniproto.types.Media)</code> – A media value with the file reference, access hash and matching input location.

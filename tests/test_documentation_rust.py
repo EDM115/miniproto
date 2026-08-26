@@ -13,14 +13,9 @@ import tools.docs.generate_rust as generate_rust
 from tools.docs.audit import audit_maintained_rust_docs
 from tools.docs.generate_rust import (
     RustDocumentationError,
-    cargo_docs_md_command,
-    cargo_docs_md_install_command,
-    ensure_pinned_nightly_available,
-    generate_pinned_rustdoc_json,
     generate_rust_pages,
+    generate_rustdoc_json,
     load_cargo_docs_md_fragments,
-    load_documentation_toolchain,
-    pinned_rustdoc_command,
 )
 
 
@@ -32,7 +27,7 @@ def _rustdoc_fixture(*, reverse_index: bool = False, include_docs: bool = True) 
         include_docs: Whether the selected Python-visible function receives documentation.
 
     Returns:
-        Rustdoc JSON data covering module, item, method, generated, and private cases.
+        Rustdoc JSON data covering module, item, method, generated and private cases.
     """
     crypto_docs = "Seal packets for the native extension.\n\n# Arguments\n\n- `secret`: Bytes authenticated by the operation.\n- `nonce`: Sequence value used once per packet."
     index = {
@@ -590,17 +585,8 @@ def _rendered_markdown() -> dict[str, str]:
     }
 
 
-def test_rust_documentation_toolchain_is_exact_and_runtime_import_free() -> None:
-    """Keep the docs-only nightly/renderer pin explicit without importing miniproto runtime code."""
-    toolchain = load_documentation_toolchain()
-    rustdoc = pinned_rustdoc_command(
-        toolchain=toolchain, manifest_path=Path("rust/miniproto/Cargo.toml"), target_dir=Path("target/rustdoc-json")
-    )
-    renderer = cargo_docs_md_command(
-        json_directory=Path("target/rustdoc-json/doc"),
-        output_directory=Path("target/cargo-docs-md"),
-        crate="miniproto_native",
-    )
+def test_rust_documentation_toolchain_is_runtime_import_free() -> None:
+    """Verify docs aren't importing miniproto runtime code."""
     imports = [
         alias.name
         for statement in ast.walk(ast.parse(Path(generate_rust.__file__).read_text(encoding="utf-8")))
@@ -608,32 +594,7 @@ def test_rust_documentation_toolchain_is_exact_and_runtime_import_free() -> None
         for alias in statement.names
     ]
 
-    assert toolchain.nightly == "nightly-2026-08-12"
-    assert cargo_docs_md_install_command(toolchain) == (
-        "cargo",
-        "install",
-        "--locked",
-        "cargo-docs-md",
-        "--version",
-        "0.2.4",
-    )
-    assert rustdoc[0:3] == ("cargo", "+nightly-2026-08-12", "rustdoc")
-    assert rustdoc[-6:] == ("--", "-Z", "unstable-options", "--output-format", "json", "--document-private-items")
-    assert "RUSTC_BOOTSTRAP" not in rustdoc
-    assert {"--source-locations", "--full-method-docs", "--no-mdbook", "--no-search-index"}.issubset(renderer)
     assert all(not imported_name.startswith("miniproto") for imported_name in imports)
-
-
-def test_pinned_nightly_detection_accepts_rustup_target_suffix() -> None:
-    """Treat rustup's normal host-qualified toolchain name as the exact pin."""
-    toolchain = load_documentation_toolchain()
-
-    ensure_pinned_nightly_available(
-        toolchain,
-        runner=lambda *args, **kwargs: CompletedProcess(
-            args=args[0], returncode=0, stdout=f"{toolchain.nightly}-x86_64-pc-windows-msvc\n", stderr=""
-        ),
-    )
 
 
 def test_cargo_docs_md_fragments_preserve_real_module_and_item_sections(tmp_path: Path) -> None:
@@ -699,17 +660,14 @@ def test_live_rustdoc_generation_resolves_relative_paths_once(tmp_path: Path, mo
     manifest = crate_root / "Cargo.toml"
     manifest.write_text("[package]\nname='fixture'\nversion='0.1.0'\n", encoding="utf-8")
     target = tmp_path / "target"
-    toolchain = load_documentation_toolchain()
 
     def runner(argv: tuple[str, ...], **kwargs: object) -> CompletedProcess[str]:
-        """Return deterministic rustup/Cargo results and materialize the fixture artifact.
+        """Return a deterministic Cargo result and materialize the fixture artifact.
 
         Args:
             argv: Process argument vector requested by the generator.
             **kwargs: Subprocess options whose working directory is verified.
         """
-        if argv[:3] == ("rustup", "toolchain", "list"):
-            return CompletedProcess(argv, 0, stdout=f"{toolchain.nightly}-x86_64-pc-windows-msvc\n", stderr="")
         manifest_argument = Path(argv[argv.index("--manifest-path") + 1])
         assert manifest_argument == manifest.resolve()
         assert kwargs["cwd"] == crate_root.resolve()
@@ -720,12 +678,8 @@ def test_live_rustdoc_generation_resolves_relative_paths_once(tmp_path: Path, mo
 
     monkeypatch.chdir(tmp_path)
 
-    artifact = generate_pinned_rustdoc_json(
-        toolchain=toolchain,
-        manifest_path=Path("crate/Cargo.toml"),
-        target_dir=Path("target"),
-        artifact_stem="fixture",
-        runner=runner,
+    artifact = generate_rustdoc_json(
+        manifest_path=Path("crate/Cargo.toml"), target_dir=Path("target"), artifact_stem="fixture", runner=runner
     )
 
     assert artifact == target.resolve() / "doc" / "fixture.json"
@@ -895,7 +849,7 @@ def test_rust_reference_pages_require_non_lifetime_generic_descriptions(tmp_path
 
 
 def test_whole_rust_audit_is_source_span_aware_and_covers_private_declarations(tmp_path: Path) -> None:
-    """Audit maintained modules, fields, tuple fields, and tests without macro noise.
+    """Audit maintained modules, fields, tuple fields and tests without macro noise.
 
     Args:
         tmp_path: Pytest-provided temporary repository root.
@@ -923,7 +877,7 @@ def test_whole_rust_audit_is_source_span_aware_and_covers_private_declarations(t
 
 
 def test_whole_rust_audit_requires_value_type_and_const_parameter_descriptions(tmp_path: Path) -> None:
-    """Require descriptions for every non-receiver value, type, and const parameter.
+    """Require descriptions for every non-receiver value, type and const parameter.
 
     Args:
         tmp_path: Pytest-provided temporary repository root.

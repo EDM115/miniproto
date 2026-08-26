@@ -1,4 +1,4 @@
-"""Asynchronous update ingestion with persistent cursors, duplicate filtering, and bounded gap recovery."""
+"""Asynchronous update ingestion with persistent cursors, duplicate filtering and bounded gap recovery."""
 
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ class RawUpdateUnit:
     """One raw update paired with an optional enclosing-container timestamp.
 
     Attributes:
-        raw: Decoded Telegram update, message, or envelope payload.
+        raw: Decoded Telegram update, message or envelope payload.
         date: Optional date inherited from an enclosing update container.
     """
 
@@ -52,7 +52,7 @@ class UpdateManager:
     """Process Telegram updates into public events while persisting recovery state.
 
     Args:
-        config: Client configuration defining queue capacities, overflow policy, and duplicate-window size.
+        config: Client configuration defining queue capacities, overflow policy and duplicate-window size.
         storage: Session storage used to load and atomically persist update cursors and discovered entities.
         invoke: Async raw-RPC invoker used for ``updates.getState`` and difference recovery.
 
@@ -60,14 +60,14 @@ class UpdateManager:
         ``start`` restores state and launches a raw-update drainer. ``stop`` cancels that drainer but does not close or sentinel the public queue; consumers of ``iter_updates`` remain blocked until cancellation or a future event.
 
     Persistence:
-        Raw update processing holds a state lock, applies cursor/entity/duplicate changes, and persists them before emitted public events are queued and handlers are called. Persisted state is therefore ahead of, or equal to, observable delivery; it does not provide application-level exactly-once handling.
+        Raw update processing holds a state lock, applies cursor/entity/duplicate changes and persists them before emitted public events are queued and handlers are called. Persisted state is therefore ahead of or equal to, observable delivery; it does not provide application-level exactly-once handling.
     """
 
     def __init__(self, config: ClientConfig, storage: SessionStorage, invoke: UpdateInvoker) -> None:
         """Initialize bounded raw/public queues and uninitialized persistent cursor state.
 
         Args:
-            config: Client queue capacities, overflow policy, and duplicate-window settings.
+            config: Client queue capacities, overflow policy and duplicate-window settings.
             storage: Session storage used to load and atomically persist cursor state.
             invoke: Async raw-RPC callable used for state and difference recovery.
         """
@@ -135,7 +135,7 @@ class UpdateManager:
     async def feed_raw_update(self, raw_update: object) -> None:
         """Offer a raw Telegram update to the bounded background-processing queue.
 
-        Queue-full behavior is controlled by ``ClientConfig.update_queue_overflow``: ``"raise"`` propagates ``asyncio.QueueFull``, ``"drop_newest"`` discards this update, and ``"drop_oldest"`` replaces the oldest queued update.
+        Queue-full behavior is controlled by ``ClientConfig.update_queue_overflow``: ``"raise"`` propagates ``asyncio.QueueFull``, ``"drop_newest"`` discards this update and ``"drop_oldest"`` replaces the oldest queued update.
 
         Args:
             raw_update: Decoded Telegram update or update-container object to enqueue.
@@ -152,7 +152,7 @@ class UpdateManager:
             raw_update: Decoded Telegram update or update-container object to process.
 
         Raises:
-            Exception: Propagates storage, RPC, gap-recovery, queue, and handler failures.
+            Exception: Propagates storage, RPC, gap-recovery, queue and handler failures.
         """
         started = time.perf_counter()
         async with self._state_lock:
@@ -168,7 +168,7 @@ class UpdateManager:
     async def emit_update(self, update: Update) -> None:
         """Offer a normalized update to consumers, then invoke matching handlers sequentially.
 
-        If the public queue rejects the item under a dropping overflow policy, handlers are not invoked. Matching registered types are visited in registration-mapping order, and each handler is awaited before the next one when it returns an awaitable.
+        If the public queue rejects the item under a dropping overflow policy, handlers are not invoked. Matching registered types are visited in registration-mapping order and each handler is awaited before the next one when it returns an awaitable.
 
         Args:
             update: Normalized public update to queue and dispatch.
@@ -225,7 +225,7 @@ class UpdateManager:
             handler: Optional synchronous or asynchronous callback.
 
         Returns:
-            The registered handler, or a decorator that registers a supplied handler.
+            The registered handler or a decorator that registers a supplied handler.
         """
 
         def register(candidate: UpdateHandler[UpdateT]) -> UpdateHandler[UpdateT]:
@@ -245,7 +245,7 @@ class UpdateManager:
         """Fetch Telegram's current global update state and persist it atomically.
 
         Returns:
-            The loaded cursor after replacing its global PTS, QTS, sequence, and date fields.
+            The loaded cursor after replacing its global PTS, QTS, sequence and date fields.
 
         Raises:
             TypeError: If ``updates.getState`` does not return ``updates.State``.
@@ -269,7 +269,7 @@ class UpdateManager:
             await self.handle_raw_update(raw_update)
 
     async def _ensure_loaded(self) -> None:
-        """Load cursor, cached entities, and bounded duplicate keys from session storage once."""
+        """Load cursor, cached entities and bounded duplicate keys from session storage once."""
         if self._cursor is not None:
             return
         payload = await self._storage.load()
@@ -278,7 +278,7 @@ class UpdateManager:
         self._duplicates = DuplicateTracker(self._cursor.duplicate_keys, max_size=self._config.update_duplicate_window)
 
     async def _persist_cursor(self) -> None:
-        """Atomically persist the current cursor, duplicate window, and merged peer entities."""
+        """Atomically persist the current cursor, duplicate window and merged peer entities."""
         cursor = self._current_cursor().with_duplicate_keys(self._duplicates.keys())
         self._cursor = cursor
 
@@ -302,7 +302,7 @@ class UpdateManager:
         await self._storage.mutate(persist)
 
     async def _process_raw_update(self, raw_update: object) -> list[Update]:
-        """Detect gaps, recover when needed, apply units, and return normalized events.
+        """Detect gaps, recover when needed, apply units and return normalized events.
 
         Args:
             raw_update: Decoded Telegram update or container to inspect and apply.
@@ -708,7 +708,7 @@ class UpdateManager:
         self._cursor = cursor.with_duplicate_keys(self._duplicates.keys())
 
     def _input_channel_for_channel(self, channel_id: int) -> object | None:
-        """Build an input channel from retained entity data, or return ``None`` without an access hash.
+        """Build an input channel from retained entity data or return ``None`` without an access hash.
 
         Args:
             channel_id: Telegram channel identifier to convert for recovery RPCs.
@@ -915,7 +915,7 @@ def _raw_update_key(raw: object) -> str | None:
 
 
 def _optional_int_attr(raw: object, attr: str) -> int | None:
-    """Return an attribute coerced to ``int``, or ``None`` when it is absent.
+    """Return an attribute coerced to ``int`` or ``None`` when it is absent.
 
     Args:
         raw: Object carrying the optional scalar attribute.

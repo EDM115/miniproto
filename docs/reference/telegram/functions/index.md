@@ -1,6 +1,6 @@
 ---
 title: "Telegram functions"
-description: "Layer 228 index of 811 canonical Telegram functions from tdlib."
+description: "Layer 229 index of 817 canonical Telegram functions from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -9,13 +9,12 @@ qualified_name: "telegram.functions"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "functions"
-layer: 228
 schema_source: "tdlib"
 ---
 
-## Layer 228 functions
+## Layer 229 functions
 
-Selected canonical functions: 811.
+Selected canonical functions: 817.
 
 ## Canonical source
 
@@ -167,11 +166,14 @@ https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/
 - [`auth.dropTempAuthKeys`](/reference/telegram/functions/auth/drop-temp-auth-keys/): `Bool`
 - [`auth.exportAuthorization`](/reference/telegram/functions/auth/export-authorization/): `auth.ExportedAuthorization`
 - [`auth.exportLoginToken`](/reference/telegram/functions/auth/export-login-token/): `auth.LoginToken`
+- [`auth.finishFirebasePnvLogin`](/reference/telegram/functions/auth/finish-firebase-pnv-login/): `auth.Authorization`
 - [`auth.finishPasskeyLogin`](/reference/telegram/functions/auth/finish-passkey-login/): `auth.Authorization`
+- [`auth.firebasePnvSignUp`](/reference/telegram/functions/auth/firebase-pnv-sign-up/): `auth.Authorization`
 - [`auth.importAuthorization`](/reference/telegram/functions/auth/import-authorization/): `auth.Authorization`
 - [`auth.importBotAuthorization`](/reference/telegram/functions/auth/import-bot-authorization/): `auth.Authorization`
 - [`auth.importLoginToken`](/reference/telegram/functions/auth/import-login-token/): `auth.LoginToken`
 - [`auth.importWebTokenAuthorization`](/reference/telegram/functions/auth/import-web-token-authorization/): `auth.Authorization`
+- [`auth.initFirebasePnvLogin`](/reference/telegram/functions/auth/init-firebase-pnv-login/): `auth.FirebasePnvIntent`
 - [`auth.initPasskeyLogin`](/reference/telegram/functions/auth/init-passkey-login/): `auth.PasskeyLoginOptions`
 - [`auth.logOut`](/reference/telegram/functions/auth/log-out/): `auth.LoggedOut`
 - [`auth.recoverPassword`](/reference/telegram/functions/auth/recover-password/): `auth.Authorization`
@@ -328,9 +330,12 @@ https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/
 - [`contacts.toggleTopPeers`](/reference/telegram/functions/contacts/toggle-top-peers/): `Bool`
 - [`contacts.unblock`](/reference/telegram/functions/contacts/unblock/): `Bool`
 - [`contacts.updateContactNote`](/reference/telegram/functions/contacts/update-contact-note/): `Bool`
+- [`ephemeral.deleteAllWelcomeMessages`](/reference/telegram/functions/ephemeral/delete-all-welcome-messages/): `Bool`
 - [`ephemeral.deleteMessage`](/reference/telegram/functions/ephemeral/delete-message/): `Bool`
+- [`ephemeral.deleteWelcomeMessage`](/reference/telegram/functions/ephemeral/delete-welcome-message/): `Bool`
 - [`ephemeral.editMessage`](/reference/telegram/functions/ephemeral/edit-message/): `Updates`
 - [`ephemeral.getCallbackAnswer`](/reference/telegram/functions/ephemeral/get-callback-answer/): `messages.BotCallbackAnswer`
+- [`ephemeral.getWelcomeMessages`](/reference/telegram/functions/ephemeral/get-welcome-messages/): `ephemeral.WelcomeMessages`
 - [`ephemeral.reportMessage`](/reference/telegram/functions/ephemeral/report-message/): `ReportResult`
 - [`ephemeral.sendMessage`](/reference/telegram/functions/ephemeral/send-message/): `Updates`
 - [`folders.editPeerFolders`](/reference/telegram/functions/folders/edit-peer-folders/): `Updates`

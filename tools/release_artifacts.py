@@ -1,4 +1,4 @@
-"""Validate, describe, and re-verify immutable miniproto release artifacts.
+"""Validate, describe and re-verify immutable miniproto release artifacts.
 
 The build workflow uses this module to create a checksum file and a provenance manifest from the complete release candidate. The separate publication workflow uses the same validation logic before any registry or GitHub release mutation.
 """
@@ -30,7 +30,7 @@ _VERSION_RE = re.compile(r"^[0-9]+(?:\.[0-9]+)+(?:[A-Za-z0-9.!+_-]*)$")
 
 
 class ReleaseArtifactError(ValueError):
-    """Report a malformed, incomplete, mismatched, or modified release candidate."""
+    """Report a malformed, incomplete, mismatched or modified release candidate."""
 
 
 def _normalize_distribution_name(value: str) -> str:
@@ -185,10 +185,10 @@ def _validate_wheel(path: Path, version: str) -> tuple[str, str, str]:
         version: Exact release version.
 
     Returns:
-        Python tag, ABI tag, and platform tag from the wheel filename.
+        Python tag, ABI tag and platform tag from the wheel filename.
 
     Raises:
-        ReleaseArtifactError: The filename, archive, or metadata does not match the release.
+        ReleaseArtifactError: The filename, archive or metadata does not match the release.
     """
     parts = path.name.removesuffix(".whl").split("-", 4)
     if len(parts) != 5:
@@ -214,7 +214,7 @@ def _validate_sdist(path: Path, version: str) -> None:
         version: Exact release version.
 
     Raises:
-        ReleaseArtifactError: The filename, archive, or metadata does not match the release.
+        ReleaseArtifactError: The filename, archive or metadata does not match the release.
     """
     expected_name = f"{_DISTRIBUTION_NAME}-{version}.tar.gz"
     if path.name != expected_name:
@@ -239,7 +239,7 @@ def _validate_crate(path: Path, version: str) -> None:
         version: Exact release version.
 
     Raises:
-        ReleaseArtifactError: The filename, archive, package name, or version does not match the release.
+        ReleaseArtifactError: The filename, archive, package name or version does not match the release.
     """
     expected_name = f"{_DISTRIBUTION_NAME}-{version}.crate"
     if path.name != expected_name:
@@ -271,10 +271,10 @@ def _distribution_paths(artifacts_dir: Path) -> list[Path]:
         artifacts_dir: Directory populated by raw workflow artifact downloads.
 
     Returns:
-        Sorted paths for wheels, the Python sdist, and the Cargo package.
+        Sorted paths for wheels, the Python sdist and the Cargo package.
 
     Raises:
-        ReleaseArtifactError: The directory is absent, nested, or contains an unexpected file.
+        ReleaseArtifactError: The directory is absent, nested or contains an unexpected file.
     """
     if not artifacts_dir.is_dir():
         raise ReleaseArtifactError(f"artifact directory does not exist: {artifacts_dir}")
@@ -303,7 +303,7 @@ def _collect_artifacts(artifacts_dir: Path, version: str) -> list[dict[str, obje
         Sorted JSON-compatible artifact records.
 
     Raises:
-        ReleaseArtifactError: Counts, ABI coverage, filenames, metadata, or archive bytes are invalid.
+        ReleaseArtifactError: Counts, ABI coverage, filenames, metadata or archive bytes are invalid.
     """
     paths = _distribution_paths(artifacts_dir)
     wheels = [path for path in paths if path.suffix == ".whl"]
@@ -311,7 +311,7 @@ def _collect_artifacts(artifacts_dir: Path, version: str) -> list[dict[str, obje
     crates = [path for path in paths if path.suffix == ".crate"]
     if len(wheels) != _EXPECTED_WHEEL_COUNT or len(sdists) != 1 or len(crates) != 1:
         raise ReleaseArtifactError(
-            f"expected 24 wheels, one Python sdist, and one Cargo package; found {len(wheels)}, {len(sdists)}, {len(crates)}"
+            f"expected 24 wheels, one Python sdist and one Cargo package; found {len(wheels)}, {len(sdists)}, {len(crates)}"
         )
 
     wheel_tags = [_validate_wheel(path, version) for path in wheels]
@@ -353,7 +353,7 @@ def build_release_manifest(
     """Create checksums and provenance for one complete build workflow run.
 
     Args:
-        artifacts_dir: Directory containing exactly 24 wheels, one Python sdist, and one Cargo package.
+        artifacts_dir: Directory containing exactly 24 wheels, one Python sdist and one Cargo package.
         output_dir: Directory receiving `release-manifest.json` and `SHA256SUMS`.
         version: Exact shared Python and Cargo version.
         repository: GitHub `owner/repository` identity that built the artifacts.
@@ -419,7 +419,7 @@ def _load_manifest(path: Path) -> dict[str, Any]:
         Parsed manifest object.
 
     Raises:
-        ReleaseArtifactError: The file is unreadable, invalid JSON, or not an object.
+        ReleaseArtifactError: The file is unreadable, invalid JSON or not an object.
     """
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
@@ -440,7 +440,7 @@ def _load_checksums(path: Path) -> dict[str, str]:
         Mapping from artifact filename to lowercase SHA-256 digest.
 
     Raises:
-        ReleaseArtifactError: A line is malformed, duplicated, or uses an invalid digest.
+        ReleaseArtifactError: A line is malformed, duplicated or uses an invalid digest.
     """
     try:
         lines = path.read_text(encoding="utf-8").splitlines()
@@ -488,7 +488,7 @@ def verify_release_manifest(
         The verified release manifest.
 
     Raises:
-        ReleaseArtifactError: Context, counts, filenames, metadata, checksums, or artifact bytes differ.
+        ReleaseArtifactError: Context, counts, filenames, metadata, checksums or artifact bytes differ.
     """
     expected_version = _validate_version(expected_version)
     expected_source_sha = _validate_source_sha(expected_source_sha)
@@ -594,7 +594,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 source_ref=args.source_ref,
                 event=args.event,
             )
-            print(f"Validated 24 wheels, one Python sdist, and one Cargo package for miniproto {args.version}.")
+            print(f"Validated 24 wheels, one Python sdist and one Cargo package for miniproto {args.version}.")
             print(f"Wrote {manifest_path} and {checksums_path}.")
             return 0
         manifest = verify_release_manifest(

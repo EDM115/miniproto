@@ -9,13 +9,11 @@ qualified_name: "miniproto_native::transport::TransportCodec"
 source_path: "rust/miniproto/src/transport.rs"
 source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L139"
 aliases: ["miniproto._native.TransportCodec"]
-crate: "miniproto_native"
 python_visible: true
 ---
 
 ## Provenance
 
-- Crate: `miniproto_native`
 - Rust visibility: `restricted`
 - Source: [`rust/miniproto/src/transport.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L139)
 - Python exposure: `miniproto._native.TransportCodec` (confirmed from adjacent PyO3 attributes)
@@ -92,7 +90,7 @@ Python-visible incremental TCP framing codec, exported as `miniproto._native.Tra
 
   
 
-  Tuple kinds are `0` payload, `1` quick ACK, and `2` negative transport error. It preserves
+  Tuple kinds are `0` payload, `1` quick ACK and `2` negative transport error. It preserves
 
   incomplete trailing bytes for the next call and raises Python errors for invalid framing.
 

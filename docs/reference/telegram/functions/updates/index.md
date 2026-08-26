@@ -1,6 +1,6 @@
 ---
 title: "Telegram functions: updates"
-description: "Layer 228 index of 3 canonical Telegram functions in the updates namespace from tdlib."
+description: "Layer 229 index of 3 canonical Telegram functions in the updates namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -9,11 +9,10 @@ qualified_name: "telegram.functions.updates"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "updates"
-layer: 228
 schema_source: "tdlib"
 ---
 
-## Layer 228 updates functions
+## Layer 229 updates functions
 
 Selected canonical functions in this namespace: 3.
 

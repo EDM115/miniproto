@@ -1,6 +1,6 @@
 ---
 title: "miniproto.media.download.download_location_from_media"
-description: "Resolve a media model, raw Telegram object, file ID, or input location for download."
+description: "Resolve a media model, raw Telegram object, file ID or input location for download."
 generated: true
 editUrl: false
 language: "python"
@@ -18,11 +18,11 @@ module: "miniproto.media.download"
 download_location_from_media(media: object) -> object
 ```
 
-Resolve a media model, raw Telegram object, file ID, or input location for download.
+Resolve a media model, raw Telegram object, file ID or input location for download.
 
 **Parameters:**
 
-- **media** (<code>[object](#object)</code>) – Supported high-level, raw, encoded, or already-resolved media input.
+- **media** (<code>[object](#object)</code>) – Supported high-level, raw, encoded or already-resolved media input.
 
 **Returns:**
 

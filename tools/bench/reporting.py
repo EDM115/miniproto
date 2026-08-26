@@ -4,7 +4,7 @@ Reports retain measurements in their declared units. Configuration keys whose
 names indicate credentials or personal identifiers are replaced recursively;
 callers must still avoid placing secrets in free-form values or result text.
 Loop lag measures event-loop scheduling delay and probe callback overhead, not
-network latency, transfer duration, or application throughput.
+network latency, transfer duration or application throughput.
 """
 
 from __future__ import annotations
@@ -34,10 +34,10 @@ def sample_statistics(samples: Sequence[float]) -> dict[str, float | int]:
     """Summarize finite numeric samples in their caller-declared unit.
 
     Args:
-        samples: Non-empty finite measurements, such as seconds, milliseconds, or bytes.
+        samples: Non-empty finite measurements, such as seconds, milliseconds or bytes.
 
     Returns:
-        Count, extrema, mean, median, and linearly interpolated p50/p95/p99 values.
+        Count, extrema, mean, median and linearly interpolated p50/p95/p99 values.
         No unit conversion occurs.
 
     Raises:
@@ -64,12 +64,12 @@ def collect_environment() -> dict[str, Any]:
     """Collect non-secret local runtime evidence used to interpret benchmark results.
 
     Returns:
-        Package/native availability, platform, interpreter, tool, Git, and event-loop
+        Package/native availability, platform, interpreter, tool, Git and event-loop
         metadata. Missing commands and distributions are represented by ``None``.
 
     Evidence Limits:
         This is contextual metadata only. It does not prove clean-tree state,
-        native correctness, live connectivity, or that a benchmark is comparable
+        native correctness, live connectivity or that a benchmark is comparable
         across machines.
     """
     native_version: str | None = None
@@ -121,7 +121,7 @@ def build_benchmark_report(
 
     Args:
         benchmark: Non-empty benchmark identifier.
-        mode: Supported execution mode: ``smoke``, ``full``, ``live``, or ``tglib``.
+        mode: Supported execution mode: ``smoke``, ``full`` or ``live``.
         warmup: Number of excluded warmup iterations.
         samples: Measurement values expressed in ``unit``.
         unit: Unit label applied to every sample and statistic without conversion.
@@ -139,12 +139,12 @@ def build_benchmark_report(
         not automatically scrubbed.
 
     Raises:
-        ValueError: ``benchmark`` is empty, mode is unsupported, or ``warmup`` is negative.
+        ValueError: ``benchmark`` is empty, mode is unsupported or ``warmup`` is negative.
     """
     if not benchmark:
         raise ValueError("benchmark must not be empty")
-    if mode not in {"smoke", "full", "live", "tglib"}:
-        raise ValueError("mode must be smoke, full, live, or tglib")
+    if mode not in {"smoke", "full", "live"}:
+        raise ValueError("mode must be smoke, full or live")
     if warmup < 0:
         raise ValueError("warmup must be non-negative")
     normalized_samples = [float(sample) for sample in samples]
@@ -343,7 +343,7 @@ def _json_value(value: Any) -> Any:
 
 
 def _distribution_version(name: str) -> str | None:
-    """Return an installed distribution version, or ``None`` when it is absent.
+    """Return an installed distribution version or ``None`` when it is absent.
 
     Args:
         name: Installed Python distribution name to query.

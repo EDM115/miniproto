@@ -1,6 +1,6 @@
 ---
 title: "miniproto.connection.sender.MTProtoSender.disconnect"
-description: "Stop background tasks, close the transport, and fail unresolved requests."
+description: "Stop background tasks, close the transport and fail unresolved requests."
 generated: true
 editUrl: false
 language: "python"
@@ -18,7 +18,7 @@ module: "miniproto.connection.sender"
 disconnect() -> None
 ```
 
-Stop background tasks, close the transport, and fail unresolved requests.
+Stop background tasks, close the transport and fail unresolved requests.
 
 This is the terminal lifecycle action for this connection instance until
 a later :meth:`connect` call. Pending request futures receive

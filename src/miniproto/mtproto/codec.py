@@ -197,7 +197,7 @@ class Pong:
 
 @dataclass(frozen=True, slots=True)
 class BadMsgNotification:
-    """MTProto notice that a message ID, sequence number, or other field was invalid.
+    """MTProto notice that a message ID, sequence number or other field was invalid.
 
     Attributes:
         bad_msg_id: Rejected message ID.
@@ -292,7 +292,7 @@ def decode_unencrypted_message(packet: ByteBuffer) -> UnencryptedMessage:
         Message identifier and a body memoryview.
 
     Raises:
-        ValueError: If the packet is too short, nonzero-authenticated, or malformed.
+        ValueError: If the packet is too short, nonzero-authenticated or malformed.
     """
     packet_view = memoryview(packet)
     if len(packet) < 20:
@@ -348,7 +348,7 @@ def encode_encrypted_message(
 def decode_encrypted_message(
     auth_key: bytes, packet: ByteBuffer, *, client_to_server: bool = False
 ) -> DecodedEncryptedMessage:
-    """Authenticate, decrypt, and parse one MTProto encrypted envelope.
+    """Authenticate, decrypt and parse one MTProto encrypted envelope.
 
     Args:
         auth_key: 256-byte MTProto authorization key.
@@ -359,7 +359,7 @@ def decode_encrypted_message(
         Decrypted envelope fields with body and padding views.
 
     Raises:
-        ValueError: If the native codec rejects framing, key, or integrity data.
+        ValueError: If the native codec rejects framing, key or integrity data.
     """
     auth_key_id, server_salt, session_id, msg_id, seq_no, body, padding = _mtproto_decode_message(
         auth_key, packet, client_to_server=client_to_server
@@ -376,10 +376,10 @@ def decode_encrypted_message(
 
 
 def encode_message_body(body: ByteBuffer | object) -> bytes:
-    """Encode raw, generated, or built-in MTProto service message bodies.
+    """Encode raw, generated or built-in MTProto service message bodies.
 
     Args:
-        body: Bytes, generated TL object, or supported service-body object.
+        body: Bytes, generated TL object or supported service-body object.
 
     Returns:
         Constructor-prefixed MTProto body bytes where applicable.
@@ -478,10 +478,10 @@ def decode_message_body(data: ByteBuffer) -> ByteBuffer | object:
         data: Exactly one MTProto body.
 
     Returns:
-        Service-body dataclass, ping tuple, RPC error/result, or the original ``ByteBuffer`` input for an unknown constructor.
+        Service-body dataclass, ping tuple, RPC error/result or the original ``ByteBuffer`` input for an unknown constructor.
 
     Raises:
-        ValueError: If a recognized body is truncated, malformed, or has trailing bytes.
+        ValueError: If a recognized body is truncated, malformed or has trailing bytes.
     """
     data_view = memoryview(data)
     constructor_id, offset = decode_constructor_id(data, 0)

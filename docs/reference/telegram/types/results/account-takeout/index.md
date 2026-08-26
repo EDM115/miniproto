@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: account.Takeout"
-description: "Layer 228 result-family index for 1 canonical constructors returning account.Takeout from tdlib."
+description: "Layer 229 result-family index for 1 canonical constructors returning account.Takeout from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -9,11 +9,10 @@ qualified_name: "telegram.types.result.account.Takeout"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "results"
-layer: 228
 schema_source: "tdlib"
 ---
 
-## Layer 228 result family `account.Takeout`
+## Layer 229 result family `account.Takeout`
 
 Selected canonical constructors in this family: 1.
 

@@ -1,6 +1,6 @@
 ---
 title: "Telegram functions: bots"
-description: "Layer 228 index of 38 canonical Telegram functions in the bots namespace from tdlib."
+description: "Layer 229 index of 38 canonical Telegram functions in the bots namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -9,11 +9,10 @@ qualified_name: "telegram.functions.bots"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "bots"
-layer: 228
 schema_source: "tdlib"
 ---
 
-## Layer 228 bots functions
+## Layer 229 bots functions
 
 Selected canonical functions in this namespace: 38.
 

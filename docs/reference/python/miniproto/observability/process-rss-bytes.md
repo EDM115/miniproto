@@ -22,4 +22,4 @@ Return this process's reported RSS/working-set byte count when available.
 
 **Returns:**
 
-- <code>[int](#int) | None</code> – Platform-reported byte count, or ``None`` when the platform cannot provide it.
+- <code>[int](#int) | None</code> – Platform-reported byte count or ``None`` when the platform cannot provide it.

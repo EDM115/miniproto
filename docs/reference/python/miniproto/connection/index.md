@@ -1,6 +1,6 @@
 ---
 title: "miniproto.connection"
-description: "Public MTProto connection, sender, and transport primitives."
+description: "Public MTProto connection, sender and transport primitives."
 generated: true
 editUrl: false
 language: "python"
@@ -13,7 +13,7 @@ module: "miniproto.connection"
 
 ## `miniproto.connection`
 
-Public MTProto connection, sender, and transport primitives.
+Public MTProto connection, sender and transport primitives.
 
 ## Public objects
 
@@ -27,4 +27,4 @@ Public MTProto connection, sender, and transport primitives.
 - [`TransportClosed`](./transport/transportclosed/) — Raised when a transport operation is attempted on a closed connection.
 - [`TransportError`](./transport/transporterror/) — Raised when an MTProto transport cannot complete an operation.
 - [`TransportTimeout`](./transport/transporttimeout/) — Raised when a transport read or write exceeds its configured deadline.
-- [`open_transport`](./transport/open-transport/) — Construct, connect, and return the transport matching ``config.mode``.
+- [`open_transport`](./transport/open-transport/) — Construct, connect and return the transport matching ``config.mode``.

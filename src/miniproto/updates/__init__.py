@@ -1,4 +1,4 @@
-"""Update-stream management, persistent cursors, duplicate tracking, and handler registration."""
+"""Update-stream management, persistent cursors, duplicate tracking and handler registration."""
 
 from __future__ import annotations
 

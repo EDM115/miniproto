@@ -7,7 +7,7 @@ import { defineConfig } from "astro/config";
 import remarkLocalMarkdownLinks from "./src/remark-local-markdown-links.ts";
 import { buildDocumentationSidebar } from "./src/sidebar.ts";
 
-const site = process.env.MINIPROTO_DOCS_SITE ?? "https://edm115.github.io";
+const site = process.env.MINIPROTO_DOCS_SITE ?? "https://miniproto.edm115.dev";
 const base = normaliseBase(process.env.MINIPROTO_DOCS_BASE ?? "/");
 const docsRoot = fileURLToPath(new URL("../docs", import.meta.url));
 const assetPath = (asset: string): string => (base === "/" ? `/${asset}` : `${base}/${asset}`);
@@ -15,7 +15,6 @@ const absoluteAssetUrl = (asset: string): string => new URL(assetPath(asset), si
 
 /**
  * Convert the hosting path into Astro's leading-slash, no-trailing-slash form.
- *
  * An empty value and `/` both deliberately mean a site hosted at the origin.
  */
 function normaliseBase(value: string): string {
@@ -37,10 +36,10 @@ export default defineConfig({
     starlight({
       title: "miniproto",
       description:
-        "A fast, async-first MTProto client core for Python with bundled Rust acceleration.",
+        "A fast, async-first MTProto client core for Python with bundled Rust acceleration",
       logo: {
         src: "./src/assets/brand/mark.svg",
-        alt: "Packet Loom mark",
+        alt: "miniproto logo",
       },
       favicon: "/favicon.svg",
       social: [{ icon: "github", label: "GitHub", href: "https://github.com/EDM115/miniproto" }],

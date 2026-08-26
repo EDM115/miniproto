@@ -37,7 +37,7 @@ def backend() -> ModuleType | None:
     """Load and return the optimized backend module when it is available.
 
     Returns:
-        The cached import of the platform-selected backend, or ``None`` when
+        The cached import of the platform-selected backend or ``None`` when
         that package is not installed.
 
     Raises:
@@ -101,7 +101,7 @@ def install() -> bool:
 
     Returns:
         ``True`` after the selected backend's legacy ``install`` hook succeeds;
-        ``False`` if no backend/hook is available, installation fails, or Python
+        ``False`` if no backend/hook is available, installation fails or Python
         3.16+ rejects policy installation.
 
     Raises:
@@ -180,7 +180,7 @@ def run[T](main: Coroutine[Any, Any, T], *, debug: bool | None = None) -> T:
         BaseException: Any exception raised by ``main`` or backend setup.
 
     Notes:
-        The runner creates, closes, and clears its loop. It must not be called
+        The runner creates, closes and clears its loop. It must not be called
         while another event loop is running in this thread.
     """
     loop_factory = None if _requires_stdlib_debug_runner(debug) else new_event_loop

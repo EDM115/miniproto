@@ -1,7 +1,7 @@
 //! Bundled PyO3 acceleration module for [`miniproto`](https://pypi.org/project/miniproto/).
 //!
 //! Python imports this crate as `miniproto._native`.  It registers native implementations for
-//! cryptographic primitives, encrypted MTProto envelopes, selected TL codecs, and TCP transport
+//! cryptographic primitives, encrypted MTProto envelopes, selected TL codecs and TCP transport
 //! framing.  These routines are an optional acceleration layer: the Python package owns the
 //! public fallback policy and must remain correct when this extension cannot be imported.
 

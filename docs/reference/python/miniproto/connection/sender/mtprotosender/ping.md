@@ -26,7 +26,7 @@ Send a retry-safe ``ping_delay_disconnect`` and require its ``Pong``.
 
 **Raises:**
 
-- <code>[TransportError](#miniproto.connection.transport.TransportError)</code> – If the request fails, times out, or returns a body
+- <code>[TransportError](#miniproto.connection.transport.TransportError)</code> – If the request fails, times out or returns a body
 other than ``Pong``.
 
 <details class="notes" open markdown="1">

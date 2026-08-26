@@ -8,13 +8,11 @@ kind: "function"
 qualified_name: "miniproto_native::tl::register"
 source_path: "rust/miniproto/src/tl.rs"
 source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L102"
-crate: "miniproto_native"
 python_visible: false
 ---
 
 ## Provenance
 
-- Crate: `miniproto_native`
 - Rust visibility: `public`
 - Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L102)
 - Python exposure: Not evidenced by static PyO3 attributes.

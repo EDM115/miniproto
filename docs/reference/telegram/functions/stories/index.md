@@ -1,6 +1,6 @@
 ---
 title: "Telegram functions: stories"
-description: "Layer 228 index of 33 canonical Telegram functions in the stories namespace from tdlib."
+description: "Layer 229 index of 33 canonical Telegram functions in the stories namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -9,11 +9,10 @@ qualified_name: "telegram.functions.stories"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "stories"
-layer: 228
 schema_source: "tdlib"
 ---
 
-## Layer 228 stories functions
+## Layer 229 stories functions
 
 Selected canonical functions in this namespace: 33.
 

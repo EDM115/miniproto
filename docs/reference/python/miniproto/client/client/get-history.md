@@ -22,7 +22,7 @@ Fetch normalized message history for a peer using Telegram pagination fields.
 
 **Parameters:**
 
-- **peer** (<code>[Peer](#miniproto.types.Peer) | [str](#str) | [int](#int)</code>) – Peer object, numeric ID, or username.
+- **peer** (<code>[Peer](#miniproto.types.Peer) | [str](#str) | [int](#int)</code>) – Peer object, numeric ID or username.
 - **limit** (<code>[int](#int)</code>) – Maximum messages to request, defaulting to 100; zero is allowed.
 - **offset_id** (<code>[int](#int)</code>) – Message ID pagination offset.
 - **offset_date** (<code>[int](#int)</code>) – Unix timestamp pagination offset.

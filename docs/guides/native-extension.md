@@ -19,7 +19,7 @@ else:
     print("Using the supported fallback or mixed dispatch path")
 ```
 
-`native_available()` reports import-time selection state. It is not a benchmark result, a promise that every operation uses Rust, a statement about optional native session-crypto capabilities, or a security verdict. Some small scalar operations deliberately use C-backed Python implementations because the call boundary costs more than the Rust path for those inputs. Larger and batched paths can select native work independently.
+`native_available()` reports import-time selection state. It is not a benchmark result, a promise that every operation uses Rust, a statement about optional native session-crypto capabilities or a security verdict. Some small scalar operations deliberately use C-backed Python implementations because the call boundary costs more than the Rust path for those inputs. Larger and batched paths can select native work independently.
 
 ## Diagnose before rebuilding
 
@@ -38,4 +38,4 @@ The fallback is part of the supported runtime boundary, so an unavailable extens
 
 The session-string layer can request optional native session crypto for specific operations and emits a stable capability error when a no-fallback variant is unavailable. The ordinary portable session-string APIs retain their documented behavior through the supported crypto paths. Read [string-session migration](./string-sessions.md) and [session storage and credential handling](../session-security.md) before testing with real authorization state.
 
-Native loading should also remain separate from event-loop selection. The event loop may use `uvloop`, `winloop`, or the standard library independently of the Rust extension; see [event-loop ownership](./event-loop-ownership.md).
+Native loading should also remain separate from event-loop selection. The event loop may use `uvloop`, `winloop` or the standard library independently of the Rust extension; see [event-loop ownership](./event-loop-ownership.md).

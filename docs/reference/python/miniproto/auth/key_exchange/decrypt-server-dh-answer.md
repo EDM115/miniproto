@@ -1,6 +1,6 @@
 ---
 title: "miniproto.auth.key_exchange.decrypt_server_dh_answer"
-description: "Decrypt, integrity-check, and decode Telegram's encrypted DH inner payload."
+description: "Decrypt, integrity-check and decode Telegram's encrypted DH inner payload."
 generated: true
 editUrl: false
 language: "python"
@@ -18,7 +18,7 @@ module: "miniproto.auth.key_exchange"
 decrypt_server_dh_answer(encrypted_answer: bytes, *, new_nonce: int, server_nonce: int) -> ServerDHInnerData
 ```
 
-Decrypt, integrity-check, and decode Telegram's encrypted DH inner payload.
+Decrypt, integrity-check and decode Telegram's encrypted DH inner payload.
 
 **Parameters:**
 

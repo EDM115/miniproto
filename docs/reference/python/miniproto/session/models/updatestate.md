@@ -20,7 +20,7 @@ UpdateState(pts: int = 0, qts: int = 0, seq: int = 0, date: datetime = _utc_now(
 
 Monotonic Telegram update cursors and their latest server timestamp.
 
-All counters default to zero, and ``date`` defaults to current UTC time.
+All counters default to zero and ``date`` defaults to current UTC time.
 
 **Attributes:**
 

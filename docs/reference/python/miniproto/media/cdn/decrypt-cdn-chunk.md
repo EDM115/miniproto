@@ -33,4 +33,4 @@ Decrypt a CDN ciphertext range with the counter aligned to its file offset.
 
 **Raises:**
 
-- <code>[ValueError](#ValueError)</code> – ``key``, ``iv``, or ``offset`` violates CDN cryptographic constraints.
+- <code>[ValueError](#ValueError)</code> – ``key``, ``iv`` or ``offset`` violates CDN cryptographic constraints.

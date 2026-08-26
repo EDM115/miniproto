@@ -1,4 +1,4 @@
-"""Resolve, normalize, and persist Telegram peers with revision-aware indexes."""
+"""Resolve, normalize and persist Telegram peers with revision-aware indexes."""
 
 from __future__ import annotations
 
@@ -69,7 +69,7 @@ class PeerCache:
     """Revision-aware session peer cache with local and remote resolution paths."""
 
     def __init__(self, config: ClientConfig, storage: SessionStorage, invoker: PeerInvoker) -> None:
-        """Bind client configuration, mutable session storage, and raw invocation.
+        """Bind client configuration, mutable session storage and raw invocation.
 
         Args:
             config: Client configuration whose DC identifies loaded session state.
@@ -129,17 +129,17 @@ class PeerCache:
         return user
 
     async def resolve_peer(self, peer: Peer | str | int) -> Peer:
-        """Resolve a peer object, numeric ID, phone number, self alias, or username.
+        """Resolve a peer object, numeric ID, phone number, self alias or username.
 
         Numeric IDs use cached peers first, then seed from dialogs. Usernames may
         call Telegram after the 24-hour local username cache expires.
 
         Raises:
-            NotFound: If the reference is empty, unknown, or lacks an access hash.
+            NotFound: If the reference is empty, unknown or lacks an access hash.
             RpcError: If remote username resolution returns an unexpected result.
 
         Args:
-            peer: Existing peer, signed/numeric ID, self alias, phone, or username.
+            peer: Existing peer, signed/numeric ID, self alias, phone or username.
         """
         if isinstance(peer, Peer):
             return await self._resolve_public_peer(peer)
@@ -173,7 +173,7 @@ class PeerCache:
         """Extract peer-bearing raw objects and merge their cache entries durably.
 
         Args:
-            raw: Raw Telegram object, container, or sequence that may expose users/chats.
+            raw: Raw Telegram object, container or sequence that may expose users/chats.
         """
         entries = tuple(_entries_from_raw(raw))
         if entries:
@@ -438,7 +438,7 @@ class PeerCache:
 
         Args:
             key: Canonical kind-and-ID key to replace or remove.
-            replacement: New entry, or ``None`` to remove the existing entry.
+            replacement: New entry or ``None`` to remove the existing entry.
         """
         bundle = self._index_bundle
         current = bundle.entries_by_key.get(key)
@@ -470,7 +470,7 @@ class PeerCache:
 
 
 def _build_index_bundle(record: SessionRecord, visit: Callable[[], None]) -> _PeerIndexBundle:
-    """Build canonical peer, ID, username, and phone indexes in record order.
+    """Build canonical peer, ID, username and phone indexes in record order.
 
     Args:
         record: Session record whose cached peers are indexed.
@@ -519,7 +519,7 @@ def _add_owner(index: dict[Any, OwnerKeys], value: Any, key: PeerKey, order_by_k
 
     Args:
         index: Secondary index to update.
-        value: Indexed ID, normalized username, or normalized phone value.
+        value: Indexed ID, normalized username or normalized phone value.
         key: Canonical peer key to add.
         order_by_key: Stable ordering used when more than one owner exists.
     """
@@ -633,7 +633,7 @@ def _entries_from_raw(raw: object) -> Iterable[PeerCacheEntry]:
     """Yield cache entries recursively from supported raw Telegram containers.
 
     Args:
-        raw: Raw peer, container, or sequence to inspect recursively.
+        raw: Raw peer, container or sequence to inspect recursively.
     """
     if isinstance(raw, types.User):
         yield _entry_from_user(raw)
@@ -880,7 +880,7 @@ def _find_entry(entries: Iterable[PeerCacheEntry], *, kind: PeerKind | None, id:
 
     Args:
         entries: Entries to scan in source order.
-        kind: Required kind, or ``None`` for any kind.
+        kind: Required kind or ``None`` for any kind.
         id: Telegram peer ID to match.
     """
     for entry in entries:

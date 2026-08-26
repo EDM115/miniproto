@@ -27,7 +27,7 @@ def coerce_update_datetime(value: datetime | int | float | str | None) -> dateti
     """Coerce supported update timestamps, preserving aware datetime timezones.
 
     Args:
-        value: A datetime, Unix timestamp, ISO 8601 string, or ``None`` for the current UTC time.
+        value: A datetime, Unix timestamp, ISO 8601 string or ``None`` for the current UTC time.
 
     Returns:
         A timezone-aware datetime; aware values retain their timezone and naive values are treated as UTC.
@@ -130,11 +130,11 @@ class UpdateCursor:
         """Build a cursor from persisted session state and bounded update metadata.
 
         Args:
-            record: Session record containing update state, peer cache, and metadata.
+            record: Session record containing update state, peer cache and metadata.
             duplicate_window: Maximum recent duplicate keys to restore.
 
         Returns:
-            A cursor containing global state, channel cursors, cached entities, and the newest retained keys.
+            A cursor containing global state, channel cursors, cached entities and the newest retained keys.
         """
         metadata = update_metadata(record.metadata)
         raw_keys = metadata.get(UPDATE_DUPLICATE_KEYS_KEY, ())
@@ -305,7 +305,7 @@ class DuplicateTracker:
 
 
 def update_metadata(metadata: Mapping[str, Any]) -> dict[str, Any]:
-    """Return a shallow copy of the nested update metadata, or an empty mapping.
+    """Return a shallow copy of the nested update metadata or an empty mapping.
 
     Args:
         metadata: Session metadata mapping that may contain update-specific fields.

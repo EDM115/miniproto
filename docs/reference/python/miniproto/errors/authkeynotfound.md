@@ -1,6 +1,6 @@
 ---
 title: "miniproto.errors.AuthKeyNotFound"
-description: "Authentication key is invalid, unregistered, or no longer available."
+description: "Authentication key is invalid, unregistered or no longer available."
 generated: true
 editUrl: false
 language: "python"
@@ -20,7 +20,7 @@ AuthKeyNotFound(message: str = 'auth key not registered', *, request: object | N
 
 Bases: <code>[AuthError](#miniproto.errors.AuthError)</code>
 
-Authentication key is invalid, unregistered, or no longer available.
+Authentication key is invalid, unregistered or no longer available.
 
 Create an auth-key-not-found failure with status code 401.
 

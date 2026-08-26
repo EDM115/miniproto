@@ -52,7 +52,7 @@ def generate_python_pages(
             Telegram reference generator.
 
     Returns:
-        Module, class, function, attribute, type-alias, and public method pages sorted by path.
+        Module, class, function, attribute, type-alias and public method pages sorted by path.
 
     Raises:
         ValueError: A selected public object cannot be represented statically or lacks required documentation.
@@ -454,7 +454,7 @@ def _slug(value: str) -> str:
         value: Source identifier segment.
 
     Returns:
-        Lowercase route-safe slug, or ``symbol`` when no characters remain.
+        Lowercase route-safe slug or ``symbol`` when no characters remain.
     """
     slug = re.sub(r"[^a-z0-9]+", "-", value.casefold()).strip("-")
     return slug or "symbol"

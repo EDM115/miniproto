@@ -1,7 +1,7 @@
 """Installed console-script bridges for repository and wheel tool modules.
 
 Each public bridge imports and invokes the named tool module's ``main`` callable. Its
-file writes, subprocesses, network access, benchmark resource use, or credential needs
+file writes, subprocesses, network access, benchmark resource use or credential needs
 are therefore defined by that delegated tool rather than this wrapper. When executed
 from a source checkout, :func:`_run` prepends the checkout root to ``sys.path`` so the
 repository ``tools`` package resolves before installed packages.
@@ -30,7 +30,6 @@ CLI_ENTRY_POINTS = {
     "miniproto-bench-runtime-paths": ("bench_runtime_paths", "tools.bench.benchmark_runtime_paths"),
     "miniproto-bench-session-crypto": ("bench_session_crypto", "tools.bench.benchmark_session_crypto_backends"),
     "miniproto-bench-tl-fast-paths": ("bench_tl_fast_paths", "tools.bench.benchmark_tl_fast_paths"),
-    "miniproto-bench-tglib": ("bench_tglib", "tools.bench.benchmark_tglib"),
     "miniproto-bench-transport-framing": ("bench_transport_framing", "tools.bench.benchmark_transport_framing"),
     "miniproto-docs": ("docs", "tools.docs.__main__"),
     "miniproto-docs-rust": ("docs_rust", "tools.docs.generate_rust"),
@@ -55,7 +54,7 @@ def _run(module_name: str) -> int:
     Notes:
         When a repository checkout contains ``tools/__init__.py``, prepends that checkout
         root to ``sys.path`` before importing. Delegated tools may perform file, process,
-        network, credential, or benchmark-resource side effects.
+        network, credential or benchmark-resource side effects.
     """
     checkout_root = Path(__file__).resolve().parents[2]
     if (checkout_root / "tools" / "__init__.py").is_file() and str(checkout_root) not in sys.path:
@@ -152,15 +151,6 @@ def bench_tl_fast_paths() -> int:
         Exit status reported by the benchmark module.
     """
     return _run("tools.bench.benchmark_tl_fast_paths")
-
-
-def bench_tglib() -> int:
-    """Run the tglib benchmark.
-
-    Returns:
-        Exit status reported by the benchmark module.
-    """
-    return _run("tools.bench.benchmark_tglib")
 
 
 def bench_transport_framing() -> int:

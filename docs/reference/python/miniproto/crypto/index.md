@@ -17,7 +17,7 @@ Public cryptographic primitives for MTProto and encrypted session storage.
 
 Exports preserve behavior across the optional Rust extension and fallback
 implementations.  Individual wrappers document their backend dispatch,
-cryptographic input constraints, and validation behavior.
+cryptographic input constraints and validation behavior.
 
 ## Public objects
 
@@ -41,8 +41,8 @@ cryptographic input constraints, and validation behavior.
 - [`aes_256_gcm_encrypt_native`](./native/aes-256-gcm-encrypt-native/) — Encrypt with the explicit compiled Rust AES-256-GCM capability.
 - [`aes_256_ige_decrypt`](./native/aes-256-ige-decrypt/) — Decrypt block-aligned AES-256-IGE bytes.
 - [`aes_256_ige_encrypt`](./native/aes-256-ige-encrypt/) — Encrypt block-aligned bytes with AES-256-IGE.
-- [`mtproto_decode_message`](./native/mtproto-decode-message/) — Decrypt, authenticate, and parse an MTProto encrypted message.
-- [`mtproto_encode_message`](./native/mtproto-encode-message/) — Build, pad, and encrypt a complete MTProto encrypted message.
+- [`mtproto_decode_message`](./native/mtproto-decode-message/) — Decrypt, authenticate and parse an MTProto encrypted message.
+- [`mtproto_encode_message`](./native/mtproto-encode-message/) — Build, pad and encrypt a complete MTProto encrypted message.
 - [`native_available`](./native/native-available/) — Report whether a complete bundled Rust backend was selected.
 - [`pq_factorize`](./native/pq-factorize/) — Factor the composite integer used by the MTProto handshake.
 - [`scrypt_derive`](./native/scrypt-derive/) — Derive key material with Scrypt through the available session backend.

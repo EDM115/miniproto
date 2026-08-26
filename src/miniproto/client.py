@@ -1,4 +1,4 @@
-"""High-level asynchronous MTProto client, including lifecycle, messaging, updates, and media transfers."""
+"""High-level asynchronous MTProto client, including lifecycle, messaging, updates and media transfers."""
 
 from __future__ import annotations
 
@@ -123,7 +123,7 @@ class _CachedSessionStorage:
         """Wrap ``storage`` and seed revision metadata from it.
 
         Args:
-            storage: Open backend to serialize, cache, and close on this wrapper's behalf.
+            storage: Open backend to serialize, cache and close on this wrapper's behalf.
         """
         self._storage = storage
         self._cached: Mapping[str, Any] | object | None = _SESSION_CACHE_EMPTY
@@ -183,7 +183,7 @@ class _CachedSessionStorage:
         """Replace cached data and revision metadata after a completed backend operation.
 
         Args:
-            data: Newly loaded, saved, mutated, or cleared backend payload.
+            data: Newly loaded, saved, mutated or cleared backend payload.
         """
         self._cached = _copy_session_payload(data)
         self._revisions = dict(self._storage.domain_revisions())
@@ -229,7 +229,7 @@ def _copy_session_payload(data: SessionPayload | object | None) -> Mapping[str, 
     """Deep-copy a serialized session payload while converting cache sentinels to ``None``.
 
     Args:
-        data: Payload, cache-empty sentinel, or absent value to isolate from caller mutation.
+        data: Payload, cache-empty sentinel or absent value to isolate from caller mutation.
     """
     if data is None or data is _SESSION_CACHE_EMPTY:
         return None
@@ -271,11 +271,11 @@ async def _cleanup_auxiliary_download_client(auxiliary: Client, *, auxiliary_ind
 class Client:
     """Async client facade for MTProto operations.
 
-    This implementation wires lifecycle, auth, raw invocation, updates, peer/message helpers, and protocol-core media transfer primitives while keeping framework-level behavior out of the SDK.
+    This implementation wires lifecycle, auth, raw invocation, updates, peer/message helpers and protocol-core media transfer primitives while keeping framework-level behavior out of the SDK.
     """
 
     def __init__(self, config: ClientConfig, *, _updates_enabled: bool = True) -> None:
-        """Initialize an unconnected client and its session, update, and media coordinators.
+        """Initialize an unconnected client and its session, update and media coordinators.
 
         Args:
             config: Immutable client configuration and session-storage policy.
@@ -336,9 +336,9 @@ class Client:
         """Disconnect the client when its async context ends, including on an exception.
 
         Args:
-            exc_type: Exception class that left the context, or ``None`` on normal exit.
-            exc: Exception instance that left the context, or ``None`` on normal exit.
-            tb: Traceback object supplied by the context-manager protocol, or ``None``.
+            exc_type: Exception class that left the context or ``None`` on normal exit.
+            exc: Exception instance that left the context or ``None`` on normal exit.
+            tb: Traceback object supplied by the context-manager protocol or ``None``.
         """
         await self.disconnect()
 
@@ -387,7 +387,7 @@ class Client:
             format: Expected input dialect or ``"auto"`` for detection.
             passphrase: Optional passphrase required to decode a protected string.
             replace: Whether a nonempty target storage may be overwritten, defaulting to ``False``.
-            allow_mismatch: Whether to bypass Pyrogram API, test-mode, and account-kind compatibility checks.
+            allow_mismatch: Whether to bypass Pyrogram API, test-mode and account-kind compatibility checks.
 
         Security:
             ``value`` and ``passphrase`` are sensitive credentials. Import is rejected while connected to avoid replacing active state.
@@ -418,7 +418,7 @@ class Client:
         The method is serialized with ``disconnect`` and is safe to call repeatedly. If update startup fails, it rolls back the connection state and closes any sender it created.
 
         Raises:
-            Exception: Propagates storage, sender, or update-manager startup failures.
+            Exception: Propagates storage, sender or update-manager startup failures.
         """
         started = time.perf_counter()
         async with self._connect_lock:
@@ -440,7 +440,7 @@ class Client:
         )
 
     async def disconnect(self) -> None:
-        """Stop updates, senders, schedulers, auxiliary clients, and session storage.
+        """Stop updates, senders, schedulers, auxiliary clients and session storage.
 
         Cleanup continues after individual failures so resources are released; after cleanup it re-raises the first captured error. Calling it makes the client unusable because session storage is closed.
 
@@ -614,10 +614,10 @@ class Client:
         return user
 
     async def resolve_peer(self, peer: Peer | str | int) -> Peer:
-        """Resolve a peer object, numeric ID, or username to a normalized ``Peer``.
+        """Resolve a peer object, numeric ID or username to a normalized ``Peer``.
 
         Args:
-            peer: Existing normalized peer, numeric identifier, or username to resolve through the peer cache.
+            peer: Existing normalized peer, numeric identifier or username to resolve through the peer cache.
 
         Raises:
             Exception: Propagates resolution failures such as missing access data or invalid usernames.
@@ -657,7 +657,7 @@ class Client:
         """Send text to a resolved peer and return the resulting normalized message.
 
         Args:
-            peer: Peer object, numeric ID, or username.
+            peer: Peer object, numeric ID or username.
             text: Source text to send.
             parse_mode: Optional text parser; ignored when explicit ``entities`` are supplied.
             random_id: Optional idempotency identifier; a random value is generated by default.
@@ -737,7 +737,7 @@ class Client:
         """Fetch normalized message history for a peer using Telegram pagination fields.
 
         Args:
-            peer: Peer object, numeric ID, or username.
+            peer: Peer object, numeric ID or username.
             limit: Maximum messages to request, defaulting to 100; zero is allowed.
             offset_id: Message ID pagination offset.
             offset_date: Unix timestamp pagination offset.
@@ -812,7 +812,7 @@ class Client:
     ) -> Message:
         """Edit a message's text and optional media settings, returning the updated message.
 
-        Explicit ``entities`` take precedence over ``parse_mode``. Request timeout, flood-wait, and retry arguments follow ``invoke`` semantics.
+        Explicit ``entities`` take precedence over ``parse_mode``. Request timeout, flood-wait and retry arguments follow ``invoke`` semantics.
 
         Args:
             peer: Conversation containing the target message.
@@ -921,18 +921,18 @@ class Client:
         return result
 
     async def send_file(self, peer: Peer | str | int, file: FileSource, **kwargs: Any) -> Message:
-        """Upload or reuse media, send it to ``peer``, and return the resulting message.
+        """Upload or reuse media, send it to ``peer`` and return the resulting message.
 
-        ``file`` may be a supported local, in-memory, or streaming source, or a reusable file ID. The default upload uses ``DEFAULT_CHUNK_SIZE``, ``DEFAULT_UPLOAD_CONCURRENCY``, and two media lanes; configured media defaults fill omitted ``concurrency`` and ``max_buffer_size`` values. Unknown-size streams may be disk-spooled by the media layer before upload.
+        ``file`` may be a supported local, in-memory or streaming source or a reusable file ID. The default upload uses ``DEFAULT_CHUNK_SIZE``, ``DEFAULT_UPLOAD_CONCURRENCY`` and two media lanes; configured media defaults fill omitted ``concurrency`` and ``max_buffer_size`` values. Unknown-size streams may be disk-spooled by the media layer before upload.
 
         Args:
-            peer: Destination peer object, numeric ID, or username.
+            peer: Destination peer object, numeric ID or username.
             file: Uploadable source or an existing miniproto file ID to reuse without uploading bytes.
-            **kwargs: Supported upload, media-send, retry, quick-ack, and scheduling options accepted by ``_send_file_options``.
+            **kwargs: Supported upload, media-send, retry, quick-ack and scheduling options accepted by ``_send_file_options``.
 
         Raises:
             TypeError: If unsupported keyword options are provided.
-            Exception: Propagates file processing, peer resolution, and Telegram RPC failures.
+            Exception: Propagates file processing, peer resolution and Telegram RPC failures.
         """
         started = time.perf_counter()
         self._apply_media_config_defaults(kwargs)
@@ -1034,18 +1034,18 @@ class Client:
     async def download_media(
         self, media: object, destination: Destination = None, **kwargs: Any
     ) -> MediaDownloadResult:
-        """Download media to memory, a path, or a writable destination.
+        """Download media to memory, a path or a writable destination.
 
         The default scheduler uses two media lanes and bounded in-flight bytes. Multi-session downloading is only used for complete, known-size bot downloads with sibling session storage; unsupported cases fall back to one session and emit telemetry.
 
         Args:
-            media: Normalized media, raw media, or compatible miniproto file ID to download.
-            destination: Memory, path, or writable destination accepted by the media download layer; defaults to in-memory output.
-            **kwargs: Supported range, resume, buffering, retry, verification, media-lane, and scheduling options accepted by ``_download_media_options``.
+            media: Normalized media, raw media or compatible miniproto file ID to download.
+            destination: Memory, path or writable destination accepted by the media download layer; defaults to in-memory output.
+            **kwargs: Supported range, resume, buffering, retry, verification, media-lane and scheduling options accepted by ``_download_media_options``.
 
         Raises:
             TypeError: If unsupported keyword options are provided.
-            Exception: Propagates media-location, destination, and RPC failures.
+            Exception: Propagates media-location, destination and RPC failures.
         """
         started = time.perf_counter()
         self._apply_media_config_defaults(kwargs)
@@ -1088,7 +1088,7 @@ class Client:
         """Stream ordered media bytes without materializing the complete download.
 
         Args:
-            media: Normalized media, raw media, or compatible miniproto file ID to stream.
+            media: Normalized media, raw media or compatible miniproto file ID to stream.
             **kwargs: Download options accepted by ``_download_media_options`` except ``multi_session`` and ``resume``, which this streaming API rejects.
 
         Yields:
@@ -1264,7 +1264,7 @@ class Client:
                 await self._disconnect_auxiliary_download_clients(auxiliaries)
 
     async def _ensure_auxiliary_download_clients(self, session_count: int) -> tuple[Client, ...]:
-        """Create, authorize, and connect compatible sibling bot clients as needed.
+        """Create, authorize and connect compatible sibling bot clients as needed.
 
         Args:
             session_count: Total desired worker sessions including the primary client.
@@ -1518,7 +1518,7 @@ class Client:
         """Run a raw request through a supplied sender lifecycle with retries and telemetry.
 
         Args:
-            raw_request: Generated TL request to wrap, send, and decode.
+            raw_request: Generated TL request to wrap, send and decode.
             ensure_sender: Async factory returning a usable sender for this attempt.
             drop_sender: Async callback that detaches a failed sender without dropping a newer replacement.
             request_timeout: Optional request timeout overriding client configuration.
@@ -2057,7 +2057,7 @@ class Client:
         Args:
             kind: Transfer direction key, currently ``"download"`` or ``"upload"``.
             lane_count: Minimum number of lanes the grow-only pool must provide.
-            dc_id: Explicit media datacenter, or ``None`` to use the session's current datacenter.
+            dc_id: Explicit media datacenter or ``None`` to use the session's current datacenter.
         """
         target_dc = dc_id if dc_id is not None else await self._current_dc_id()
         # Pools are keyed by (kind, dc) only: asking for a different lane count
@@ -2361,10 +2361,10 @@ class _MediaInvokeContext:
         priority: MediaPriority = "foreground",
         defer_transfer: bool = False,
     ) -> None:
-        """Bind a client, transfer direction, lane count, optional target DC, and scheduler policy.
+        """Bind a client, transfer direction, lane count, optional target DC and scheduler policy.
 
         Args:
-            client: Owning client used for sender pools, current DC lookup, and scheduling.
+            client: Owning client used for sender pools, current DC lookup and scheduling.
             lane_count: Requested number of media lanes, with zero disabling pool use.
             kind: Download or upload transfer direction.
             dc_id: Optional media datacenter override.
@@ -2442,7 +2442,7 @@ class _MediaInvokeContext:
         return self._transfer
 
     async def __call__(self, raw_request: object, **kwargs: Any) -> object:
-        """Schedule, dispatch, and release one media RPC, rerouting FILE migrations to another DC.
+        """Schedule, dispatch and release one media RPC, rerouting FILE migrations to another DC.
 
         Background requests receive temporary transfers so they do not consume the foreground transfer's budget.
 
@@ -2502,7 +2502,7 @@ class _MediaInvokeContext:
         Args:
             raw_request: CDN-only request, normally ``upload.getCdnFile``.
             dc_id: CDN datacenter carried by the file redirect.
-            **kwargs: Request timeout, flood-wait, and retry options forwarded to the sender lifecycle.
+            **kwargs: Request timeout, flood-wait and retry options forwarded to the sender lifecycle.
         """
 
         async def ensure_sender() -> RawSender:
@@ -2531,7 +2531,7 @@ class _MediaInvokeContext:
 
 
 def _media_request_weight(raw_request: object) -> int:
-    """Estimate scheduler byte weight from request payload, limit, or the default unit.
+    """Estimate scheduler byte weight from request payload, limit or the default unit.
 
     Args:
         raw_request: Raw request inspected for a nonempty ``bytes`` payload or positive ``limit`` field.
@@ -2619,7 +2619,7 @@ class _MediaSenderPool:
         flood_sleep_threshold: int | None = None,
         retry: bool | None = None,
     ) -> object:
-        """Acquire the least-loaded lane, invoke one request, and release it afterward.
+        """Acquire the least-loaded lane, invoke one request and release it afterward.
 
         Args:
             raw_request: Generated media request sent through the selected lane.
@@ -2863,7 +2863,7 @@ def _resolve_media_dc_id(media: object) -> int | None:
     """The DC hosting this media, when the media object knows it.
 
     Args:
-        media: Normalized media, raw media, or compatible file ID to inspect.
+        media: Normalized media, raw media or compatible file ID to inspect.
     """
     resolved: Media | None
     if isinstance(media, Media):
@@ -3022,13 +3022,13 @@ _DOWNLOAD_MEDIA_OPTION_DEFAULTS: dict[str, object] = {
 
 
 def _send_file_options(kwargs: dict[str, Any]) -> dict[str, Any]:
-    """Validate, normalize, and split upload and send-media keyword options.
+    """Validate, normalize and split upload and send-media keyword options.
 
     Raises:
         TypeError: If unsupported option names are supplied.
 
     Args:
-        kwargs: Caller-provided file-upload and send-media options to validate, coerce, and split.
+        kwargs: Caller-provided file-upload and send-media options to validate, coerce and split.
     """
     known = set(_SEND_FILE_OPTION_DEFAULTS) | set(_SEND_MEDIA_OPTION_DEFAULTS)
     unknown = sorted(set(kwargs) - known)
@@ -3106,7 +3106,7 @@ def _download_media_options(kwargs: dict[str, Any]) -> dict[str, Any]:
         TypeError: If unsupported option names are supplied.
 
     Args:
-        kwargs: Caller-provided download options to validate, fill, and coerce.
+        kwargs: Caller-provided download options to validate, fill and coerce.
     """
     unknown = sorted(set(kwargs) - set(_DOWNLOAD_MEDIA_OPTION_DEFAULTS))
     if unknown:
@@ -3145,7 +3145,7 @@ def _media_lane_count(configured: Any, concurrency: Any) -> int:
         ValueError: If the resolved count is negative.
 
     Args:
-        configured: Explicit media-lane setting, or ``None`` to derive from concurrency.
+        configured: Explicit media-lane setting or ``None`` to derive from concurrency.
         concurrency: Concurrent-request setting used when no explicit lane count is supplied.
     """
     lanes = max(1, int(concurrency)) if configured is None else int(configured)
@@ -3158,7 +3158,7 @@ def _resolve_download_total_size(media: object, configured: object) -> int | Non
     """Prefer configured byte size, otherwise derive it from normalized or encoded media.
 
     Args:
-        media: Normalized media, raw media, or compatible file ID whose size may be known.
+        media: Normalized media, raw media or compatible file ID whose size may be known.
         configured: Explicit size override, if supplied.
     """
     if configured is not None:
@@ -3201,7 +3201,7 @@ def _uploaded_input_media(input_file: object, options: dict[str, Any]) -> object
 
     Args:
         input_file: Uploaded-file object referenced by the generated input-media payload.
-        options: Normalized send-file options controlling media kind, attributes, and flags.
+        options: Normalized send-file options controlling media kind, attributes and flags.
     """
     if options["as_photo"]:
         return types.InputMediaUploadedPhoto(
@@ -3232,7 +3232,7 @@ def _document_attributes(attributes: object, file_name: str) -> tuple[object, ..
     """Normalize explicit document attributes or add the required filename attribute.
 
     Args:
-        attributes: Explicit scalar or iterable attributes, or ``None`` to synthesize a filename attribute.
+        attributes: Explicit scalar or iterable attributes or ``None`` to synthesize a filename attribute.
         file_name: Filename used when a default document filename attribute is required.
     """
     if attributes is None:
@@ -3264,7 +3264,7 @@ def _validate_imported_session_config(record: SessionRecord, config: ClientConfi
     """Reject incompatible Pyrogram session metadata unless the caller opted out.
 
     Raises:
-        ValueError: If imported API ID, test mode, or account kind conflicts with client configuration.
+        ValueError: If imported API ID, test mode or account kind conflicts with client configuration.
 
     Args:
         record: Imported session record and its source-format metadata.
@@ -3300,7 +3300,7 @@ def _record_flood_wait_metric(
     Args:
         error: Flood-wait error containing the server-requested delay.
         request: Canonical request name associated with the wait.
-        threshold: Configured maximum automatic wait, or ``None`` when not limited here.
+        threshold: Configured maximum automatic wait or ``None`` when not limited here.
         action: Decision label such as ``"sleep"`` or ``"raise"``.
         source: Whether the wait came from server response or local method cache.
         attempt: One-based invocation attempt count.

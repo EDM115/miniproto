@@ -1,6 +1,6 @@
 ---
 title: "Telegram types: base"
-description: "Layer 228 index of 1317 canonical Telegram types in the base namespace from tdlib."
+description: "Layer 229 index of 1328 canonical Telegram types in the base namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -9,13 +9,12 @@ qualified_name: "telegram.types.base"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "base"
-layer: 228
 schema_source: "tdlib"
 ---
 
-## Layer 228 base types
+## Layer 229 base types
 
-Selected canonical types in this namespace: 1317.
+Selected canonical types in this namespace: 1328.
 
 ## Declarations
 
@@ -94,6 +93,12 @@ Selected canonical types in this namespace: 1317.
 - [`businessRecipients`](/reference/telegram/types/base/business-recipients/): `BusinessRecipients`
 - [`businessWeeklyOpen`](/reference/telegram/types/base/business-weekly-open/): `BusinessWeeklyOpen`
 - [`businessWorkHours`](/reference/telegram/types/base/business-work-hours/): `BusinessWorkHours`
+- [`buttonTypeDefault`](/reference/telegram/types/base/button-type-default/): `ButtonType`
+- [`buttonTypeRequestGeoLocation`](/reference/telegram/types/base/button-type-request-geo-location/): `ButtonType`
+- [`buttonTypeRequestPeer`](/reference/telegram/types/base/button-type-request-peer/): `ButtonType`
+- [`buttonTypeRequestPhone`](/reference/telegram/types/base/button-type-request-phone/): `ButtonType`
+- [`buttonTypeRequestPoll`](/reference/telegram/types/base/button-type-request-poll/): `ButtonType`
+- [`buttonTypeSimpleWebView`](/reference/telegram/types/base/button-type-simple-web-view/): `ButtonType`
 - [`cdnConfig`](/reference/telegram/types/base/cdn-config/): `CdnConfig`
 - [`cdnPublicKey`](/reference/telegram/types/base/cdn-public-key/): `CdnPublicKey`
 - [`channel`](/reference/telegram/types/base/channel/): `Chat`
@@ -293,6 +298,16 @@ Selected canonical types in this namespace: 1317.
 - [`importedContact`](/reference/telegram/types/base/imported-contact/): `ImportedContact`
 - [`inlineBotSwitchPM`](/reference/telegram/types/base/inline-bot-switch-pm/): `InlineBotSwitchPM`
 - [`inlineBotWebView`](/reference/telegram/types/base/inline-bot-web-view/): `InlineBotWebView`
+- [`inlineButtonTypeBuy`](/reference/telegram/types/base/inline-button-type-buy/): `InlineButtonType`
+- [`inlineButtonTypeCallback`](/reference/telegram/types/base/inline-button-type-callback/): `InlineButtonType`
+- [`inlineButtonTypeCopy`](/reference/telegram/types/base/inline-button-type-copy/): `InlineButtonType`
+- [`inlineButtonTypeDisabled`](/reference/telegram/types/base/inline-button-type-disabled/): `InlineButtonType`
+- [`inlineButtonTypeGame`](/reference/telegram/types/base/inline-button-type-game/): `InlineButtonType`
+- [`inlineButtonTypeSwitchInline`](/reference/telegram/types/base/inline-button-type-switch-inline/): `InlineButtonType`
+- [`inlineButtonTypeUrl`](/reference/telegram/types/base/inline-button-type-url/): `InlineButtonType`
+- [`inlineButtonTypeUrlAuth`](/reference/telegram/types/base/inline-button-type-url-auth/): `InlineButtonType`
+- [`inlineButtonTypeUserProfile`](/reference/telegram/types/base/inline-button-type-user-profile/): `InlineButtonType`
+- [`inlineButtonTypeWebView`](/reference/telegram/types/base/inline-button-type-web-view/): `InlineButtonType`
 - [`inlineQueryPeerTypeBotPM`](/reference/telegram/types/base/inline-query-peer-type-bot-pm/): `InlineQueryPeerType`
 - [`inlineQueryPeerTypeBroadcast`](/reference/telegram/types/base/inline-query-peer-type-broadcast/): `InlineQueryPeerType`
 - [`inlineQueryPeerTypeChat`](/reference/telegram/types/base/inline-query-peer-type-chat/): `InlineQueryPeerType`
@@ -327,6 +342,7 @@ Selected canonical types in this namespace: 1317.
 - [`inputBusinessGreetingMessage`](/reference/telegram/types/base/input-business-greeting-message/): `InputBusinessGreetingMessage`
 - [`inputBusinessIntro`](/reference/telegram/types/base/input-business-intro/): `InputBusinessIntro`
 - [`inputBusinessRecipients`](/reference/telegram/types/base/input-business-recipients/): `InputBusinessRecipients`
+- [`inputButtonTypeRequestPeer`](/reference/telegram/types/base/input-button-type-request-peer/): `ButtonType`
 - [`inputChannel`](/reference/telegram/types/base/input-channel/): `InputChannel`
 - [`inputChannelEmpty`](/reference/telegram/types/base/input-channel-empty/): `InputChannel`
 - [`inputChannelFromMessage`](/reference/telegram/types/base/input-channel-from-message/): `InputChannel`
@@ -368,6 +384,8 @@ Selected canonical types in this namespace: 1317.
 - [`inputGroupCallInviteMessage`](/reference/telegram/types/base/input-group-call-invite-message/): `InputGroupCall`
 - [`inputGroupCallSlug`](/reference/telegram/types/base/input-group-call-slug/): `InputGroupCall`
 - [`inputGroupCallStream`](/reference/telegram/types/base/input-group-call-stream/): `InputFileLocation`
+- [`inputInlineButtonTypeUrlAuth`](/reference/telegram/types/base/input-inline-button-type-url-auth/): `InlineButtonType`
+- [`inputInlineButtonTypeUserProfile`](/reference/telegram/types/base/input-inline-button-type-user-profile/): `InlineButtonType`
 - [`inputInvoiceBusinessBotTransferStars`](/reference/telegram/types/base/input-invoice-business-bot-transfer-stars/): `InputInvoice`
 - [`inputInvoiceChatInviteSubscription`](/reference/telegram/types/base/input-invoice-chat-invite-subscription/): `InputInvoice`
 - [`inputInvoiceMessage`](/reference/telegram/types/base/input-invoice-message/): `InputInvoice`
@@ -383,9 +401,6 @@ Selected canonical types in this namespace: 1317.
 - [`inputInvoiceStarGiftTransfer`](/reference/telegram/types/base/input-invoice-star-gift-transfer/): `InputInvoice`
 - [`inputInvoiceStarGiftUpgrade`](/reference/telegram/types/base/input-invoice-star-gift-upgrade/): `InputInvoice`
 - [`inputInvoiceStars`](/reference/telegram/types/base/input-invoice-stars/): `InputInvoice`
-- [`inputKeyboardButtonRequestPeer`](/reference/telegram/types/base/input-keyboard-button-request-peer/): `KeyboardButton`
-- [`inputKeyboardButtonUrlAuth`](/reference/telegram/types/base/input-keyboard-button-url-auth/): `KeyboardButton`
-- [`inputKeyboardButtonUserProfile`](/reference/telegram/types/base/input-keyboard-button-user-profile/): `KeyboardButton`
 - [`inputMediaAreaChannelPost`](/reference/telegram/types/base/input-media-area-channel-post/): `MediaArea`
 - [`inputMediaAreaVenue`](/reference/telegram/types/base/input-media-area-venue/): `MediaArea`
 - [`inputMediaContact`](/reference/telegram/types/base/input-media-contact/): `InputMedia`
@@ -579,22 +594,10 @@ Selected canonical types in this namespace: 1317.
 - [`jsonObjectValue`](/reference/telegram/types/base/json-object-value/): `JSONObjectValue`
 - [`jsonString`](/reference/telegram/types/base/json-string/): `JSONValue`
 - [`keyboardButton`](/reference/telegram/types/base/keyboard-button/): `KeyboardButton`
-- [`keyboardButtonBuy`](/reference/telegram/types/base/keyboard-button-buy/): `KeyboardButton`
-- [`keyboardButtonCallback`](/reference/telegram/types/base/keyboard-button-callback/): `KeyboardButton`
-- [`keyboardButtonCopy`](/reference/telegram/types/base/keyboard-button-copy/): `KeyboardButton`
-- [`keyboardButtonGame`](/reference/telegram/types/base/keyboard-button-game/): `KeyboardButton`
-- [`keyboardButtonRequestGeoLocation`](/reference/telegram/types/base/keyboard-button-request-geo-location/): `KeyboardButton`
-- [`keyboardButtonRequestPeer`](/reference/telegram/types/base/keyboard-button-request-peer/): `KeyboardButton`
-- [`keyboardButtonRequestPhone`](/reference/telegram/types/base/keyboard-button-request-phone/): `KeyboardButton`
-- [`keyboardButtonRequestPoll`](/reference/telegram/types/base/keyboard-button-request-poll/): `KeyboardButton`
 - [`keyboardButtonRow`](/reference/telegram/types/base/keyboard-button-row/): `KeyboardButtonRow`
-- [`keyboardButtonSimpleWebView`](/reference/telegram/types/base/keyboard-button-simple-web-view/): `KeyboardButton`
 - [`keyboardButtonStyle`](/reference/telegram/types/base/keyboard-button-style/): `KeyboardButtonStyle`
-- [`keyboardButtonSwitchInline`](/reference/telegram/types/base/keyboard-button-switch-inline/): `KeyboardButton`
-- [`keyboardButtonUrl`](/reference/telegram/types/base/keyboard-button-url/): `KeyboardButton`
-- [`keyboardButtonUrlAuth`](/reference/telegram/types/base/keyboard-button-url-auth/): `KeyboardButton`
-- [`keyboardButtonUserProfile`](/reference/telegram/types/base/keyboard-button-user-profile/): `KeyboardButton`
-- [`keyboardButtonWebView`](/reference/telegram/types/base/keyboard-button-web-view/): `KeyboardButton`
+- [`keyboardInlineButton`](/reference/telegram/types/base/keyboard-inline-button/): `KeyboardInlineButton`
+- [`keyboardInlineButtonRow`](/reference/telegram/types/base/keyboard-inline-button-row/): `KeyboardInlineButtonRow`
 - [`labeledPrice`](/reference/telegram/types/base/labeled-price/): `LabeledPrice`
 - [`langPackDifference`](/reference/telegram/types/base/lang-pack-difference/): `LangPackDifference`
 - [`langPackLanguage`](/reference/telegram/types/base/lang-pack-language/): `LangPackLanguage`
@@ -625,6 +628,7 @@ Selected canonical types in this namespace: 1317.
 - [`messageActionChatEditTitle`](/reference/telegram/types/base/message-action-chat-edit-title/): `MessageAction`
 - [`messageActionChatJoinedByLink`](/reference/telegram/types/base/message-action-chat-joined-by-link/): `MessageAction`
 - [`messageActionChatJoinedByRequest`](/reference/telegram/types/base/message-action-chat-joined-by-request/): `MessageAction`
+- [`messageActionChatJoinedViaCommunity`](/reference/telegram/types/base/message-action-chat-joined-via-community/): `MessageAction`
 - [`messageActionChatMigrateTo`](/reference/telegram/types/base/message-action-chat-migrate-to/): `MessageAction`
 - [`messageActionConferenceCall`](/reference/telegram/types/base/message-action-conference-call/): `MessageAction`
 - [`messageActionContactSignUp`](/reference/telegram/types/base/message-action-contact-sign-up/): `MessageAction`
@@ -760,11 +764,13 @@ Selected canonical types in this namespace: 1317.
 - [`pageBlockAuthorDate`](/reference/telegram/types/base/page-block-author-date/): `PageBlock`
 - [`pageBlockBlockquote`](/reference/telegram/types/base/page-block-blockquote/): `PageBlock`
 - [`pageBlockBlockquoteBlocks`](/reference/telegram/types/base/page-block-blockquote-blocks/): `PageBlock`
+- [`pageBlockButtonRow`](/reference/telegram/types/base/page-block-button-row/): `PageBlock`
 - [`pageBlockChannel`](/reference/telegram/types/base/page-block-channel/): `PageBlock`
 - [`pageBlockCollage`](/reference/telegram/types/base/page-block-collage/): `PageBlock`
 - [`pageBlockCover`](/reference/telegram/types/base/page-block-cover/): `PageBlock`
 - [`pageBlockDetails`](/reference/telegram/types/base/page-block-details/): `PageBlock`
 - [`pageBlockDivider`](/reference/telegram/types/base/page-block-divider/): `PageBlock`
+- [`pageBlockDocument`](/reference/telegram/types/base/page-block-document/): `PageBlock`
 - [`pageBlockEmbed`](/reference/telegram/types/base/page-block-embed/): `PageBlock`
 - [`pageBlockEmbedPost`](/reference/telegram/types/base/page-block-embed-post/): `PageBlock`
 - [`pageBlockFooter`](/reference/telegram/types/base/page-block-footer/): `PageBlock`
@@ -793,6 +799,7 @@ Selected canonical types in this namespace: 1317.
 - [`pageBlockTitle`](/reference/telegram/types/base/page-block-title/): `PageBlock`
 - [`pageBlockUnsupported`](/reference/telegram/types/base/page-block-unsupported/): `PageBlock`
 - [`pageBlockVideo`](/reference/telegram/types/base/page-block-video/): `PageBlock`
+- [`pageButton`](/reference/telegram/types/base/page-button/): `PageButton`
 - [`pageCaption`](/reference/telegram/types/base/page-caption/): `PageCaption`
 - [`pageListItemBlocks`](/reference/telegram/types/base/page-list-item-blocks/): `PageListItem`
 - [`pageListItemText`](/reference/telegram/types/base/page-list-item-text/): `PageListItem`
@@ -928,6 +935,7 @@ Selected canonical types in this namespace: 1317.
 - [`requirementToContactPaidMessages`](/reference/telegram/types/base/requirement-to-contact-paid-messages/): `RequirementToContact`
 - [`requirementToContactPremium`](/reference/telegram/types/base/requirement-to-contact-premium/): `RequirementToContact`
 - [`restrictionReason`](/reference/telegram/types/base/restriction-reason/): `RestrictionReason`
+- [`richButtonStyle`](/reference/telegram/types/base/rich-button-style/): `RichButtonStyle`
 - [`richMessage`](/reference/telegram/types/base/rich-message/): `RichMessage`
 - [`savedDialog`](/reference/telegram/types/base/saved-dialog/): `SavedDialog`
 - [`savedPhoneContact`](/reference/telegram/types/base/saved-phone-contact/): `SavedContact`
@@ -985,6 +993,7 @@ Selected canonical types in this namespace: 1317.
 - [`sendMessageRecordRoundAction`](/reference/telegram/types/base/send-message-record-round-action/): `SendMessageAction`
 - [`sendMessageRecordVideoAction`](/reference/telegram/types/base/send-message-record-video-action/): `SendMessageAction`
 - [`sendMessageRichMessageDraftAction`](/reference/telegram/types/base/send-message-rich-message-draft-action/): `SendMessageAction`
+- [`sendMessageStopDraftAction`](/reference/telegram/types/base/send-message-stop-draft-action/): `SendMessageAction`
 - [`sendMessageTextDraftAction`](/reference/telegram/types/base/send-message-text-draft-action/): `SendMessageAction`
 - [`sendMessageTypingAction`](/reference/telegram/types/base/send-message-typing-action/): `SendMessageAction`
 - [`sendMessageUploadAudioAction`](/reference/telegram/types/base/send-message-upload-audio-action/): `SendMessageAction`
@@ -1082,6 +1091,7 @@ Selected canonical types in this namespace: 1317.
 - [`textBankCard`](/reference/telegram/types/base/text-bank-card/): `RichText`
 - [`textBold`](/reference/telegram/types/base/text-bold/): `RichText`
 - [`textBotCommand`](/reference/telegram/types/base/text-bot-command/): `RichText`
+- [`textButton`](/reference/telegram/types/base/text-button/): `RichText`
 - [`textCashtag`](/reference/telegram/types/base/text-cashtag/): `RichText`
 - [`textConcat`](/reference/telegram/types/base/text-concat/): `RichText`
 - [`textCustomEmoji`](/reference/telegram/types/base/text-custom-emoji/): `RichText`

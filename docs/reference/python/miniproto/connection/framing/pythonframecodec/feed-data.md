@@ -28,7 +28,7 @@ may pass ordinary socket-read fragments without preserving boundaries.
 
 **Returns:**
 
-- <code>[FrameEvent](#miniproto.connection.framing.FrameEvent)</code> – Every complete payload, quick-ACK, or transport-error event decoded
+- <code>[FrameEvent](#miniproto.connection.framing.FrameEvent)</code> – Every complete payload, quick-ACK or transport-error event decoded
 - <code>...</code> – from the accumulated input, in wire order.
 
 **Raises:**

@@ -1,7 +1,7 @@
-"""Telegram CDN retrieval, AES-CTR decryption, and ``FileHash``-bounded integrity checks.
+"""Telegram CDN retrieval, AES-CTR decryption and ``FileHash``-bounded integrity checks.
 
 The module accepts and returns ordinary immutable ``bytes``. Ciphertext,
-plaintext, redirect keys, IVs, and temporary counter buffers are not explicitly
+plaintext, redirect keys, IVs and temporary counter buffers are not explicitly
 zeroized; callers that require memory sanitization must manage their own process
 and buffer-lifetime boundary.
 """
@@ -20,14 +20,14 @@ CDN_HASH_BLOCK_SIZE = 128 * 1024
 
 
 class CdnError(RuntimeError):
-    """Raised when a CDN response cannot be reuploaded, decrypted, or interpreted."""
+    """Raised when a CDN response cannot be reuploaded, decrypted or interpreted."""
 
 
 class CdnIntegrityError(CdnError):
     """Raised when a CDN range lacks valid ``FileHash`` coverage or verification fails.
 
     This includes missing hash metadata, non-positive declared ``FileHash.limit``,
-    a response shorter than that declared limit, and SHA-256 mismatches. The
+    a response shorter than that declared limit and SHA-256 mismatches. The
     declared limit controls exactly how many decrypted bytes form each verified
     range; it is not assumed to be a fixed-size block.
     """
@@ -66,7 +66,7 @@ async def get_cdn_file_part(
     limit: int,
     request_timeout: float | None = None,
 ) -> bytes:
-    """Fetch, decrypt, and hash-verify one CDN file range.
+    """Fetch, decrypt and hash-verify one CDN file range.
 
     Args:
         origin_invoke: Async master-DC invoker used for hashes and reupload authorization.
@@ -81,7 +81,7 @@ async def get_cdn_file_part(
 
     Raises:
         CdnIntegrityError: The range lacks coverage, has an invalid/short declared
-            hash range, or its digest mismatches.
+            hash range or its digest mismatches.
         CdnError: Telegram returns an unsupported CDN response.
         asyncio.CancelledError: The caller cancels the awaited transfer.
     """
@@ -171,7 +171,7 @@ async def verify_cdn_part(
 
     Raises:
         CdnIntegrityError: Any byte lacks a valid complete hash block, hash metadata
-            is invalid, or a SHA-256 digest mismatches.
+            is invalid or a SHA-256 digest mismatches.
         asyncio.CancelledError: The awaited metadata request is cancelled.
 
     Hashes delivered with the redirect seed the lookup; uncovered blocks are
@@ -248,7 +248,7 @@ def decrypt_cdn_chunk(data: bytes, *, key: bytes, iv: bytes, offset: int = 0) ->
         Plaintext bytes of the same length as ``data``.
 
     Raises:
-        ValueError: ``key``, ``iv``, or ``offset`` violates CDN cryptographic constraints.
+        ValueError: ``key``, ``iv`` or ``offset`` violates CDN cryptographic constraints.
     """
     if len(key) != 32:
         raise ValueError("CDN encryption key must be 32 bytes")

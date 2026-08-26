@@ -30,11 +30,11 @@ obtains the minimum compliant length from ``os.urandom``.
 
 **Returns:**
 
-- <code>[EncryptedPayload](#miniproto.crypto.mtproto.EncryptedPayload)</code> – The key identifier, message key, and encrypted payload components.
+- <code>[EncryptedPayload](#miniproto.crypto.mtproto.EncryptedPayload)</code> – The key identifier, message key and encrypted payload components.
 
 **Raises:**
 
-- <code>[ValueError](#ValueError)</code> – If key length, padding length (12 through 1024 bytes), or final
+- <code>[ValueError](#ValueError)</code> – If key length, padding length (12 through 1024 bytes) or final
 AES block alignment is invalid.
 
 The default only chooses a compliant padding length; callers who supply

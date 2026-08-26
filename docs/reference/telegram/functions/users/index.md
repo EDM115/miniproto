@@ -1,6 +1,6 @@
 ---
 title: "Telegram functions: users"
-description: "Layer 228 index of 7 canonical Telegram functions in the users namespace from tdlib."
+description: "Layer 229 index of 7 canonical Telegram functions in the users namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -9,11 +9,10 @@ qualified_name: "telegram.functions.users"
 source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "users"
-layer: 228
 schema_source: "tdlib"
 ---
 
-## Layer 228 users functions
+## Layer 229 users functions
 
 Selected canonical functions in this namespace: 7.
 

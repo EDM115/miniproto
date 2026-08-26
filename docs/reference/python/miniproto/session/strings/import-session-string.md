@@ -1,6 +1,6 @@
 ---
 title: "miniproto.session.strings.import_session_string"
-description: "Import a native, Telethon v1, or Pyrogram string into a validated record."
+description: "Import a native, Telethon v1 or Pyrogram string into a validated record."
 generated: true
 editUrl: false
 language: "python"
@@ -18,7 +18,7 @@ module: "miniproto.session.strings"
 import_session_string(value: str, *, format: SessionStringFormat = 'auto', passphrase: str | bytes | None = None) -> SessionRecord
 ```
 
-Import a native, Telethon v1, or Pyrogram string into a validated record.
+Import a native, Telethon v1 or Pyrogram string into a validated record.
 
 **Parameters:**
 
@@ -32,5 +32,5 @@ Import a native, Telethon v1, or Pyrogram string into a validated record.
 
 **Raises:**
 
-- <code>[SessionEnvelopeError](#miniproto.errors.SessionEnvelopeError)</code> – If the string, envelope, protected-native authentication, or format is invalid.
+- <code>[SessionEnvelopeError](#miniproto.errors.SessionEnvelopeError)</code> – If the string, envelope, protected-native authentication or format is invalid.
 - <code>[TypeError](#TypeError)</code> – If ``value`` is not a string.

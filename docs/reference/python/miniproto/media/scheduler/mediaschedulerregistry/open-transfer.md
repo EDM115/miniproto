@@ -23,9 +23,9 @@ Open a transfer with foreground priority by default.
 
 - **dc_id** (<code>[int](#int)</code>) – Positive Telegram data-centre identifier.
 - **direction** (<code>[MediaDirection](#miniproto.media.scheduler.MediaDirection)</code>) – Whether requests upload or download.
-- **total_size** (<code>[int](#int) | None</code>) – Known size, or ``None`` to conservatively classify it as large.
+- **total_size** (<code>[int](#int) | None</code>) – Known size or ``None`` to conservatively classify it as large.
 - **priority** (<code>[MediaPriority](#miniproto.media.scheduler.MediaPriority)</code>) – ``foreground`` by default; background still receives periodic grants.
 
 **Raises:**
 
-- <code>[ValueError](#ValueError)</code> – If the DC, direction, size, or priority is invalid.
+- <code>[ValueError](#ValueError)</code> – If the DC, direction, size or priority is invalid.

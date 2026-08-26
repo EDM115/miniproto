@@ -22,7 +22,7 @@ Fetch Telegram's current global update state and persist it atomically.
 
 **Returns:**
 
-- <code>[UpdateCursor](#miniproto.updates.state.UpdateCursor)</code> – The loaded cursor after replacing its global PTS, QTS, sequence, and date fields.
+- <code>[UpdateCursor](#miniproto.updates.state.UpdateCursor)</code> – The loaded cursor after replacing its global PTS, QTS, sequence and date fields.
 
 **Raises:**
 

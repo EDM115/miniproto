@@ -1,6 +1,6 @@
 ---
 title: "miniproto.observability.MetricEvent"
-description: "Immutable metric event recorded with a unit, attributes, and wall-clock timestamp."
+description: "Immutable metric event recorded with a unit, attributes and wall-clock timestamp."
 generated: true
 editUrl: false
 language: "python"
@@ -18,7 +18,7 @@ module: "miniproto.observability"
 MetricEvent(name: str, value: float, unit: str = 'count', attributes: Mapping[str, object] = dict(), timestamp: float = time.time()) -> None
 ```
 
-Immutable metric event recorded with a unit, attributes, and wall-clock timestamp.
+Immutable metric event recorded with a unit, attributes and wall-clock timestamp.
 
 **Attributes:**
 

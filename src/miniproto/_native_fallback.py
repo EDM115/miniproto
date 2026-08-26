@@ -151,7 +151,7 @@ def mtproto_encode_message(
     client_to_server: bool = True,
     padding: bytes | None = None,
 ) -> bytes:
-    """Serialize, pad, and encrypt one complete MTProto message.
+    """Serialize, pad and encrypt one complete MTProto message.
 
     Args:
         auth_key: Required 256-byte MTProto authorization key.
@@ -188,7 +188,7 @@ def mtproto_decode_message(
 
     Args:
         auth_key: Required 256-byte MTProto authorization key.
-        packet: Auth-key ID, message key, and encrypted packet bytes.
+        packet: Auth-key ID, message key and encrypted packet bytes.
         client_to_server: Whether to derive for client-to-server traffic.
     """
     packet = bytes(packet)

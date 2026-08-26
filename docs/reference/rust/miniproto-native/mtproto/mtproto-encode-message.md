@@ -9,13 +9,11 @@ qualified_name: "miniproto_native::mtproto::mtproto_encode_message"
 source_path: "rust/miniproto/src/mtproto.rs"
 source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/mtproto.rs#L114"
 aliases: ["miniproto._native.mtproto_encode_message"]
-crate: "miniproto_native"
 python_visible: true
 ---
 
 ## Provenance
 
-- Crate: `miniproto_native`
 - Rust visibility: `restricted`
 - Source: [`rust/miniproto/src/mtproto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/mtproto.rs#L114)
 - Python exposure: `miniproto._native.mtproto_encode_message` (confirmed from adjacent PyO3 attributes)
@@ -50,11 +48,11 @@ fn mtproto_encode_message(py: Python<'_>, auth_key: Vec<u8>, server_salt: u64, s
 
 Encodes one encrypted MTProto envelope as Python `mtproto_encode_message`.
 
-The salt, session/message identifiers, sequence number, body length, `body`, and padding form
+The salt, session/message identifiers, sequence number, body length, `body` and padding form
 the inner envelope; `auth_key` encrypts it but is not itself serialized in that envelope.
 `client_to_server` chooses MTProto's directional key offset; optional `padding` replaces random
 padding. Returns auth-key-id/message-key/ciphertext concatenated in wire
-order, or `ValueError` for invalid key, body, or padding.  For large byte inputs it releases
+order or `ValueError` for invalid key, body or padding.  For large byte inputs it releases
 the GIL while performing the native work.
 
 # Arguments

@@ -31,4 +31,4 @@ Build the request payload required to verify an account password.
 
 **Raises:**
 
-- <code>[ValueError](#ValueError)</code> – If Telegram supplies unsupported, incomplete, or cryptographically invalid SRP parameters.
+- <code>[ValueError](#ValueError)</code> – If Telegram supplies unsupported, incomplete or cryptographically invalid SRP parameters.

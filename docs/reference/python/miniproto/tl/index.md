@@ -19,7 +19,7 @@ Public TL primitive and object codec APIs.
 
 - [`BOOL_FALSE_ID`](./codec/bool-false-id/) — Public attribute `miniproto.tl.codec.BOOL_FALSE_ID`.
 - [`BOOL_TRUE_ID`](./codec/bool-true-id/) — Public attribute `miniproto.tl.codec.BOOL_TRUE_ID`.
-- [`TLCodecError`](./codec/tlcodecerror/) — Raised when TL wire data, types, or generated metadata cannot be encoded or decoded.
+- [`TLCodecError`](./codec/tlcodecerror/) — Raised when TL wire data, types or generated metadata cannot be encoded or decoded.
 - [`VECTOR_CONSTRUCTOR_ID`](./codec/vector-constructor-id/) — Public attribute `miniproto.tl.codec.VECTOR_CONSTRUCTOR_ID`.
 - [`decode_bool`](./codec/decode-bool/) — Decode a TL ``Bool`` constructor.
 - [`decode_bytes`](./codec/decode-bytes/) — Decode a TL length-prefixed byte string.

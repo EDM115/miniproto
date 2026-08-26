@@ -22,7 +22,7 @@ Serialize ``p_q_inner_data_dc`` before applying Telegram RSA padding.
 
 **Parameters:**
 
-- **inner** (<code>[PQInnerDataDC](#miniproto.auth.key_exchange.PQInnerDataDC)</code>) – Exchange-specific factors, nonces, and target DC payload.
+- **inner** (<code>[PQInnerDataDC](#miniproto.auth.key_exchange.PQInnerDataDC)</code>) – Exchange-specific factors, nonces and target DC payload.
 
 **Returns:**
 

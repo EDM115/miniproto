@@ -1,6 +1,6 @@
 ---
 title: "miniproto.media.cdn.CdnError"
-description: "Raised when a CDN response cannot be reuploaded, decrypted, or interpreted."
+description: "Raised when a CDN response cannot be reuploaded, decrypted or interpreted."
 generated: true
 editUrl: false
 language: "python"
@@ -16,4 +16,4 @@ module: "miniproto.media.cdn"
 
 Bases: <code>[RuntimeError](#RuntimeError)</code>
 
-Raised when a CDN response cannot be reuploaded, decrypted, or interpreted.
+Raised when a CDN response cannot be reuploaded, decrypted or interpreted.

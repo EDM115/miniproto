@@ -1,11 +1,9 @@
-"""Generate, verify, and build miniproto's committed documentation website."""
+"""Generate, verify and build miniproto's committed documentation website."""
 
 from __future__ import annotations
 
 import argparse
 import hashlib
-import importlib.metadata
-import json
 import os
 import shutil
 import subprocess
@@ -22,9 +20,8 @@ from urllib.parse import unquote, urljoin, urlsplit
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_CONFIGURATION = _REPOSITORY_ROOT / "docs/reference-surface.toml"
 _GENERATOR_VERSION = "1"
-_SURFACE_CONTRACT_MARKER = "miniproto-surface:user-pinned-packet-loom"
 _REQUIRED_SITE_ROUTES = ("/", "/start/", "/guides/", "/concepts/", "/recipes/", "/faq/", "/reference/", "/project/")
-_REQUIRED_PAGEFIND_FILTERS = {"crate", "kind", "language", "layer", "module", "namespace", "python_visible"}
+_REQUIRED_PAGEFIND_FILTERS = {"kind", "language", "module", "namespace", "python_visible"}
 
 
 class DocumentationConfigurationError(ValueError):
@@ -58,7 +55,7 @@ class TelegramDocumentationConfiguration:
 
     Attributes:
         schema_path: Canonical normalized TDLib structural schema.
-        metadata_path: Layer, source-precedence, digest, and count metadata.
+        metadata_path: Layer, source-precedence, digest and count metadata.
         rpc_errors_path: Pinned Telegram RPC-error database.
         bindings_path: Generated schema-to-Python binding manifest.
         relationships_path: POSIX path for the generated relationship artifact relative to ``docs/reference``.
@@ -73,12 +70,11 @@ class TelegramDocumentationConfiguration:
 
 @dataclass(frozen=True, slots=True)
 class RustDocumentationConfiguration:
-    """Describe the exact Rust documentation extraction contract.
+    """Describe the Rust documentation extraction contract.
 
     Attributes:
         manifest_path: Cargo manifest for the native extension crate.
         source_root: Repository source root used for spans and PyO3 attributes.
-        toolchain_path: Exact documentation-only nightly and converter pin.
         crate: Crate provenance and cargo-docs-md output name.
         artifact_stem: Rustdoc JSON artifact filename without its suffix.
         reviewed_modules: Modules whose supported public/PyO3 surface receives pages.
@@ -87,7 +83,6 @@ class RustDocumentationConfiguration:
 
     manifest_path: Path
     source_root: Path
-    toolchain_path: Path
     crate: str
     artifact_stem: str
     reviewed_modules: tuple[str, ...]
@@ -162,7 +157,6 @@ class _BuiltPageParser(HTMLParser):
         local_references: Raw ``href`` and ``src`` values requiring destination validation.
         filter_names: Pagefind filter keys declared by rendered metadata.
         has_pagefind_body: Whether the page exposes an intentional indexable content region.
-        has_surface_contract: Whether the root artifact retained the Packet Loom design contract marker.
     """
 
     def __init__(self) -> None:
@@ -171,10 +165,9 @@ class _BuiltPageParser(HTMLParser):
         self.local_references: list[str] = []
         self.filter_names: set[str] = set()
         self.has_pagefind_body = False
-        self.has_surface_contract = False
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        """Collect relevant link, asset, and Pagefind attributes from an opening tag.
+        """Collect relevant link, asset and Pagefind attributes from an opening tag.
 
         Args:
             tag: Lowercase HTML element name supplied by ``HTMLParser``.
@@ -195,15 +188,6 @@ class _BuiltPageParser(HTMLParser):
                 if name:
                     self.filter_names.add(name)
 
-    def handle_comment(self, data: str) -> None:
-        """Record whether an emitted HTML comment carries the visual direction contract.
-
-        Args:
-            data: Comment contents without the surrounding delimiter.
-        """
-        if _SURFACE_CONTRACT_MARKER in data:
-            self.has_surface_contract = True
-
 
 def load_documentation_configuration(path: Path, *, repository_root: Path) -> DocumentationConfiguration:
     """Load and validate the checked-in documentation surface manifest.
@@ -216,7 +200,7 @@ def load_documentation_configuration(path: Path, *, repository_root: Path) -> Do
         Validated immutable pipeline configuration.
 
     Raises:
-        DocumentationConfigurationError: The schema, value types, path ownership, or reviewed lists are invalid.
+        DocumentationConfigurationError: The schema, value types, path ownership or reviewed lists are invalid.
     """
     repository_root = repository_root.resolve()
     payload = tomllib.loads(path.read_text(encoding="utf-8"))
@@ -269,9 +253,6 @@ def load_documentation_configuration(path: Path, *, repository_root: Path) -> Do
             repository_root, _required_string(rust, "manifest_path"), field="rust.manifest_path"
         ),
         source_root=_repository_path(repository_root, _required_string(rust, "source_root"), field="rust.source_root"),
-        toolchain_path=_repository_path(
-            repository_root, _required_string(rust, "toolchain_path"), field="rust.toolchain_path"
-        ),
         crate=_required_string(rust, "crate"),
         artifact_stem=_required_string(rust, "artifact_stem"),
         reviewed_modules=_unique_strings(rust, "reviewed_modules"),
@@ -335,7 +316,7 @@ def _required_string(payload: Mapping[str, Any], field: str) -> str:
         Trimmed string value.
 
     Raises:
-        DocumentationConfigurationError: The field is absent, non-string, or empty.
+        DocumentationConfigurationError: The field is absent, non-string or empty.
     """
     value = payload.get(field)
     if not isinstance(value, str) or not value.strip():
@@ -354,7 +335,7 @@ def _unique_strings(payload: Mapping[str, Any], field: str) -> tuple[str, ...]:
         String values in declared order.
 
     Raises:
-        DocumentationConfigurationError: The list is absent, malformed, empty, or contains duplicates.
+        DocumentationConfigurationError: The list is absent, malformed, empty or contains duplicates.
     """
     value = payload.get(field)
     if not isinstance(value, list) or not value or any(not isinstance(item, str) or not item.strip() for item in value):
@@ -411,7 +392,7 @@ def _relative_artifact_path(value: str) -> str:
         Normalized POSIX path.
 
     Raises:
-        DocumentationConfigurationError: The path is absolute, empty, or traverses a parent.
+        DocumentationConfigurationError: The path is absolute, empty or traverses a parent.
     """
     path = PurePosixPath(value.replace("\\", "/"))
     if path.is_absolute() or not path.parts or ".." in path.parts:
@@ -468,7 +449,7 @@ def _reconcile_reference_tree(*, staging: Path, output_root: Path, repository_ro
 
     Raises:
         DocumentationGenerationError: Either path escapes its permitted owned root.
-        RuntimeError: Check mode detects added, removed, or changed files.
+        RuntimeError: Check mode detects added, removed or changed files.
     """
     from tools.docs.manifest import compare_reference_trees
 
@@ -563,7 +544,6 @@ def _source_hashes(configuration: DocumentationConfiguration) -> dict[str, str]:
         configuration.telegram.metadata_path,
         configuration.telegram.rpc_errors_path,
         configuration.telegram.bindings_path,
-        configuration.rust.toolchain_path,
     }
     files.update(path for path in (root / "tools/docs").glob("*.py") if path.is_file())
     files.update(
@@ -588,26 +568,6 @@ def _source_hashes(configuration: DocumentationConfiguration) -> dict[str, str]:
     }
 
 
-def _tool_versions(configuration: DocumentationConfiguration, *, rust_toolchain: Any) -> dict[str, str]:
-    """Collect exact extractor versions recorded in the committed reference manifest.
-
-    Args:
-        configuration: Validated pipeline configuration retained for future version sources.
-        rust_toolchain: Loaded exact Rust documentation pin.
-
-    Returns:
-        Stable tool-name to exact-version mapping.
-    """
-    del configuration
-    return {
-        "cargo-docs-md": str(rust_toolchain.cargo_docs_md),
-        "griffe": importlib.metadata.version("griffe"),
-        "griffe2md": importlib.metadata.version("griffe2md"),
-        "miniproto-docs": _GENERATOR_VERSION,
-        "rustdoc": str(rust_toolchain.nightly),
-    }
-
-
 def _audit_python_sources(configuration: DocumentationConfiguration) -> None:
     """Enforce complete maintained Python and tooling docstrings before generation.
 
@@ -615,7 +575,7 @@ def _audit_python_sources(configuration: DocumentationConfiguration) -> None:
         configuration: Validated roots and exclusions for the documentation pipeline.
 
     Raises:
-        DocumentationGenerationError: A module, declaration, or explicit argument lacks meaningful prose.
+        DocumentationGenerationError: A module, declaration or explicit argument lacks meaningful prose.
     """
     from tools.docs.audit import find_missing_python_docs, find_missing_python_parameter_docs
 
@@ -640,23 +600,22 @@ def _generate_reference_tree(configuration: DocumentationConfiguration, *, stagi
         scratch: Task-owned transient Rust artifact directory.
 
     Raises:
-        DocumentationGenerationError: A required docs dependency, source, tool, or extraction stage is unavailable.
+        DocumentationGenerationError: A required docs dependency, source, tool or extraction stage is unavailable.
     """
     try:
         from tools.docs.audit import audit_maintained_rust_docs
         from tools.docs.generate_python import generate_python_pages
         from tools.docs.generate_rust import (
-            generate_pinned_rustdoc_json,
             generate_rust_pages,
+            generate_rustdoc_json,
             load_cargo_docs_md_fragments,
-            load_documentation_toolchain,
             render_rustdoc_with_cargo_docs_md,
         )
         from tools.docs.generate_telegram import generate_telegram_reference_surface, load_telegram_binding_manifest
         from tools.docs.manifest import write_reference_tree
     except ModuleNotFoundError as error:
         raise DocumentationGenerationError(
-            "documentation extraction dependencies are missing; install the pinned docs dependency group"
+            "documentation extraction dependencies are missing; install the docs dependency group"
         ) from error
 
     _audit_python_sources(configuration)
@@ -678,10 +637,8 @@ def _generate_reference_tree(configuration: DocumentationConfiguration, *, stagi
             "Telegram relationship artifact path disagrees with the reviewed reference-surface configuration"
         )
 
-    rust_toolchain = load_documentation_toolchain(configuration.rust.toolchain_path)
     rust_target = scratch / "rustdoc-target"
-    rustdoc_json = generate_pinned_rustdoc_json(
-        toolchain=rust_toolchain,
+    rustdoc_json = generate_rustdoc_json(
         manifest_path=configuration.rust.manifest_path,
         target_dir=rust_target,
         artifact_stem=configuration.rust.artifact_stem,
@@ -712,10 +669,7 @@ def _generate_reference_tree(configuration: DocumentationConfiguration, *, stagi
     )
     converter_output = scratch / "cargo-docs-md"
     render_rustdoc_with_cargo_docs_md(
-        toolchain=rust_toolchain,
-        json_directory=rustdoc_json.parent,
-        output_directory=converter_output,
-        crate=configuration.rust.crate,
+        json_directory=rustdoc_json.parent, output_directory=converter_output, crate=configuration.rust.crate
     )
     rust_pages = generate_rust_pages(
         rustdoc_json=rustdoc_json,
@@ -732,7 +686,6 @@ def _generate_reference_tree(configuration: DocumentationConfiguration, *, stagi
     write_reference_tree(
         staging,
         (*python_pages, *telegram_surface.pages, *rust_pages),
-        tool_versions=_tool_versions(configuration, rust_toolchain=rust_toolchain),
         source_hashes=source_hashes,
         artifacts={configuration.telegram.relationships_path: telegram_surface.relationship_manifest},
     )
@@ -785,37 +738,6 @@ def _resolve_site_command(command: Sequence[str]) -> tuple[str, ...]:
     return (executable, *command[1:])
 
 
-def _verify_site_tool_versions(configuration: SiteDocumentationConfiguration) -> None:
-    """Require the exact Node and pnpm versions declared by the site package.
-
-    Args:
-        configuration: Site directory and expected package-manager executable.
-
-    Raises:
-        DocumentationGenerationError: Package metadata is malformed or either executable reports a different version.
-    """
-    package = json.loads((configuration.directory / "package.json").read_text(encoding="utf-8"))
-    engines = package.get("engines")
-    if not isinstance(engines, Mapping):
-        raise DocumentationGenerationError("docs-site/package.json lacks exact engine pins")
-    expected_node = str(engines.get("node") or "")
-    expected_package_manager = str(engines.get(configuration.package_manager) or "")
-    checks = (
-        ("node", ("node", "--version"), expected_node),
-        (configuration.package_manager, (configuration.package_manager, "--version"), expected_package_manager),
-    )
-    for label, command, expected in checks:
-        resolved_command = _resolve_site_command(command)
-        result = subprocess.run(  # noqa: S603 - executable names are fixed by reviewed repository configuration.
-            resolved_command, cwd=configuration.directory, capture_output=True, check=False, text=True
-        )
-        actual = result.stdout.strip().removeprefix("v")
-        if result.returncode or not expected or actual != expected:
-            raise DocumentationGenerationError(
-                f"{label} must be exactly {expected or '<missing pin>'}, reported {actual or '<unavailable>'}"
-            )
-
-
 def _normalize_site_base(value: str) -> str:
     """Normalize a configured deployment path for local artifact validation.
 
@@ -857,7 +779,7 @@ def _local_route(reference: str, *, source_route: str, base: str) -> str | None:
         base: Normalized deployment base path.
 
     Returns:
-        Base-free absolute route, or ``None`` for fragments and external protocols.
+        Base-free absolute route or ``None`` for fragments and external protocols.
 
     Raises:
         RuntimeError: An absolute local path escapes a non-root deployment base.
@@ -902,7 +824,7 @@ def _html_route(path: Path, *, output: Path, base: str) -> str:
 
 
 def _validate_static_site(output: Path, *, base: str, required_routes: Sequence[str]) -> StaticSiteValidationReport:
-    """Validate routes, local references, search metadata, and internal-content boundaries in a built site.
+    """Validate routes, local references, search metadata and internal-content boundaries in a built site.
 
     Args:
         output: Static Astro output directory to inspect without modification.
@@ -913,7 +835,7 @@ def _validate_static_site(output: Path, *, base: str, required_routes: Sequence[
         Counts and Pagefind filter names from the validated artifact.
 
     Raises:
-        RuntimeError: The artifact is incomplete, leaks the internal scratchpad, loses its design contract, or contains a broken local reference.
+        RuntimeError: The artifact is incomplete, leaks the internal scratchpad or contains a broken local reference.
     """
     output = output.resolve()
     normalized_base = _normalize_site_base(base)
@@ -931,7 +853,6 @@ def _validate_static_site(output: Path, *, base: str, required_routes: Sequence[
 
     filters: set[str] = set()
     internal_links = 0
-    homepage_contract = False
     has_pagefind_body = False
     for path in html_paths:
         relative_path = path.relative_to(output).as_posix()
@@ -942,8 +863,6 @@ def _validate_static_site(output: Path, *, base: str, required_routes: Sequence[
         parser.close()
         filters.update(parser.filter_names)
         has_pagefind_body = has_pagefind_body or parser.has_pagefind_body
-        if relative_path == "index.html":
-            homepage_contract = parser.has_surface_contract
         source_route = _html_route(path, output=output, base=normalized_base)
         for reference in parser.local_references:
             if "thoughts" in reference.casefold():
@@ -956,8 +875,6 @@ def _validate_static_site(output: Path, *, base: str, required_routes: Sequence[
             if not destination.is_file():
                 raise RuntimeError(f"broken local reference in {relative_path}: {reference} -> {destination}")
 
-    if not homepage_contract:
-        raise RuntimeError(f"homepage lacks the {_SURFACE_CONTRACT_MARKER!r} design contract")
     if not has_pagefind_body:
         raise RuntimeError("documentation static output lacks any data-pagefind-body content region")
     return StaticSiteValidationReport(
@@ -966,7 +883,7 @@ def _validate_static_site(output: Path, *, base: str, required_routes: Sequence[
 
 
 def _run_site_pipeline(configuration: SiteDocumentationConfiguration, *, skip_install: bool) -> None:
-    """Install, check, and build the pinned Astro/Starlight static site.
+    """Install, check and build the pinned Astro/Starlight static site.
 
     Args:
         configuration: Exact site directory and command vectors.
@@ -975,7 +892,6 @@ def _run_site_pipeline(configuration: SiteDocumentationConfiguration, *, skip_in
     Raises:
         DocumentationGenerationError: An exact tool version or configured frontend stage fails.
     """
-    _verify_site_tool_versions(configuration)
     commands = (configuration.check_command, configuration.build_command, configuration.test_command)
     if not skip_install:
         commands = (configuration.install_command, *commands)

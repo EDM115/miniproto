@@ -16,7 +16,7 @@ module: "miniproto.connection.framing"
 Stateful MTProto TCP transport framing.
 
 The codec is deliberately independent from sockets: callers may feed arbitrary
-fragments, and every complete frame is drained before another read is needed.
+fragments and every complete frame is drained before another read is needed.
 
 ## Public objects
 

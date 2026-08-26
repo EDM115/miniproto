@@ -42,7 +42,7 @@ def _normalize_source_location_match(match: re.Match[str]) -> str:
     """Render one generated source-location match with a canonical path.
 
     Args:
-        match: Regex match containing the source-location prefix, path, and suffix.
+        match: Regex match containing the source-location prefix, path and suffix.
 
     Returns:
         The reconstructed source-location record with POSIX separators.
@@ -66,10 +66,8 @@ class ReferencePage:
         body: Generated Markdown body without frontmatter.
         module: Python module provenance when ``language`` is ``python``.
         namespace: Telegram namespace when ``language`` is ``telegram``.
-        layer: Telegram API layer when ``language`` is ``telegram``.
         schema_source: Canonical Telegram structural source identifier.
         constructor_id: Telegram constructor or method identifier when present.
-        crate: Cargo crate provenance when ``language`` is ``rust``.
         python_visible: Whether a Rust declaration is exposed through PyO3.
         aliases: Additional names indexed for search and compatibility.
     """
@@ -85,18 +83,16 @@ class ReferencePage:
     body: str
     module: str | None = None
     namespace: str | None = None
-    layer: int | None = None
     schema_source: str | None = None
     constructor_id: str | None = None
-    crate: str | None = None
     python_visible: bool | None = None
     aliases: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
-        """Validate route safety, required text, and language-specific provenance.
+        """Validate route safety, required text and language-specific provenance.
 
         Raises:
-            ValueError: The route is unsafe, a required text field is absent or empty, or language-specific provenance is incomplete.
+            ValueError: The route is unsafe, a required text field is absent or empty or language-specific provenance is incomplete.
         """
         object.__setattr__(self, "path", canonical_markdown_path(self.path))
         object.__setattr__(self, "source_path", canonical_markdown_path(self.source_path))
@@ -110,13 +106,8 @@ class ReferencePage:
                 raise ValueError(f"{field_name} must not be empty")
         if self.language == "python" and not self.module:
             raise ValueError("Python reference pages require module provenance")
-        if self.language == "telegram":
-            if self.layer is None:
-                raise ValueError("Telegram reference pages require a layer")
-            if not self.schema_source:
-                raise ValueError("Telegram reference pages require schema_source provenance")
-        if self.language == "rust" and not self.crate:
-            raise ValueError("Rust reference pages require crate provenance")
+        if self.language == "telegram" and not self.schema_source:
+            raise ValueError("Telegram reference pages require schema_source provenance")
 
     @property
     def route(self) -> str:
@@ -141,7 +132,7 @@ class ReferencePage:
         ]
         if self.aliases:
             frontmatter.append(("aliases", list(self.aliases)))
-        for name in ("module", "namespace", "layer", "schema_source", "constructor_id", "crate", "python_visible"):
+        for name in ("module", "namespace", "schema_source", "constructor_id", "python_visible"):
             value = getattr(self, name)
             if value is not None:
                 frontmatter.append((name, value))
@@ -154,7 +145,7 @@ def _yaml_scalar(value: object) -> str:
     """Render a JSON scalar or sequence, which is valid YAML frontmatter.
 
     Args:
-        value: JSON-compatible scalar, mapping, or sequence to encode; booleans and integers use an explicit compact representation.
+        value: JSON-compatible scalar, mapping or sequence to encode; booleans and integers use an explicit compact representation.
 
     Returns:
         Deterministic YAML-compatible scalar text.

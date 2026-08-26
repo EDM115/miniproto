@@ -1,6 +1,6 @@
 ---
 title: "miniproto.session.storage.EncryptedSQLiteSessionStorage.close"
-description: "Close load, save, mutate, and clear after queued worker work reaches the lock."
+description: "Close load, save, mutate and clear after queued worker work reaches the lock."
 generated: true
 editUrl: false
 language: "python"
@@ -18,6 +18,6 @@ module: "miniproto.session.storage"
 close() -> None
 ```
 
-Close load, save, mutate, and clear after queued worker work reaches the lock.
+Close load, save, mutate and clear after queued worker work reaches the lock.
 
 ``sibling`` and ``domain_revisions`` remain usable after closure.

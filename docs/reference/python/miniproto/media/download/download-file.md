@@ -1,6 +1,6 @@
 ---
 title: "miniproto.media.download.download_file"
-description: "Download media into memory, a path, or a caller-owned binary stream."
+description: "Download media into memory, a path or a caller-owned binary stream."
 generated: true
 editUrl: false
 language: "python"
@@ -18,15 +18,15 @@ module: "miniproto.media.download"
 download_file(invoke: RawInvoker, location: object, destination: Destination = None, *, offset: int = 0, limit: int | None = None, part_size: int = DEFAULT_DOWNLOAD_PART_SIZE, resume: bool = False, progress: ProgressCallback | None = None, precise: bool = False, cdn_supported: bool = True, total_size: int | None = None, request_timeout: float | None = None, max_retries: int = 2, flood_sleep_threshold: int | None = 30, max_buffer_size: int | None = None, concurrency: int = DEFAULT_DOWNLOAD_CONCURRENCY, adaptive_concurrency: bool = True, launch_stagger: bool = True, max_in_flight_bytes: int | None = None, adaptive_part_size: bool = True, max_part_size: int = MAX_DOWNLOAD_CHUNK_SIZE, range_cache: DownloadRangeCache | bool | None = None, range_cache_key: str | None = None, range_cache_max_bytes: int = DEFAULT_RANGE_CACHE_BYTES, read_ahead_bytes: int = 0, verify_plain_hashes: bool = False, file_reference_refresher: FileReferenceRefresher | None = None) -> MediaDownloadResult
 ```
 
-Download media into memory, a path, or a caller-owned binary stream.
+Download media into memory, a path or a caller-owned binary stream.
 
 **Parameters:**
 
 - **invoke** (<code>[RawInvoker](#miniproto.media.download.RawInvoker)</code>) – Async raw-RPC invoker used for Telegram file requests.
 - **location** (<code>[object](#object)</code>) – Telegram input file location to retrieve.
-- **destination** (<code>[Destination](#miniproto.media.download.Destination)</code>) – ``None`` for in-memory bytes, a path to create/overwrite, or an open binary stream.
+- **destination** (<code>[Destination](#miniproto.media.download.Destination)</code>) – ``None`` for in-memory bytes, a path to create/overwrite or an open binary stream.
 - **offset** (<code>[int](#int)</code>) – Starting byte offset; defaults to ``0``.
-- **limit** (<code>[int](#int) | None</code>) – Exact requested byte count, or ``None`` to continue until EOF.
+- **limit** (<code>[int](#int) | None</code>) – Exact requested byte count or ``None`` to continue until EOF.
 - **part_size** (<code>[int](#int)</code>) – Initial power-of-two request size; defaults to 512 KiB.
 - **resume** (<code>[bool](#bool)</code>) – Append to an existing path from its 1 KiB-aligned size; defaults to ``False``.
 - **progress** (<code>[ProgressCallback](#miniproto.media.upload.ProgressCallback) | None</code>) – Optional synchronous or async ``(current, total)`` callback;
@@ -46,7 +46,7 @@ Eligible waits retain their slot and are separately capped at 16 per part.
 - **max_in_flight_bytes** (<code>[int](#int) | None</code>) – Maximum requested bytes not yet released by the stream.
 - **adaptive_part_size** (<code>[bool](#bool)</code>) – Probe larger legal part sizes for large transfers.
 - **max_part_size** (<code>[int](#int)</code>) – Upper bound for adaptive parts, no greater than one MiB.
-- **range_cache** (<code>[DownloadRangeCache](#miniproto.media.download.DownloadRangeCache) | [bool](#bool) | None</code>) – Exact-range cache instance, ``True`` for shared cache, or disabled value.
+- **range_cache** (<code>[DownloadRangeCache](#miniproto.media.download.DownloadRangeCache) | [bool](#bool) | None</code>) – Exact-range cache instance, ``True`` for shared cache or disabled value.
 - **range_cache_key** (<code>[str](#str) | None</code>) – Stable media identity for range-cache sharing.
 - **range_cache_max_bytes** (<code>[int](#int)</code>) – Capacity used by an implicit shared cache.
 - **read_ahead_bytes** (<code>[int](#int)</code>) – Best-effort range prefetch budget; disabled for a full-file transfer.
@@ -65,7 +65,7 @@ Eligible waits retain their slot and are separately capped at 16 per part.
 on failure. A path creates parent directories; a new path is removed on
 cancellation/failure, while an existing non-resume path is overwritten
 rather than restored. A resumed path preserves its existing prefix after
-truncating any non-1-KiB tail, and failure truncates it back to that
+truncating any non-1-KiB tail and failure truncates it back to that
 aligned prefix. A caller ``BytesIO`` is restored to its original contents
 and position; arbitrary caller streams remain open and are not generally
 restorable. Payload/key buffers are not explicitly zeroized.
@@ -76,7 +76,7 @@ restorable. Payload/key buffers are not explicitly zeroized.
 
 - <code>[ValueError](#ValueError)</code> – An offset, limit, part/cache/window option is invalid.
 - <code>[TypeError](#TypeError)</code> – A boolean option has the wrong type.
-- <code>[MediaDownloadError](#miniproto.media.download.MediaDownloadError)</code> – A response, finite range, or destination write is invalid.
+- <code>[MediaDownloadError](#miniproto.media.download.MediaDownloadError)</code> – A response, finite range or destination write is invalid.
 - <code>[MediaIntegrityError](#miniproto.media.download.MediaIntegrityError)</code> – CDN or requested plain-file integrity verification fails.
-- <code>[OSError](#OSError)</code> – A path destination cannot be created, written, or restored.
+- <code>[OSError](#OSError)</code> – A path destination cannot be created, written or restored.
 - <code>[CancelledError](#asyncio.CancelledError)</code> – The transfer is cancelled; created paths are removed and owned buffers restored.

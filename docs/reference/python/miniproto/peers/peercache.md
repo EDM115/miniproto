@@ -19,7 +19,7 @@ PeerCache(config: ClientConfig, storage: SessionStorage, invoker: PeerInvoker) -
 
 Revision-aware session peer cache with local and remote resolution paths.
 
-Bind client configuration, mutable session storage, and raw invocation.
+Bind client configuration, mutable session storage and raw invocation.
 
 **Parameters:**
 

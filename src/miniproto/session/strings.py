@@ -1,7 +1,7 @@
 """Import and export validated portable bearer session strings without client dependencies.
 
 Only protected native strings use scrypt-derived AES-256-GCM authenticated encryption.
-Plain native strings, Telethon strings, and Pyrogram strings are bearer encodings:
+Plain native strings, Telethon strings and Pyrogram strings are bearer encodings:
 they are validated for shape and may carry a checksum, but do not authenticate a
 holder or protect their contained authorization key.
 """
@@ -89,7 +89,7 @@ def export_session_string(
 
     Args:
         record_or_mapping: A validated record or an already decoded record mapping.
-        format: Native ``miniproto`` (default), ``telethon``, or ``pyrogram``.
+        format: Native ``miniproto`` (default), ``telethon`` or ``pyrogram``.
         passphrase: Optional native-only authenticated encryption using scrypt and AES-256-GCM.
         api_id: Required for Pyrogram when absent from record metadata.
         test_mode: Required for Pyrogram when absent from record metadata.
@@ -98,11 +98,11 @@ def export_session_string(
         A redacted-on-representation bearer session string.
 
     Raises:
-        SessionEnvelopeError: If data, authentication material, limits, or format options are invalid.
+        SessionEnvelopeError: If data, authentication material, limits or format options are invalid.
         TypeError: If the input is neither a record nor mapping.
 
     Protected native strings authenticate and encrypt their payload. Plain native,
-    Telethon, and Pyrogram outputs remain validated bearer encodings. Generic
+    Telethon and Pyrogram outputs remain validated bearer encodings. Generic
     asynchronous storage is exported through ``Client.export_session_string``; this
     layer deliberately only accepts already loaded state.
     """
@@ -122,7 +122,7 @@ def export_session_string(
 def import_session_string(
     value: str, *, format: SessionStringFormat = "auto", passphrase: str | bytes | None = None
 ) -> SessionRecord:
-    """Import a native, Telethon v1, or Pyrogram string into a validated record.
+    """Import a native, Telethon v1 or Pyrogram string into a validated record.
 
     Args:
         value: Bearer session string; it is parsed without stripping characters.
@@ -133,7 +133,7 @@ def import_session_string(
         A normalized session record. Foreign formats set bootstrap metadata.
 
     Raises:
-        SessionEnvelopeError: If the string, envelope, protected-native authentication, or format is invalid.
+        SessionEnvelopeError: If the string, envelope, protected-native authentication or format is invalid.
         TypeError: If ``value`` is not a string.
     """
 
@@ -331,7 +331,7 @@ def _export_telethon(record: SessionRecord) -> SessionString:
     The result is a validated bearer encoding, not encrypted or authenticated.
 
     Args:
-        record: Session record with active DC, endpoint, and 256-byte authorization key.
+        record: Session record with active DC, endpoint and 256-byte authorization key.
     """
     dc_id, auth_key = _required_dc_and_auth(record, format_name="Telethon")
     option = next(
@@ -400,7 +400,7 @@ def _export_pyrogram(record: SessionRecord, *, api_id: int | None, test_mode: bo
     The result is a validated bearer encoding, not encrypted or authenticated.
 
     Args:
-        record: Session record with active DC, key, and account identity.
+        record: Session record with active DC, key and account identity.
         api_id: Optional API ID overriding record metadata.
         test_mode: Optional test-mode value overriding record metadata.
     """
