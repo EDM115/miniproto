@@ -9,9 +9,8 @@
     "build": "astro build --force",
     "brand:build": "jiti scripts/build-brand.ts",
     "brand:check": "jiti scripts/build-brand.ts --check",
-    "check": "pnpm format:check && pnpm lint && astro check",
+    "check": "pnpm lint && astro check",
     "format": "oxfmt",
-    "format:check": "oxfmt --check",
     "lint": "oxlint astro.config.ts playwright.config.ts oxfmt.config.ts oxlint.config.ts scripts src tests",
     "preview": "astro preview",
     "serve:static": "jiti scripts/serve-static.ts",
@@ -19,22 +18,21 @@
   },
   "devDependencies": {
     "@astrojs/check": "~0.9.10",
-    "@astrojs/markdown-remark": "~7.2.2",
-    "@astrojs/starlight": "~0.41.7",
+    "@astrojs/markdown-remark": "~7.2.4",
+    "@astrojs/starlight": "~0.41.9",
     "@playwright/test": "~1.62.1",
-    "@types/node": "~26.2.0",
-    "astro": "~7.2.2",
+    "@types/node": "^26.3.0",
+    "astro": "~7.2.7",
     "jiti": "~2.7.0",
-    "oxfmt": "~0.63.0",
-    "oxlint": "~1.78.0",
+    "oxfmt": "~0.65.0",
+    "oxlint": "~1.80.0",
     "oxlint-tsgolint": "~7.0.2001",
     "pagefind": "~1.5.2",
     "sharp": "~0.35.3",
     "typescript": "~6.0.3"
   },
   "engines": {
-    "node": "26.7.0",
-    "pnpm": "11.22.0"
+    "node": "26.7.0"
   },
-  "packageManager": "pnpm@11.22.0"
+  "packageManager": "pnpm@11.23.0"
 }

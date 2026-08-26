@@ -49,7 +49,7 @@ Project-URL: Security, https://github.com/EDM115/miniproto/security/policy
 Requires-Dist: cryptography==50.0.0
 Requires-Dist: uvloop==0.22.1; sys_platform == 'linux' or sys_platform == 'darwin'
 Requires-Dist: winloop==0.6.3; sys_platform == 'win32'
-Requires-Dist: maturin==1.14.1; extra == 'dev'
+Requires-Dist: maturin==1.15.0; extra == 'dev'
 Requires-Dist: griffe==2.2.0; extra == 'docs'
 Provides-Extra: dev
 Provides-Extra: docs

@@ -1,8 +1,8 @@
 <div align="center">
 
-# `miniproto` changelog
-
 <img src="docs-site/src/assets/brand/mark.svg" width="96" height="96" alt="miniproto logo">
+
+# `miniproto` changelog
 
 </div>
 

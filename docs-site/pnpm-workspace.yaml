@@ -1,3 +1,7 @@
 allowBuilds:
   esbuild: true
 dedupePeers: true
+lockfileIncludeTarballUrl: true
+minimumReleaseAge: 120
+resolutionMode: highest
+savePrefix: "~"

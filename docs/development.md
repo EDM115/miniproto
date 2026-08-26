@@ -302,7 +302,7 @@ For a focused local free-threaded check, build against an explicit `t` interpret
 
 ```pwsh
 uv venv .tmp/ft314 --python 3.14t
-uv run --python .tmp/ft314/Scripts/python.exe --with maturin==1.14.1 maturin build --release --locked -i .tmp/ft314/Scripts/python.exe --out .tmp/ft314-wheel
+uv run --python .tmp/ft314/Scripts/python.exe --with maturin==1.15.0 maturin build --release --locked -i .tmp/ft314/Scripts/python.exe --out .tmp/ft314-wheel
 $wheel = Get-ChildItem .tmp/ft314-wheel/*.whl | Select-Object -Single
 uv pip install --python .tmp/ft314/Scripts/python.exe $wheel.FullName
 .tmp/ft314/Scripts/python.exe -X gil=0 -c "import importlib.util, sys, sysconfig; import miniproto; from miniproto import _native; assert sysconfig.get_config_var('Py_GIL_DISABLED') == 1; assert not sys._is_gil_enabled(); assert importlib.util.find_spec('cryptography') is not None; assert importlib.util.find_spec('winloop') is not None; assert _native.native_available()"
