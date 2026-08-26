@@ -1,0 +1,81 @@
+---
+title: "webPageEmpty"
+description: "No description provided by the pinned schema."
+generated: true
+editUrl: false
+language: "telegram"
+kind: "type"
+qualified_name: "webPageEmpty"
+source_path: "tools/schema/schema.json"
+source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
+namespace: "base"
+schema_source: "tdlib"
+constructor_id: "0x211a1788"
+---
+
+# `webPageEmpty`
+
+No description provided by the pinned schema.
+
+## Signature
+
+```tl
+webPageEmpty#211a1788 flags:# id:long url:flags.0?string = WebPage;
+```
+
+## Result type
+
+`WebPage`
+
+## Parameters
+
+| Name | Type | Flag | Default | Description |
+| --- | --- | --- | --- | --- |
+| flags | # | flag word | — | No description provided by the pinned schema. |
+| id | long | — | — | No description provided by the pinned schema. |
+| url | flags.0?string | flags.0 | — | No description provided by the pinned schema. |
+
+## Flags
+
+| Parameter | Bit | Meaning |
+| --- | ---: | --- |
+| url | 0 | Controlled by `flags`; present when this bit is set. |
+
+## Python binding
+
+```python
+from miniproto.raw.types import WebPageEmpty
+```
+
+Public access: `miniproto.raw.types.WebPageEmpty`.
+
+## Safe usage shape
+
+```python
+from miniproto.raw.types import WebPageEmpty
+
+# Naming the raw constructor class is local only; it performs no I/O or network request.
+constructor_type = WebPageEmpty
+```
+
+## Result family
+
+[`WebPage`](/reference/telegram/types/results/web-page/)
+
+## Relationships
+
+- Result family: [`WebPage`](/reference/telegram/types/results/web-page/)
+- Related constructors: [`webPage`](/reference/telegram/types/base/web-page/), [`webPageNotModified`](/reference/telegram/types/base/web-page-not-modified/), [`webPagePending`](/reference/telegram/types/base/web-page-pending/)
+- Accepted by: [`messageMediaWebPage`](/reference/telegram/types/base/message-media-web-page/), [`messages.webPage`](/reference/telegram/types/messages/web-page/), [`updateChannelWebPage`](/reference/telegram/types/base/update-channel-web-page/), [`updateWebPage`](/reference/telegram/types/base/update-web-page/)
+
+## Provenance
+
+- structural source: `tdlib`
+- canonical schema: https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/telegram_api.tl
+- prose merge precedence: TDLib → Telegram Desktop → Core JSON
+- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 229 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
+
+## Source-diff notes
+
+- tdlib_vs_core: changed_count=78; core_only_count=18; overlap_count=2285; tdlib_only_count=195
+- tdlib_vs_tdesktop: changed_count=0; overlap_count=2470; tdesktop_only=null; tdlib_only=accessPointRule, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret

@@ -1,0 +1,392 @@
+name: Build release artifacts
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-release-artifacts-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  linux-wheels:
+    name: Wheel Linux ${{ matrix.platform.libc }} ${{ matrix.platform.arch }} ${{ matrix.python.python-version }}
+    runs-on: ubuntu-24.04
+    permissions:
+      attestations: write
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        python:
+          - python-version: "3.13"
+            interpreter: python3.13
+            abi: cp313-cp313
+            free-threaded: false
+          - python-version: "3.14"
+            interpreter: python3.14
+            abi: cp314-cp314
+            free-threaded: false
+          - python-version: "3.14t"
+            interpreter: python3.14t
+            abi: cp314-cp314t
+            free-threaded: true
+        platform:
+          - libc: glibc
+            arch: x86_64
+            target: x86_64-unknown-linux-gnu
+            compatibility: "2_17"
+            container: quay.io/pypa/manylinux2014_x86_64@2026.08.24-1
+            docker-platform: linux/amd64
+            qemu: ""
+          - libc: glibc
+            arch: aarch64
+            target: aarch64-unknown-linux-gnu
+            compatibility: "2_17"
+            container: quay.io/pypa/manylinux2014_aarch64@2026.08.24-1
+            docker-platform: linux/arm64
+            qemu: arm64
+          - libc: musl
+            arch: x86_64
+            target: x86_64-unknown-linux-musl
+            compatibility: musllinux_1_2
+            container: quay.io/pypa/musllinux_1_2_x86_64@2026.08.24-1
+            docker-platform: linux/amd64
+            qemu: ""
+          - libc: musl
+            arch: aarch64
+            target: aarch64-unknown-linux-musl
+            compatibility: musllinux_1_2
+            container: quay.io/pypa/musllinux_1_2_aarch64@2026.08.24-1
+            docker-platform: linux/arm64
+            qemu: arm64
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up QEMU for cross-architecture build and test
+        if: matrix.platform.qemu != ''
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: ${{ matrix.platform.qemu }}
+
+      - name: Build wheel
+        uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          maturin-version: v1.15.0
+          target: ${{ matrix.platform.target }}
+          manylinux: ${{ matrix.platform.compatibility }}
+          container: ${{ matrix.platform.container }}
+          rust-toolchain: "1.98"
+          args: --release --locked --compatibility pypi -i ${{ matrix.python.interpreter }} --out dist
+
+      - name: Install and exercise wheel in its target Linux container
+        shell: bash
+        env:
+          TEST_IMAGE: ${{ matrix.platform.container }}
+          TEST_PLATFORM: ${{ matrix.platform.docker-platform }}
+          TEST_INTERPRETER: /opt/python/${{ matrix.python.abi }}/bin/python
+          EXPECT_FREE_THREADED: ${{ matrix.python.free-threaded }}
+        run: |
+          docker run --rm --platform "$TEST_PLATFORM" -e EXPECT_FREE_THREADED -v "$GITHUB_WORKSPACE:/io" "$TEST_IMAGE" /bin/bash -euxo pipefail -c 'interpreter="$1"; test_code="$2"; "$interpreter" -m pip install /io/dist/*.whl; "$interpreter" -I -c "$test_code"' bash "$TEST_INTERPRETER" 'import importlib.metadata as metadata; import importlib.util; import os; import shutil; import subprocess; import sys; import sysconfig; from concurrent.futures import ThreadPoolExecutor; import miniproto; from miniproto import _native; expected_free_threaded = os.environ["EXPECT_FREE_THREADED"].lower() == "true"; assert bool(sysconfig.get_config_var("Py_GIL_DISABLED")) == expected_free_threaded; assert not expected_free_threaded or not sys._is_gil_enabled(); assert importlib.util.find_spec("cryptography") is not None; assert importlib.util.find_spec("uvloop") is not None; assert _native.native_available(); record = miniproto.SessionRecord(); protected = miniproto.export_session_string(record, passphrase="wheel acceptance"); assert miniproto.import_session_string(protected, passphrase="wheel acceptance") == record; payload = b"miniproto-wheel-thread-safety" * 256; expected = _native.sha256_digest(payload); executor = ThreadPoolExecutor(max_workers=8); results = tuple(executor.map(_native.sha256_digest, (payload,) * 256)); executor.shutdown(); assert all(result == expected for result in results); entry_points = sorted((entry_point for entry_point in metadata.distribution("miniproto").entry_points if entry_point.group == "console_scripts"), key=lambda entry_point: entry_point.name); assert entry_points; executables = [shutil.which(entry_point.name, path=sysconfig.get_path("scripts")) for entry_point in entry_points]; assert all(executables); [subprocess.check_call([executable, "--help"]) for executable in executables]'
+
+      - name: Attest wheel
+        uses: actions/attest@v4
+        with:
+          subject-path: dist/*.whl
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v7
+        with:
+          archive: false
+          path: dist/*.whl
+          if-no-files-found: error
+          retention-days: 30
+
+  native-wheels:
+    name: Wheel ${{ matrix.platform.platform }} ${{ matrix.platform.arch }} ${{ matrix.python.python-version }}
+    runs-on: ${{ matrix.platform.runner }}
+    permissions:
+      attestations: write
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        python:
+          - python-version: "3.13"
+            free-threaded: false
+          - python-version: "3.14"
+            free-threaded: false
+          - python-version: "3.14t"
+            free-threaded: true
+        platform:
+          - platform: windows
+            arch: x86_64
+            runner: windows-latest
+            python-architecture: x64
+            target: x86_64-pc-windows-msvc
+            expect-cryptography: "true"
+          - platform: windows
+            arch: aarch64
+            runner: windows-11-arm
+            python-architecture: arm64
+            target: aarch64-pc-windows-msvc
+            expect-cryptography: "false"
+          - platform: macos
+            arch: x86_64
+            runner: macos-15-intel
+            python-architecture: x64
+            target: x86_64-apple-darwin
+            expect-cryptography: "true"
+          - platform: macos
+            arch: aarch64
+            runner: macos-15
+            python-architecture: arm64
+            target: aarch64-apple-darwin
+            expect-cryptography: "true"
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python.python-version }}
+          architecture: ${{ matrix.platform.python-architecture }}
+
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+          cache-suffix: wheel-${{ matrix.platform.platform }}-${{ matrix.platform.arch }}-py${{ matrix.python.python-version }}
+
+      - name: Build wheel
+        uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          maturin-version: v1.15.0
+          target: ${{ matrix.platform.target }}
+          manylinux: "off"
+          rust-toolchain: "1.98"
+          args: --release --locked --compatibility pypi -i python --out dist
+
+      - name: Install and exercise wheel in clean runner Python
+        shell: python
+        env:
+          EXPECT_FREE_THREADED: ${{ matrix.python.free-threaded }}
+          EXPECT_CRYPTOGRAPHY: ${{ matrix.platform.expect-cryptography }}
+        run: |
+          import glob
+          import importlib.metadata as metadata
+          import importlib.util
+          import os
+          import shutil
+          import subprocess
+          import sys
+          import sysconfig
+          from concurrent.futures import ThreadPoolExecutor
+
+          wheels = glob.glob("dist/*.whl")
+          if len(wheels) != 1:
+              raise SystemExit(f"expected one wheel, found {wheels}")
+          subprocess.check_call(["uv", "pip", "install", "--system", wheels[0]])
+          import miniproto
+          from miniproto import _native
+
+          expected_free_threaded = os.environ["EXPECT_FREE_THREADED"].lower() == "true"
+          expected_cryptography = os.environ["EXPECT_CRYPTOGRAPHY"].lower() == "true"
+          assert bool(sysconfig.get_config_var("Py_GIL_DISABLED")) == expected_free_threaded
+          assert not expected_free_threaded or not sys._is_gil_enabled()
+          assert (importlib.util.find_spec("cryptography") is not None) == expected_cryptography
+          assert importlib.util.find_spec("uvloop" if sys.platform == "darwin" else "winloop") is not None
+          assert _native.native_available()
+          record = miniproto.SessionRecord()
+          protected = miniproto.export_session_string(record, passphrase="wheel acceptance")
+          assert miniproto.import_session_string(protected, passphrase="wheel acceptance") == record
+          payload = b"miniproto-wheel-thread-safety" * 256
+          expected = _native.sha256_digest(payload)
+          with ThreadPoolExecutor(max_workers=8) as executor:
+              results = tuple(executor.map(_native.sha256_digest, (payload,) * 256))
+          assert all(result == expected for result in results)
+          entry_points = sorted(
+              (entry_point for entry_point in metadata.distribution("miniproto").entry_points if entry_point.group == "console_scripts"),
+              key=lambda entry_point: entry_point.name,
+          )
+          if not entry_points:
+              raise SystemExit("wheel installed no miniproto console scripts")
+          for entry_point in entry_points:
+              executable = shutil.which(entry_point.name, path=sysconfig.get_path("scripts"))
+              if executable is None:
+                  raise SystemExit(f"console script is missing from the selected interpreter: {entry_point.name}")
+              subprocess.check_call([executable, "--help"])
+
+      - name: Attest wheel
+        uses: actions/attest@v4
+        with:
+          subject-path: dist/*.whl
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v7
+        with:
+          archive: false
+          path: dist/*.whl
+          if-no-files-found: error
+          retention-days: 30
+
+  python-sdist:
+    name: Python source distribution
+    runs-on: ubuntu-24.04
+    permissions:
+      attestations: write
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          python-version: "3.14"
+          enable-cache: true
+          cache-suffix: release-sdist
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: "1.98"
+
+      - name: Build Python source distribution
+        run: |
+          uv sync --extra dev,docs --frozen
+          uv run maturin sdist --out dist
+
+      - name: Require exactly one source distribution
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          distributions=(dist/*.tar.gz)
+          if [[ ${#distributions[@]} -ne 1 ]]; then
+            printf 'expected one Python source distribution, found %s\n' "${#distributions[@]}" >&2
+            exit 1
+          fi
+          printf 'Python source distribution: %s\n' "${distributions[0]}"
+
+      - name: Attest Python source distribution
+        uses: actions/attest@v4
+        with:
+          subject-path: dist/*.tar.gz
+
+      - name: Upload Python source distribution
+        uses: actions/upload-artifact@v7
+        with:
+          archive: false
+          path: dist/*.tar.gz
+          if-no-files-found: error
+          retention-days: 30
+
+  rust-crate:
+    name: Rust source package
+    runs-on: ubuntu-24.04
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/.tmp/release-crate-target
+    permissions:
+      attestations: write
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: "1.98"
+
+      - name: Inspect Cargo package contents
+        run: cargo package --locked -p miniproto --list
+
+      - name: Build and package Rust source
+        run: |
+          cargo build --locked --release --all-features -p miniproto
+          cargo package --locked -p miniproto
+
+      - name: Require exactly one Cargo source package
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          packages=("$CARGO_TARGET_DIR"/package/*.crate)
+          if [[ ${#packages[@]} -ne 1 ]]; then
+            printf 'expected one Cargo source package, found %s\n' "${#packages[@]}" >&2
+            exit 1
+          fi
+          printf 'Cargo source package: %s\n' "${packages[0]}"
+
+      - name: Attest Cargo source package
+        uses: actions/attest@v4
+        with:
+          subject-path: ${{ env.CARGO_TARGET_DIR }}/package/*.crate
+
+      - name: Upload Cargo source package
+        uses: actions/upload-artifact@v7
+        with:
+          archive: false
+          path: ${{ env.CARGO_TARGET_DIR }}/package/*.crate
+          if-no-files-found: error
+          retention-days: 30
+
+  release-manifest:
+    name: Release candidate manifest
+    needs: [linux-wheels, native-wheels, python-sdist, rust-crate]
+    runs-on: ubuntu-24.04
+    permissions:
+      attestations: write
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download raw release distributions
+        uses: actions/download-artifact@v8
+        with:
+          path: release-artifacts
+          merge-multiple: true
+          digest-mismatch: error
+
+      - name: Validate release candidate and create manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
+          python -m tools.release_artifacts manifest \
+            --artifacts-dir release-artifacts \
+            --output-dir release-summary \
+            --version "$version" \
+            --repository "${{ github.repository }}" \
+            --workflow .github/workflows/build-wheels.yml \
+            --run-id "${{ github.run_id }}" \
+            --run-attempt "${{ github.run_attempt }}" \
+            --source-sha "${{ github.sha }}" \
+            --source-ref "${{ github.ref }}" \
+            --event "${{ github.event_name }}"
+
+      - name: Attest release manifest and checksums
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            release-summary/release-manifest.json
+            release-summary/SHA256SUMS
+
+      - name: Upload release manifest
+        uses: actions/upload-artifact@v7
+        with:
+          archive: false
+          path: release-summary/release-manifest.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload release checksums
+        uses: actions/upload-artifact@v7
+        with:
+          archive: false
+          path: release-summary/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 30

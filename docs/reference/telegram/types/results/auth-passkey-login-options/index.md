@@ -1,0 +1,21 @@
+---
+title: "Telegram result family: auth.PasskeyLoginOptions"
+description: "Layer 229 result-family index for 1 canonical constructors returning auth.PasskeyLoginOptions from tdlib."
+generated: true
+editUrl: false
+language: "telegram"
+kind: "index"
+qualified_name: "telegram.types.result.auth.PasskeyLoginOptions"
+source_path: "tools/schema/schema.json"
+source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
+namespace: "results"
+schema_source: "tdlib"
+---
+
+## Layer 229 result family `auth.PasskeyLoginOptions`
+
+Selected canonical constructors in this family: 1.
+
+## Constructors
+
+- [`auth.passkeyLoginOptions`](/reference/telegram/types/auth/passkey-login-options/): `auth.PasskeyLoginOptions`

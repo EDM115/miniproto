@@ -1,0 +1,24 @@
+---
+import DefaultEditLink from '@astrojs/starlight/components/EditLink.astro';
+
+const { entry } = Astro.locals.starlightRoute;
+const sourceUrl = entry?.data.source_url;
+---
+
+{
+  sourceUrl ? (
+    <a class="source-link" href={sourceUrl} rel="noreferrer">
+      View source
+    </a>
+  ) : (
+    <DefaultEditLink {...Astro.props} />
+  )
+}
+
+<style>
+  .source-link {
+    color: var(--sl-color-text-accent);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+</style>

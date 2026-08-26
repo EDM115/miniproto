@@ -1,0 +1,132 @@
+[build-system]
+requires = ["maturin~=1.15.0"]
+build-backend = "maturin"
+
+[project]
+name = "miniproto"
+version = "0.1.0"
+description = "Async-first MTProto client core for Python with bundled Rust acceleration"
+readme = "README.md"
+requires-python = ">=3.13"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "EDM115", email = "miniproto@edm115.dev" }]
+keywords = ["telegram", "mtproto", "asyncio", "pyo3", "rust"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Framework :: AsyncIO",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Rust",
+  "Typing :: Typed",
+]
+dependencies = [
+  # Remove the Windows ARM64 exclusion after https://github.com/pyca/cryptography/pull/15350 ships in a release with regular and free-threaded wheels on PyPI
+  "cryptography~=50.0.0; sys_platform != 'win32' or (platform_machine != 'ARM64' and platform_machine != 'arm64' and platform_machine != 'aarch64')",
+  "uvloop~=0.22.1; sys_platform == 'linux' or sys_platform == 'darwin'",
+  "winloop~=0.6.3; sys_platform == 'win32' or sys_platform == 'cygwin' or sys_platform == 'cli'",
+]
+
+[project.optional-dependencies]
+dev = [
+  "maturin~=1.15.0",
+  "pytest~=9.1.1",
+  "PyYAML~=6.0.3",
+  "ruff~=0.16.4",
+  "ty~=0.0.74",
+]
+docs = [
+  "griffe~=2.2.0",
+  "griffe2md~=1.5.0",
+]
+
+[project.urls]
+Homepage = "https://miniproto.edm115.dev/"
+Documentation = "https://miniproto.edm115.dev/"
+Source = "https://github.com/EDM115/miniproto"
+Changelog = "https://github.com/EDM115/miniproto/blob/master/CHANGELOG.md"
+Issues = "https://github.com/EDM115/miniproto/issues"
+Funding = "https://github.com/EDM115#support-me-"
+Security = "https://github.com/EDM115/miniproto/security/policy"
+
+[project.scripts]
+miniproto-bench-acceptance = "miniproto._cli:bench_acceptance"
+miniproto-bench-imports = "miniproto._cli:bench_imports"
+miniproto-bench-live-media = "miniproto._cli:bench_live_media"
+miniproto-bench-matrix = "miniproto._cli:bench_matrix"
+miniproto-bench-media-scheduler = "miniproto._cli:bench_media_scheduler"
+miniproto-bench-multi-session-download = "miniproto._cli:bench_multi_session_download"
+miniproto-bench-native-fallback-crypto = "miniproto._cli:bench_native_fallback_crypto"
+miniproto-bench-runtime-paths = "miniproto._cli:bench_runtime_paths"
+miniproto-bench-session-crypto = "miniproto._cli:bench_session_crypto"
+miniproto-bench-tl-fast-paths = "miniproto._cli:bench_tl_fast_paths"
+miniproto-bench-transport-framing = "miniproto._cli:bench_transport_framing"
+miniproto-docs = "miniproto._cli:docs"
+miniproto-docs-rust = "miniproto._cli:docs_rust"
+miniproto-profile-lazy-raw-codec = "miniproto._cli:profile_lazy_raw_codec"
+miniproto-provision-benchmark-session = "miniproto._cli:provision_benchmark_session"
+miniproto-release-artifacts = "miniproto._cli:release_artifacts"
+miniproto-release-check = "miniproto._cli:release_check"
+miniproto-schema-generate = "miniproto._cli:schema_generate"
+miniproto-schema-update = "miniproto._cli:schema_update"
+
+[tool.maturin]
+module-name = "miniproto._native"
+python-source = "src"
+manifest-path = "rust/miniproto/Cargo.toml"
+features = ["pyo3/extension-module"]
+include = [
+  { path = "tools/*.py", format = ["sdist", "wheel"] },
+  { path = "tools/**/*.py", format = ["sdist", "wheel"] },
+  { path = "tools/**/*.json", format = ["sdist", "wheel"] },
+  { path = "tools/**/*.tl", format = ["sdist", "wheel"] },
+  { path = "tools/**/*.md", format = ["sdist", "wheel"] },
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+# Generated reference Markdown is validated by the documentation generator and Astro build, Ruff must not rewrite committed output after a drift check
+exclude = [".venv", ".tmp", "docs/reference"]
+target-version = "py313"
+line-length = 120
+src = ["src", "tests"]
+
+[tool.ruff.format]
+docstring-code-format = true
+line-ending = "lf"
+skip-magic-trailing-comma = true
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC", "C4", "SIM", "RUF", "N", "S", "W"]
+ignore = ["S101", "E501", "N818"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/miniproto/raw/types.py" = ["F822", "I001", "RUF022"]
+"src/miniproto/raw/functions.py" = ["F822", "I001", "RUF022"]
+"src/miniproto/raw/types.pyi" = ["N801", "N803", "N815"]
+"src/miniproto/raw/functions.pyi" = ["N801"]
+"src/miniproto/raw/_types_shards/*.py" = ["F401", "N801", "N806", "N815", "RUF022", "RUF059"]
+"src/miniproto/raw/_function_shards/*.py" = ["F401", "N801", "RUF022"]
+
+[tool.ruff.lint.isort]
+split-on-trailing-comma = false
+
+[tool.ty.environment]
+python-version = "3.13"
+
+[tool.ty.src]
+exclude = [".venv", ".tmp"]
+
+[tool.uv]
+compile-bytecode = true
+link-mode = "copy"
+
+[tool.uv.pip]
+compile-bytecode = true
+generate-hashes = true
+link-mode = "copy"

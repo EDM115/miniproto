@@ -1,0 +1,340 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+    types: [ready_for_review, synchronize]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  python:
+    name: Python ${{ matrix.python-version }} quality and tests
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    env:
+      MINIPROTO_INTEGRATION: 0
+      MINIPROTO_REAL_INTEGRATION: 0
+      MINIPROTO_STRESS: 1
+      PYTHON_GIL: "${{ matrix.python-version == '3.14t' && '0' || '1' }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.13", "3.14", "3.14t"]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+          cache-suffix: py${{ matrix.python-version }}
+
+      - name: Sync locked development environment
+        run: uv sync --extra dev,docs --frozen
+
+      - name: Ruff format check
+        run: uv run ruff format --check .
+
+      - name: Ruff lint
+        run: uv run ruff check .
+
+      - name: Type check
+        run: uv run ty check
+
+      - name: Schema freshness
+        run: uv run miniproto-schema-generate --check
+
+      - name: Tests
+        run: |
+          mkdir -p .tmp
+          uv run pytest --basetemp=.tmp/pytest-ci-${{ matrix.python-version }}
+
+  free-threaded:
+    name: Python ${{ matrix.python-version }} free-threaded runtime
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    env:
+      PYTHON_GIL: "0"
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.14t"]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+          cache-suffix: free-threaded-${{ matrix.python-version }}
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: "1.98"
+
+      - name: Sync dependencies and build native extension
+        run: |
+          uv sync --python "${{ matrix.python-version }}" --extra dev,docs --frozen
+          uv run maturin develop --release --locked
+
+      - name: Exercise the runtime with the GIL disabled
+        shell: bash
+        run: |
+          .venv/bin/python - <<'PY'
+          import importlib.util
+          import sys
+          import sysconfig
+          from concurrent.futures import ThreadPoolExecutor
+
+          import miniproto
+          from miniproto import _native
+
+          assert sysconfig.get_config_var("Py_GIL_DISABLED") == 1
+          assert not sys._is_gil_enabled()
+          assert importlib.util.find_spec("cryptography") is not None
+          assert importlib.util.find_spec("uvloop") is not None
+          assert _native.native_available()
+          record = miniproto.SessionRecord()
+          protected = miniproto.export_session_string(record, passphrase="free-threaded CI")
+          assert miniproto.import_session_string(protected, passphrase="free-threaded CI") == record
+          payload = b"miniproto-free-threaded" * 256
+          expected = _native.sha256_digest(payload)
+          with ThreadPoolExecutor(max_workers=8) as executor:
+              results = tuple(executor.map(_native.sha256_digest, (payload,) * 256))
+          assert all(result == expected for result in results)
+          PY
+
+  rust:
+    name: Rust 1.98 checks
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: clippy, rustfmt
+          toolchain: "1.98"
+
+      - name: Format check
+        run: cargo fmt --check
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+      - name: Tests
+        run: cargo test --workspace --all-features
+
+  benchmark-smoke:
+    name: Benchmark ${{ matrix.platform.platform }} ${{ matrix.platform.arch }} Python ${{ matrix.python.python-version }}
+    needs: [python, rust]
+    runs-on: ${{ matrix.platform.runner }}
+    env:
+      MINIPROTO_INTEGRATION: 0
+      MINIPROTO_REAL_INTEGRATION: 0
+    strategy:
+      fail-fast: false
+      matrix:
+        python:
+          - python-version: "3.14"
+            artifact: py314
+            free-threaded: "false"
+          - python-version: "3.14t"
+            artifact: py314t
+            free-threaded: "true"
+        platform:
+          - platform: linux
+            arch: x86_64
+            runner: ubuntu-24.04
+            python-architecture: x64
+            machine-family: x86_64
+            expect-cryptography: "true"
+          - platform: linux
+            arch: aarch64
+            runner: ubuntu-24.04-arm
+            python-architecture: arm64
+            machine-family: aarch64
+            expect-cryptography: "true"
+          - platform: windows
+            arch: x86_64
+            runner: windows-latest
+            python-architecture: x64
+            machine-family: x86_64
+            expect-cryptography: "true"
+          - platform: windows
+            arch: aarch64
+            runner: windows-11-arm
+            python-architecture: arm64
+            machine-family: aarch64
+            expect-cryptography: "false"
+          - platform: macos
+            arch: x86_64
+            runner: macos-15-intel
+            python-architecture: x64
+            machine-family: x86_64
+            expect-cryptography: "true"
+          - platform: macos
+            arch: aarch64
+            runner: macos-15
+            python-architecture: arm64
+            machine-family: aarch64
+            expect-cryptography: "true"
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python.python-version }}
+          architecture: ${{ matrix.platform.python-architecture }}
+
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+          cache-suffix: benchmark-${{ matrix.platform.platform }}-${{ matrix.platform.arch }}-${{ matrix.python.artifact }}
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: "1.98"
+          cache-key: ${{ matrix.python.artifact }}
+
+      - name: Sync and build native extension
+        run: |
+          uv sync --python python --extra dev,docs --frozen --no-install-project
+          uv run --no-sync maturin develop --release --locked
+
+      - name: Validate and record benchmark environment
+        shell: bash
+        env:
+          BENCHMARK_PLATFORM: ${{ matrix.platform.platform }}
+          BENCHMARK_ARCH: ${{ matrix.platform.arch }}
+          BENCHMARK_PYTHON: ${{ matrix.python.python-version }}
+          EXPECTED_MACHINE_FAMILY: ${{ matrix.platform.machine-family }}
+          EXPECT_FREE_THREADED: ${{ matrix.python.free-threaded }}
+          EXPECT_CRYPTOGRAPHY: ${{ matrix.platform.expect-cryptography }}
+        run: |
+          set -euo pipefail
+          mkdir -p .tmp/benchmark-smoke
+          uv run --no-sync python - <<'PY'
+          import importlib.util
+          import json
+          import os
+          import platform
+          import sys
+          import sysconfig
+          from pathlib import Path
+
+          from miniproto import _native
+
+          machine = platform.machine()
+          machine_family = os.environ["EXPECTED_MACHINE_FAMILY"]
+          machine_aliases = {
+              "x86_64": {"amd64", "x86_64"},
+              "aarch64": {"aarch64", "arm64"},
+          }
+          if machine.lower() not in machine_aliases[machine_family]:
+              raise AssertionError(f"expected {machine_family}, runner reported {machine}")
+
+          expected_free_threaded = os.environ["EXPECT_FREE_THREADED"].lower() == "true"
+          gil_disabled_build = bool(sysconfig.get_config_var("Py_GIL_DISABLED"))
+          gil_enabled_runtime = bool(sys._is_gil_enabled())
+          if gil_disabled_build != expected_free_threaded:
+              raise AssertionError(
+                  f"expected free-threaded={expected_free_threaded}, Py_GIL_DISABLED={gil_disabled_build}"
+              )
+          if gil_enabled_runtime == expected_free_threaded:
+              raise AssertionError(
+                  f"expected runtime GIL enabled={not expected_free_threaded}, got {gil_enabled_runtime}"
+              )
+
+          cryptography_available = importlib.util.find_spec("cryptography") is not None
+          expected_cryptography = os.environ["EXPECT_CRYPTOGRAPHY"].lower() == "true"
+          if cryptography_available != expected_cryptography:
+              raise AssertionError(
+                  f"expected cryptography={expected_cryptography}, available={cryptography_available}"
+              )
+          if not _native.native_available():
+              raise AssertionError("compiled miniproto native backend is unavailable")
+
+          manifest = {
+              "platform": os.environ["BENCHMARK_PLATFORM"],
+              "architecture": os.environ["BENCHMARK_ARCH"],
+              "machine": machine,
+              "python_requested": os.environ["BENCHMARK_PYTHON"],
+              "python_version": platform.python_version(),
+              "python_implementation": platform.python_implementation(),
+              "python_abi": sysconfig.get_config_var("SOABI"),
+              "python_executable": sys.executable,
+              "free_threaded_build": gil_disabled_build,
+              "gil_enabled_runtime": gil_enabled_runtime,
+              "cryptography_available": cryptography_available,
+              "native_available": True,
+          }
+          Path(".tmp/benchmark-smoke/environment.json").write_text(
+              json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          print(json.dumps(manifest, indent=2, sort_keys=True))
+          PY
+
+      - name: Run deterministic benchmark gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .tmp/benchmark-smoke
+          uv run --no-sync miniproto-bench-acceptance --mode smoke --json .tmp/benchmark-smoke/runtime-acceptance.json > .tmp/benchmark-smoke/runtime-acceptance.log
+          uv run --no-sync miniproto-bench-imports --runs 3 > .tmp/benchmark-smoke/imports.json
+          uv run --no-sync miniproto-bench-media-scheduler > .tmp/benchmark-smoke/media-scheduler.json
+          uv run --no-sync miniproto-bench-native-fallback-crypto --mode smoke --json .tmp/benchmark-smoke/native-fallback.json > .tmp/benchmark-smoke/native-fallback.log
+          uv run --no-sync miniproto-bench-runtime-paths > .tmp/benchmark-smoke/runtime-paths.log
+          uv run --no-sync miniproto-bench-session-crypto --mode smoke --json .tmp/benchmark-smoke/session-crypto.json > .tmp/benchmark-smoke/session-crypto.log
+          uv run --no-sync miniproto-bench-tl-fast-paths --mode smoke --json .tmp/benchmark-smoke/tl-fast-paths.json > .tmp/benchmark-smoke/tl-fast-paths.log
+          uv run --no-sync miniproto-bench-transport-framing --mode smoke --json .tmp/benchmark-smoke/transport-framing.json > .tmp/benchmark-smoke/transport-framing.log
+          uv run --no-sync miniproto-profile-lazy-raw-codec > .tmp/benchmark-smoke/lazy-raw-codec.json
+
+      - name: Upload benchmark artifacts
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: benchmark-smoke-${{ matrix.platform.platform }}-${{ matrix.platform.arch }}-${{ matrix.python.artifact }}
+          path: .tmp/benchmark-smoke/
+          if-no-files-found: error
+          retention-days: 30
+
+  sdist:
+    name: Source distribution
+    needs: [python, rust]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          python-version: "3.14"
+          enable-cache: true
+          cache-suffix: sdist
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: "1.98"
+
+      - name: Build sdist
+        run: |
+          uv sync --extra dev,docs --frozen
+          uv run maturin sdist --out dist
+
+      - name: Upload sdist
+        uses: actions/upload-artifact@v7
+        with:
+          archive: false
+          path: dist/*.tar.gz
+          if-no-files-found: error
+          retention-days: 30

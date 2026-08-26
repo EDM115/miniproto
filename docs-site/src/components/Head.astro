@@ -1,0 +1,31 @@
+---
+import DefaultHead from '@astrojs/starlight/components/Head.astro';
+
+interface ReferenceMetadata {
+  aliases?: string[];
+  description?: string;
+  kind?: string;
+  language?: string;
+  module?: string;
+  namespace?: string;
+  python_visible?: boolean;
+  qualified_name?: string;
+}
+
+const data = Astro.locals.starlightRoute.entry.data as ReferenceMetadata;
+const filters: Array<[string, string | number | boolean | undefined]> = [
+  ['language', data.language],
+  ['kind', data.kind],
+  ['namespace', data.namespace],
+  ['module', data.module],
+  ['python_visible', data.python_visible],
+];
+const presentFilters = filters.filter((entry) => entry[1] !== undefined);
+const aliases = data.aliases ?? [];
+---
+
+<DefaultHead {...Astro.props} />
+{presentFilters.map(([name, value]) => <meta data-pagefind-filter={`${name}[content]`} content={String(value)} />)}
+{data.qualified_name && <meta data-pagefind-meta="qualified_name[content]" content={data.qualified_name} />}
+{data.description && <meta data-pagefind-meta="description[content]" content={data.description} />}
+{aliases.map((alias) => <meta data-pagefind-meta="aliases[content]" content={alias} />)}

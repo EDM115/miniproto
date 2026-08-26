@@ -1,0 +1,176 @@
+name: Live Media Benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Benchmark mode
+        required: true
+        default: smoke
+        type: choice
+        options: [smoke, matrix]
+      runner:
+        description: Operating system runner
+        required: true
+        default: both
+        type: choice
+        options: [linux, windows, both]
+      matrix_profile:
+        description: Matrix size; smoke is four edge cells and full is 576 cells
+        required: true
+        default: smoke
+        type: choice
+        options: [smoke, full]
+      actor:
+        description: Account for smoke mode
+        required: true
+        default: bot
+        type: choice
+        options: [user, bot, both]
+      operation:
+        description: Transfer operation for smoke mode
+        required: true
+        default: download
+        type: choice
+        options: [download, upload, both]
+      file_id:
+        description: Explicit pre-uploaded file ID; required by matrix and download-only smoke
+        required: false
+        default: ""
+      size:
+        description: Smoke payload size
+        required: true
+        default: telegram-default
+      dc_id:
+        description: Production DC for encrypted session storage
+        required: true
+        default: "4"
+      repeat:
+        description: Measured smoke repeats
+        required: true
+        default: "1"
+      peer:
+        description: Optional bot destination override; prefer the secret for routine runs
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: miniproto-live-media-bench
+  cancel-in-progress: false
+
+jobs:
+  live-benchmark:
+    name: ${{ inputs.mode }} on ${{ matrix.runner }}
+    runs-on: ${{ matrix.runner == 'linux' && 'ubuntu-latest' || 'windows-latest' }}
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: ${{ fromJSON(inputs.runner == 'both' && '["linux","windows"]' || format('["{0}"]', inputs.runner)) }}
+    env:
+      MINIPROTO_LIVE_BENCH: "1"
+      MINIPROTO_INTEGRATION: "1"
+      MINIPROTO_REAL_INTEGRATION: "1"
+      MINIPROTO_API_ID: ${{ secrets.MINIPROTO_API_ID }}
+      MINIPROTO_API_HASH: ${{ secrets.MINIPROTO_API_HASH }}
+      MINIPROTO_SESSION_KEY: ${{ secrets.MINIPROTO_SESSION_KEY }}
+      MINIPROTO_REAL_PHONE: ${{ secrets.MINIPROTO_REAL_PHONE }}
+      MINIPROTO_REAL_PASSWORD: ${{ secrets.MINIPROTO_REAL_PASSWORD }}
+      MINIPROTO_BOT_TOKEN: ${{ secrets.MINIPROTO_BOT_TOKEN }}
+      MINIPROTO_LIVE_BENCH_USER_PEER: ${{ secrets.MINIPROTO_LIVE_BENCH_USER_PEER }}
+      MINIPROTO_LIVE_BENCH_BOT_PEER: ${{ secrets.MINIPROTO_LIVE_BENCH_BOT_PEER }}
+      MINIPROTO_LIVE_BENCH_USER_SESSION_B64: ${{ secrets.MINIPROTO_LIVE_BENCH_USER_SESSION_B64 }}
+      MINIPROTO_LIVE_BENCH_BOT_SESSION_B64: ${{ secrets.MINIPROTO_LIVE_BENCH_BOT_SESSION_B64 }}
+      MINIPROTO_LIVE_BENCH_USER_STRING_SESSION: ${{ secrets.MINIPROTO_LIVE_BENCH_USER_STRING_SESSION }}
+      MINIPROTO_LIVE_BENCH_BOT_STRING_SESSION: ${{ secrets.MINIPROTO_LIVE_BENCH_BOT_STRING_SESSION }}
+      MINIPROTO_LIVE_BENCH_STRING_PASSPHRASE: ${{ secrets.MINIPROTO_LIVE_BENCH_STRING_PASSPHRASE }}
+      MINIPROTO_LIVE_BENCH_ACTOR: ${{ inputs.actor }}
+      MINIPROTO_LIVE_BENCH_OPERATION: ${{ inputs.operation }}
+      MINIPROTO_LIVE_BENCH_FILE_ID: ${{ inputs.file_id }}
+      MINIPROTO_LIVE_BENCH_USER_FILE_ID: ${{ inputs.file_id }}
+      MINIPROTO_LIVE_BENCH_BOT_FILE_ID: ${{ inputs.file_id }}
+      MINIPROTO_LIVE_BENCH_SIZE: ${{ inputs.size }}
+      MINIPROTO_LIVE_BENCH_DC_ID: ${{ inputs.dc_id }}
+      MINIPROTO_LIVE_BENCH_REPEAT: ${{ inputs.repeat }}
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          python-version: "3.14"
+          enable-cache: true
+          cache-suffix: live-${{ matrix.runner }}
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: "1.98"
+          cache-key: live-${{ matrix.runner }}
+
+      - name: Sync locked environment
+        shell: pwsh
+        run: |
+          uv sync --extra dev,docs --frozen
+          uv run --no-sync maturin develop --release --locked
+
+      - name: Restore optional encrypted sessions
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path .tmp | Out-Null
+          function Restore-Session([string]$Actor, [string]$Encoded) {
+            if ([string]::IsNullOrWhiteSpace($Encoded)) { return }
+            $Target = ".tmp/miniproto-live-bench-$Actor-dc${{ inputs.dc_id }}.sqlite"
+            [IO.File]::WriteAllBytes($Target, [Convert]::FromBase64String($Encoded))
+            Write-Output "restored encrypted $Actor session"
+          }
+          Restore-Session "user" $env:MINIPROTO_LIVE_BENCH_USER_SESSION_B64
+          Restore-Session "bot" $env:MINIPROTO_LIVE_BENCH_BOT_SESSION_B64
+
+      - name: Provision optional string sessions
+        shell: pwsh
+        run: uv run miniproto-provision-benchmark-session --dc-id "${{ inputs.dc_id }}"
+
+      - name: Validate non-interactive inputs
+        shell: pwsh
+        run: |
+          if ("${{ inputs.mode }}" -eq "matrix" -and [string]::IsNullOrWhiteSpace("${{ inputs.file_id }}")) {
+            throw "matrix mode require an explicit pre-uploaded file_id"
+          }
+          if ("${{ inputs.mode }}" -eq "smoke" -and "${{ inputs.operation }}" -eq "download" -and [string]::IsNullOrWhiteSpace("${{ inputs.file_id }}")) {
+            throw "download-only smoke mode requires an explicit pre-uploaded file_id"
+          }
+
+      - name: Run selected live benchmark
+        shell: pwsh
+        run: |
+          $Output = ".tmp/live-bench-results/${{ inputs.mode }}-${{ matrix.runner }}"
+          New-Item -ItemType Directory -Force -Path $Output | Out-Null
+          if ("${{ inputs.mode }}" -eq "smoke") {
+            $Arguments = @(
+              "run", "miniproto-bench-live-media",
+              "--actor", "${{ inputs.actor }}",
+              "--operation", "${{ inputs.operation }}",
+              "--repeat", "${{ inputs.repeat }}",
+              "--size", "${{ inputs.size }}",
+              "--dc-id", "${{ inputs.dc_id }}",
+              "--json", "$Output/summary.json",
+              "--loop-lag"
+            )
+            if (-not [string]::IsNullOrWhiteSpace("${{ inputs.file_id }}")) { $Arguments += @("--file-id", "${{ inputs.file_id }}") }
+            & uv @Arguments 2>&1 | Tee-Object -FilePath "$Output/benchmark.log"
+          } elseif ("${{ inputs.mode }}" -eq "matrix") {
+            & uv run miniproto-bench-matrix --mode "${{ inputs.matrix_profile }}" --output "$Output/matrix" 2>&1 | Tee-Object -FilePath "$Output/benchmark.log"
+          }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload live benchmark artifacts
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: live-${{ inputs.mode }}-${{ matrix.runner }}-dc${{ inputs.dc_id }}
+          path: .tmp/live-bench-results/
+          if-no-files-found: warn
+          retention-days: 30

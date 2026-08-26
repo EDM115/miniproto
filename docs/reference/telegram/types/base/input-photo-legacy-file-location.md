@@ -1,0 +1,78 @@
+---
+title: "inputPhotoLegacyFileLocation"
+description: "No description provided by the pinned schema."
+generated: true
+editUrl: false
+language: "telegram"
+kind: "type"
+qualified_name: "inputPhotoLegacyFileLocation"
+source_path: "tools/schema/schema.json"
+source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
+namespace: "base"
+schema_source: "tdlib"
+constructor_id: "0xd83466f3"
+---
+
+# `inputPhotoLegacyFileLocation`
+
+No description provided by the pinned schema.
+
+## Signature
+
+```tl
+inputPhotoLegacyFileLocation#d83466f3 id:long access_hash:long file_reference:bytes volume_id:long local_id:int secret:long = InputFileLocation;
+```
+
+## Result type
+
+`InputFileLocation`
+
+## Parameters
+
+| Name | Type | Flag | Default | Description |
+| --- | --- | --- | --- | --- |
+| id | long | — | — | No description provided by the pinned schema. |
+| access_hash | long | — | — | No description provided by the pinned schema. |
+| file_reference | bytes | — | — | No description provided by the pinned schema. |
+| volume_id | long | — | — | No description provided by the pinned schema. |
+| local_id | int | — | — | No description provided by the pinned schema. |
+| secret | long | — | — | No description provided by the pinned schema. |
+
+## Python binding
+
+```python
+from miniproto.raw.types import InputPhotoLegacyFileLocation
+```
+
+Public access: `miniproto.raw.types.InputPhotoLegacyFileLocation`.
+
+## Safe usage shape
+
+```python
+from miniproto.raw.types import InputPhotoLegacyFileLocation
+
+# Naming the raw constructor class is local only; it performs no I/O or network request.
+constructor_type = InputPhotoLegacyFileLocation
+```
+
+## Result family
+
+[`InputFileLocation`](/reference/telegram/types/results/input-file-location/)
+
+## Relationships
+
+- Result family: [`InputFileLocation`](/reference/telegram/types/results/input-file-location/)
+- Related constructors: [`inputDocumentFileLocation`](/reference/telegram/types/base/input-document-file-location/), [`inputEncryptedFileLocation`](/reference/telegram/types/base/input-encrypted-file-location/), [`inputFileLocation`](/reference/telegram/types/base/input-file-location/), [`inputGroupCallStream`](/reference/telegram/types/base/input-group-call-stream/), [`inputPeerPhotoFileLocation`](/reference/telegram/types/base/input-peer-photo-file-location/), [`inputPeerPhotoFileLocationLegacy`](/reference/telegram/types/base/input-peer-photo-file-location-legacy/), [`inputPhotoFileLocation`](/reference/telegram/types/base/input-photo-file-location/), [`inputSecureFileLocation`](/reference/telegram/types/base/input-secure-file-location/), [`inputStickerSetThumb`](/reference/telegram/types/base/input-sticker-set-thumb/), [`inputStickerSetThumbLegacy`](/reference/telegram/types/base/input-sticker-set-thumb-legacy/), [`inputTakeoutFileLocation`](/reference/telegram/types/base/input-takeout-file-location/)
+- Accepted by: [`upload.getFile`](/reference/telegram/functions/upload/get-file/), [`upload.getFileHashes`](/reference/telegram/functions/upload/get-file-hashes/)
+
+## Provenance
+
+- structural source: `tdlib`
+- canonical schema: https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/telegram_api.tl
+- prose merge precedence: TDLib → Telegram Desktop → Core JSON
+- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 229 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
+
+## Source-diff notes
+
+- tdlib_vs_core: changed_count=78; core_only_count=18; overlap_count=2285; tdlib_only_count=195
+- tdlib_vs_tdesktop: changed_count=0; overlap_count=2470; tdesktop_only=null; tdlib_only=accessPointRule, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret

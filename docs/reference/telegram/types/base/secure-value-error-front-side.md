@@ -1,0 +1,75 @@
+---
+title: "secureValueErrorFrontSide"
+description: "No description provided by the pinned schema."
+generated: true
+editUrl: false
+language: "telegram"
+kind: "type"
+qualified_name: "secureValueErrorFrontSide"
+source_path: "tools/schema/schema.json"
+source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
+namespace: "base"
+schema_source: "tdlib"
+constructor_id: "0x00be3dfa"
+---
+
+# `secureValueErrorFrontSide`
+
+No description provided by the pinned schema.
+
+## Signature
+
+```tl
+secureValueErrorFrontSide#00be3dfa type:SecureValueType file_hash:bytes text:string = SecureValueError;
+```
+
+## Result type
+
+`SecureValueError`
+
+## Parameters
+
+| Name | Type | Flag | Default | Description |
+| --- | --- | --- | --- | --- |
+| type | SecureValueType | — | — | No description provided by the pinned schema. |
+| file_hash | bytes | — | — | No description provided by the pinned schema. |
+| text | string | — | — | No description provided by the pinned schema. |
+
+## Python binding
+
+```python
+from miniproto.raw.types import SecureValueErrorFrontSide
+```
+
+Public access: `miniproto.raw.types.SecureValueErrorFrontSide`.
+
+## Safe usage shape
+
+```python
+from miniproto.raw.types import SecureValueErrorFrontSide
+
+# Naming the raw constructor class is local only; it performs no I/O or network request.
+constructor_type = SecureValueErrorFrontSide
+```
+
+## Result family
+
+[`SecureValueError`](/reference/telegram/types/results/secure-value-error/)
+
+## Relationships
+
+- Result family: [`SecureValueError`](/reference/telegram/types/results/secure-value-error/)
+- Related constructors: [`secureValueError`](/reference/telegram/types/base/secure-value-error/), [`secureValueErrorData`](/reference/telegram/types/base/secure-value-error-data/), [`secureValueErrorFile`](/reference/telegram/types/base/secure-value-error-file/), [`secureValueErrorFiles`](/reference/telegram/types/base/secure-value-error-files/), [`secureValueErrorReverseSide`](/reference/telegram/types/base/secure-value-error-reverse-side/), [`secureValueErrorSelfie`](/reference/telegram/types/base/secure-value-error-selfie/), [`secureValueErrorTranslationFile`](/reference/telegram/types/base/secure-value-error-translation-file/), [`secureValueErrorTranslationFiles`](/reference/telegram/types/base/secure-value-error-translation-files/)
+- Accepted by: [`users.setSecureValueErrors`](/reference/telegram/functions/users/set-secure-value-errors/), [`account.authorizationForm`](/reference/telegram/types/account/authorization-form/)
+
+## Provenance
+
+- structural source: `tdlib`
+- canonical schema: https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/telegram_api.tl
+- prose merge precedence: TDLib → Telegram Desktop → Core JSON
+- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 229 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
+
+## Source-diff notes
+
+- tdlib_vs_core: changed_count=78; core_only_count=18; overlap_count=2285; tdlib_only_count=195
+- tdlib_vs_tdesktop: changed_count=0; overlap_count=2470; tdesktop_only=null; tdlib_only=accessPointRule, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret

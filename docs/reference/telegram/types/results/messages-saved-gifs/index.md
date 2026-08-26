@@ -1,0 +1,22 @@
+---
+title: "Telegram result family: messages.SavedGifs"
+description: "Layer 229 result-family index for 2 canonical constructors returning messages.SavedGifs from tdlib."
+generated: true
+editUrl: false
+language: "telegram"
+kind: "index"
+qualified_name: "telegram.types.result.messages.SavedGifs"
+source_path: "tools/schema/schema.json"
+source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
+namespace: "results"
+schema_source: "tdlib"
+---
+
+## Layer 229 result family `messages.SavedGifs`
+
+Selected canonical constructors in this family: 2.
+
+## Constructors
+
+- [`messages.savedGifs`](/reference/telegram/types/messages/saved-gifs/): `messages.SavedGifs`
+- [`messages.savedGifsNotModified`](/reference/telegram/types/messages/saved-gifs-not-modified/): `messages.SavedGifs`

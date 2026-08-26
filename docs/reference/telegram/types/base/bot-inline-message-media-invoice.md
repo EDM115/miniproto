@@ -1,0 +1,90 @@
+---
+title: "botInlineMessageMediaInvoice"
+description: "No description provided by the pinned schema."
+generated: true
+editUrl: false
+language: "telegram"
+kind: "type"
+qualified_name: "botInlineMessageMediaInvoice"
+source_path: "tools/schema/schema.json"
+source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
+namespace: "base"
+schema_source: "tdlib"
+constructor_id: "0x354a9b09"
+---
+
+# `botInlineMessageMediaInvoice`
+
+No description provided by the pinned schema.
+
+## Signature
+
+```tl
+botInlineMessageMediaInvoice#354a9b09 flags:# shipping_address_requested:flags.1?true test:flags.3?true title:string description:string photo:flags.0?WebDocument currency:string total_amount:long reply_markup:flags.2?ReplyMarkup = BotInlineMessage;
+```
+
+## Result type
+
+`BotInlineMessage`
+
+## Parameters
+
+| Name | Type | Flag | Default | Description |
+| --- | --- | --- | --- | --- |
+| flags | # | flag word | — | No description provided by the pinned schema. |
+| shipping_address_requested | flags.1?true | flags.1 | — | No description provided by the pinned schema. |
+| test | flags.3?true | flags.3 | — | No description provided by the pinned schema. |
+| title | string | — | — | No description provided by the pinned schema. |
+| description | string | — | — | No description provided by the pinned schema. |
+| photo | flags.0?WebDocument | flags.0 | — | No description provided by the pinned schema. |
+| currency | string | — | — | No description provided by the pinned schema. |
+| total_amount | long | — | — | No description provided by the pinned schema. |
+| reply_markup | flags.2?ReplyMarkup | flags.2 | — | No description provided by the pinned schema. |
+
+## Flags
+
+| Parameter | Bit | Meaning |
+| --- | ---: | --- |
+| shipping_address_requested | 1 | Controlled by `flags`; present when this bit is set. |
+| test | 3 | Controlled by `flags`; present when this bit is set. |
+| photo | 0 | Controlled by `flags`; present when this bit is set. |
+| reply_markup | 2 | Controlled by `flags`; present when this bit is set. |
+
+## Python binding
+
+```python
+from miniproto.raw.types import BotInlineMessageMediaInvoice
+```
+
+Public access: `miniproto.raw.types.BotInlineMessageMediaInvoice`.
+
+## Safe usage shape
+
+```python
+from miniproto.raw.types import BotInlineMessageMediaInvoice
+
+# Naming the raw constructor class is local only; it performs no I/O or network request.
+constructor_type = BotInlineMessageMediaInvoice
+```
+
+## Result family
+
+[`BotInlineMessage`](/reference/telegram/types/results/bot-inline-message/)
+
+## Relationships
+
+- Result family: [`BotInlineMessage`](/reference/telegram/types/results/bot-inline-message/)
+- Related constructors: [`botInlineMessageMediaAuto`](/reference/telegram/types/base/bot-inline-message-media-auto/), [`botInlineMessageMediaContact`](/reference/telegram/types/base/bot-inline-message-media-contact/), [`botInlineMessageMediaGeo`](/reference/telegram/types/base/bot-inline-message-media-geo/), [`botInlineMessageMediaVenue`](/reference/telegram/types/base/bot-inline-message-media-venue/), [`botInlineMessageMediaWebPage`](/reference/telegram/types/base/bot-inline-message-media-web-page/), [`botInlineMessageRichMessage`](/reference/telegram/types/base/bot-inline-message-rich-message/), [`botInlineMessageText`](/reference/telegram/types/base/bot-inline-message-text/)
+- Accepted by: [`botInlineMediaResult`](/reference/telegram/types/base/bot-inline-media-result/), [`botInlineResult`](/reference/telegram/types/base/bot-inline-result/)
+
+## Provenance
+
+- structural source: `tdlib`
+- canonical schema: https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/telegram_api.tl
+- prose merge precedence: TDLib → Telegram Desktop → Core JSON
+- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 229 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
+
+## Source-diff notes
+
+- tdlib_vs_core: changed_count=78; core_only_count=18; overlap_count=2285; tdlib_only_count=195
+- tdlib_vs_tdesktop: changed_count=0; overlap_count=2470; tdesktop_only=null; tdlib_only=accessPointRule, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret

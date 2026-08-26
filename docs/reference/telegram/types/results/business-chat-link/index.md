@@ -1,0 +1,21 @@
+---
+title: "Telegram result family: BusinessChatLink"
+description: "Layer 229 result-family index for 1 canonical constructors returning BusinessChatLink from tdlib."
+generated: true
+editUrl: false
+language: "telegram"
+kind: "index"
+qualified_name: "telegram.types.result.BusinessChatLink"
+source_path: "tools/schema/schema.json"
+source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
+namespace: "results"
+schema_source: "tdlib"
+---
+
+## Layer 229 result family `BusinessChatLink`
+
+Selected canonical constructors in this family: 1.
+
+## Constructors
+
+- [`businessChatLink`](/reference/telegram/types/base/business-chat-link/): `BusinessChatLink`

@@ -1,0 +1,89 @@
+---
+title: "pageListOrderedItemText"
+description: "No description provided by the pinned schema."
+generated: true
+editUrl: false
+language: "telegram"
+kind: "type"
+qualified_name: "pageListOrderedItemText"
+source_path: "tools/schema/schema.json"
+source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
+namespace: "base"
+schema_source: "tdlib"
+constructor_id: "0x15031189"
+---
+
+# `pageListOrderedItemText`
+
+No description provided by the pinned schema.
+
+## Signature
+
+```tl
+pageListOrderedItemText#15031189 flags:# checkbox:flags.0?true checked:flags.1?true num:flags.2?string text:RichText value:flags.3?int type:flags.4?string = PageListOrderedItem;
+```
+
+## Result type
+
+`PageListOrderedItem`
+
+## Parameters
+
+| Name | Type | Flag | Default | Description |
+| --- | --- | --- | --- | --- |
+| flags | # | flag word | — | No description provided by the pinned schema. |
+| checkbox | flags.0?true | flags.0 | — | No description provided by the pinned schema. |
+| checked | flags.1?true | flags.1 | — | No description provided by the pinned schema. |
+| num | flags.2?string | flags.2 | — | No description provided by the pinned schema. |
+| text | RichText | — | — | No description provided by the pinned schema. |
+| value | flags.3?int | flags.3 | — | No description provided by the pinned schema. |
+| type | flags.4?string | flags.4 | — | No description provided by the pinned schema. |
+
+## Flags
+
+| Parameter | Bit | Meaning |
+| --- | ---: | --- |
+| checkbox | 0 | Controlled by `flags`; present when this bit is set. |
+| checked | 1 | Controlled by `flags`; present when this bit is set. |
+| num | 2 | Controlled by `flags`; present when this bit is set. |
+| value | 3 | Controlled by `flags`; present when this bit is set. |
+| type | 4 | Controlled by `flags`; present when this bit is set. |
+
+## Python binding
+
+```python
+from miniproto.raw.types import PageListOrderedItemText
+```
+
+Public access: `miniproto.raw.types.PageListOrderedItemText`.
+
+## Safe usage shape
+
+```python
+from miniproto.raw.types import PageListOrderedItemText
+
+# Naming the raw constructor class is local only; it performs no I/O or network request.
+constructor_type = PageListOrderedItemText
+```
+
+## Result family
+
+[`PageListOrderedItem`](/reference/telegram/types/results/page-list-ordered-item/)
+
+## Relationships
+
+- Result family: [`PageListOrderedItem`](/reference/telegram/types/results/page-list-ordered-item/)
+- Related constructors: [`pageListOrderedItemBlocks`](/reference/telegram/types/base/page-list-ordered-item-blocks/)
+- Accepted by: [`pageBlockOrderedList`](/reference/telegram/types/base/page-block-ordered-list/)
+
+## Provenance
+
+- structural source: `tdlib`
+- canonical schema: https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/telegram_api.tl
+- prose merge precedence: TDLib → Telegram Desktop → Core JSON
+- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 229 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
+
+## Source-diff notes
+
+- tdlib_vs_core: changed_count=78; core_only_count=18; overlap_count=2285; tdlib_only_count=195
+- tdlib_vs_tdesktop: changed_count=0; overlap_count=2470; tdesktop_only=null; tdlib_only=accessPointRule, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret

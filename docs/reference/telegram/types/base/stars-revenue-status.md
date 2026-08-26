@@ -1,0 +1,84 @@
+---
+title: "starsRevenueStatus"
+description: "No description provided by the pinned schema."
+generated: true
+editUrl: false
+language: "telegram"
+kind: "type"
+qualified_name: "starsRevenueStatus"
+source_path: "tools/schema/schema.json"
+source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
+namespace: "base"
+schema_source: "tdlib"
+constructor_id: "0xfebe5491"
+---
+
+# `starsRevenueStatus`
+
+No description provided by the pinned schema.
+
+## Signature
+
+```tl
+starsRevenueStatus#febe5491 flags:# withdrawal_enabled:flags.0?true current_balance:StarsAmount available_balance:StarsAmount overall_revenue:StarsAmount next_withdrawal_at:flags.1?int = StarsRevenueStatus;
+```
+
+## Result type
+
+`StarsRevenueStatus`
+
+## Parameters
+
+| Name | Type | Flag | Default | Description |
+| --- | --- | --- | --- | --- |
+| flags | # | flag word | — | No description provided by the pinned schema. |
+| withdrawal_enabled | flags.0?true | flags.0 | — | No description provided by the pinned schema. |
+| current_balance | StarsAmount | — | — | No description provided by the pinned schema. |
+| available_balance | StarsAmount | — | — | No description provided by the pinned schema. |
+| overall_revenue | StarsAmount | — | — | No description provided by the pinned schema. |
+| next_withdrawal_at | flags.1?int | flags.1 | — | No description provided by the pinned schema. |
+
+## Flags
+
+| Parameter | Bit | Meaning |
+| --- | ---: | --- |
+| withdrawal_enabled | 0 | Controlled by `flags`; present when this bit is set. |
+| next_withdrawal_at | 1 | Controlled by `flags`; present when this bit is set. |
+
+## Python binding
+
+```python
+from miniproto.raw.types import StarsRevenueStatus
+```
+
+Public access: `miniproto.raw.types.StarsRevenueStatus`.
+
+## Safe usage shape
+
+```python
+from miniproto.raw.types import StarsRevenueStatus
+
+# Naming the raw constructor class is local only; it performs no I/O or network request.
+constructor_type = StarsRevenueStatus
+```
+
+## Result family
+
+[`StarsRevenueStatus`](/reference/telegram/types/results/stars-revenue-status/)
+
+## Relationships
+
+- Result family: [`StarsRevenueStatus`](/reference/telegram/types/results/stars-revenue-status/)
+- Accepted by: [`payments.starsRevenueStats`](/reference/telegram/types/payments/stars-revenue-stats/), [`updateStarsRevenueStatus`](/reference/telegram/types/base/update-stars-revenue-status/)
+
+## Provenance
+
+- structural source: `tdlib`
+- canonical schema: https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/telegram_api.tl
+- prose merge precedence: TDLib → Telegram Desktop → Core JSON
+- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 229 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
+
+## Source-diff notes
+
+- tdlib_vs_core: changed_count=78; core_only_count=18; overlap_count=2285; tdlib_only_count=195
+- tdlib_vs_tdesktop: changed_count=0; overlap_count=2470; tdesktop_only=null; tdlib_only=accessPointRule, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret

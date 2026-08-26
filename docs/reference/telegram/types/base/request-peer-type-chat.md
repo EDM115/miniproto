@@ -1,0 +1,90 @@
+---
+title: "requestPeerTypeChat"
+description: "No description provided by the pinned schema."
+generated: true
+editUrl: false
+language: "telegram"
+kind: "type"
+qualified_name: "requestPeerTypeChat"
+source_path: "tools/schema/schema.json"
+source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
+namespace: "base"
+schema_source: "tdlib"
+constructor_id: "0xc9f06e1b"
+---
+
+# `requestPeerTypeChat`
+
+No description provided by the pinned schema.
+
+## Signature
+
+```tl
+requestPeerTypeChat#c9f06e1b flags:# creator:flags.0?true bot_participant:flags.5?true has_username:flags.3?Bool forum:flags.4?Bool user_admin_rights:flags.1?ChatAdminRights bot_admin_rights:flags.2?ChatAdminRights = RequestPeerType;
+```
+
+## Result type
+
+`RequestPeerType`
+
+## Parameters
+
+| Name | Type | Flag | Default | Description |
+| --- | --- | --- | --- | --- |
+| flags | # | flag word | — | No description provided by the pinned schema. |
+| creator | flags.0?true | flags.0 | — | No description provided by the pinned schema. |
+| bot_participant | flags.5?true | flags.5 | — | No description provided by the pinned schema. |
+| has_username | flags.3?Bool | flags.3 | — | No description provided by the pinned schema. |
+| forum | flags.4?Bool | flags.4 | — | No description provided by the pinned schema. |
+| user_admin_rights | flags.1?ChatAdminRights | flags.1 | — | No description provided by the pinned schema. |
+| bot_admin_rights | flags.2?ChatAdminRights | flags.2 | — | No description provided by the pinned schema. |
+
+## Flags
+
+| Parameter | Bit | Meaning |
+| --- | ---: | --- |
+| creator | 0 | Controlled by `flags`; present when this bit is set. |
+| bot_participant | 5 | Controlled by `flags`; present when this bit is set. |
+| has_username | 3 | Controlled by `flags`; present when this bit is set. |
+| forum | 4 | Controlled by `flags`; present when this bit is set. |
+| user_admin_rights | 1 | Controlled by `flags`; present when this bit is set. |
+| bot_admin_rights | 2 | Controlled by `flags`; present when this bit is set. |
+
+## Python binding
+
+```python
+from miniproto.raw.types import RequestPeerTypeChat
+```
+
+Public access: `miniproto.raw.types.RequestPeerTypeChat`.
+
+## Safe usage shape
+
+```python
+from miniproto.raw.types import RequestPeerTypeChat
+
+# Naming the raw constructor class is local only; it performs no I/O or network request.
+constructor_type = RequestPeerTypeChat
+```
+
+## Result family
+
+[`RequestPeerType`](/reference/telegram/types/results/request-peer-type/)
+
+## Relationships
+
+- Result family: [`RequestPeerType`](/reference/telegram/types/results/request-peer-type/)
+- Related constructors: [`requestPeerTypeBroadcast`](/reference/telegram/types/base/request-peer-type-broadcast/), [`requestPeerTypeCreateBot`](/reference/telegram/types/base/request-peer-type-create-bot/), [`requestPeerTypeUser`](/reference/telegram/types/base/request-peer-type-user/)
+- Accepted by: [`buttonTypeRequestPeer`](/reference/telegram/types/base/button-type-request-peer/), [`inputButtonTypeRequestPeer`](/reference/telegram/types/base/input-button-type-request-peer/)
+
+## Provenance
+
+- structural source: `tdlib`
+- canonical schema: https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/telegram_api.tl
+- prose merge precedence: TDLib → Telegram Desktop → Core JSON
+- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 229 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
+
+## Source-diff notes
+
+- tdlib_vs_core: changed_count=78; core_only_count=18; overlap_count=2285; tdlib_only_count=195
+- tdlib_vs_tdesktop: changed_count=0; overlap_count=2470; tdesktop_only=null; tdlib_only=accessPointRule, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret

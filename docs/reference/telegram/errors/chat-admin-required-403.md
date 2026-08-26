@@ -1,0 +1,43 @@
+---
+title: "CHAT_ADMIN_REQUIRED"
+description: "You must be an admin in this chat to do this."
+generated: true
+editUrl: false
+language: "telegram"
+kind: "error"
+qualified_name: "403:CHAT_ADMIN_REQUIRED"
+source_path: "tools/schema/rpc-errors.json"
+source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/rpc-errors.json"
+namespace: "errors"
+schema_source: "tdlib"
+---
+
+# `CHAT_ADMIN_REQUIRED`
+
+You must be an admin in this chat to do this.
+
+## Error details
+
+- code: 403
+- parameterized: no
+- mapped methods: `channels.deleteUserHistory` (not in selected Layer 229 schema), [`channels.editAdmin`](/reference/telegram/functions/channels/edit-admin/), [`channels.editBanned`](/reference/telegram/functions/channels/edit-banned/), `channels.editForumTopic` (not in selected Layer 229 schema), [`channels.editPhoto`](/reference/telegram/functions/channels/edit-photo/), [`channels.editTitle`](/reference/telegram/functions/channels/edit-title/), [`channels.getAdminLog`](/reference/telegram/functions/channels/get-admin-log/), [`channels.getParticipant`](/reference/telegram/functions/channels/get-participant/), [`channels.getParticipants`](/reference/telegram/functions/channels/get-participants/), [`channels.inviteToChannel`](/reference/telegram/functions/channels/invite-to-channel/), [`channels.updateUsername`](/reference/telegram/functions/channels/update-username/), [`messages.addChatUser`](/reference/telegram/functions/messages/add-chat-user/), [`messages.editMessage`](/reference/telegram/functions/messages/edit-message/), [`messages.forwardMessages`](/reference/telegram/functions/messages/forward-messages/), [`messages.migrateChat`](/reference/telegram/functions/messages/migrate-chat/), [`messages.search`](/reference/telegram/functions/messages/search/), [`messages.sendMedia`](/reference/telegram/functions/messages/send-media/), [`messages.sendMessage`](/reference/telegram/functions/messages/send-message/), [`stats.getBroadcastStats`](/reference/telegram/functions/stats/get-broadcast-stats/), [`stats.getMegagroupStats`](/reference/telegram/functions/stats/get-megagroup-stats/)
+
+## Python error class
+
+```python
+from miniproto.errors import ChatAdminRequired
+```
+
+Public access: `miniproto.errors.ChatAdminRequired`.
+
+## Provenance
+
+- structural source: `tdlib`
+- RPC error source: https://core.telegram.org/api/errors
+- prose merge precedence: TDLib → Telegram Desktop → Core JSON
+- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 229 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
+
+## Source-diff notes
+
+- tdlib_vs_core: changed_count=78; core_only_count=18; overlap_count=2285; tdlib_only_count=195
+- tdlib_vs_tdesktop: changed_count=0; overlap_count=2470; tdesktop_only=null; tdlib_only=accessPointRule, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret

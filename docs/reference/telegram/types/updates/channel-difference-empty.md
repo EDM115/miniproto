@@ -1,0 +1,83 @@
+---
+title: "updates.channelDifferenceEmpty"
+description: "No description provided by the pinned schema."
+generated: true
+editUrl: false
+language: "telegram"
+kind: "type"
+qualified_name: "updates.channelDifferenceEmpty"
+source_path: "tools/schema/schema.json"
+source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
+namespace: "updates"
+schema_source: "tdlib"
+constructor_id: "0x3e11affb"
+---
+
+# `updates.channelDifferenceEmpty`
+
+No description provided by the pinned schema.
+
+## Signature
+
+```tl
+updates.channelDifferenceEmpty#3e11affb flags:# final:flags.0?true pts:int timeout:flags.1?int = updates.ChannelDifference;
+```
+
+## Result type
+
+`updates.ChannelDifference`
+
+## Parameters
+
+| Name | Type | Flag | Default | Description |
+| --- | --- | --- | --- | --- |
+| flags | # | flag word | — | No description provided by the pinned schema. |
+| final | flags.0?true | flags.0 | — | No description provided by the pinned schema. |
+| pts | int | — | — | No description provided by the pinned schema. |
+| timeout | flags.1?int | flags.1 | — | No description provided by the pinned schema. |
+
+## Flags
+
+| Parameter | Bit | Meaning |
+| --- | ---: | --- |
+| final | 0 | Controlled by `flags`; present when this bit is set. |
+| timeout | 1 | Controlled by `flags`; present when this bit is set. |
+
+## Python binding
+
+```python
+from miniproto.raw.types import UpdatesChannelDifferenceEmpty
+```
+
+Public access: `miniproto.raw.types.UpdatesChannelDifferenceEmpty`.
+
+## Safe usage shape
+
+```python
+from miniproto.raw.types import UpdatesChannelDifferenceEmpty
+
+# Naming the raw constructor class is local only; it performs no I/O or network request.
+constructor_type = UpdatesChannelDifferenceEmpty
+```
+
+## Result family
+
+[`updates.ChannelDifference`](/reference/telegram/types/results/updates-channel-difference/)
+
+## Relationships
+
+- Result family: [`updates.ChannelDifference`](/reference/telegram/types/results/updates-channel-difference/)
+- Related constructors: [`updates.channelDifference`](/reference/telegram/types/updates/channel-difference/), [`updates.channelDifferenceTooLong`](/reference/telegram/types/updates/channel-difference-too-long/)
+- Returned by: [`updates.getChannelDifference`](/reference/telegram/functions/updates/get-channel-difference/)
+
+## Provenance
+
+- structural source: `tdlib`
+- canonical schema: https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/telegram_api.tl
+- prose merge precedence: TDLib → Telegram Desktop → Core JSON
+- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 229 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
+
+## Source-diff notes
+
+- tdlib_vs_core: changed_count=78; core_only_count=18; overlap_count=2285; tdlib_only_count=195
+- tdlib_vs_tdesktop: changed_count=0; overlap_count=2470; tdesktop_only=null; tdlib_only=accessPointRule, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret

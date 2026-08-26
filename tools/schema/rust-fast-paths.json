@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "schema_layer": 229,
+  "schema_json_sha256": "0631ec65da66e15bcfc45d34ac32bfbbca244985f8c1ffdd928a28ef64c49d8c",
+  "api": [
+    {"kind": "function", "name": "upload.saveFilePart", "directions": ["encode", "decode"]},
+    {"kind": "function", "name": "upload.getFile", "directions": ["encode"]},
+    {"kind": "function", "name": "upload.saveBigFilePart", "directions": ["encode", "decode"]},
+    {"kind": "function", "name": "upload.getWebFile", "directions": ["encode"]},
+    {"kind": "function", "name": "upload.getCdnFile", "directions": ["encode", "decode"]},
+    {"kind": "function", "name": "upload.reuploadCdnFile", "directions": ["encode", "decode"]},
+    {"kind": "function", "name": "upload.getCdnFileHashes", "directions": ["encode", "decode"]},
+    {"kind": "function", "name": "upload.getFileHashes", "directions": ["encode"]},
+    {"kind": "constructor", "name": "inputFileLocation", "directions": ["encode", "decode"]},
+    {"kind": "constructor", "name": "inputEncryptedFileLocation", "directions": ["encode", "decode"]},
+    {"kind": "constructor", "name": "inputDocumentFileLocation", "directions": ["encode", "decode"]},
+    {"kind": "constructor", "name": "inputSecureFileLocation", "directions": ["encode", "decode"]},
+    {"kind": "constructor", "name": "inputTakeoutFileLocation", "directions": ["encode", "decode"]},
+    {"kind": "constructor", "name": "inputPhotoFileLocation", "directions": ["encode", "decode"]},
+    {"kind": "constructor", "name": "inputPhotoLegacyFileLocation", "directions": ["encode", "decode"]},
+    {"kind": "constructor", "name": "upload.file", "directions": ["encode", "decode"]},
+    {"kind": "constructor", "name": "upload.cdnFileReuploadNeeded", "directions": ["encode", "decode"]},
+    {"kind": "constructor", "name": "upload.cdnFile", "directions": ["encode", "decode"]},
+    {"kind": "constructor", "name": "fileHash", "directions": ["encode", "decode"]},
+    {"kind": "constructor", "name": "inputWebFileLocation", "directions": ["encode", "decode"]}
+  ],
+  "mtproto": [
+    {"name": "msgs_ack", "constructor_id": "0x62d6b459", "python_type": "MsgsAck", "fields": [{"name": "msg_ids", "type": "Vector<long>"}], "directions": ["encode", "decode"]},
+    {"name": "msgs_state_req", "constructor_id": "0xda69fb52", "python_type": "MsgsStateReq", "fields": [{"name": "msg_ids", "type": "Vector<long>"}], "directions": ["encode", "decode"]},
+    {"name": "msgs_state_info", "constructor_id": "0x04deb57d", "python_type": "MsgsStateInfo", "fields": [{"name": "req_msg_id", "type": "long"}, {"name": "info", "type": "bytes"}], "directions": ["encode", "decode"]},
+    {"name": "msg_resend_req", "constructor_id": "0x7d861a08", "python_type": "MsgResendReq", "fields": [{"name": "msg_ids", "type": "Vector<long>"}], "directions": ["encode", "decode"]},
+    {"name": "msg_container", "constructor_id": "0x73f1f8dc", "python_type": "MessageContainer", "fields": [{"name": "messages", "type": "message_container"}], "directions": ["encode", "decode"]},
+    {"name": "gzip_packed", "constructor_id": "0x3072cfa1", "python_type": "GzipPacked", "fields": [{"name": "packed_data", "type": "bytes"}], "directions": ["encode", "decode"]},
+    {"name": "pong", "constructor_id": "0x347773c5", "python_type": "Pong", "fields": [{"name": "msg_id", "type": "long"}, {"name": "ping_id", "type": "long"}], "directions": ["encode", "decode"]},
+    {"name": "bad_msg_notification", "constructor_id": "0xa7eff811", "python_type": "BadMsgNotification", "fields": [{"name": "bad_msg_id", "type": "long"}, {"name": "bad_msg_seq_no", "type": "int"}, {"name": "error_code", "type": "int"}], "directions": ["encode", "decode"]},
+    {"name": "bad_server_salt", "constructor_id": "0xedab447b", "python_type": "BadServerSalt", "fields": [{"name": "bad_msg_id", "type": "long"}, {"name": "bad_msg_seq_no", "type": "int"}, {"name": "error_code", "type": "int"}, {"name": "new_server_salt", "type": "uint64"}], "directions": ["encode", "decode"]},
+    {"name": "rpc_result", "constructor_id": "0xf35c6d01", "python_type": "RpcResult", "fields": [{"name": "req_msg_id", "type": "long"}, {"name": "result", "type": "raw"}], "directions": ["encode", "decode"]}
+  ]
+}

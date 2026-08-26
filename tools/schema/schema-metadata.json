@@ -1,0 +1,134 @@
+{
+  "canonical_source": "tdlib",
+  "changelog_latest_layer": 225,
+  "changelog_source_url": "https://core.telegram.org/api/layers",
+  "constructor_count": 1663,
+  "documentation_merge_precedence": [
+    "tdlib",
+    "tdesktop",
+    "core_json"
+  ],
+  "fetch_date": "2026-08-26",
+  "function_count": 817,
+  "generated_file_manifest": [
+    "src/miniproto/raw/base.py",
+    "src/miniproto/raw/types.py",
+    "src/miniproto/raw/types.pyi",
+    "src/miniproto/raw/functions.py",
+    "src/miniproto/raw/functions.pyi",
+    "src/miniproto/raw/_registry.py",
+    "src/miniproto/raw/_types_shards/*.py",
+    "src/miniproto/raw/_function_shards/*.py",
+    "src/miniproto/raw/errors.py",
+    "tools/schema/telegram-bindings.json",
+    "src/miniproto/tl/fast_metadata.py",
+    "rust/miniproto/src/generated_tl.rs"
+  ],
+  "generator_version": "5",
+  "layer": 229,
+  "layer_source_url": "https://raw.githubusercontent.com/telegramdesktop/tdesktop/refs/heads/dev/Telegram/SourceFiles/mtproto/scheme/api.tl",
+  "rpc_error_count": 818,
+  "rpc_error_download_url": "https://core.telegram.org/api/errors.json",
+  "rpc_error_layer": 227,
+  "rpc_error_sha256": "fb7304a7f7e66a6750f9ca842dd1406ed3798eebd6f4f2d993924135848ee82e",
+  "rpc_error_source_url": "https://core.telegram.org/api/errors",
+  "schema_doc_url": "https://core.telegram.org/schema",
+  "schema_format": "json",
+  "schema_json_sha256": "0631ec65da66e15bcfc45d34ac32bfbbca244985f8c1ffdd928a28ef64c49d8c",
+  "schema_layer": 229,
+  "schema_sha256": "0631ec65da66e15bcfc45d34ac32bfbbca244985f8c1ffdd928a28ef64c49d8c",
+  "schema_source_url": "https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/telegram_api.tl",
+  "schema_tl_sha256": "4c44853dd138f6484281317b2a6da7e778b770014bf2d63db76d4138b33bec4f",
+  "schema_tl_source_kind": "tdlib_verbatim",
+  "sha256": "0631ec65da66e15bcfc45d34ac32bfbbca244985f8c1ffdd928a28ef64c49d8c",
+  "source_comparison_summary": {
+    "tdlib_vs_core": {
+      "changed_count": 78,
+      "core_only_count": 18,
+      "overlap_count": 2285,
+      "tdlib_only_count": 195
+    },
+    "tdlib_vs_tdesktop": {
+      "changed_count": 0,
+      "overlap_count": 2470,
+      "tdesktop_only": [
+        "null"
+      ],
+      "tdlib_only": [
+        "accessPointRule",
+        "help.configSimple",
+        "inputPeerPhotoFileLocationLegacy",
+        "inputStickerSetThumbLegacy",
+        "invokeWithApnsSecretPrefix",
+        "invokeWithBusinessConnectionPrefix",
+        "invokeWithGooglePlayIntegrityPrefix",
+        "invokeWithReCaptchaPrefix",
+        "ipPort",
+        "ipPortSecret"
+      ]
+    }
+  },
+  "source_note": "Canonical structure is the pinned TDLib telegram_api.tl; Layer 229 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.",
+  "source_url": "https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/telegram_api.tl",
+  "sources": {
+    "core_json": {
+      "bytes": 501685,
+      "constructor_count": 1546,
+      "declaration_count": 2303,
+      "function_count": 757,
+      "role": "documentation_and_drift",
+      "sha256": "287817f49fea78191c5f4342ad683ba2aed6c3bc2acc89757fc64f68ea24d846",
+      "url": "https://core.telegram.org/schema/json"
+    },
+    "core_schema_page": {
+      "bytes": 691787,
+      "constructor_count": 0,
+      "declaration_count": 0,
+      "derived_tl_sha256": "e91d38be1709d0af9ae28bfd41ffa0c04e5092bc62dba0ad560f1660ca098ef5",
+      "derived_tl_source_kind": "html_extracted",
+      "function_count": 0,
+      "normalization": "trailing_page_generation_timing_removed",
+      "role": "documentation_and_tl_mirror",
+      "sha256": "757e19f270bd405387105f22b9ae3f4b69560c8bbeea8b839b750800b7174313",
+      "url": "https://core.telegram.org/schema"
+    },
+    "layer_changelog": {
+      "bytes": 902694,
+      "constructor_count": 0,
+      "declaration_count": 0,
+      "function_count": 0,
+      "normalization": "trailing_page_generation_timing_removed",
+      "role": "drift_context",
+      "sha256": "a93eb99160a1eb6f7c8d4524ffa3ce83a67a04e5016aa8f92e28fd063153d849",
+      "url": "https://core.telegram.org/api/layers"
+    },
+    "rpc_errors": {
+      "bytes": 223094,
+      "constructor_count": 0,
+      "declaration_count": 0,
+      "function_count": 0,
+      "role": "rpc_error_database",
+      "sha256": "fb7304a7f7e66a6750f9ca842dd1406ed3798eebd6f4f2d993924135848ee82e",
+      "url": "https://core.telegram.org/api/errors.json"
+    },
+    "tdesktop": {
+      "bytes": 281257,
+      "constructor_count": 1658,
+      "declaration_count": 2471,
+      "function_count": 813,
+      "role": "layer_and_documentation",
+      "sha256": "7655504c25a5d3a368e7729d3e9e64afffcacbcb54ec85508c60f0472064b617",
+      "url": "https://raw.githubusercontent.com/telegramdesktop/tdesktop/refs/heads/dev/Telegram/SourceFiles/mtproto/scheme/api.tl"
+    },
+    "tdlib": {
+      "bytes": 282267,
+      "constructor_count": 1663,
+      "declaration_count": 2480,
+      "function_count": 817,
+      "role": "canonical_structure",
+      "sha256": "4c44853dd138f6484281317b2a6da7e778b770014bf2d63db76d4138b33bec4f",
+      "url": "https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/telegram_api.tl"
+    }
+  },
+  "structural_source_url": "https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/telegram_api.tl"
+}

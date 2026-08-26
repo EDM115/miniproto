@@ -1,0 +1,35 @@
+name: Upstream schema freshness
+
+on:
+  schedule:
+    - cron: "0 0 * * SUN"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-upstream:
+    runs-on: ubuntu-slim
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.0.1
+
+      - name: Install Python
+        run: uv python install 3.14
+
+      - name: Sync locked development environment
+        run: uv sync --extra dev,docs --frozen
+
+      - name: Compare all upstream schema sources with the pinned snapshot
+        run: uv run miniproto-schema-update --check-upstream --report .tmp/schema-upstream/schema-upstream-report.json
+
+      - name: Upload source comparison report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          archive: false
+          path: .tmp/schema-upstream/schema-upstream-report.json
+          if-no-files-found: error
+          retention-days: 14

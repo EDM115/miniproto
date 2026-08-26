@@ -1,0 +1,39 @@
+"""MTProto quick-ACK token derivation with native capability fallback."""
+
+from __future__ import annotations
+
+from collections.abc import Callable
+from importlib import import_module
+from typing import cast
+
+
+def quick_ack_token(auth_key: bytes, encrypted_packet: bytes) -> int:
+    """Derive Telegram's high-bit-set quick-ACK token for an encrypted packet.
+
+    Args:
+        auth_key: MTProto authorization key used for the packet.
+        encrypted_packet: Complete encrypted MTProto packet bytes.
+
+    Returns:
+        The 32-bit quick-ACK token computed by the available native or fallback codec.
+
+    Raises:
+        ValueError: The selected native or fallback codec rejects the authorization key or packet framing.
+    """
+    return int(_quick_ack_impl()(auth_key, encrypted_packet))
+
+
+def _quick_ack_impl() -> Callable[[bytes, bytes], int]:
+    """Select the native quick-ACK implementation or its bundled fallback."""
+    try:
+        native = import_module("miniproto._native")
+    except Exception:
+        native = None
+    candidate = getattr(native, "quick_ack_token", None) if native is not None else None
+    if callable(candidate):
+        return cast(Callable[[bytes, bytes], int], candidate)
+    fallback = import_module("miniproto._native_fallback")
+    return cast(Callable[[bytes, bytes], int], fallback.quick_ack_token)
+
+
+__all__ = ["quick_ack_token"]

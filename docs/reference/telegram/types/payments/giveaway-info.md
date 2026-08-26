@@ -1,0 +1,89 @@
+---
+title: "payments.giveawayInfo"
+description: "No description provided by the pinned schema."
+generated: true
+editUrl: false
+language: "telegram"
+kind: "type"
+qualified_name: "payments.giveawayInfo"
+source_path: "tools/schema/schema.json"
+source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
+namespace: "payments"
+schema_source: "tdlib"
+constructor_id: "0x4367daa0"
+---
+
+# `payments.giveawayInfo`
+
+No description provided by the pinned schema.
+
+## Signature
+
+```tl
+payments.giveawayInfo#4367daa0 flags:# participating:flags.0?true preparing_results:flags.3?true start_date:int joined_too_early_date:flags.1?int admin_disallowed_chat_id:flags.2?long disallowed_country:flags.4?string = payments.GiveawayInfo;
+```
+
+## Result type
+
+`payments.GiveawayInfo`
+
+## Parameters
+
+| Name | Type | Flag | Default | Description |
+| --- | --- | --- | --- | --- |
+| flags | # | flag word | — | No description provided by the pinned schema. |
+| participating | flags.0?true | flags.0 | — | No description provided by the pinned schema. |
+| preparing_results | flags.3?true | flags.3 | — | No description provided by the pinned schema. |
+| start_date | int | — | — | No description provided by the pinned schema. |
+| joined_too_early_date | flags.1?int | flags.1 | — | No description provided by the pinned schema. |
+| admin_disallowed_chat_id | flags.2?long | flags.2 | — | No description provided by the pinned schema. |
+| disallowed_country | flags.4?string | flags.4 | — | No description provided by the pinned schema. |
+
+## Flags
+
+| Parameter | Bit | Meaning |
+| --- | ---: | --- |
+| participating | 0 | Controlled by `flags`; present when this bit is set. |
+| preparing_results | 3 | Controlled by `flags`; present when this bit is set. |
+| joined_too_early_date | 1 | Controlled by `flags`; present when this bit is set. |
+| admin_disallowed_chat_id | 2 | Controlled by `flags`; present when this bit is set. |
+| disallowed_country | 4 | Controlled by `flags`; present when this bit is set. |
+
+## Python binding
+
+```python
+from miniproto.raw.types import PaymentsGiveawayInfo
+```
+
+Public access: `miniproto.raw.types.PaymentsGiveawayInfo`.
+
+## Safe usage shape
+
+```python
+from miniproto.raw.types import PaymentsGiveawayInfo
+
+# Naming the raw constructor class is local only; it performs no I/O or network request.
+constructor_type = PaymentsGiveawayInfo
+```
+
+## Result family
+
+[`payments.GiveawayInfo`](/reference/telegram/types/results/payments-giveaway-info/)
+
+## Relationships
+
+- Result family: [`payments.GiveawayInfo`](/reference/telegram/types/results/payments-giveaway-info/)
+- Related constructors: [`payments.giveawayInfoResults`](/reference/telegram/types/payments/giveaway-info-results/)
+- Returned by: [`payments.getGiveawayInfo`](/reference/telegram/functions/payments/get-giveaway-info/)
+
+## Provenance
+
+- structural source: `tdlib`
+- canonical schema: https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/telegram_api.tl
+- prose merge precedence: TDLib → Telegram Desktop → Core JSON
+- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 229 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
+
+## Source-diff notes
+
+- tdlib_vs_core: changed_count=78; core_only_count=18; overlap_count=2285; tdlib_only_count=195
+- tdlib_vs_tdesktop: changed_count=0; overlap_count=2470; tdesktop_only=null; tdlib_only=accessPointRule, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret
