@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: TopPeerCategory"
-description: "Layer 229 result-family index for 10 canonical constructors returning TopPeerCategory from tdlib."
+description: "Layer 230 result-family index for 10 canonical constructors returning TopPeerCategory from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `TopPeerCategory`
+## Layer 230 result family `TopPeerCategory`
 
 Selected canonical constructors in this family: 10.
 

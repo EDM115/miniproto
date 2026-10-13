@@ -1243,6 +1243,15 @@
       "qualified_name": "auth.cancelCode"
     },
     {
+      "constructor_id": "0x490dada1",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.AuthCancelWebTokenAuthorization",
+      "python_import": "from miniproto.raw.functions import AuthCancelWebTokenAuthorization",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "AuthCancelWebTokenAuthorization",
+      "qualified_name": "auth.cancelWebTokenAuthorization"
+    },
+    {
       "constructor_id": "0x56e59f9c",
       "kind": "function",
       "public_access": "miniproto.raw.functions.AuthCheckPaidAuth",
@@ -1360,7 +1369,7 @@
       "qualified_name": "auth.importWebTokenAuthorization"
     },
     {
-      "constructor_id": "0x777df37a",
+      "constructor_id": "0x644f15c0",
       "kind": "function",
       "public_access": "miniproto.raw.functions.AuthInitFirebasePnvLogin",
       "python_import": "from miniproto.raw.functions import AuthInitFirebasePnvLogin",
@@ -1486,6 +1495,15 @@
       "qualified_name": "bots.addPreviewMedia"
     },
     {
+      "constructor_id": "0x3501c08a",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.BotsAddUsername",
+      "python_import": "from miniproto.raw.functions import BotsAddUsername",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "BotsAddUsername",
+      "qualified_name": "bots.addUsername"
+    },
+    {
       "constructor_id": "0xf132e3ef",
       "kind": "function",
       "public_access": "miniproto.raw.functions.BotsAllowSendMessage",
@@ -1522,7 +1540,7 @@
       "qualified_name": "bots.checkDownloadFileParams"
     },
     {
-      "constructor_id": "0x87f2219b",
+      "constructor_id": "0xe3ac4c61",
       "kind": "function",
       "public_access": "miniproto.raw.functions.BotsCheckUsername",
       "python_import": "from miniproto.raw.functions import BotsCheckUsername",
@@ -1675,6 +1693,15 @@
       "qualified_name": "bots.invokeWebViewCustomMethod"
     },
     {
+      "constructor_id": "0xc704147d",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.BotsRemoveUsername",
+      "python_import": "from miniproto.raw.functions import BotsRemoveUsername",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "BotsRemoveUsername",
+      "qualified_name": "bots.removeUsername"
+    },
+    {
       "constructor_id": "0xb627f3aa",
       "kind": "function",
       "public_access": "miniproto.raw.functions.BotsReorderPreviewMedias",
@@ -1765,7 +1792,7 @@
       "qualified_name": "bots.setBotMenuButton"
     },
     {
-      "constructor_id": "0x8b89dfbd",
+      "constructor_id": "0xf4946757",
       "kind": "function",
       "public_access": "miniproto.raw.functions.BotsSetCustomVerification",
       "python_import": "from miniproto.raw.functions import BotsSetCustomVerification",
@@ -5707,6 +5734,15 @@
       "qualified_name": "payments.craftStarGift"
     },
     {
+      "constructor_id": "0xa2197cf6",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.PaymentsCreateOnrampSession",
+      "python_import": "from miniproto.raw.functions import PaymentsCreateOnrampSession",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "PaymentsCreateOnrampSession",
+      "qualified_name": "payments.createOnrampSession"
+    },
+    {
       "constructor_id": "0x1f4a0e87",
       "kind": "function",
       "public_access": "miniproto.raw.functions.PaymentsCreateStarGiftCollection",
@@ -5788,6 +5824,15 @@
       "qualified_name": "payments.getCraftStarGifts"
     },
     {
+      "constructor_id": "0xd35983e8",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.PaymentsGetCurrencyRates",
+      "python_import": "from miniproto.raw.functions import PaymentsGetCurrencyRates",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "PaymentsGetCurrencyRates",
+      "qualified_name": "payments.getCurrencyRates"
+    },
+    {
       "constructor_id": "0xf4239425",
       "kind": "function",
       "public_access": "miniproto.raw.functions.PaymentsGetGiveawayInfo",
@@ -5795,6 +5840,51 @@
       "python_module": "miniproto.raw.functions",
       "python_name": "PaymentsGetGiveawayInfo",
       "qualified_name": "payments.getGiveawayInfo"
+    },
+    {
+      "constructor_id": "0x2ec29951",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.PaymentsGetOnrampAvailability",
+      "python_import": "from miniproto.raw.functions import PaymentsGetOnrampAvailability",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "PaymentsGetOnrampAvailability",
+      "qualified_name": "payments.getOnrampAvailability"
+    },
+    {
+      "constructor_id": "0x1c8bedf3",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.PaymentsGetOnrampBaseCurrencies",
+      "python_import": "from miniproto.raw.functions import PaymentsGetOnrampBaseCurrencies",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "PaymentsGetOnrampBaseCurrencies",
+      "qualified_name": "payments.getOnrampBaseCurrencies"
+    },
+    {
+      "constructor_id": "0x80e851fd",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.PaymentsGetOnrampLimits",
+      "python_import": "from miniproto.raw.functions import PaymentsGetOnrampLimits",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "PaymentsGetOnrampLimits",
+      "qualified_name": "payments.getOnrampLimits"
+    },
+    {
+      "constructor_id": "0x3f3e00dc",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.PaymentsGetOnrampProviders",
+      "python_import": "from miniproto.raw.functions import PaymentsGetOnrampProviders",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "PaymentsGetOnrampProviders",
+      "qualified_name": "payments.getOnrampProviders"
+    },
+    {
+      "constructor_id": "0xe06645fa",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.PaymentsGetOnrampQuote",
+      "python_import": "from miniproto.raw.functions import PaymentsGetOnrampQuote",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "PaymentsGetOnrampQuote",
+      "qualified_name": "payments.getOnrampQuote"
     },
     {
       "constructor_id": "0x37148dbb",
@@ -7192,6 +7282,24 @@
       "qualified_name": "stories.updateAlbum"
     },
     {
+      "constructor_id": "0xcdaf63c7",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.ToncenterGetStreamingUrl",
+      "python_import": "from miniproto.raw.functions import ToncenterGetStreamingUrl",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "ToncenterGetStreamingUrl",
+      "qualified_name": "toncenter.getStreamingUrl"
+    },
+    {
+      "constructor_id": "0x8d7bdd61",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.ToncenterPerformApiRequest",
+      "python_import": "from miniproto.raw.functions import ToncenterPerformApiRequest",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "ToncenterPerformApiRequest",
+      "qualified_name": "toncenter.performApiRequest"
+    },
+    {
       "constructor_id": "0x03173d78",
       "kind": "function",
       "public_access": "miniproto.raw.functions.UpdatesGetChannelDifference",
@@ -7352,6 +7460,231 @@
       "python_module": "miniproto.raw.functions",
       "python_name": "UsersSuggestBirthday",
       "qualified_name": "users.suggestBirthday"
+    },
+    {
+      "constructor_id": "0x0b0bf0da",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.WalletDisableBackup",
+      "python_import": "from miniproto.raw.functions import WalletDisableBackup",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "WalletDisableBackup",
+      "qualified_name": "wallet.disableBackup"
+    },
+    {
+      "constructor_id": "0x4500c525",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.WalletEnableBackup",
+      "python_import": "from miniproto.raw.functions import WalletEnableBackup",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "WalletEnableBackup",
+      "qualified_name": "wallet.enableBackup"
+    },
+    {
+      "constructor_id": "0x9077c9ac",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.WalletExportSecretPhrase",
+      "python_import": "from miniproto.raw.functions import WalletExportSecretPhrase",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "WalletExportSecretPhrase",
+      "qualified_name": "wallet.exportSecretPhrase"
+    },
+    {
+      "constructor_id": "0xf53925cf",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.WalletFetchEncryptedSecretPhrasePart",
+      "python_import": "from miniproto.raw.functions import WalletFetchEncryptedSecretPhrasePart",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "WalletFetchEncryptedSecretPhrasePart",
+      "qualified_name": "wallet.fetchEncryptedSecretPhrasePart"
+    },
+    {
+      "constructor_id": "0xd179d494",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.WalletGetBackupHolderDcs",
+      "python_import": "from miniproto.raw.functions import WalletGetBackupHolderDcs",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "WalletGetBackupHolderDcs",
+      "qualified_name": "wallet.getBackupHolderDcs"
+    },
+    {
+      "constructor_id": "0x691f4360",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.WalletGetExistingWaltBalance",
+      "python_import": "from miniproto.raw.functions import WalletGetExistingWaltBalance",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "WalletGetExistingWaltBalance",
+      "qualified_name": "wallet.getExistingWaltBalance"
+    },
+    {
+      "constructor_id": "0x742df0a1",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.WalletGetGaslessInfo",
+      "python_import": "from miniproto.raw.functions import WalletGetGaslessInfo",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "WalletGetGaslessInfo",
+      "qualified_name": "wallet.getGaslessInfo"
+    },
+    {
+      "constructor_id": "0x8c12f3a4",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.WalletGetNfts",
+      "python_import": "from miniproto.raw.functions import WalletGetNfts",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "WalletGetNfts",
+      "qualified_name": "wallet.getNfts"
+    },
+    {
+      "constructor_id": "0x2025e697",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.WalletGetProofChallenge",
+      "python_import": "from miniproto.raw.functions import WalletGetProofChallenge",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "WalletGetProofChallenge",
+      "qualified_name": "wallet.getProofChallenge"
+    },
+    {
+      "constructor_id": "0xab83b33a",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.WalletGetState",
+      "python_import": "from miniproto.raw.functions import WalletGetState",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "WalletGetState",
+      "qualified_name": "wallet.getState"
+    },
+    {
+      "constructor_id": "0xa8830a83",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.WalletGetTransactions",
+      "python_import": "from miniproto.raw.functions import WalletGetTransactions",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "WalletGetTransactions",
+      "qualified_name": "wallet.getTransactions"
+    },
+    {
+      "constructor_id": "0x811ceab6",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.WalletGetTransactionsByIDs",
+      "python_import": "from miniproto.raw.functions import WalletGetTransactionsByIDs",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "WalletGetTransactionsByIDs",
+      "qualified_name": "wallet.getTransactionsByIDs"
+    },
+    {
+      "constructor_id": "0xa6bb795d",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.WalletGetTransactionsByMsgHash",
+      "python_import": "from miniproto.raw.functions import WalletGetTransactionsByMsgHash",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "WalletGetTransactionsByMsgHash",
+      "qualified_name": "wallet.getTransactionsByMsgHash"
+    },
+    {
+      "constructor_id": "0x5275dfdd",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.WalletGetUserAddresses",
+      "python_import": "from miniproto.raw.functions import WalletGetUserAddresses",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "WalletGetUserAddresses",
+      "qualified_name": "wallet.getUserAddresses"
+    },
+    {
+      "constructor_id": "0xd8c72eec",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.WalletReplaceWallet",
+      "python_import": "from miniproto.raw.functions import WalletReplaceWallet",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "WalletReplaceWallet",
+      "qualified_name": "wallet.replaceWallet"
+    },
+    {
+      "constructor_id": "0xd9e5d9e2",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.WalletSendTransfer",
+      "python_import": "from miniproto.raw.functions import WalletSendTransfer",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "WalletSendTransfer",
+      "qualified_name": "wallet.sendTransfer"
+    },
+    {
+      "constructor_id": "0x66b57b41",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.WalletTonConnectClaimRequest",
+      "python_import": "from miniproto.raw.functions import WalletTonConnectClaimRequest",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "WalletTonConnectClaimRequest",
+      "qualified_name": "wallet.tonConnectClaimRequest"
+    },
+    {
+      "constructor_id": "0xd63f61ce",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.WalletTonConnectCloseSession",
+      "python_import": "from miniproto.raw.functions import WalletTonConnectCloseSession",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "WalletTonConnectCloseSession",
+      "qualified_name": "wallet.tonConnectCloseSession"
+    },
+    {
+      "constructor_id": "0xcc931046",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.WalletTonConnectCreateSession",
+      "python_import": "from miniproto.raw.functions import WalletTonConnectCreateSession",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "WalletTonConnectCreateSession",
+      "qualified_name": "wallet.tonConnectCreateSession"
+    },
+    {
+      "constructor_id": "0x11aee065",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.WalletTonConnectGetPending",
+      "python_import": "from miniproto.raw.functions import WalletTonConnectGetPending",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "WalletTonConnectGetPending",
+      "qualified_name": "wallet.tonConnectGetPending"
+    },
+    {
+      "constructor_id": "0xa7ffb56e",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.WalletTonConnectGetSessions",
+      "python_import": "from miniproto.raw.functions import WalletTonConnectGetSessions",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "WalletTonConnectGetSessions",
+      "qualified_name": "wallet.tonConnectGetSessions"
+    },
+    {
+      "constructor_id": "0x775d7244",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.WalletTonConnectNextEventId",
+      "python_import": "from miniproto.raw.functions import WalletTonConnectNextEventId",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "WalletTonConnectNextEventId",
+      "qualified_name": "wallet.tonConnectNextEventId"
+    },
+    {
+      "constructor_id": "0x338bcf1c",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.WalletTonConnectRegisterKey",
+      "python_import": "from miniproto.raw.functions import WalletTonConnectRegisterKey",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "WalletTonConnectRegisterKey",
+      "qualified_name": "wallet.tonConnectRegisterKey"
+    },
+    {
+      "constructor_id": "0xc2c00779",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.WalletTonConnectSubmitConnectResult",
+      "python_import": "from miniproto.raw.functions import WalletTonConnectSubmitConnectResult",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "WalletTonConnectSubmitConnectResult",
+      "qualified_name": "wallet.tonConnectSubmitConnectResult"
+    },
+    {
+      "constructor_id": "0xfac67d3c",
+      "kind": "function",
+      "public_access": "miniproto.raw.functions.WalletTonConnectSubmitResponse",
+      "python_import": "from miniproto.raw.functions import WalletTonConnectSubmitResponse",
+      "python_module": "miniproto.raw.functions",
+      "python_name": "WalletTonConnectSubmitResponse",
+      "qualified_name": "wallet.tonConnectSubmitResponse"
     },
     {
       "constructor_id": "0x4679b65f",
@@ -8533,7 +8866,7 @@
       "qualified_name": "botPreviewMedia"
     },
     {
-      "constructor_id": "0xf93cd45c",
+      "constructor_id": "0xf72e0ed9",
       "kind": "type",
       "public_access": "miniproto.raw.types.BotVerification",
       "python_import": "from miniproto.raw.types import BotVerification",
@@ -8542,7 +8875,7 @@
       "qualified_name": "botVerification"
     },
     {
-      "constructor_id": "0xb0cd6617",
+      "constructor_id": "0xa12aefff",
       "kind": "type",
       "public_access": "miniproto.raw.types.BotVerifierSettings",
       "python_import": "from miniproto.raw.types import BotVerifierSettings",
@@ -10061,6 +10394,15 @@
       "python_module": "miniproto.raw.types",
       "python_name": "ContactsTopPeersNotModified",
       "qualified_name": "contacts.topPeersNotModified"
+    },
+    {
+      "constructor_id": "0x30d9743c",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.CurrencyRate",
+      "python_import": "from miniproto.raw.types import CurrencyRate",
+      "python_module": "miniproto.raw.types",
+      "python_name": "CurrencyRate",
+      "qualified_name": "currencyRate"
     },
     {
       "constructor_id": "0x7d748d04",
@@ -12538,15 +12880,6 @@
       "qualified_name": "inputPageBlockMap"
     },
     {
-      "constructor_id": "0x5b1ccb28",
-      "kind": "type",
-      "public_access": "miniproto.raw.types.InputPasskeyCredentialFirebasePNV",
-      "python_import": "from miniproto.raw.types import InputPasskeyCredentialFirebasePNV",
-      "python_module": "miniproto.raw.types",
-      "python_name": "InputPasskeyCredentialFirebasePNV",
-      "qualified_name": "inputPasskeyCredentialFirebasePNV"
-    },
-    {
       "constructor_id": "0x3c27b78f",
       "kind": "type",
       "public_access": "miniproto.raw.types.InputPasskeyCredentialPublicKey",
@@ -13627,6 +13960,24 @@
       "qualified_name": "inputWallPaperSlug"
     },
     {
+      "constructor_id": "0x66a66a3b",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.InputWalletImported",
+      "python_import": "from miniproto.raw.types import InputWalletImported",
+      "python_module": "miniproto.raw.types",
+      "python_name": "InputWalletImported",
+      "qualified_name": "inputWalletImported"
+    },
+    {
+      "constructor_id": "0x63a440dc",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.InputWalletNew",
+      "python_import": "from miniproto.raw.types import InputWalletNew",
+      "python_module": "miniproto.raw.types",
+      "python_name": "InputWalletNew",
+      "qualified_name": "inputWalletNew"
+    },
+    {
       "constructor_id": "0x9bed434d",
       "kind": "type",
       "public_access": "miniproto.raw.types.InputWebDocument",
@@ -14230,6 +14581,15 @@
       "qualified_name": "messageActionGiveawayResults"
     },
     {
+      "constructor_id": "0x9329ea33",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.MessageActionGramTransfer",
+      "python_import": "from miniproto.raw.types import MessageActionGramTransfer",
+      "python_module": "miniproto.raw.types",
+      "python_name": "MessageActionGramTransfer",
+      "qualified_name": "messageActionGramTransfer"
+    },
+    {
       "constructor_id": "0x7a0d7f42",
       "kind": "type",
       "public_access": "miniproto.raw.types.MessageActionGroupCall",
@@ -14581,6 +14941,15 @@
       "qualified_name": "messageActionTopicEdit"
     },
     {
+      "constructor_id": "0x69b8c4bf",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.MessageActionWalletTonConnectRequest",
+      "python_import": "from miniproto.raw.types import MessageActionWalletTonConnectRequest",
+      "python_module": "miniproto.raw.types",
+      "python_name": "MessageActionWalletTonConnectRequest",
+      "qualified_name": "messageActionWalletTonConnectRequest"
+    },
+    {
       "constructor_id": "0xb4c38cb5",
       "kind": "type",
       "public_access": "miniproto.raw.types.MessageActionWebViewDataSent",
@@ -14795,6 +15164,15 @@
       "python_module": "miniproto.raw.types",
       "python_name": "MessageEntityTextUrl",
       "qualified_name": "messageEntityTextUrl"
+    },
+    {
+      "constructor_id": "0xfdabbfcd",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.MessageEntityTonAddress",
+      "python_import": "from miniproto.raw.types import MessageEntityTonAddress",
+      "python_module": "miniproto.raw.types",
+      "python_name": "MessageEntityTonAddress",
+      "qualified_name": "messageEntityTonAddress"
     },
     {
       "constructor_id": "0x9c4e7e8b",
@@ -16129,6 +16507,60 @@
       "qualified_name": "notifyUsers"
     },
     {
+      "constructor_id": "0xf9c84973",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.OnrampAvailability",
+      "python_import": "from miniproto.raw.types import OnrampAvailability",
+      "python_module": "miniproto.raw.types",
+      "python_name": "OnrampAvailability",
+      "qualified_name": "onrampAvailability"
+    },
+    {
+      "constructor_id": "0x7be2677e",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.OnrampLimits",
+      "python_import": "from miniproto.raw.types import OnrampLimits",
+      "python_module": "miniproto.raw.types",
+      "python_name": "OnrampLimits",
+      "qualified_name": "onrampLimits"
+    },
+    {
+      "constructor_id": "0x9ec8c6a8",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.OnrampMethodAvailability",
+      "python_import": "from miniproto.raw.types import OnrampMethodAvailability",
+      "python_module": "miniproto.raw.types",
+      "python_name": "OnrampMethodAvailability",
+      "qualified_name": "onrampMethodAvailability"
+    },
+    {
+      "constructor_id": "0x0dc27582",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.OnrampProviderInfo",
+      "python_import": "from miniproto.raw.types import OnrampProviderInfo",
+      "python_module": "miniproto.raw.types",
+      "python_name": "OnrampProviderInfo",
+      "qualified_name": "onrampProviderInfo"
+    },
+    {
+      "constructor_id": "0x7a8011e9",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.OnrampQuote",
+      "python_import": "from miniproto.raw.types import OnrampQuote",
+      "python_module": "miniproto.raw.types",
+      "python_name": "OnrampQuote",
+      "qualified_name": "onrampQuote"
+    },
+    {
+      "constructor_id": "0xd1e42e24",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.OnrampSession",
+      "python_import": "from miniproto.raw.types import OnrampSession",
+      "python_module": "miniproto.raw.types",
+      "python_name": "OnrampSession",
+      "qualified_name": "onrampSession"
+    },
+    {
       "constructor_id": "0x3bb842ac",
       "kind": "type",
       "public_access": "miniproto.raw.types.OutboxReadDate",
@@ -16721,6 +17153,15 @@
       "python_module": "miniproto.raw.types",
       "python_name": "PaymentsConnectedStarRefBots",
       "qualified_name": "payments.connectedStarRefBots"
+    },
+    {
+      "constructor_id": "0xbbcce4c2",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.PaymentsCurrencyRates",
+      "python_import": "from miniproto.raw.types import PaymentsCurrencyRates",
+      "python_module": "miniproto.raw.types",
+      "python_name": "PaymentsCurrencyRates",
+      "qualified_name": "payments.currencyRates"
     },
     {
       "constructor_id": "0xaed0cbd9",
@@ -20062,6 +20503,15 @@
       "qualified_name": "textSuperscript"
     },
     {
+      "constructor_id": "0x3cd2a36a",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.TextTonAddress",
+      "python_import": "from miniproto.raw.types import TextTonAddress",
+      "python_module": "miniproto.raw.types",
+      "python_name": "TextTonAddress",
+      "qualified_name": "textTonAddress"
+    },
+    {
       "constructor_id": "0xc12622c4",
       "kind": "type",
       "public_access": "miniproto.raw.types.TextUnderline",
@@ -20141,6 +20591,60 @@
       "python_module": "miniproto.raw.types",
       "python_name": "TodoList",
       "qualified_name": "todoList"
+    },
+    {
+      "constructor_id": "0x12229264",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.TonConnectManifest",
+      "python_import": "from miniproto.raw.types import TonConnectManifest",
+      "python_module": "miniproto.raw.types",
+      "python_name": "TonConnectManifest",
+      "qualified_name": "tonConnectManifest"
+    },
+    {
+      "constructor_id": "0x582464e3",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.TonConnectNextEventId",
+      "python_import": "from miniproto.raw.types import TonConnectNextEventId",
+      "python_module": "miniproto.raw.types",
+      "python_name": "TonConnectNextEventId",
+      "qualified_name": "tonConnectNextEventId"
+    },
+    {
+      "constructor_id": "0xa15f8513",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.TonConnectRequest",
+      "python_import": "from miniproto.raw.types import TonConnectRequest",
+      "python_module": "miniproto.raw.types",
+      "python_name": "TonConnectRequest",
+      "qualified_name": "tonConnectRequest"
+    },
+    {
+      "constructor_id": "0x126556c6",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.TonConnectSession",
+      "python_import": "from miniproto.raw.types import TonConnectSession",
+      "python_module": "miniproto.raw.types",
+      "python_name": "TonConnectSession",
+      "qualified_name": "tonConnectSession"
+    },
+    {
+      "constructor_id": "0xac8dfe19",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.ToncenterApiResponse",
+      "python_import": "from miniproto.raw.types import ToncenterApiResponse",
+      "python_module": "miniproto.raw.types",
+      "python_name": "ToncenterApiResponse",
+      "qualified_name": "toncenter.apiResponse"
+    },
+    {
+      "constructor_id": "0x19887601",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.ToncenterStreamingUrl",
+      "python_import": "from miniproto.raw.types import ToncenterStreamingUrl",
+      "python_module": "miniproto.raw.types",
+      "python_name": "ToncenterStreamingUrl",
+      "qualified_name": "toncenter.streamingUrl"
     },
     {
       "constructor_id": "0xedcdc05b",
@@ -21529,6 +22033,15 @@
       "qualified_name": "updateSentStoryReaction"
     },
     {
+      "constructor_id": "0xb1434d4a",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.UpdateSentWalletTransaction",
+      "python_import": "from miniproto.raw.types import UpdateSentWalletTransaction",
+      "python_module": "miniproto.raw.types",
+      "python_name": "UpdateSentWalletTransaction",
+      "qualified_name": "updateSentWalletTransaction"
+    },
+    {
       "constructor_id": "0xebe46819",
       "kind": "type",
       "public_access": "miniproto.raw.types.UpdateServiceNotification",
@@ -21743,6 +22256,42 @@
       "python_module": "miniproto.raw.types",
       "python_name": "UpdateUserTyping",
       "qualified_name": "updateUserTyping"
+    },
+    {
+      "constructor_id": "0xa8ae1cac",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.UpdateWalletGaslessInfo",
+      "python_import": "from miniproto.raw.types import UpdateWalletGaslessInfo",
+      "python_module": "miniproto.raw.types",
+      "python_name": "UpdateWalletGaslessInfo",
+      "qualified_name": "updateWalletGaslessInfo"
+    },
+    {
+      "constructor_id": "0x6ac3f2aa",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.UpdateWalletState",
+      "python_import": "from miniproto.raw.types import UpdateWalletState",
+      "python_module": "miniproto.raw.types",
+      "python_name": "UpdateWalletState",
+      "qualified_name": "updateWalletState"
+    },
+    {
+      "constructor_id": "0xd1ee8199",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.UpdateWalletTonConnectPendingDisconnect",
+      "python_import": "from miniproto.raw.types import UpdateWalletTonConnectPendingDisconnect",
+      "python_module": "miniproto.raw.types",
+      "python_name": "UpdateWalletTonConnectPendingDisconnect",
+      "qualified_name": "updateWalletTonConnectPendingDisconnect"
+    },
+    {
+      "constructor_id": "0x50a38e0e",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.UpdateWalletTonConnectSession",
+      "python_import": "from miniproto.raw.types import UpdateWalletTonConnectSession",
+      "python_module": "miniproto.raw.types",
+      "python_name": "UpdateWalletTonConnectSession",
+      "qualified_name": "updateWalletTonConnectSession"
     },
     {
       "constructor_id": "0x140502d1",
@@ -22166,6 +22715,204 @@
       "python_module": "miniproto.raw.types",
       "python_name": "WallPaperSettings",
       "qualified_name": "wallPaperSettings"
+    },
+    {
+      "constructor_id": "0x18e82537",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.WalletEncryptedSecretPhrasePart",
+      "python_import": "from miniproto.raw.types import WalletEncryptedSecretPhrasePart",
+      "python_module": "miniproto.raw.types",
+      "python_name": "WalletEncryptedSecretPhrasePart",
+      "qualified_name": "wallet.encryptedSecretPhrasePart"
+    },
+    {
+      "constructor_id": "0xbde90a8d",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.WalletExistingBalance",
+      "python_import": "from miniproto.raw.types import WalletExistingBalance",
+      "python_module": "miniproto.raw.types",
+      "python_name": "WalletExistingBalance",
+      "qualified_name": "wallet.existingBalance"
+    },
+    {
+      "constructor_id": "0xf9d612ef",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.WalletHolderDc",
+      "python_import": "from miniproto.raw.types import WalletHolderDc",
+      "python_module": "miniproto.raw.types",
+      "python_name": "WalletHolderDc",
+      "qualified_name": "wallet.holderDc"
+    },
+    {
+      "constructor_id": "0x4c1ef10e",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.WalletNftAttribute",
+      "python_import": "from miniproto.raw.types import WalletNftAttribute",
+      "python_module": "miniproto.raw.types",
+      "python_name": "WalletNftAttribute",
+      "qualified_name": "wallet.nftAttribute"
+    },
+    {
+      "constructor_id": "0x3441fd1c",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.WalletNftItem",
+      "python_import": "from miniproto.raw.types import WalletNftItem",
+      "python_module": "miniproto.raw.types",
+      "python_name": "WalletNftItem",
+      "qualified_name": "wallet.nftItem"
+    },
+    {
+      "constructor_id": "0x794d486f",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.WalletNftItems",
+      "python_import": "from miniproto.raw.types import WalletNftItems",
+      "python_module": "miniproto.raw.types",
+      "python_name": "WalletNftItems",
+      "qualified_name": "wallet.nftItems"
+    },
+    {
+      "constructor_id": "0x99e41707",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.WalletProofChallenge",
+      "python_import": "from miniproto.raw.types import WalletProofChallenge",
+      "python_module": "miniproto.raw.types",
+      "python_name": "WalletProofChallenge",
+      "qualified_name": "wallet.proofChallenge"
+    },
+    {
+      "constructor_id": "0xe6d0ef01",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.WalletSecretPhraseParts",
+      "python_import": "from miniproto.raw.types import WalletSecretPhraseParts",
+      "python_module": "miniproto.raw.types",
+      "python_name": "WalletSecretPhraseParts",
+      "qualified_name": "wallet.secretPhraseParts"
+    },
+    {
+      "constructor_id": "0x4bc89693",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.WalletTonConnectChallenge",
+      "python_import": "from miniproto.raw.types import WalletTonConnectChallenge",
+      "python_module": "miniproto.raw.types",
+      "python_name": "WalletTonConnectChallenge",
+      "qualified_name": "wallet.tonConnectChallenge"
+    },
+    {
+      "constructor_id": "0x85c0f124",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.WalletTonConnectPending",
+      "python_import": "from miniproto.raw.types import WalletTonConnectPending",
+      "python_module": "miniproto.raw.types",
+      "python_name": "WalletTonConnectPending",
+      "qualified_name": "wallet.tonConnectPending"
+    },
+    {
+      "constructor_id": "0x0e1f6896",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.WalletTonConnectSessions",
+      "python_import": "from miniproto.raw.types import WalletTonConnectSessions",
+      "python_module": "miniproto.raw.types",
+      "python_name": "WalletTonConnectSessions",
+      "qualified_name": "wallet.tonConnectSessions"
+    },
+    {
+      "constructor_id": "0x4322d5a5",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.WalletTransactions",
+      "python_import": "from miniproto.raw.types import WalletTransactions",
+      "python_module": "miniproto.raw.types",
+      "python_name": "WalletTransactions",
+      "qualified_name": "wallet.transactions"
+    },
+    {
+      "constructor_id": "0x928e7b55",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.WalletUserAddresses",
+      "python_import": "from miniproto.raw.types import WalletUserAddresses",
+      "python_module": "miniproto.raw.types",
+      "python_name": "WalletUserAddresses",
+      "qualified_name": "wallet.userAddresses"
+    },
+    {
+      "constructor_id": "0x60bccb0d",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.WalletOwnershipProof",
+      "python_import": "from miniproto.raw.types import WalletOwnershipProof",
+      "python_module": "miniproto.raw.types",
+      "python_name": "WalletOwnershipProof",
+      "qualified_name": "walletOwnershipProof"
+    },
+    {
+      "constructor_id": "0x95c5346b",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.WalletState",
+      "python_import": "from miniproto.raw.types import WalletState",
+      "python_module": "miniproto.raw.types",
+      "python_name": "WalletState",
+      "qualified_name": "walletState"
+    },
+    {
+      "constructor_id": "0x9cb9b2ec",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.WalletStateEmpty",
+      "python_import": "from miniproto.raw.types import WalletStateEmpty",
+      "python_module": "miniproto.raw.types",
+      "python_name": "WalletStateEmpty",
+      "qualified_name": "walletStateEmpty"
+    },
+    {
+      "constructor_id": "0x952dc143",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.WalletTransaction",
+      "python_import": "from miniproto.raw.types import WalletTransaction",
+      "python_module": "miniproto.raw.types",
+      "python_name": "WalletTransaction",
+      "qualified_name": "walletTransaction"
+    },
+    {
+      "constructor_id": "0x062cc1bc",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.WalletTransactionPeerAddress",
+      "python_import": "from miniproto.raw.types import WalletTransactionPeerAddress",
+      "python_module": "miniproto.raw.types",
+      "python_name": "WalletTransactionPeerAddress",
+      "qualified_name": "walletTransactionPeerAddress"
+    },
+    {
+      "constructor_id": "0xe595186e",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.WalletTransactionPeerOnramp",
+      "python_import": "from miniproto.raw.types import WalletTransactionPeerOnramp",
+      "python_module": "miniproto.raw.types",
+      "python_name": "WalletTransactionPeerOnramp",
+      "qualified_name": "walletTransactionPeerOnramp"
+    },
+    {
+      "constructor_id": "0x728bed5a",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.WalletTransactionPeerUnsupported",
+      "python_import": "from miniproto.raw.types import WalletTransactionPeerUnsupported",
+      "python_module": "miniproto.raw.types",
+      "python_name": "WalletTransactionPeerUnsupported",
+      "qualified_name": "walletTransactionPeerUnsupported"
+    },
+    {
+      "constructor_id": "0xd4ea706d",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.WalletTransactionPeerUser",
+      "python_import": "from miniproto.raw.types import WalletTransactionPeerUser",
+      "python_module": "miniproto.raw.types",
+      "python_name": "WalletTransactionPeerUser",
+      "qualified_name": "walletTransactionPeerUser"
+    },
+    {
+      "constructor_id": "0xfe78eecc",
+      "kind": "type",
+      "public_access": "miniproto.raw.types.WalletUserAddress",
+      "python_import": "from miniproto.raw.types import WalletUserAddress",
+      "python_module": "miniproto.raw.types",
+      "python_name": "WalletUserAddress",
+      "qualified_name": "walletUserAddress"
     },
     {
       "constructor_id": "0xa6f8f452",
@@ -28867,6 +29614,6 @@
       "python_name": "TranslationTimeout"
     }
   ],
-  "layer": 229,
+  "layer": 230,
   "schema_version": 1
 }

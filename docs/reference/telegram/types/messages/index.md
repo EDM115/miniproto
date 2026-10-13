@@ -1,6 +1,6 @@
 ---
 title: "Telegram types: messages"
-description: "Layer 229 index of 96 canonical Telegram types in the messages namespace from tdlib."
+description: "Layer 230 index of 96 canonical Telegram types in the messages namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "messages"
 schema_source: "tdlib"
 ---
 
-## Layer 229 messages types
+## Layer 230 messages types
 
 Selected canonical types in this namespace: 96.
 

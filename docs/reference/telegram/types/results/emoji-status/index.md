@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: EmojiStatus"
-description: "Layer 229 result-family index for 4 canonical constructors returning EmojiStatus from tdlib."
+description: "Layer 230 result-family index for 4 canonical constructors returning EmojiStatus from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `EmojiStatus`
+## Layer 230 result family `EmojiStatus`
 
 Selected canonical constructors in this family: 4.
 

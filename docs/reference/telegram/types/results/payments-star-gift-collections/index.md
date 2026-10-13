@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: payments.StarGiftCollections"
-description: "Layer 229 result-family index for 2 canonical constructors returning payments.StarGiftCollections from tdlib."
+description: "Layer 230 result-family index for 2 canonical constructors returning payments.StarGiftCollections from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `payments.StarGiftCollections`
+## Layer 230 result family `payments.StarGiftCollections`
 
 Selected canonical constructors in this family: 2.
 

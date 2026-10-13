@@ -1,6 +1,6 @@
 ---
 title: "Telegram functions: stickers"
-description: "Layer 229 index of 11 canonical Telegram functions in the stickers namespace from tdlib."
+description: "Layer 230 index of 11 canonical Telegram functions in the stickers namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "stickers"
 schema_source: "tdlib"
 ---
 
-## Layer 229 stickers functions
+## Layer 230 stickers functions
 
 Selected canonical functions in this namespace: 11.
 

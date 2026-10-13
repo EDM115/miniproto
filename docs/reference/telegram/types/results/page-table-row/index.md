@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: PageTableRow"
-description: "Layer 229 result-family index for 1 canonical constructors returning PageTableRow from tdlib."
+description: "Layer 230 result-family index for 1 canonical constructors returning PageTableRow from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `PageTableRow`
+## Layer 230 result family `PageTableRow`
 
 Selected canonical constructors in this family: 1.
 

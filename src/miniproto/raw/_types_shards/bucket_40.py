@@ -1625,56 +1625,6 @@ class PaymentsUniqueStarGift(TLConstructor):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class InputPasskeyCredentialFirebasePNV(TLConstructor):
-    pnv_token: str
-    CONSTRUCTOR_ID: ClassVar[int] = 0x5B1CCB28
-    QUALNAME: ClassVar[str] = "inputPasskeyCredentialFirebasePNV"
-    RESULT_TYPE: ClassVar[str] = "InputPasskeyCredential"
-    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
-        TLField(
-            name="pnv_token",
-            python_name="pnv_token",
-            type="string",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-    )
-    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
-
-    def serialize(self) -> bytes:
-        return self._serialize(boxed=True)
-
-    def _serialize(self, *, boxed: bool = True) -> bytes:
-        output = bytearray()
-        if boxed:
-            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
-        output.extend(encode_string(self.pnv_token))
-        return bytes(output)
-
-    @classmethod
-    def deserialize(cls, data: bytes | memoryview) -> Self:
-        obj, offset = cls._deserialize(data)
-        if offset != len(data):
-            raise TLCodecError("TL object payload has trailing bytes")
-        return obj
-
-    @classmethod
-    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
-        raw_data = data
-        cursor = offset
-        if boxed:
-            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
-            if constructor_id != cls.CONSTRUCTOR_ID:
-                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
-        _value_pnv_token, cursor = decode_string(raw_data, cursor)
-        return cls(pnv_token=_value_pnv_token), cursor
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
 class StarGiftAuctionRound(TLConstructor):
     num: int
     duration: int
@@ -1810,6 +1760,77 @@ class StarGiftAttributeRarityLegendary(TLConstructor):
         return cls(), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class OnrampMethodAvailability(TLConstructor):
+    available: bool = False
+    payment_method: str
+    CONSTRUCTOR_ID: ClassVar[int] = 0x9EC8C6A8
+    QUALNAME: ClassVar[str] = "onrampMethodAvailability"
+    RESULT_TYPE: ClassVar[str] = "OnrampMethodAvailability"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="available",
+            python_name="available",
+            type="true",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="payment_method",
+            python_name="payment_method",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.available:
+            flags |= 1
+        output.extend(encode_int(flags))
+        output.extend(encode_string(self.payment_method))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_available = bool(flags & 1)
+        _value_payment_method, cursor = decode_string(raw_data, cursor)
+        return cls(available=_value_available, payment_method=_value_payment_method), cursor
+
+
 class contacts:
     TopPeers = ContactsTopPeers
 
@@ -1859,10 +1880,10 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     SavedReactionTag,
     PaymentsStarGiftsNotModified,
     PaymentsUniqueStarGift,
-    InputPasskeyCredentialFirebasePNV,
     StarGiftAuctionRound,
     StarGiftAttributeRarityEpic,
     StarGiftAttributeRarityLegendary,
+    OnrampMethodAvailability,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -1892,10 +1913,10 @@ __all__ = (
     "SavedReactionTag",
     "PaymentsStarGiftsNotModified",
     "PaymentsUniqueStarGift",
-    "InputPasskeyCredentialFirebasePNV",
     "StarGiftAuctionRound",
     "StarGiftAttributeRarityEpic",
     "StarGiftAttributeRarityLegendary",
+    "OnrampMethodAvailability",
     "contacts",
     "messages",
     "payments",

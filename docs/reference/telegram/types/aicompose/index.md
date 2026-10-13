@@ -1,6 +1,6 @@
 ---
 title: "Telegram types: aicompose"
-description: "Layer 229 index of 2 canonical Telegram types in the aicompose namespace from tdlib."
+description: "Layer 230 index of 2 canonical Telegram types in the aicompose namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "aicompose"
 schema_source: "tdlib"
 ---
 
-## Layer 229 aicompose types
+## Layer 230 aicompose types
 
 Selected canonical types in this namespace: 2.
 

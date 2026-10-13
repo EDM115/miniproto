@@ -1,6 +1,6 @@
 ---
 title: "Telegram functions: auth"
-description: "Layer 229 index of 29 canonical Telegram functions in the auth namespace from tdlib."
+description: "Layer 230 index of 30 canonical Telegram functions in the auth namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,15 +12,16 @@ namespace: "auth"
 schema_source: "tdlib"
 ---
 
-## Layer 229 auth functions
+## Layer 230 auth functions
 
-Selected canonical functions in this namespace: 29.
+Selected canonical functions in this namespace: 30.
 
 ## Declarations
 
 - [`auth.acceptLoginToken`](/reference/telegram/functions/auth/accept-login-token/): `Authorization`
 - [`auth.bindTempAuthKey`](/reference/telegram/functions/auth/bind-temp-auth-key/): `Bool`
 - [`auth.cancelCode`](/reference/telegram/functions/auth/cancel-code/): `Bool`
+- [`auth.cancelWebTokenAuthorization`](/reference/telegram/functions/auth/cancel-web-token-authorization/): `Bool`
 - [`auth.checkPaidAuth`](/reference/telegram/functions/auth/check-paid-auth/): `auth.SentCode`
 - [`auth.checkPassword`](/reference/telegram/functions/auth/check-password/): `auth.Authorization`
 - [`auth.checkRecoveryPassword`](/reference/telegram/functions/auth/check-recovery-password/): `Bool`

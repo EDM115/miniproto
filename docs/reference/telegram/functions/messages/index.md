@@ -1,6 +1,6 @@
 ---
 title: "Telegram functions: messages"
-description: "Layer 229 index of 259 canonical Telegram functions in the messages namespace from tdlib."
+description: "Layer 230 index of 259 canonical Telegram functions in the messages namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "messages"
 schema_source: "tdlib"
 ---
 
-## Layer 229 messages functions
+## Layer 230 messages functions
 
 Selected canonical functions in this namespace: 259.
 

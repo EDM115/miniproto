@@ -1,6 +1,6 @@
 ---
 title: "Telegram functions: chatlists"
-description: "Layer 229 index of 11 canonical Telegram functions in the chatlists namespace from tdlib."
+description: "Layer 230 index of 11 canonical Telegram functions in the chatlists namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "chatlists"
 schema_source: "tdlib"
 ---
 
-## Layer 229 chatlists functions
+## Layer 230 chatlists functions
 
 Selected canonical functions in this namespace: 11.
 

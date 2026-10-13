@@ -1,6 +1,6 @@
 ---
 title: "Telegram types: chatlists"
-description: "Layer 229 index of 5 canonical Telegram types in the chatlists namespace from tdlib."
+description: "Layer 230 index of 5 canonical Telegram types in the chatlists namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "chatlists"
 schema_source: "tdlib"
 ---
 
-## Layer 229 chatlists types
+## Layer 230 chatlists types
 
 Selected canonical types in this namespace: 5.
 

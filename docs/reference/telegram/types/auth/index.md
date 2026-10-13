@@ -1,6 +1,6 @@
 ---
 title: "Telegram types: auth"
-description: "Layer 229 index of 29 canonical Telegram types in the auth namespace from tdlib."
+description: "Layer 230 index of 29 canonical Telegram types in the auth namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "auth"
 schema_source: "tdlib"
 ---
 
-## Layer 229 auth types
+## Layer 230 auth types
 
 Selected canonical types in this namespace: 29.
 

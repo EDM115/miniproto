@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: storage.FileType"
-description: "Layer 229 result-family index for 10 canonical constructors returning storage.FileType from tdlib."
+description: "Layer 230 result-family index for 10 canonical constructors returning storage.FileType from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `storage.FileType`
+## Layer 230 result family `storage.FileType`
 
 Selected canonical constructors in this family: 10.
 

@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: InputReplyTo"
-description: "Layer 229 result-family index for 4 canonical constructors returning InputReplyTo from tdlib."
+description: "Layer 230 result-family index for 4 canonical constructors returning InputReplyTo from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `InputReplyTo`
+## Layer 230 result family `InputReplyTo`
 
 Selected canonical constructors in this family: 4.
 

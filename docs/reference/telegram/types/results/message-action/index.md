@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: MessageAction"
-description: "Layer 229 result-family index for 69 canonical constructors returning MessageAction from tdlib."
+description: "Layer 230 result-family index for 71 canonical constructors returning MessageAction from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,9 +12,9 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `MessageAction`
+## Layer 230 result family `MessageAction`
 
-Selected canonical constructors in this family: 69.
+Selected canonical constructors in this family: 71.
 
 ## Constructors
 
@@ -46,6 +46,7 @@ Selected canonical constructors in this family: 69.
 - [`messageActionGiftTon`](/reference/telegram/types/base/message-action-gift-ton/): `MessageAction`
 - [`messageActionGiveawayLaunch`](/reference/telegram/types/base/message-action-giveaway-launch/): `MessageAction`
 - [`messageActionGiveawayResults`](/reference/telegram/types/base/message-action-giveaway-results/): `MessageAction`
+- [`messageActionGramTransfer`](/reference/telegram/types/base/message-action-gram-transfer/): `MessageAction`
 - [`messageActionGroupCall`](/reference/telegram/types/base/message-action-group-call/): `MessageAction`
 - [`messageActionGroupCallScheduled`](/reference/telegram/types/base/message-action-group-call-scheduled/): `MessageAction`
 - [`messageActionHistoryClear`](/reference/telegram/types/base/message-action-history-clear/): `MessageAction`
@@ -85,5 +86,6 @@ Selected canonical constructors in this family: 69.
 - [`messageActionTodoCompletions`](/reference/telegram/types/base/message-action-todo-completions/): `MessageAction`
 - [`messageActionTopicCreate`](/reference/telegram/types/base/message-action-topic-create/): `MessageAction`
 - [`messageActionTopicEdit`](/reference/telegram/types/base/message-action-topic-edit/): `MessageAction`
+- [`messageActionWalletTonConnectRequest`](/reference/telegram/types/base/message-action-wallet-ton-connect-request/): `MessageAction`
 - [`messageActionWebViewDataSent`](/reference/telegram/types/base/message-action-web-view-data-sent/): `MessageAction`
 - [`messageActionWebViewDataSentMe`](/reference/telegram/types/base/message-action-web-view-data-sent-me/): `MessageAction`

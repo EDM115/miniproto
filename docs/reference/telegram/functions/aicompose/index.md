@@ -1,6 +1,6 @@
 ---
 title: "Telegram functions: aicompose"
-description: "Layer 229 index of 7 canonical Telegram functions in the aicompose namespace from tdlib."
+description: "Layer 230 index of 7 canonical Telegram functions in the aicompose namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "aicompose"
 schema_source: "tdlib"
 ---
 
-## Layer 229 aicompose functions
+## Layer 230 aicompose functions
 
 Selected canonical functions in this namespace: 7.
 

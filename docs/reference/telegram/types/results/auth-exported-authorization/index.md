@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: auth.ExportedAuthorization"
-description: "Layer 229 result-family index for 1 canonical constructors returning auth.ExportedAuthorization from tdlib."
+description: "Layer 230 result-family index for 1 canonical constructors returning auth.ExportedAuthorization from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `auth.ExportedAuthorization`
+## Layer 230 result family `auth.ExportedAuthorization`
 
 Selected canonical constructors in this family: 1.
 

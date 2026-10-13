@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: help.CountriesList"
-description: "Layer 229 result-family index for 2 canonical constructors returning help.CountriesList from tdlib."
+description: "Layer 230 result-family index for 2 canonical constructors returning help.CountriesList from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `help.CountriesList`
+## Layer 230 result family `help.CountriesList`
 
 Selected canonical constructors in this family: 2.
 

@@ -1,6 +1,6 @@
 ---
 title: "Telegram types: upload"
-description: "Layer 229 index of 5 canonical Telegram types in the upload namespace from tdlib."
+description: "Layer 230 index of 5 canonical Telegram types in the upload namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "upload"
 schema_source: "tdlib"
 ---
 
-## Layer 229 upload types
+## Layer 230 upload types
 
 Selected canonical types in this namespace: 5.
 

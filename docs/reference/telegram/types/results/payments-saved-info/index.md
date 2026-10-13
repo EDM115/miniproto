@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: payments.SavedInfo"
-description: "Layer 229 result-family index for 1 canonical constructors returning payments.SavedInfo from tdlib."
+description: "Layer 230 result-family index for 1 canonical constructors returning payments.SavedInfo from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `payments.SavedInfo`
+## Layer 230 result family `payments.SavedInfo`
 
 Selected canonical constructors in this family: 1.
 

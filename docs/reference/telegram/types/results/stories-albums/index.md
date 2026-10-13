@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: stories.Albums"
-description: "Layer 229 result-family index for 2 canonical constructors returning stories.Albums from tdlib."
+description: "Layer 230 result-family index for 2 canonical constructors returning stories.Albums from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `stories.Albums`
+## Layer 230 result family `stories.Albums`
 
 Selected canonical constructors in this family: 2.
 

@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: Update"
-description: "Layer 229 result-family index for 165 canonical constructors returning Update from tdlib."
+description: "Layer 230 result-family index for 170 canonical constructors returning Update from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,9 +12,9 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `Update`
+## Layer 230 result family `Update`
 
-Selected canonical constructors in this family: 165.
+Selected canonical constructors in this family: 170.
 
 ## Constructors
 
@@ -159,6 +159,7 @@ Selected canonical constructors in this family: 165.
 - [`updateSavedRingtones`](/reference/telegram/types/base/update-saved-ringtones/): `Update`
 - [`updateSentPhoneCode`](/reference/telegram/types/base/update-sent-phone-code/): `Update`
 - [`updateSentStoryReaction`](/reference/telegram/types/base/update-sent-story-reaction/): `Update`
+- [`updateSentWalletTransaction`](/reference/telegram/types/base/update-sent-wallet-transaction/): `Update`
 - [`updateServiceNotification`](/reference/telegram/types/base/update-service-notification/): `Update`
 - [`updateSmsJob`](/reference/telegram/types/base/update-sms-job/): `Update`
 - [`updateStarGiftAuctionState`](/reference/telegram/types/base/update-star-gift-auction-state/): `Update`
@@ -179,6 +180,10 @@ Selected canonical constructors in this family: 165.
 - [`updateUserPhone`](/reference/telegram/types/base/update-user-phone/): `Update`
 - [`updateUserStatus`](/reference/telegram/types/base/update-user-status/): `Update`
 - [`updateUserTyping`](/reference/telegram/types/base/update-user-typing/): `Update`
+- [`updateWalletGaslessInfo`](/reference/telegram/types/base/update-wallet-gasless-info/): `Update`
+- [`updateWalletState`](/reference/telegram/types/base/update-wallet-state/): `Update`
+- [`updateWalletTonConnectPendingDisconnect`](/reference/telegram/types/base/update-wallet-ton-connect-pending-disconnect/): `Update`
+- [`updateWalletTonConnectSession`](/reference/telegram/types/base/update-wallet-ton-connect-session/): `Update`
 - [`updateWebBrowserException`](/reference/telegram/types/base/update-web-browser-exception/): `Update`
 - [`updateWebBrowserSettings`](/reference/telegram/types/base/update-web-browser-settings/): `Update`
 - [`updateWebPage`](/reference/telegram/types/base/update-web-page/): `Update`

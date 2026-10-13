@@ -2469,6 +2469,42 @@ class AicomposeGetToneExample(TLRequest):
         return cls(tone=_value_tone, num=_value_num), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletGetBackupHolderDcs(TLRequest):
+    pass
+    CONSTRUCTOR_ID: ClassVar[int] = 0xD179D494
+    QUALNAME: ClassVar[str] = "wallet.getBackupHolderDcs"
+    RESULT_TYPE: ClassVar[str] = "Vector<wallet.HolderDc>"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        return cls(), cursor
+
+
 class account:
     DeleteAccount = AccountDeleteAccount
     DeleteBusinessChatLink = AccountDeleteBusinessChatLink
@@ -2530,6 +2566,10 @@ class stories:
     GetStoriesByID = StoriesGetStoriesByID
 
 
+class wallet:
+    GetBackupHolderDcs = WalletGetBackupHolderDcs
+
+
 ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
     InvokeWithReCaptchaPrefix,
     InvokeWithReCaptcha,
@@ -2564,6 +2604,7 @@ ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
     ChatlistsGetLeaveChatlistSuggestions,
     StoriesGetStoriesByID,
     AicomposeGetToneExample,
+    WalletGetBackupHolderDcs,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLRequest]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_FUNCTIONS}
 NAME_MAP: dict[str, type[TLRequest]] = {entry.QUALNAME: entry for entry in ALL_FUNCTIONS}
@@ -2601,6 +2642,7 @@ __all__ = (
     "ChatlistsGetLeaveChatlistSuggestions",
     "StoriesGetStoriesByID",
     "AicomposeGetToneExample",
+    "WalletGetBackupHolderDcs",
     "account",
     "aicompose",
     "channels",
@@ -2611,6 +2653,7 @@ __all__ = (
     "payments",
     "stickers",
     "stories",
+    "wallet",
     "CONSTRUCTOR_ID_MAP",
     "NAME_MAP",
 )

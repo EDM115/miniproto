@@ -2210,6 +2210,146 @@ class InputAiComposeToneSingleUse(TLConstructor):
         return cls(custom_prompt=_value_custom_prompt), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletHolderDc(TLConstructor):
+    dc: int
+    public_key: bytes
+    CONSTRUCTOR_ID: ClassVar[int] = 0xF9D612EF
+    QUALNAME: ClassVar[str] = "wallet.holderDc"
+    RESULT_TYPE: ClassVar[str] = "wallet.HolderDc"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="dc",
+            python_name="dc",
+            type="int",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="public_key",
+            python_name="public_key",
+            type="bytes",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_int(self.dc))
+        output.extend(encode_bytes(self.public_key))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_dc, cursor = decode_int(raw_data, cursor)
+        _value_public_key, cursor = decode_bytes(raw_data, cursor)
+        return cls(dc=_value_dc, public_key=_value_public_key), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletNftItems(TLConstructor):
+    items: tuple[Any, ...]
+    next_offset: str | None = None
+    CONSTRUCTOR_ID: ClassVar[int] = 0x794D486F
+    QUALNAME: ClassVar[str] = "wallet.nftItems"
+    RESULT_TYPE: ClassVar[str] = "wallet.NftItems"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="items",
+            python_name="items",
+            type="Vector<wallet.NftItem>",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=True,
+            vector_item_type="wallet.NftItem",
+        ),
+        TLField(
+            name="next_offset",
+            python_name="next_offset",
+            type="string",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.next_offset is not None:
+            flags |= 1
+        output.extend(encode_int(flags))
+        output.extend(encode_vector(self.items, "wallet.NftItem"))
+        if self.next_offset is not None:
+            output.extend(encode_string(self.next_offset))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_items, cursor = decode_vector(raw_data, cursor, "wallet.NftItem")
+        if bool(flags & 1):
+            _value_next_offset, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_next_offset = None
+        return cls(items=_value_items, next_offset=_value_next_offset), cursor
+
+
 class auth:
     SentCodeTypeSmsPhrase = AuthSentCodeTypeSmsPhrase
 
@@ -2237,6 +2377,11 @@ class messages:
 class payments:
     GiveawayInfoResults = PaymentsGiveawayInfoResults
     StarGiftUpgradeAttributes = PaymentsStarGiftUpgradeAttributes
+
+
+class wallet:
+    HolderDc = WalletHolderDc
+    NftItems = WalletNftItems
 
 
 ALL_TYPES: tuple[type[TLConstructor], ...] = (
@@ -2270,6 +2415,8 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     TodoItem,
     PaymentsStarGiftUpgradeAttributes,
     InputAiComposeToneSingleUse,
+    WalletHolderDc,
+    WalletNftItems,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -2304,12 +2451,15 @@ __all__ = (
     "TodoItem",
     "PaymentsStarGiftUpgradeAttributes",
     "InputAiComposeToneSingleUse",
+    "WalletHolderDc",
+    "WalletNftItems",
     "auth",
     "channels",
     "chatlists",
     "help",
     "messages",
     "payments",
+    "wallet",
     "CONSTRUCTOR_ID_MAP",
     "NAME_MAP",
 )

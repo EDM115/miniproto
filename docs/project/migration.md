@@ -23,4 +23,4 @@ Portable string import is deliberately guarded: it requires a disconnected clien
 
 ## Generated raw API changes
 
-The raw surface follows the pinned Layer 229 schema policy. A schema update can add/remove generated classes or fields, change available imports and remove a constructor that was present in an earlier snapshot. Regenerate and review the raw diff rather than carrying handwritten patches in generated files. The [schema and layer concept](../concepts/schema-layers.md) describes the source policy; the [development guide](../development.md) gives the authoritative commands.
+The raw surface follows the pinned Layer 230 schema policy. A schema update can add/remove generated classes or fields, change available imports and remove a constructor that was present in an earlier snapshot. Regenerate and review the raw diff rather than carrying handwritten patches in generated files. The [schema and layer concept](../concepts/schema-layers.md) describes the source policy; the [development guide](../development.md) gives the authoritative commands.

@@ -1,6 +1,6 @@
 ---
 title: "Telegram functions: account"
-description: "Layer 229 index of 128 canonical Telegram functions in the account namespace from tdlib."
+description: "Layer 230 index of 128 canonical Telegram functions in the account namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "account"
 schema_source: "tdlib"
 ---
 
-## Layer 229 account functions
+## Layer 230 account functions
 
 Selected canonical functions in this namespace: 128.
 

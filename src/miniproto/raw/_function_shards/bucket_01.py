@@ -36,6 +36,56 @@ from miniproto.tl.fast import decode_fast, encode_fast, materialize_empty_object
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class AuthCancelWebTokenAuthorization(TLRequest):
+    web_auth_token: str
+    CONSTRUCTOR_ID: ClassVar[int] = 0x490DADA1
+    QUALNAME: ClassVar[str] = "auth.cancelWebTokenAuthorization"
+    RESULT_TYPE: ClassVar[str] = "Bool"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="web_auth_token",
+            python_name="web_auth_token",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_string(self.web_auth_token))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_web_auth_token, cursor = decode_string(raw_data, cursor)
+        return cls(web_auth_token=_value_web_auth_token), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class AccountSetContactSignUpNotification(TLRequest):
     silent: bool
     CONSTRUCTOR_ID: ClassVar[int] = 0xCFF43F61
@@ -1534,6 +1584,77 @@ class BotsSetBotBroadcastDefaultAdminRights(TLRequest):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class BotsCheckUsername(TLRequest):
+    additional: bool = False
+    username: str
+    CONSTRUCTOR_ID: ClassVar[int] = 0xE3AC4C61
+    QUALNAME: ClassVar[str] = "bots.checkUsername"
+    RESULT_TYPE: ClassVar[str] = "Bool"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="additional",
+            python_name="additional",
+            type="true",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="username",
+            python_name="username",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.additional:
+            flags |= 1
+        output.extend(encode_int(flags))
+        output.extend(encode_string(self.username))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_additional = bool(flags & 1)
+        _value_username, cursor = decode_string(raw_data, cursor)
+        return cls(additional=_value_additional, username=_value_username), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class PaymentsClearSavedInfo(TLRequest):
     credentials: bool = False
     info: bool = False
@@ -2271,6 +2392,278 @@ class EphemeralDeleteAllWelcomeMessages(TLRequest):
         return cls(peer=_value_peer), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class ToncenterPerformApiRequest(TLRequest):
+    post: bool = False
+    endpoint: str
+    query: str | None = None
+    payload: str | None = None
+    CONSTRUCTOR_ID: ClassVar[int] = 0x8D7BDD61
+    QUALNAME: ClassVar[str] = "toncenter.performApiRequest"
+    RESULT_TYPE: ClassVar[str] = "toncenter.ApiResponse"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="post",
+            python_name="post",
+            type="true",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="endpoint",
+            python_name="endpoint",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="query",
+            python_name="query",
+            type="string",
+            flag="flags",
+            flag_index=1,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="payload",
+            python_name="payload",
+            type="string",
+            flag="flags",
+            flag_index=2,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.post:
+            flags |= 1
+        if self.query is not None:
+            flags |= 2
+        if self.payload is not None:
+            flags |= 4
+        output.extend(encode_int(flags))
+        output.extend(encode_string(self.endpoint))
+        if self.query is not None:
+            output.extend(encode_string(self.query))
+        if self.payload is not None:
+            output.extend(encode_string(self.payload))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_post = bool(flags & 1)
+        _value_endpoint, cursor = decode_string(raw_data, cursor)
+        if bool(flags & 2):
+            _value_query, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_query = None
+        if bool(flags & 4):
+            _value_payload, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_payload = None
+        return cls(post=_value_post, endpoint=_value_endpoint, query=_value_query, payload=_value_payload), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletGetGaslessInfo(TLRequest):
+    pass
+    CONSTRUCTOR_ID: ClassVar[int] = 0x742DF0A1
+    QUALNAME: ClassVar[str] = "wallet.getGaslessInfo"
+    RESULT_TYPE: ClassVar[str] = "Updates"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        return cls(), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletTonConnectClaimRequest(TLRequest):
+    declined: bool = False
+    session_id: int
+    msg_id: int
+    app_request_id: str
+    challenge_answer: bytes | None = None
+    CONSTRUCTOR_ID: ClassVar[int] = 0x66B57B41
+    QUALNAME: ClassVar[str] = "wallet.tonConnectClaimRequest"
+    RESULT_TYPE: ClassVar[str] = "Bool"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="declined",
+            python_name="declined",
+            type="true",
+            flag="flags",
+            flag_index=1,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="session_id",
+            python_name="session_id",
+            type="long",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="msg_id",
+            python_name="msg_id",
+            type="int",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="app_request_id",
+            python_name="app_request_id",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="challenge_answer",
+            python_name="challenge_answer",
+            type="bytes",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.declined:
+            flags |= 2
+        if self.challenge_answer is not None:
+            flags |= 1
+        output.extend(encode_int(flags))
+        output.extend(encode_long(self.session_id))
+        output.extend(encode_int(self.msg_id))
+        output.extend(encode_string(self.app_request_id))
+        if self.challenge_answer is not None:
+            output.extend(encode_bytes(self.challenge_answer))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_declined = bool(flags & 2)
+        _value_session_id, cursor = decode_long(raw_data, cursor)
+        _value_msg_id, cursor = decode_int(raw_data, cursor)
+        _value_app_request_id, cursor = decode_string(raw_data, cursor)
+        if bool(flags & 1):
+            _value_challenge_answer, cursor = decode_bytes(raw_data, cursor)
+        else:
+            _value_challenge_answer = None
+        return cls(
+            declined=_value_declined,
+            session_id=_value_session_id,
+            msg_id=_value_msg_id,
+            app_request_id=_value_app_request_id,
+            challenge_answer=_value_challenge_answer,
+        ), cursor
+
+
 class account:
     GetBusinessChatLinks = AccountGetBusinessChatLinks
     SaveAutoSaveSettings = AccountSaveAutoSaveSettings
@@ -2281,7 +2674,12 @@ class aicompose:
     GetTones = AicomposeGetTones
 
 
+class auth:
+    CancelWebTokenAuthorization = AuthCancelWebTokenAuthorization
+
+
 class bots:
+    CheckUsername = BotsCheckUsername
     SetBotBroadcastDefaultAdminRights = BotsSetBotBroadcastDefaultAdminRights
 
 
@@ -2334,11 +2732,21 @@ class stories:
     GetAlbumStories = StoriesGetAlbumStories
 
 
+class toncenter:
+    PerformApiRequest = ToncenterPerformApiRequest
+
+
 class upload:
     SaveFilePart = UploadSaveFilePart
 
 
+class wallet:
+    GetGaslessInfo = WalletGetGaslessInfo
+    TonConnectClaimRequest = WalletTonConnectClaimRequest
+
+
 ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
+    AuthCancelWebTokenAuthorization,
     AccountSetContactSignUpNotification,
     AccountSaveAutoSaveSettings,
     AccountGetBusinessChatLinks,
@@ -2356,6 +2764,7 @@ ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
     ChannelsEditBanned,
     ChannelsToggleAutotranslation,
     BotsSetBotBroadcastDefaultAdminRights,
+    BotsCheckUsername,
     PaymentsClearSavedInfo,
     PaymentsCheckGiftCode,
     PaymentsToggleChatStarGiftNotifications,
@@ -2367,10 +2776,14 @@ ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
     AicomposeGetTones,
     EphemeralDeleteWelcomeMessage,
     EphemeralDeleteAllWelcomeMessages,
+    ToncenterPerformApiRequest,
+    WalletGetGaslessInfo,
+    WalletTonConnectClaimRequest,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLRequest]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_FUNCTIONS}
 NAME_MAP: dict[str, type[TLRequest]] = {entry.QUALNAME: entry for entry in ALL_FUNCTIONS}
 __all__ = (
+    "AuthCancelWebTokenAuthorization",
     "AccountSetContactSignUpNotification",
     "AccountSaveAutoSaveSettings",
     "AccountGetBusinessChatLinks",
@@ -2388,6 +2801,7 @@ __all__ = (
     "ChannelsEditBanned",
     "ChannelsToggleAutotranslation",
     "BotsSetBotBroadcastDefaultAdminRights",
+    "BotsCheckUsername",
     "PaymentsClearSavedInfo",
     "PaymentsCheckGiftCode",
     "PaymentsToggleChatStarGiftNotifications",
@@ -2399,8 +2813,12 @@ __all__ = (
     "AicomposeGetTones",
     "EphemeralDeleteWelcomeMessage",
     "EphemeralDeleteAllWelcomeMessages",
+    "ToncenterPerformApiRequest",
+    "WalletGetGaslessInfo",
+    "WalletTonConnectClaimRequest",
     "account",
     "aicompose",
+    "auth",
     "bots",
     "channels",
     "chatlists",
@@ -2411,7 +2829,9 @@ __all__ = (
     "phone",
     "premium",
     "stories",
+    "toncenter",
     "upload",
+    "wallet",
     "CONSTRUCTOR_ID_MAP",
     "NAME_MAP",
 )

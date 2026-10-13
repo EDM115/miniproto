@@ -1,6 +1,6 @@
 ---
 title: "Telegram types: phone"
-description: "Layer 229 index of 8 canonical Telegram types in the phone namespace from tdlib."
+description: "Layer 230 index of 8 canonical Telegram types in the phone namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "phone"
 schema_source: "tdlib"
 ---
 
-## Layer 229 phone types
+## Layer 230 phone types
 
 Selected canonical types in this namespace: 8.
 

@@ -1,6 +1,6 @@
 ---
 title: "Telegram functions: base"
-description: "Layer 229 index of 15 canonical Telegram functions in the base namespace from tdlib."
+description: "Layer 230 index of 15 canonical Telegram functions in the base namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "base"
 schema_source: "tdlib"
 ---
 
-## Layer 229 base functions
+## Layer 230 base functions
 
 Selected canonical functions in this namespace: 15.
 

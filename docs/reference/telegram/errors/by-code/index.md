@@ -1,6 +1,6 @@
 ---
 title: "Telegram RPC errors by code"
-description: "Layer 229 index of 818 pinned Telegram RPC errors sorted by numeric code."
+description: "Layer 230 index of 818 pinned Telegram RPC errors sorted by numeric code."
 generated: true
 editUrl: false
 language: "telegram"

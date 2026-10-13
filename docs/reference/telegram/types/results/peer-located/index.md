@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: PeerLocated"
-description: "Layer 229 result-family index for 2 canonical constructors returning PeerLocated from tdlib."
+description: "Layer 230 result-family index for 2 canonical constructors returning PeerLocated from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `PeerLocated`
+## Layer 230 result family `PeerLocated`
 
 Selected canonical constructors in this family: 2.
 

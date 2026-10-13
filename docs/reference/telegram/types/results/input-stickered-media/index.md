@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: InputStickeredMedia"
-description: "Layer 229 result-family index for 2 canonical constructors returning InputStickeredMedia from tdlib."
+description: "Layer 230 result-family index for 2 canonical constructors returning InputStickeredMedia from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `InputStickeredMedia`
+## Layer 230 result family `InputStickeredMedia`
 
 Selected canonical constructors in this family: 2.
 

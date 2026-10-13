@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: Chat"
-description: "Layer 229 result-family index for 7 canonical constructors returning Chat from tdlib."
+description: "Layer 230 result-family index for 7 canonical constructors returning Chat from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `Chat`
+## Layer 230 result family `Chat`
 
 Selected canonical constructors in this family: 7.
 

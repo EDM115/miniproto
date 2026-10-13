@@ -273,3 +273,71 @@ def test_public_primitive_vector_decode_normalizes_invalid_offsets(
 
     with pytest.raises(ValueError, match="TL data ended before the requested value could be decoded"):
         decode_vector(encoded, offset, item_type)
+
+
+# Layer 230 declarations: https://raw.githubusercontent.com/tdlib/td/105481a3da3668e68ee12973dc60541ec013036a/td/generate/scheme/telegram_api.tl
+# Golden bytes are hand-derived using https://core.telegram.org/mtproto/serialize
+# fmt: off
+@pytest.mark.parametrize(
+    ("additional", "expected_hex"),
+    [(False, "614cace3 00000000 03616263"), (True, "614cace3 01000000 03616263")],
+)
+def test_layer230_bot_username_request_encodes_additional_flag(additional: bool, expected_hex: str) -> None:
+    _assert_layer230_wire(functions.BotsCheckUsername(username="abc", additional=additional), expected_hex)
+
+
+@pytest.mark.parametrize(
+    ("deletable", "expired", "expected_hex"),
+    [(True, False, "473607b4 04000000 03616263"), (False, True, "473607b4 08000000 03616263")],
+)
+def test_layer230_username_flags_have_distinct_wire_bits(deletable: bool, expired: bool, expected_hex: str) -> None:
+    _assert_layer230_wire(types.Username(username="abc", deletable=deletable, expired=expired), expected_hex)
+
+
+@pytest.mark.parametrize(
+    ("except_ids", "expected_hex"),
+    [
+        (None, "c0154f64 00000000 04030201 03616263"),
+        ((), "c0154f64 01000000 15c4b51c 00000000 04030201 03616263"),
+        ((0x0102030405060708, -2), "c0154f64 01000000 15c4b51c 02000000 0807060504030201 feffffffffffffff 04030201 03616263"),
+    ],
+)
+def test_layer230_firebase_login_places_optional_long_vector_before_api_fields(except_ids: tuple[int, ...] | None, expected_hex: str) -> None:
+    request = functions.AuthInitFirebasePnvLogin(except_ids=except_ids, api_id=0x01020304, api_hash="abc")
+    _assert_layer230_wire(request, expected_hex)
+
+
+@pytest.mark.parametrize("kind", ["verification", "settings", "request"])
+def test_layer230_bot_verification_descriptions_are_boxed_text_with_entities(kind: str) -> None:
+    description = types.TextWithEntities(text="abc", entities=(types.MessageEntityBold(offset=1, length=2),))
+    description_hex = "46311f75 03616263 15c4b51c 01000000 c90b61bd 01000000 02000000"
+    if kind == "verification":
+        value = types.BotVerification(bot_id=0x0102030405060708, icon=0x1112131415161718, description=description)
+        expected_hex = "d90e2ef7 0807060504030201 1817161514131211 " + description_hex
+    elif kind == "settings":
+        value = types.BotVerifierSettings(can_modify_custom_description=True, icon=0x1112131415161718, company="XYZ", custom_description=description)
+        expected_hex = "ffef2aa1 03000000 1817161514131211 0358595a " + description_hex
+    else:
+        value = functions.BotsSetCustomVerification(enabled=True, peer=types.InputPeerSelf(), custom_description=description)
+        expected_hex = "576794f4 06000000 c97ea07d " + description_hex
+    _assert_layer230_wire(value, expected_hex)
+
+
+def test_layer230_wallet_update_dispatch_preserves_nested_state_and_wire_offset() -> None:
+    value = types.UpdateWalletState(state=types.WalletState(backup_enabled=True, can_enable_backup=True, address="abc", public_key=b"\x10\x20", balance=0x0102030405060708))
+    _assert_layer230_wire(value, "aaf2c36a 6b34c595 05000000 03616263 02102000 0807060504030201")
+
+
+def test_layer230_removed_firebase_passkey_constructor_is_not_decodable() -> None:
+    with pytest.raises(tl_codec.TLCodecError, match="unknown TL constructor 0x5b1ccb28"):
+        decode_object(bytes.fromhex("28cb1c5b 03616263"))
+
+
+def _assert_layer230_wire(value: TLObject, expected_hex: str) -> None:
+    expected = bytes.fromhex(expected_hex)
+    assert value.serialize() == expected
+    assert type(value).deserialize(expected) == value
+    decoded, offset = decode_object(b"head" + expected + b"tail", 4)
+    assert decoded == value
+    assert offset == 4 + len(expected)
+# fmt: on

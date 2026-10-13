@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: Config"
-description: "Layer 229 result-family index for 1 canonical constructors returning Config from tdlib."
+description: "Layer 230 result-family index for 1 canonical constructors returning Config from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `Config`
+## Layer 230 result family `Config`
 
 Selected canonical constructors in this family: 1.
 

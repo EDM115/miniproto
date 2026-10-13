@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: PasswordKdfAlgo"
-description: "Layer 229 result-family index for 2 canonical constructors returning PasswordKdfAlgo from tdlib."
+description: "Layer 230 result-family index for 2 canonical constructors returning PasswordKdfAlgo from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `PasswordKdfAlgo`
+## Layer 230 result family `PasswordKdfAlgo`
 
 Selected canonical constructors in this family: 2.
 

@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: SponsoredMessage"
-description: "Layer 229 result-family index for 1 canonical constructors returning SponsoredMessage from tdlib."
+description: "Layer 230 result-family index for 1 canonical constructors returning SponsoredMessage from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `SponsoredMessage`
+## Layer 230 result family `SponsoredMessage`
 
 Selected canonical constructors in this family: 1.
 

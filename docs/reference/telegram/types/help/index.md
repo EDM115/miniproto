@@ -1,6 +1,6 @@
 ---
 title: "Telegram types: help"
-description: "Layer 229 index of 32 canonical Telegram types in the help namespace from tdlib."
+description: "Layer 230 index of 32 canonical Telegram types in the help namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "help"
 schema_source: "tdlib"
 ---
 
-## Layer 229 help types
+## Layer 230 help types
 
 Selected canonical types in this namespace: 32.
 

@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: SecureSecretSettings"
-description: "Layer 229 result-family index for 1 canonical constructors returning SecureSecretSettings from tdlib."
+description: "Layer 230 result-family index for 1 canonical constructors returning SecureSecretSettings from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `SecureSecretSettings`
+## Layer 230 result family `SecureSecretSettings`
 
 Selected canonical constructors in this family: 1.
 

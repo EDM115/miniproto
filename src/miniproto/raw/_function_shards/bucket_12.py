@@ -2456,6 +2456,144 @@ class CommunitiesCreate(TLRequest):
         return cls(hidden=_value_hidden, title=_value_title, about=_value_about, peer=_value_peer), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletExportSecretPhrase(TLRequest):
+    password: Any | None = None
+    CONSTRUCTOR_ID: ClassVar[int] = 0x9077C9AC
+    QUALNAME: ClassVar[str] = "wallet.exportSecretPhrase"
+    RESULT_TYPE: ClassVar[str] = "wallet.SecretPhraseParts"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="password",
+            python_name="password",
+            type="InputCheckPasswordSRP",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.password is not None:
+            flags |= 1
+        output.extend(encode_int(flags))
+        if self.password is not None:
+            output.extend(encode_value("InputCheckPasswordSRP", self.password))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        if bool(flags & 1):
+            _value_password, cursor = decode_value("InputCheckPasswordSRP", raw_data, cursor)
+        else:
+            _value_password = None
+        return cls(password=_value_password), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletReplaceWallet(TLRequest):
+    wallet: Any
+    password: Any | None = None
+    CONSTRUCTOR_ID: ClassVar[int] = 0xD8C72EEC
+    QUALNAME: ClassVar[str] = "wallet.replaceWallet"
+    RESULT_TYPE: ClassVar[str] = "WalletState"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="wallet",
+            python_name="wallet",
+            type="InputWalletReplacement",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="password",
+            python_name="password",
+            type="InputCheckPasswordSRP",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.password is not None:
+            flags |= 1
+        output.extend(encode_int(flags))
+        output.extend(encode_value("InputWalletReplacement", self.wallet))
+        if self.password is not None:
+            output.extend(encode_value("InputCheckPasswordSRP", self.password))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_wallet, cursor = decode_value("InputWalletReplacement", raw_data, cursor)
+        if bool(flags & 1):
+            _value_password, cursor = decode_value("InputCheckPasswordSRP", raw_data, cursor)
+        else:
+            _value_password = None
+        return cls(wallet=_value_wallet, password=_value_password), cursor
+
+
 class account:
     CheckUsername = AccountCheckUsername
     GetReactionsNotifySettings = AccountGetReactionsNotifySettings
@@ -2512,6 +2650,11 @@ class phone:
     SaveDefaultGroupCallJoinAs = PhoneSaveDefaultGroupCallJoinAs
 
 
+class wallet:
+    ExportSecretPhrase = WalletExportSecretPhrase
+    ReplaceWallet = WalletReplaceWallet
+
+
 ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
     AuthImportBotAuthorization,
     AuthFinishFirebasePnvLogin,
@@ -2542,6 +2685,8 @@ ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
     PaymentsGetStarGiftAuctionAcquiredGifts,
     PhoneSaveDefaultGroupCallJoinAs,
     CommunitiesCreate,
+    WalletExportSecretPhrase,
+    WalletReplaceWallet,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLRequest]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_FUNCTIONS}
 NAME_MAP: dict[str, type[TLRequest]] = {entry.QUALNAME: entry for entry in ALL_FUNCTIONS}
@@ -2575,6 +2720,8 @@ __all__ = (
     "PaymentsGetStarGiftAuctionAcquiredGifts",
     "PhoneSaveDefaultGroupCallJoinAs",
     "CommunitiesCreate",
+    "WalletExportSecretPhrase",
+    "WalletReplaceWallet",
     "account",
     "auth",
     "channels",
@@ -2584,6 +2731,7 @@ __all__ = (
     "messages",
     "payments",
     "phone",
+    "wallet",
     "CONSTRUCTOR_ID_MAP",
     "NAME_MAP",
 )

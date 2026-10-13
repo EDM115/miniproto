@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: Message"
-description: "Layer 229 result-family index for 3 canonical constructors returning Message from tdlib."
+description: "Layer 230 result-family index for 3 canonical constructors returning Message from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `Message`
+## Layer 230 result family `Message`
 
 Selected canonical constructors in this family: 3.
 

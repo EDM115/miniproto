@@ -1170,6 +1170,119 @@ class ChannelsSetEmojiStickers(TLRequest):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class BotsSetCustomVerification(TLRequest):
+    enabled: bool = False
+    bot: Any | None = None
+    peer: Any
+    custom_description: Any | None = None
+    CONSTRUCTOR_ID: ClassVar[int] = 0xF4946757
+    QUALNAME: ClassVar[str] = "bots.setCustomVerification"
+    RESULT_TYPE: ClassVar[str] = "Bool"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="enabled",
+            python_name="enabled",
+            type="true",
+            flag="flags",
+            flag_index=1,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="bot",
+            python_name="bot",
+            type="InputUser",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="peer",
+            python_name="peer",
+            type="InputPeer",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="custom_description",
+            python_name="custom_description",
+            type="TextWithEntities",
+            flag="flags",
+            flag_index=2,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.enabled:
+            flags |= 2
+        if self.bot is not None:
+            flags |= 1
+        if self.custom_description is not None:
+            flags |= 4
+        output.extend(encode_int(flags))
+        if self.bot is not None:
+            output.extend(encode_value("InputUser", self.bot))
+        output.extend(encode_value("InputPeer", self.peer))
+        if self.custom_description is not None:
+            output.extend(encode_value("TextWithEntities", self.custom_description))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_enabled = bool(flags & 2)
+        if bool(flags & 1):
+            _value_bot, cursor = decode_value("InputUser", raw_data, cursor)
+        else:
+            _value_bot = None
+        _value_peer, cursor = decode_value("InputPeer", raw_data, cursor)
+        if bool(flags & 4):
+            _value_custom_description, cursor = decode_value("TextWithEntities", raw_data, cursor)
+        else:
+            _value_custom_description = None
+        return cls(
+            enabled=_value_enabled, bot=_value_bot, peer=_value_peer, custom_description=_value_custom_description
+        ), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class PaymentsGetStarsTransactions(TLRequest):
     inbound: bool = False
     outbound: bool = False
@@ -2056,6 +2169,42 @@ class EphemeralDeleteMessage(TLRequest):
         return cls(peer=_value_peer, receiver_id=_value_receiver_id, id=_value_id), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletGetProofChallenge(TLRequest):
+    pass
+    CONSTRUCTOR_ID: ClassVar[int] = 0x2025E697
+    QUALNAME: ClassVar[str] = "wallet.getProofChallenge"
+    RESULT_TYPE: ClassVar[str] = "wallet.ProofChallenge"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        return cls(), cursor
+
+
 class account:
     SaveWallPaper = AccountSaveWallPaper
     ToggleConnectedBotPaused = AccountToggleConnectedBotPaused
@@ -2064,6 +2213,10 @@ class account:
 class auth:
     InitPasskeyLogin = AuthInitPasskeyLogin
     SignUp = AuthSignUp
+
+
+class bots:
+    SetCustomVerification = BotsSetCustomVerification
 
 
 class channels:
@@ -2102,6 +2255,10 @@ class stories:
     GetStoryViewsList = StoriesGetStoryViewsList
 
 
+class wallet:
+    GetProofChallenge = WalletGetProofChallenge
+
+
 ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
     InvokeWithoutUpdates,
     AuthSignUp,
@@ -2119,6 +2276,7 @@ ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
     MessagesEditChatCreator,
     ChannelsReadHistory,
     ChannelsSetEmojiStickers,
+    BotsSetCustomVerification,
     PaymentsGetStarsTransactions,
     PaymentsGetSuggestedStarRefBots,
     PhoneJoinGroupCall,
@@ -2126,6 +2284,7 @@ ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
     PhoneDeleteGroupCallMessages,
     StoriesGetStoryViewsList,
     EphemeralDeleteMessage,
+    WalletGetProofChallenge,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLRequest]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_FUNCTIONS}
 NAME_MAP: dict[str, type[TLRequest]] = {entry.QUALNAME: entry for entry in ALL_FUNCTIONS}
@@ -2146,6 +2305,7 @@ __all__ = (
     "MessagesEditChatCreator",
     "ChannelsReadHistory",
     "ChannelsSetEmojiStickers",
+    "BotsSetCustomVerification",
     "PaymentsGetStarsTransactions",
     "PaymentsGetSuggestedStarRefBots",
     "PhoneJoinGroupCall",
@@ -2153,14 +2313,17 @@ __all__ = (
     "PhoneDeleteGroupCallMessages",
     "StoriesGetStoryViewsList",
     "EphemeralDeleteMessage",
+    "WalletGetProofChallenge",
     "account",
     "auth",
+    "bots",
     "channels",
     "ephemeral",
     "messages",
     "payments",
     "phone",
     "stories",
+    "wallet",
     "CONSTRUCTOR_ID_MAP",
     "NAME_MAP",
 )

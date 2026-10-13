@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: BotCommandScope"
-description: "Layer 229 result-family index for 7 canonical constructors returning BotCommandScope from tdlib."
+description: "Layer 230 result-family index for 7 canonical constructors returning BotCommandScope from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `BotCommandScope`
+## Layer 230 result family `BotCommandScope`
 
 Selected canonical constructors in this family: 7.
 

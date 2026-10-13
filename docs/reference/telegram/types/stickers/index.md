@@ -1,6 +1,6 @@
 ---
 title: "Telegram types: stickers"
-description: "Layer 229 index of 1 canonical Telegram types in the stickers namespace from tdlib."
+description: "Layer 230 index of 1 canonical Telegram types in the stickers namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "stickers"
 schema_source: "tdlib"
 ---
 
-## Layer 229 stickers types
+## Layer 230 stickers types
 
 Selected canonical types in this namespace: 1.
 

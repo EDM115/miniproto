@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: messages.InactiveChats"
-description: "Layer 229 result-family index for 1 canonical constructors returning messages.InactiveChats from tdlib."
+description: "Layer 230 result-family index for 1 canonical constructors returning messages.InactiveChats from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `messages.InactiveChats`
+## Layer 230 result family `messages.InactiveChats`
 
 Selected canonical constructors in this family: 1.
 

@@ -2817,84 +2817,6 @@ class BusinessAwayMessage(TLConstructor):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class BotVerification(TLConstructor):
-    bot_id: int
-    icon: int
-    description: str
-    CONSTRUCTOR_ID: ClassVar[int] = 0xF93CD45C
-    QUALNAME: ClassVar[str] = "botVerification"
-    RESULT_TYPE: ClassVar[str] = "BotVerification"
-    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
-        TLField(
-            name="bot_id",
-            python_name="bot_id",
-            type="long",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="icon",
-            python_name="icon",
-            type="long",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="description",
-            python_name="description",
-            type="string",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-    )
-    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
-
-    def serialize(self) -> bytes:
-        return self._serialize(boxed=True)
-
-    def _serialize(self, *, boxed: bool = True) -> bytes:
-        output = bytearray()
-        if boxed:
-            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
-        output.extend(encode_long(self.bot_id))
-        output.extend(encode_long(self.icon))
-        output.extend(encode_string(self.description))
-        return bytes(output)
-
-    @classmethod
-    def deserialize(cls, data: bytes | memoryview) -> Self:
-        obj, offset = cls._deserialize(data)
-        if offset != len(data):
-            raise TLCodecError("TL object payload has trailing bytes")
-        return obj
-
-    @classmethod
-    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
-        raw_data = data
-        cursor = offset
-        if boxed:
-            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
-            if constructor_id != cls.CONSTRUCTOR_ID:
-                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
-        _value_bot_id, cursor = decode_long(raw_data, cursor)
-        _value_icon, cursor = decode_long(raw_data, cursor)
-        _value_description, cursor = decode_string(raw_data, cursor)
-        return cls(bot_id=_value_bot_id, icon=_value_icon, description=_value_description), cursor
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
 class PaymentsStarGiftWithdrawalUrl(TLConstructor):
     url: str
     CONSTRUCTOR_ID: ClassVar[int] = 0x84AA3A9C
@@ -3108,6 +3030,319 @@ class InputPasskeyResponseRegister(TLConstructor):
         return cls(client_data=_value_client_data, attestation_data=_value_attestation_data), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class InputWalletNew(TLConstructor):
+    pass
+    CONSTRUCTOR_ID: ClassVar[int] = 0x63A440DC
+    QUALNAME: ClassVar[str] = "inputWalletNew"
+    RESULT_TYPE: ClassVar[str] = "InputWalletReplacement"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        return cls(), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletNftItem(TLConstructor):
+    collection_address: str | None = None
+    address: str
+    owner_address: str
+    index: str
+    name: str | None = None
+    description: str | None = None
+    image: Any | None = None
+    image_small: Any | None = None
+    content_url: Any | None = None
+    lottie: Any | None = None
+    attributes: tuple[Any, ...] | None = None
+    extra: Any | None = None
+    CONSTRUCTOR_ID: ClassVar[int] = 0x3441FD1C
+    QUALNAME: ClassVar[str] = "wallet.nftItem"
+    RESULT_TYPE: ClassVar[str] = "wallet.NftItem"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="collection_address",
+            python_name="collection_address",
+            type="string",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="address",
+            python_name="address",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="owner_address",
+            python_name="owner_address",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="index",
+            python_name="index",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="name",
+            python_name="name",
+            type="string",
+            flag="flags",
+            flag_index=1,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="description",
+            python_name="description",
+            type="string",
+            flag="flags",
+            flag_index=2,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="image",
+            python_name="image",
+            type="WebDocument",
+            flag="flags",
+            flag_index=3,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="image_small",
+            python_name="image_small",
+            type="WebDocument",
+            flag="flags",
+            flag_index=4,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="content_url",
+            python_name="content_url",
+            type="WebDocument",
+            flag="flags",
+            flag_index=5,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="lottie",
+            python_name="lottie",
+            type="WebDocument",
+            flag="flags",
+            flag_index=6,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="attributes",
+            python_name="attributes",
+            type="Vector<wallet.NftAttribute>",
+            flag="flags",
+            flag_index=7,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=True,
+            vector_item_type="wallet.NftAttribute",
+        ),
+        TLField(
+            name="extra",
+            python_name="extra",
+            type="DataJSON",
+            flag="flags",
+            flag_index=8,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.collection_address is not None:
+            flags |= 1
+        if self.name is not None:
+            flags |= 2
+        if self.description is not None:
+            flags |= 4
+        if self.image is not None:
+            flags |= 8
+        if self.image_small is not None:
+            flags |= 16
+        if self.content_url is not None:
+            flags |= 32
+        if self.lottie is not None:
+            flags |= 64
+        if self.attributes is not None:
+            flags |= 128
+        if self.extra is not None:
+            flags |= 256
+        output.extend(encode_int(flags))
+        if self.collection_address is not None:
+            output.extend(encode_string(self.collection_address))
+        output.extend(encode_string(self.address))
+        output.extend(encode_string(self.owner_address))
+        output.extend(encode_string(self.index))
+        if self.name is not None:
+            output.extend(encode_string(self.name))
+        if self.description is not None:
+            output.extend(encode_string(self.description))
+        if self.image is not None:
+            output.extend(encode_value("WebDocument", self.image))
+        if self.image_small is not None:
+            output.extend(encode_value("WebDocument", self.image_small))
+        if self.content_url is not None:
+            output.extend(encode_value("WebDocument", self.content_url))
+        if self.lottie is not None:
+            output.extend(encode_value("WebDocument", self.lottie))
+        if self.attributes is not None:
+            output.extend(encode_vector(self.attributes, "wallet.NftAttribute"))
+        if self.extra is not None:
+            output.extend(encode_value("DataJSON", self.extra))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        if bool(flags & 1):
+            _value_collection_address, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_collection_address = None
+        _value_address, cursor = decode_string(raw_data, cursor)
+        _value_owner_address, cursor = decode_string(raw_data, cursor)
+        _value_index, cursor = decode_string(raw_data, cursor)
+        if bool(flags & 2):
+            _value_name, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_name = None
+        if bool(flags & 4):
+            _value_description, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_description = None
+        if bool(flags & 8):
+            _value_image, cursor = decode_value("WebDocument", raw_data, cursor)
+        else:
+            _value_image = None
+        if bool(flags & 16):
+            _value_image_small, cursor = decode_value("WebDocument", raw_data, cursor)
+        else:
+            _value_image_small = None
+        if bool(flags & 32):
+            _value_content_url, cursor = decode_value("WebDocument", raw_data, cursor)
+        else:
+            _value_content_url = None
+        if bool(flags & 64):
+            _value_lottie, cursor = decode_value("WebDocument", raw_data, cursor)
+        else:
+            _value_lottie = None
+        if bool(flags & 128):
+            _value_attributes, cursor = decode_vector(raw_data, cursor, "wallet.NftAttribute")
+        else:
+            _value_attributes = None
+        if bool(flags & 256):
+            _value_extra, cursor = decode_value("DataJSON", raw_data, cursor)
+        else:
+            _value_extra = None
+        return cls(
+            collection_address=_value_collection_address,
+            address=_value_address,
+            owner_address=_value_owner_address,
+            index=_value_index,
+            name=_value_name,
+            description=_value_description,
+            image=_value_image,
+            image_small=_value_image_small,
+            content_url=_value_content_url,
+            lottie=_value_lottie,
+            attributes=_value_attributes,
+            extra=_value_extra,
+        ), cursor
+
+
 class account:
     Passkeys = AccountPasskeys
 
@@ -3127,6 +3362,10 @@ class payments:
 
 class stories:
     StoryReactionsList = StoriesStoryReactionsList
+
+
+class wallet:
+    NftItem = WalletNftItem
 
 
 ALL_TYPES: tuple[type[TLConstructor], ...] = (
@@ -3159,11 +3398,12 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     MyBoost,
     StoriesStoryReactionsList,
     BusinessAwayMessage,
-    BotVerification,
     PaymentsStarGiftWithdrawalUrl,
     InputChatTheme,
     AccountPasskeys,
     InputPasskeyResponseRegister,
+    InputWalletNew,
+    WalletNftItem,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -3197,16 +3437,18 @@ __all__ = (
     "MyBoost",
     "StoriesStoryReactionsList",
     "BusinessAwayMessage",
-    "BotVerification",
     "PaymentsStarGiftWithdrawalUrl",
     "InputChatTheme",
     "AccountPasskeys",
     "InputPasskeyResponseRegister",
+    "InputWalletNew",
+    "WalletNftItem",
     "account",
     "help",
     "messages",
     "payments",
     "stories",
+    "wallet",
     "CONSTRUCTOR_ID_MAP",
     "NAME_MAP",
 )

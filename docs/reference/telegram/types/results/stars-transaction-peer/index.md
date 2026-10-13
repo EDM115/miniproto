@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: StarsTransactionPeer"
-description: "Layer 229 result-family index for 8 canonical constructors returning StarsTransactionPeer from tdlib."
+description: "Layer 230 result-family index for 8 canonical constructors returning StarsTransactionPeer from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `StarsTransactionPeer`
+## Layer 230 result family `StarsTransactionPeer`
 
 Selected canonical constructors in this family: 8.
 

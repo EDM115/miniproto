@@ -547,6 +547,97 @@ class InputMessagesFilterPoll(TLConstructor):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class UpdateSentWalletTransaction(TLConstructor):
+    gasless: bool = False
+    msg_hash: str
+    transaction: Any | None = None
+    CONSTRUCTOR_ID: ClassVar[int] = 0xB1434D4A
+    QUALNAME: ClassVar[str] = "updateSentWalletTransaction"
+    RESULT_TYPE: ClassVar[str] = "Update"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="gasless",
+            python_name="gasless",
+            type="true",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="msg_hash",
+            python_name="msg_hash",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="transaction",
+            python_name="transaction",
+            type="WalletTransaction",
+            flag="flags",
+            flag_index=1,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.gasless:
+            flags |= 1
+        if self.transaction is not None:
+            flags |= 2
+        output.extend(encode_int(flags))
+        output.extend(encode_string(self.msg_hash))
+        if self.transaction is not None:
+            output.extend(encode_value("WalletTransaction", self.transaction))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_gasless = bool(flags & 1)
+        _value_msg_hash, cursor = decode_string(raw_data, cursor)
+        if bool(flags & 2):
+            _value_transaction, cursor = decode_value("WalletTransaction", raw_data, cursor)
+        else:
+            _value_transaction = None
+        return cls(gasless=_value_gasless, msg_hash=_value_msg_hash, transaction=_value_transaction), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class TopPeerCategoryGroups(TLConstructor):
     pass
     CONSTRUCTOR_ID: ClassVar[int] = 0xBD17A14A
@@ -2241,6 +2332,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     InputPhoto,
     MessageService,
     InputMessagesFilterPoll,
+    UpdateSentWalletTransaction,
     TopPeerCategoryGroups,
     InputGameShortName,
     PageBlockUnsupported,
@@ -2269,6 +2361,7 @@ __all__ = (
     "InputPhoto",
     "MessageService",
     "InputMessagesFilterPoll",
+    "UpdateSentWalletTransaction",
     "TopPeerCategoryGroups",
     "InputGameShortName",
     "PageBlockUnsupported",

@@ -12,7 +12,7 @@ generated: false
 - [MTProto and the Bot API](./mtproto-and-bot-api.md) explains which Telegram surface miniproto speaks and what that does not authorize.
 - [Architecture and data flow](./architecture.md) follows an application request through client coordination, storage, sender, transport, framing and Telegram.
 - [High-level helpers and the raw API](./high-level-and-raw.md) separates the small convenience layer from generated TL requests.
-- [Schema sources and layers](./schema-layers.md) records the Layer 229 canonical-source policy.
+- [Schema sources and layers](./schema-layers.md) records the Layer 230 canonical-source policy.
 
 ## Stateful operation
 

@@ -72,70 +72,6 @@ class AuthResetAuthorizations(TLRequest):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class AuthInitFirebasePnvLogin(TLRequest):
-    api_id: int
-    api_hash: str
-    CONSTRUCTOR_ID: ClassVar[int] = 0x777DF37A
-    QUALNAME: ClassVar[str] = "auth.initFirebasePnvLogin"
-    RESULT_TYPE: ClassVar[str] = "auth.FirebasePnvIntent"
-    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
-        TLField(
-            name="api_id",
-            python_name="api_id",
-            type="int",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="api_hash",
-            python_name="api_hash",
-            type="string",
-            flag=None,
-            flag_index=None,
-            is_optional=False,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-    )
-    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
-
-    def serialize(self) -> bytes:
-        return self._serialize(boxed=True)
-
-    def _serialize(self, *, boxed: bool = True) -> bytes:
-        output = bytearray()
-        if boxed:
-            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
-        output.extend(encode_int(self.api_id))
-        output.extend(encode_string(self.api_hash))
-        return bytes(output)
-
-    @classmethod
-    def deserialize(cls, data: bytes | memoryview) -> Self:
-        obj, offset = cls._deserialize(data)
-        if offset != len(data):
-            raise TLCodecError("TL object payload has trailing bytes")
-        return obj
-
-    @classmethod
-    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
-        raw_data = data
-        cursor = offset
-        if boxed:
-            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
-            if constructor_id != cls.CONSTRUCTOR_ID:
-                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
-        _value_api_id, cursor = decode_int(raw_data, cursor)
-        _value_api_hash, cursor = decode_string(raw_data, cursor)
-        return cls(api_id=_value_api_id, api_hash=_value_api_hash), cursor
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
 class AccountRegisterDevice(TLRequest):
     no_muted: bool = False
     token_type: int
@@ -1380,6 +1316,157 @@ class BotsAddPreviewMedia(TLRequest):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class PaymentsGetOnrampQuote(TLRequest):
+    provider: str
+    crypto_currency: str
+    base_currency: str
+    base_amount: str | None = None
+    crypto_amount: str | None = None
+    payment_method: str | None = None
+    CONSTRUCTOR_ID: ClassVar[int] = 0xE06645FA
+    QUALNAME: ClassVar[str] = "payments.getOnrampQuote"
+    RESULT_TYPE: ClassVar[str] = "OnrampQuote"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="provider",
+            python_name="provider",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="crypto_currency",
+            python_name="crypto_currency",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="base_currency",
+            python_name="base_currency",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="base_amount",
+            python_name="base_amount",
+            type="string",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="crypto_amount",
+            python_name="crypto_amount",
+            type="string",
+            flag="flags",
+            flag_index=1,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="payment_method",
+            python_name="payment_method",
+            type="string",
+            flag="flags",
+            flag_index=2,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.base_amount is not None:
+            flags |= 1
+        if self.crypto_amount is not None:
+            flags |= 2
+        if self.payment_method is not None:
+            flags |= 4
+        output.extend(encode_int(flags))
+        output.extend(encode_string(self.provider))
+        output.extend(encode_string(self.crypto_currency))
+        output.extend(encode_string(self.base_currency))
+        if self.base_amount is not None:
+            output.extend(encode_string(self.base_amount))
+        if self.crypto_amount is not None:
+            output.extend(encode_string(self.crypto_amount))
+        if self.payment_method is not None:
+            output.extend(encode_string(self.payment_method))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_provider, cursor = decode_string(raw_data, cursor)
+        _value_crypto_currency, cursor = decode_string(raw_data, cursor)
+        _value_base_currency, cursor = decode_string(raw_data, cursor)
+        if bool(flags & 1):
+            _value_base_amount, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_base_amount = None
+        if bool(flags & 2):
+            _value_crypto_amount, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_crypto_amount = None
+        if bool(flags & 4):
+            _value_payment_method, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_payment_method = None
+        return cls(
+            provider=_value_provider,
+            crypto_currency=_value_crypto_currency,
+            base_currency=_value_base_currency,
+            base_amount=_value_base_amount,
+            crypto_amount=_value_crypto_amount,
+            payment_method=_value_payment_method,
+        ), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class StickersReplaceSticker(TLRequest):
     sticker: Any
     new_sticker: Any
@@ -1827,6 +1914,144 @@ class FragmentGetCollectibleInfo(TLRequest):
         return cls(collectible=_value_collectible), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletGetState(TLRequest):
+    pass
+    CONSTRUCTOR_ID: ClassVar[int] = 0xAB83B33A
+    QUALNAME: ClassVar[str] = "wallet.getState"
+    RESULT_TYPE: ClassVar[str] = "WalletState"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        return cls(), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletDisableBackup(TLRequest):
+    password: Any | None = None
+    new_public_key: bytes | None = None
+    proof: Any | None = None
+    CONSTRUCTOR_ID: ClassVar[int] = 0x0B0BF0DA
+    QUALNAME: ClassVar[str] = "wallet.disableBackup"
+    RESULT_TYPE: ClassVar[str] = "WalletState"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="password",
+            python_name="password",
+            type="InputCheckPasswordSRP",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="new_public_key",
+            python_name="new_public_key",
+            type="bytes",
+            flag="flags",
+            flag_index=1,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="proof",
+            python_name="proof",
+            type="WalletOwnershipProof",
+            flag="flags",
+            flag_index=2,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.password is not None:
+            flags |= 1
+        if self.new_public_key is not None:
+            flags |= 2
+        if self.proof is not None:
+            flags |= 4
+        output.extend(encode_int(flags))
+        if self.password is not None:
+            output.extend(encode_value("InputCheckPasswordSRP", self.password))
+        if self.new_public_key is not None:
+            output.extend(encode_bytes(self.new_public_key))
+        if self.proof is not None:
+            output.extend(encode_value("WalletOwnershipProof", self.proof))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        if bool(flags & 1):
+            _value_password, cursor = decode_value("InputCheckPasswordSRP", raw_data, cursor)
+        else:
+            _value_password = None
+        if bool(flags & 2):
+            _value_new_public_key, cursor = decode_bytes(raw_data, cursor)
+        else:
+            _value_new_public_key = None
+        if bool(flags & 4):
+            _value_proof, cursor = decode_value("WalletOwnershipProof", raw_data, cursor)
+        else:
+            _value_proof = None
+        return cls(password=_value_password, new_public_key=_value_new_public_key, proof=_value_proof), cursor
+
+
 class account:
     GetAuthorizationForm = AccountGetAuthorizationForm
     GetAutoSaveSettings = AccountGetAutoSaveSettings
@@ -1836,7 +2061,6 @@ class account:
 
 
 class auth:
-    InitFirebasePnvLogin = AuthInitFirebasePnvLogin
     ResetAuthorizations = AuthResetAuthorizations
 
 
@@ -1869,6 +2093,10 @@ class messages:
     SetBotShippingResults = MessagesSetBotShippingResults
 
 
+class payments:
+    GetOnrampQuote = PaymentsGetOnrampQuote
+
+
 class phone:
     GetGroupCallJoinAs = PhoneGetGroupCallJoinAs
     GetGroupCallStreamRtmpUrl = PhoneGetGroupCallStreamRtmpUrl
@@ -1886,9 +2114,13 @@ class upload:
     GetCdnFile = UploadGetCdnFile
 
 
+class wallet:
+    DisableBackup = WalletDisableBackup
+    GetState = WalletGetState
+
+
 ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
     AuthResetAuthorizations,
-    AuthInitFirebasePnvLogin,
     AccountRegisterDevice,
     AccountGetAuthorizationForm,
     AccountGetAutoSaveSettings,
@@ -1903,6 +2135,7 @@ ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
     HelpAcceptTermsOfService,
     BotsSetBotCommands,
     BotsAddPreviewMedia,
+    PaymentsGetOnrampQuote,
     StickersReplaceSticker,
     PhoneGetGroupCallJoinAs,
     PhoneGetGroupCallStreamRtmpUrl,
@@ -1910,12 +2143,13 @@ ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
     ChatlistsJoinChatlistInvite,
     ChatlistsLeaveChatlist,
     FragmentGetCollectibleInfo,
+    WalletGetState,
+    WalletDisableBackup,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLRequest]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_FUNCTIONS}
 NAME_MAP: dict[str, type[TLRequest]] = {entry.QUALNAME: entry for entry in ALL_FUNCTIONS}
 __all__ = (
     "AuthResetAuthorizations",
-    "AuthInitFirebasePnvLogin",
     "AccountRegisterDevice",
     "AccountGetAuthorizationForm",
     "AccountGetAutoSaveSettings",
@@ -1930,6 +2164,7 @@ __all__ = (
     "HelpAcceptTermsOfService",
     "BotsSetBotCommands",
     "BotsAddPreviewMedia",
+    "PaymentsGetOnrampQuote",
     "StickersReplaceSticker",
     "PhoneGetGroupCallJoinAs",
     "PhoneGetGroupCallStreamRtmpUrl",
@@ -1937,6 +2172,8 @@ __all__ = (
     "ChatlistsJoinChatlistInvite",
     "ChatlistsLeaveChatlist",
     "FragmentGetCollectibleInfo",
+    "WalletGetState",
+    "WalletDisableBackup",
     "account",
     "auth",
     "bots",
@@ -1945,10 +2182,12 @@ __all__ = (
     "fragment",
     "help",
     "messages",
+    "payments",
     "phone",
     "stats",
     "stickers",
     "upload",
+    "wallet",
     "CONSTRUCTOR_ID_MAP",
     "NAME_MAP",
 )

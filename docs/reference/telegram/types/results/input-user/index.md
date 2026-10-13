@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: InputUser"
-description: "Layer 229 result-family index for 4 canonical constructors returning InputUser from tdlib."
+description: "Layer 230 result-family index for 4 canonical constructors returning InputUser from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `InputUser`
+## Layer 230 result family `InputUser`
 
 Selected canonical constructors in this family: 4.
 

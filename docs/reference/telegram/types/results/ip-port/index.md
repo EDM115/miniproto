@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: IpPort"
-description: "Layer 229 result-family index for 2 canonical constructors returning IpPort from tdlib."
+description: "Layer 230 result-family index for 2 canonical constructors returning IpPort from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `IpPort`
+## Layer 230 result family `IpPort`
 
 Selected canonical constructors in this family: 2.
 

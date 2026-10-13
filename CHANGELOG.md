@@ -17,13 +17,14 @@
 💥♻️ refactor : custom session backends must implement atomic `mutate()` and domain-revision semantics rather than an unlocked `load()`/`save()` read-modify-write cycle  
 💥⚙️ config : `session_storage` takes precedence over `session_path`, pending RPC capacity is a positive bounded client setting and each account or deployment must use its own durable session path  
 💥📦️ package : Python 3.13+ is required; normal CPython 3.13/3.14 and free-threaded 3.14t are supported, while CPython 3.13t and ARMv7 are intentionally outside this line  
-💥🏗️ architecture : `miniproto` owns the protocol SDK while routers, filters, middleware, plugins, conversations, commands and broad application-framework ergonomics belong to the future `mpgram` package
+💥🏗️ architecture : `miniproto` owns the protocol SDK while routers, filters, middleware, plugins, conversations, commands and broad application-framework ergonomics belong to the future `mpgram` package  
+💥🧩 schema : Layer 230 removes `InputPasskeyCredentialFirebasePNV` and changes verification descriptions in `BotVerification`, `BotVerifierSettings` and `BotsSetCustomVerification` from strings to `TextWithEntities`
 
 ### Features
 
 ✨ feat : provide an async-first `Client` with serialized connect/disconnect, async-context-manager ownership, explicit timeouts/retries, datacenter migration and no import-time asyncio policy mutation  
 ✨ feat : authorize phone accounts with code and optional 2FA callbacks, authorize bots with bearer tokens, persist normalized identity and expose `is_authorized()` plus `get_me()`  
-✨ feat : generate the complete Telegram Layer 229 raw function/type surface from pinned TDLib structure validated against Telegram Desktop, with lazy facades, shards, registries, typed stubs and source provenance  
+✨ feat : generate the complete Telegram Layer 230 raw function/type surface from pinned TDLib structure validated against Telegram Desktop, with lazy facades, shards, registries, typed stubs and source provenance  
 ✨ feat : invoke generated requests through result-type validation, initialization envelopes, retry-safety classification, method-level flood-wait caching, migration recovery and typed RPC errors  
 ✨ feat : expose normalized peers and messages with indexed peer resolution, username/phone/numeric lookup, access-hash persistence, `send_message()`, `edit_message()` and `delete_messages()`  
 ✨ feat : persist update cursors, recover global and channel gaps, deduplicate updates, dispatch pushed sender updates, expose ordered `iter_updates()` and support bounded queue overflow policies  
@@ -41,7 +42,7 @@
 
 ⚡️ perf : bundle Rust/PyO3 acceleration for crypto, MTProto envelopes, transport framing, TL primitives, generated hot constructors, hashing, factorization and protected-session operations  
 ⚡️ perf : select native capabilities independently, retain output/validation parity with supported Python or `cryptography` implementations and fall back when an optional native symbol cannot load  
-⚡️ perf : use a stateful Rust frame pump for fragmented/coalesced TCP input and generated Rust fast paths for a reviewed Layer 229 constructor set while leaving unsupported shapes on the canonical codec  
+⚡️ perf : use a stateful Rust frame pump for fragmented/coalesced TCP input and generated Rust fast paths for a reviewed Layer 230 constructor set while leaving unsupported shapes on the canonical codec  
 ⚡️ perf : keep peer resolution warm through revision-aware indexes and incremental reconciliation rather than rescanning or copying the canonical peer collection on every lookup  
 ⚡️ perf : provide nine non-live benchmark families covering imports, runtime acceptance, media scheduling, native/fallback crypto, protected sessions, runtime paths, TL fast paths, transport framing and lazy raw-codec behavior  
 ⚡️ perf : provide resumable benchmark matrices, loop-lag and resource probes and separately guarded live media measurements without turning host-specific speedups into universal gates  

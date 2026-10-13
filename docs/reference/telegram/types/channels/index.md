@@ -1,6 +1,6 @@
 ---
 title: "Telegram types: channels"
-description: "Layer 229 index of 8 canonical Telegram types in the channels namespace from tdlib."
+description: "Layer 230 index of 8 canonical Telegram types in the channels namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "channels"
 schema_source: "tdlib"
 ---
 
-## Layer 229 channels types
+## Layer 230 channels types
 
 Selected canonical types in this namespace: 8.
 

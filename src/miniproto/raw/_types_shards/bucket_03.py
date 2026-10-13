@@ -2701,6 +2701,267 @@ class AicomposeTonesNotModified(TLConstructor):
         return cls(), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletTransaction(TLConstructor):
+    incoming: bool = False
+    gasless: bool = False
+    failed: bool = False
+    key_change: bool = False
+    comment_encrypted: bool = False
+    id: str
+    amount: int
+    fee: int
+    date: int
+    peer: Any
+    comment: str | None = None
+    tx_hash: str | None = None
+    nft: Any | None = None
+    CONSTRUCTOR_ID: ClassVar[int] = 0x952DC143
+    QUALNAME: ClassVar[str] = "walletTransaction"
+    RESULT_TYPE: ClassVar[str] = "WalletTransaction"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="incoming",
+            python_name="incoming",
+            type="true",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="gasless",
+            python_name="gasless",
+            type="true",
+            flag="flags",
+            flag_index=1,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="failed",
+            python_name="failed",
+            type="true",
+            flag="flags",
+            flag_index=2,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="key_change",
+            python_name="key_change",
+            type="true",
+            flag="flags",
+            flag_index=5,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="comment_encrypted",
+            python_name="comment_encrypted",
+            type="true",
+            flag="flags",
+            flag_index=6,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="id",
+            python_name="id",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="amount",
+            python_name="amount",
+            type="long",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="fee",
+            python_name="fee",
+            type="long",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="date",
+            python_name="date",
+            type="int",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="peer",
+            python_name="peer",
+            type="WalletTransactionPeer",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="comment",
+            python_name="comment",
+            type="string",
+            flag="flags",
+            flag_index=3,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="tx_hash",
+            python_name="tx_hash",
+            type="string",
+            flag="flags",
+            flag_index=4,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="nft",
+            python_name="nft",
+            type="wallet.NftItem",
+            flag="flags",
+            flag_index=7,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.incoming:
+            flags |= 1
+        if self.gasless:
+            flags |= 2
+        if self.failed:
+            flags |= 4
+        if self.key_change:
+            flags |= 32
+        if self.comment_encrypted:
+            flags |= 64
+        if self.comment is not None:
+            flags |= 8
+        if self.tx_hash is not None:
+            flags |= 16
+        if self.nft is not None:
+            flags |= 128
+        output.extend(encode_int(flags))
+        output.extend(encode_string(self.id))
+        output.extend(encode_long(self.amount))
+        output.extend(encode_long(self.fee))
+        output.extend(encode_int(self.date))
+        output.extend(encode_value("WalletTransactionPeer", self.peer))
+        if self.comment is not None:
+            output.extend(encode_string(self.comment))
+        if self.tx_hash is not None:
+            output.extend(encode_string(self.tx_hash))
+        if self.nft is not None:
+            output.extend(encode_value("wallet.NftItem", self.nft))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_incoming = bool(flags & 1)
+        _value_gasless = bool(flags & 2)
+        _value_failed = bool(flags & 4)
+        _value_key_change = bool(flags & 32)
+        _value_comment_encrypted = bool(flags & 64)
+        _value_id, cursor = decode_string(raw_data, cursor)
+        _value_amount, cursor = decode_long(raw_data, cursor)
+        _value_fee, cursor = decode_long(raw_data, cursor)
+        _value_date, cursor = decode_int(raw_data, cursor)
+        _value_peer, cursor = decode_value("WalletTransactionPeer", raw_data, cursor)
+        if bool(flags & 8):
+            _value_comment, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_comment = None
+        if bool(flags & 16):
+            _value_tx_hash, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_tx_hash = None
+        if bool(flags & 128):
+            _value_nft, cursor = decode_value("wallet.NftItem", raw_data, cursor)
+        else:
+            _value_nft = None
+        return cls(
+            incoming=_value_incoming,
+            gasless=_value_gasless,
+            failed=_value_failed,
+            key_change=_value_key_change,
+            comment_encrypted=_value_comment_encrypted,
+            id=_value_id,
+            amount=_value_amount,
+            fee=_value_fee,
+            date=_value_date,
+            peer=_value_peer,
+            comment=_value_comment,
+            tx_hash=_value_tx_hash,
+            nft=_value_nft,
+        ), cursor
+
+
 class account:
     WallPapersNotModified = AccountWallPapersNotModified
 
@@ -2745,6 +3006,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     StoryReactionPublicForward,
     InputChatThemeEmpty,
     AicomposeTonesNotModified,
+    WalletTransaction,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -2774,6 +3036,7 @@ __all__ = (
     "StoryReactionPublicForward",
     "InputChatThemeEmpty",
     "AicomposeTonesNotModified",
+    "WalletTransaction",
     "account",
     "aicompose",
     "messages",

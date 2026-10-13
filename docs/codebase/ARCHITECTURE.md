@@ -69,7 +69,7 @@ Media requests use the same invocation/sender machinery through dedicated per-op
 ## Known architectural risks
 
 - `src/miniproto/client.py`, `src/miniproto/connection/sender.py` and `src/miniproto/media/download.py` are large, high-churn orchestration files. Cross-cutting lifecycle changes can violate ownership in more than one subsystem; use focused fake-server/cancellation tests before the complete suite.
-- Generated Layer 229 code is large and upstream-driven. Hand edits or a source-precedence mistake can create broad API drift; only the pinned multi-source generator and offline stale check are authoritative.
+- Generated Layer 230 code is large and upstream-driven. Hand edits or a source-precedence mistake can create broad API drift; only the pinned multi-source generator and offline stale check are authoritative.
 - Session/peer/update correctness spans async and thread locks plus encrypted SQLite transactions. New read-modify-write paths must use atomic mutations and preserve the established lock order.
 - Native and fallback implementations can diverge by platform or interpreter even when one local benchmark is green. Parity tests and cross-platform benchmark evidence remain mandatory before changing routing.
 

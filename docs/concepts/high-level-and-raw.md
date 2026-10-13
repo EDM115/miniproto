@@ -19,7 +19,7 @@ Use a helper when it expresses the desired task and preserves the controls you n
 
 ## Static rather than inferred schema behavior
 
-The raw surface is generated from the pinned schema workflow, not reverse-engineered from Python classes at runtime. That keeps constructor IDs and flags tied to the canonical schema snapshot. See [schema sources and layers](./schema-layers.md) for the Layer 229 provenance policy and [the raw API guide](../raw-api.md) for the current generated-runtime layout.
+The raw surface is generated from the pinned schema workflow, not reverse-engineered from Python classes at runtime. That keeps constructor IDs and flags tied to the canonical schema snapshot. See [schema sources and layers](./schema-layers.md) for the Layer 230 provenance policy and [the raw API guide](../raw-api.md) for the current generated-runtime layout.
 
 ## Alpha compatibility
 

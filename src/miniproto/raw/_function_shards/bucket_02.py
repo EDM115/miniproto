@@ -1660,6 +1660,115 @@ class LangpackGetLanguage(TLRequest):
         return cls(lang_pack=_value_lang_pack, lang_code=_value_lang_code), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletSendTransfer(TLRequest):
+    data_normal: bytes
+    data_gasless: bytes | None = None
+    user_id: Any
+    random_id: int
+    CONSTRUCTOR_ID: ClassVar[int] = 0xD9E5D9E2
+    QUALNAME: ClassVar[str] = "wallet.sendTransfer"
+    RESULT_TYPE: ClassVar[str] = "Updates"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="data_normal",
+            python_name="data_normal",
+            type="bytes",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="data_gasless",
+            python_name="data_gasless",
+            type="bytes",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="user_id",
+            python_name="user_id",
+            type="InputUser",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="random_id",
+            python_name="random_id",
+            type="long",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.data_gasless is not None:
+            flags |= 1
+        output.extend(encode_int(flags))
+        output.extend(encode_bytes(self.data_normal))
+        if self.data_gasless is not None:
+            output.extend(encode_bytes(self.data_gasless))
+        output.extend(encode_value("InputUser", self.user_id))
+        output.extend(encode_long(self.random_id))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_data_normal, cursor = decode_bytes(raw_data, cursor)
+        if bool(flags & 1):
+            _value_data_gasless, cursor = decode_bytes(raw_data, cursor)
+        else:
+            _value_data_gasless = None
+        _value_user_id, cursor = decode_value("InputUser", raw_data, cursor)
+        _value_random_id, cursor = decode_long(raw_data, cursor)
+        return cls(
+            data_normal=_value_data_normal,
+            data_gasless=_value_data_gasless,
+            user_id=_value_user_id,
+            random_id=_value_random_id,
+        ), cursor
+
+
 class account:
     ChangeAuthorizationSettings = AccountChangeAuthorizationSettings
     GetSecureValue = AccountGetSecureValue
@@ -1703,6 +1812,10 @@ class phone:
     StartScheduledGroupCall = PhoneStartScheduledGroupCall
 
 
+class wallet:
+    SendTransfer = WalletSendTransfer
+
+
 ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
     AccountGetSecureValue,
     AccountSetGlobalPrivacySettings,
@@ -1723,6 +1836,7 @@ ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
     PhoneStartScheduledGroupCall,
     PhoneGetGroupCallStars,
     LangpackGetLanguage,
+    WalletSendTransfer,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLRequest]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_FUNCTIONS}
 NAME_MAP: dict[str, type[TLRequest]] = {entry.QUALNAME: entry for entry in ALL_FUNCTIONS}
@@ -1746,6 +1860,7 @@ __all__ = (
     "PhoneStartScheduledGroupCall",
     "PhoneGetGroupCallStars",
     "LangpackGetLanguage",
+    "WalletSendTransfer",
     "account",
     "bots",
     "channels",
@@ -1754,6 +1869,7 @@ __all__ = (
     "messages",
     "payments",
     "phone",
+    "wallet",
     "CONSTRUCTOR_ID_MAP",
     "NAME_MAP",
 )

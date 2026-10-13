@@ -1704,6 +1704,56 @@ class MessagesEmojiGameDiceInfo(TLConstructor):
         ), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class TonConnectNextEventId(TLConstructor):
+    event_id: int
+    CONSTRUCTOR_ID: ClassVar[int] = 0x582464E3
+    QUALNAME: ClassVar[str] = "tonConnectNextEventId"
+    RESULT_TYPE: ClassVar[str] = "TonConnectNextEventId"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="event_id",
+            python_name="event_id",
+            type="long",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_long(self.event_id))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_event_id, cursor = decode_long(raw_data, cursor)
+        return cls(event_id=_value_event_id), cursor
+
+
 class auth:
     CodeTypeCall = AuthCodeTypeCall
 
@@ -1738,6 +1788,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     BotPreviewMedia,
     StarsAmount,
     MessagesEmojiGameDiceInfo,
+    TonConnectNextEventId,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -1763,6 +1814,7 @@ __all__ = (
     "BotPreviewMedia",
     "StarsAmount",
     "MessagesEmojiGameDiceInfo",
+    "TonConnectNextEventId",
     "auth",
     "help",
     "messages",

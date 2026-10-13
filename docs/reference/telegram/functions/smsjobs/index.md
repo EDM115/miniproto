@@ -1,6 +1,6 @@
 ---
 title: "Telegram functions: smsjobs"
-description: "Layer 229 index of 7 canonical Telegram functions in the smsjobs namespace from tdlib."
+description: "Layer 230 index of 7 canonical Telegram functions in the smsjobs namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "smsjobs"
 schema_source: "tdlib"
 ---
 
-## Layer 229 smsjobs functions
+## Layer 230 smsjobs functions
 
 Selected canonical functions in this namespace: 7.
 

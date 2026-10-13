@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: BotInlineMessage"
-description: "Layer 229 result-family index for 8 canonical constructors returning BotInlineMessage from tdlib."
+description: "Layer 230 result-family index for 8 canonical constructors returning BotInlineMessage from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `BotInlineMessage`
+## Layer 230 result family `BotInlineMessage`
 
 Selected canonical constructors in this family: 8.
 

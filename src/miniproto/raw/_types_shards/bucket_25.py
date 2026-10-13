@@ -1187,6 +1187,56 @@ class UpdateStarsRevenueStatus(TLConstructor):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class UpdateWalletTonConnectPendingDisconnect(TLConstructor):
+    session_ids: tuple[int, ...]
+    CONSTRUCTOR_ID: ClassVar[int] = 0xD1EE8199
+    QUALNAME: ClassVar[str] = "updateWalletTonConnectPendingDisconnect"
+    RESULT_TYPE: ClassVar[str] = "Update"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="session_ids",
+            python_name="session_ids",
+            type="Vector<long>",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=True,
+            vector_item_type="long",
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_vector(self.session_ids, "long"))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_session_ids, cursor = decode_vector(raw_data, cursor, "long")
+        return cls(session_ids=_value_session_ids), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class NotifyCommunity(TLConstructor):
     community_id: int
     CONSTRUCTOR_ID: ClassVar[int] = 0xBE376999
@@ -3152,6 +3202,84 @@ class PaymentsSuggestedStarRefBots(TLConstructor):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class BotVerification(TLConstructor):
+    bot_id: int
+    icon: int
+    description: Any
+    CONSTRUCTOR_ID: ClassVar[int] = 0xF72E0ED9
+    QUALNAME: ClassVar[str] = "botVerification"
+    RESULT_TYPE: ClassVar[str] = "BotVerification"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="bot_id",
+            python_name="bot_id",
+            type="long",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="icon",
+            python_name="icon",
+            type="long",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="description",
+            python_name="description",
+            type="TextWithEntities",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_long(self.bot_id))
+        output.extend(encode_long(self.icon))
+        output.extend(encode_value("TextWithEntities", self.description))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_bot_id, cursor = decode_long(raw_data, cursor)
+        _value_icon, cursor = decode_long(raw_data, cursor)
+        _value_description, cursor = decode_value("TextWithEntities", raw_data, cursor)
+        return cls(bot_id=_value_bot_id, icon=_value_icon, description=_value_description), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class PaidReactionPrivacyAnonymous(TLConstructor):
     pass
     CONSTRUCTOR_ID: ClassVar[int] = 0x1F0C1AD9
@@ -3223,6 +3351,56 @@ class ProfileTabLinks(TLConstructor):
         return cls(), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class ToncenterApiResponse(TLConstructor):
+    response: Any
+    CONSTRUCTOR_ID: ClassVar[int] = 0xAC8DFE19
+    QUALNAME: ClassVar[str] = "toncenter.apiResponse"
+    RESULT_TYPE: ClassVar[str] = "toncenter.ApiResponse"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="response",
+            python_name="response",
+            type="DataJSON",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_value("DataJSON", self.response))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_response, cursor = decode_value("DataJSON", raw_data, cursor)
+        return cls(response=_value_response), cursor
+
+
 class auth:
     SentCodeTypeFlashCall = AuthSentCodeTypeFlashCall
 
@@ -3246,6 +3424,10 @@ class payments:
     SuggestedStarRefBots = PaymentsSuggestedStarRefBots
 
 
+class toncenter:
+    ApiResponse = ToncenterApiResponse
+
+
 ALL_TYPES: tuple[type[TLConstructor], ...] = (
     InputTakeoutFileLocation,
     InputPeerPhotoFileLocation,
@@ -3258,6 +3440,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     UpdateUserEmojiStatus,
     UpdateBotMessageReactions,
     UpdateStarsRevenueStatus,
+    UpdateWalletTonConnectPendingDisconnect,
     NotifyCommunity,
     DocumentAttributeCustomEmoji,
     BotInfo,
@@ -3280,8 +3463,10 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     MessagesDialogFilters,
     MessageReportOption,
     PaymentsSuggestedStarRefBots,
+    BotVerification,
     PaidReactionPrivacyAnonymous,
     ProfileTabLinks,
+    ToncenterApiResponse,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -3297,6 +3482,7 @@ __all__ = (
     "UpdateUserEmojiStatus",
     "UpdateBotMessageReactions",
     "UpdateStarsRevenueStatus",
+    "UpdateWalletTonConnectPendingDisconnect",
     "NotifyCommunity",
     "DocumentAttributeCustomEmoji",
     "BotInfo",
@@ -3319,13 +3505,16 @@ __all__ = (
     "MessagesDialogFilters",
     "MessageReportOption",
     "PaymentsSuggestedStarRefBots",
+    "BotVerification",
     "PaidReactionPrivacyAnonymous",
     "ProfileTabLinks",
+    "ToncenterApiResponse",
     "auth",
     "chatlists",
     "contacts",
     "messages",
     "payments",
+    "toncenter",
     "CONSTRUCTOR_ID_MAP",
     "NAME_MAP",
 )

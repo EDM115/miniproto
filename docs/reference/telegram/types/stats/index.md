@@ -1,6 +1,6 @@
 ---
 title: "Telegram types: stats"
-description: "Layer 229 index of 6 canonical Telegram types in the stats namespace from tdlib."
+description: "Layer 230 index of 6 canonical Telegram types in the stats namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "stats"
 schema_source: "tdlib"
 ---
 
-## Layer 229 stats types
+## Layer 230 stats types
 
 Selected canonical types in this namespace: 6.
 

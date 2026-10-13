@@ -1953,6 +1953,42 @@ class PaymentsDeleteStarGiftCollection(TLRequest):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class PaymentsGetCurrencyRates(TLRequest):
+    pass
+    CONSTRUCTOR_ID: ClassVar[int] = 0xD35983E8
+    QUALNAME: ClassVar[str] = "payments.getCurrencyRates"
+    RESULT_TYPE: ClassVar[str] = "payments.CurrencyRates"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        return cls(), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class PhoneToggleGroupCallRecord(TLRequest):
     start: bool = False
     video: bool = False
@@ -2565,6 +2601,7 @@ class messages:
 
 class payments:
     DeleteStarGiftCollection = PaymentsDeleteStarGiftCollection
+    GetCurrencyRates = PaymentsGetCurrencyRates
     GetStarGiftWithdrawalUrl = PaymentsGetStarGiftWithdrawalUrl
     GetStarsGiftOptions = PaymentsGetStarsGiftOptions
 
@@ -2631,6 +2668,7 @@ ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
     PaymentsGetStarsGiftOptions,
     PaymentsGetStarGiftWithdrawalUrl,
     PaymentsDeleteStarGiftCollection,
+    PaymentsGetCurrencyRates,
     PhoneToggleGroupCallRecord,
     StatsGetPollStats,
     StoriesReadStories,
@@ -2674,6 +2712,7 @@ __all__ = (
     "PaymentsGetStarsGiftOptions",
     "PaymentsGetStarGiftWithdrawalUrl",
     "PaymentsDeleteStarGiftCollection",
+    "PaymentsGetCurrencyRates",
     "PhoneToggleGroupCallRecord",
     "StatsGetPollStats",
     "StoriesReadStories",

@@ -487,6 +487,174 @@ class MessageActionPhoneCall(TLConstructor):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class MessageActionWalletTonConnectRequest(TLConstructor):
+    accepted: bool = False
+    declined: bool = False
+    session_id: int
+    expires: int
+    topic: str | None = None
+    trace_id: str | None = None
+    dapp_name: str | None = None
+    CONSTRUCTOR_ID: ClassVar[int] = 0x69B8C4BF
+    QUALNAME: ClassVar[str] = "messageActionWalletTonConnectRequest"
+    RESULT_TYPE: ClassVar[str] = "MessageAction"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="accepted",
+            python_name="accepted",
+            type="true",
+            flag="flags",
+            flag_index=2,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="declined",
+            python_name="declined",
+            type="true",
+            flag="flags",
+            flag_index=3,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="session_id",
+            python_name="session_id",
+            type="long",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="expires",
+            python_name="expires",
+            type="int",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="topic",
+            python_name="topic",
+            type="string",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="trace_id",
+            python_name="trace_id",
+            type="string",
+            flag="flags",
+            flag_index=1,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="dapp_name",
+            python_name="dapp_name",
+            type="string",
+            flag="flags",
+            flag_index=4,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.accepted:
+            flags |= 4
+        if self.declined:
+            flags |= 8
+        if self.topic is not None:
+            flags |= 1
+        if self.trace_id is not None:
+            flags |= 2
+        if self.dapp_name is not None:
+            flags |= 16
+        output.extend(encode_int(flags))
+        output.extend(encode_long(self.session_id))
+        output.extend(encode_int(self.expires))
+        if self.topic is not None:
+            output.extend(encode_string(self.topic))
+        if self.trace_id is not None:
+            output.extend(encode_string(self.trace_id))
+        if self.dapp_name is not None:
+            output.extend(encode_string(self.dapp_name))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_accepted = bool(flags & 4)
+        _value_declined = bool(flags & 8)
+        _value_session_id, cursor = decode_long(raw_data, cursor)
+        _value_expires, cursor = decode_int(raw_data, cursor)
+        if bool(flags & 1):
+            _value_topic, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_topic = None
+        if bool(flags & 2):
+            _value_trace_id, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_trace_id = None
+        if bool(flags & 16):
+            _value_dapp_name, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_dapp_name = None
+        return cls(
+            accepted=_value_accepted,
+            declined=_value_declined,
+            session_id=_value_session_id,
+            expires=_value_expires,
+            topic=_value_topic,
+            trace_id=_value_trace_id,
+            dapp_name=_value_dapp_name,
+        ), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class AuthSentCodePaymentRequired(TLConstructor):
     store_product: str
     phone_code_hash: str
@@ -2120,6 +2288,116 @@ class PostInteractionCountersMessage(TLConstructor):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class BotVerifierSettings(TLConstructor):
+    can_modify_custom_description: bool = False
+    icon: int
+    company: str
+    custom_description: Any | None = None
+    CONSTRUCTOR_ID: ClassVar[int] = 0xA12AEFFF
+    QUALNAME: ClassVar[str] = "botVerifierSettings"
+    RESULT_TYPE: ClassVar[str] = "BotVerifierSettings"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="can_modify_custom_description",
+            python_name="can_modify_custom_description",
+            type="true",
+            flag="flags",
+            flag_index=1,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="icon",
+            python_name="icon",
+            type="long",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="company",
+            python_name="company",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="custom_description",
+            python_name="custom_description",
+            type="TextWithEntities",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.can_modify_custom_description:
+            flags |= 2
+        if self.custom_description is not None:
+            flags |= 1
+        output.extend(encode_int(flags))
+        output.extend(encode_long(self.icon))
+        output.extend(encode_string(self.company))
+        if self.custom_description is not None:
+            output.extend(encode_value("TextWithEntities", self.custom_description))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_can_modify_custom_description = bool(flags & 2)
+        _value_icon, cursor = decode_long(raw_data, cursor)
+        _value_company, cursor = decode_string(raw_data, cursor)
+        if bool(flags & 1):
+            _value_custom_description, cursor = decode_value("TextWithEntities", raw_data, cursor)
+        else:
+            _value_custom_description = None
+        return cls(
+            can_modify_custom_description=_value_can_modify_custom_description,
+            icon=_value_icon,
+            company=_value_company,
+            custom_description=_value_custom_description,
+        ), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class InputSavedStarGiftChat(TLConstructor):
     peer: Any
     saved_id: int
@@ -2541,6 +2819,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     UserStatusOffline,
     MessageMediaVenue,
     MessageActionPhoneCall,
+    MessageActionWalletTonConnectRequest,
     AuthSentCodePaymentRequired,
     UpdateReadHistoryOutbox,
     InputPrivacyValueAllowUsers,
@@ -2560,6 +2839,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     InputMediaAreaVenue,
     InputMediaAreaChannelPost,
     PostInteractionCountersMessage,
+    BotVerifierSettings,
     InputSavedStarGiftChat,
     StarGiftAuctionStateFinished,
     Passkey,
@@ -2574,6 +2854,7 @@ __all__ = (
     "UserStatusOffline",
     "MessageMediaVenue",
     "MessageActionPhoneCall",
+    "MessageActionWalletTonConnectRequest",
     "AuthSentCodePaymentRequired",
     "UpdateReadHistoryOutbox",
     "InputPrivacyValueAllowUsers",
@@ -2593,6 +2874,7 @@ __all__ = (
     "InputMediaAreaVenue",
     "InputMediaAreaChannelPost",
     "PostInteractionCountersMessage",
+    "BotVerifierSettings",
     "InputSavedStarGiftChat",
     "StarGiftAuctionStateFinished",
     "Passkey",

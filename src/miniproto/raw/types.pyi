@@ -2601,6 +2601,48 @@ class MessageActionChatJoinedViaCommunity(TLConstructor):
     community_id: int
     def __init__(self, *, community_id: int) -> None: ...
 
+class MessageActionGramTransfer(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    comment_encrypted: bool
+    amount: int
+    peer_address: str
+    transaction_id: str
+    comment: str | None
+    def __init__(
+        self,
+        *,
+        comment_encrypted: bool = ...,
+        amount: int,
+        peer_address: str,
+        transaction_id: str,
+        comment: str | None = ...,
+    ) -> None: ...
+
+class MessageActionWalletTonConnectRequest(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    accepted: bool
+    declined: bool
+    session_id: int
+    expires: int
+    topic: str | None
+    trace_id: str | None
+    dapp_name: str | None
+    def __init__(
+        self,
+        *,
+        accepted: bool = ...,
+        declined: bool = ...,
+        session_id: int,
+        expires: int,
+        topic: str | None = ...,
+        trace_id: str | None = ...,
+        dapp_name: str | None = ...,
+    ) -> None: ...
+
 class Dialog(TLConstructor):
     CONSTRUCTOR_ID: ClassVar[int]
     QUALNAME: ClassVar[str]
@@ -5162,6 +5204,49 @@ class UpdateBotStarsSubscription(TLConstructor):
         qts: int,
     ) -> None: ...
 
+class UpdateWalletState(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    state: Any
+    def __init__(self, *, state: Any) -> None: ...
+
+class UpdateSentWalletTransaction(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    gasless: bool
+    msg_hash: str
+    transaction: Any | None
+    def __init__(self, *, gasless: bool = ..., msg_hash: str, transaction: Any | None = ...) -> None: ...
+
+class UpdateWalletGaslessInfo(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    available: bool
+    left: int
+    reset_at: int
+    min_amount: int
+    relayer_address: str
+    def __init__(
+        self, *, available: bool = ..., left: int, reset_at: int, min_amount: int, relayer_address: str
+    ) -> None: ...
+
+class UpdateWalletTonConnectSession(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    session: Any
+    def __init__(self, *, session: Any) -> None: ...
+
+class UpdateWalletTonConnectPendingDisconnect(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    session_ids: tuple[int, ...]
+    def __init__(self, *, session_ids: tuple[int, ...]) -> None: ...
+
 class UpdatesState(TLConstructor):
     CONSTRUCTOR_ID: ClassVar[int]
     QUALNAME: ClassVar[str]
@@ -7313,6 +7398,14 @@ class MessageEntityDiffDelete(TLConstructor):
     length: int
     def __init__(self, *, offset: int, length: int) -> None: ...
 
+class MessageEntityTonAddress(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    offset: int
+    length: int
+    def __init__(self, *, offset: int, length: int) -> None: ...
+
 class InputChannelEmpty(TLConstructor):
     CONSTRUCTOR_ID: ClassVar[int]
     QUALNAME: ClassVar[str]
@@ -8869,6 +8962,13 @@ class TextButton(TLConstructor):
     type: Any
     style: Any | None
     def __init__(self, *, text: Any, type: Any, style: Any | None = ...) -> None: ...
+
+class TextTonAddress(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    text: Any
+    def __init__(self, *, text: Any) -> None: ...
 
 class PageBlockUnsupported(TLConstructor):
     CONSTRUCTOR_ID: ClassVar[int]
@@ -14196,8 +14296,12 @@ class Username(TLConstructor):
     RESULT_TYPE: ClassVar[str]
     editable: bool
     active: bool
+    deletable: bool
+    expired: bool
     username: str
-    def __init__(self, *, editable: bool = ..., active: bool = ..., username: str) -> None: ...
+    def __init__(
+        self, *, editable: bool = ..., active: bool = ..., deletable: bool = ..., expired: bool = ..., username: str
+    ) -> None: ...
 
 class ForumTopicDeleted(TLConstructor):
     CONSTRUCTOR_ID: ClassVar[int]
@@ -16934,14 +17038,14 @@ class BotVerifierSettings(TLConstructor):
     can_modify_custom_description: bool
     icon: int
     company: str
-    custom_description: str | None
+    custom_description: Any | None
     def __init__(
         self,
         *,
         can_modify_custom_description: bool = ...,
         icon: int,
         company: str,
-        custom_description: str | None = ...,
+        custom_description: Any | None = ...,
     ) -> None: ...
 
 class BotVerification(TLConstructor):
@@ -16950,8 +17054,8 @@ class BotVerification(TLConstructor):
     RESULT_TYPE: ClassVar[str]
     bot_id: int
     icon: int
-    description: str
-    def __init__(self, *, bot_id: int, icon: int, description: str) -> None: ...
+    description: Any
+    def __init__(self, *, bot_id: int, icon: int, description: Any) -> None: ...
 
 class StarGiftAttributeModel(TLConstructor):
     CONSTRUCTOR_ID: ClassVar[int]
@@ -17921,13 +18025,6 @@ class InputPasskeyCredentialPublicKey(TLConstructor):
     response: Any
     def __init__(self, *, id: str, raw_id: str, response: Any) -> None: ...
 
-class InputPasskeyCredentialFirebasePNV(TLConstructor):
-    CONSTRUCTOR_ID: ClassVar[int]
-    QUALNAME: ClassVar[str]
-    RESULT_TYPE: ClassVar[str]
-    pnv_token: str
-    def __init__(self, *, pnv_token: str) -> None: ...
-
 class StarGiftBackground(TLConstructor):
     CONSTRUCTOR_ID: ClassVar[int]
     QUALNAME: ClassVar[str]
@@ -18661,6 +18758,478 @@ class EphemeralWelcomeMessages(TLConstructor):
     messages: tuple[Any, ...]
     def __init__(self, *, hash: int, messages: tuple[Any, ...]) -> None: ...
 
+class CurrencyRate(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    currency: str
+    rate: float
+    def __init__(self, *, currency: str, rate: float) -> None: ...
+
+class PaymentsCurrencyRates(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    rates: tuple[Any, ...]
+    def __init__(self, *, rates: tuple[Any, ...]) -> None: ...
+
+class ToncenterApiResponse(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    response: Any
+    def __init__(self, *, response: Any) -> None: ...
+
+class ToncenterStreamingUrl(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    url: str
+    expires: int
+    def __init__(self, *, url: str, expires: int) -> None: ...
+
+class OnrampMethodAvailability(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    available: bool
+    payment_method: str
+    def __init__(self, *, available: bool = ..., payment_method: str) -> None: ...
+
+class OnrampProviderInfo(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    supports_base_currencies: bool
+    supports_limits: bool
+    supports_quote: bool
+    id: str
+    name: str
+    crypto_currencies: tuple[str, ...]
+    def __init__(
+        self,
+        *,
+        supports_base_currencies: bool = ...,
+        supports_limits: bool = ...,
+        supports_quote: bool = ...,
+        id: str,
+        name: str,
+        crypto_currencies: tuple[str, ...],
+    ) -> None: ...
+
+class OnrampAvailability(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    allowed: bool
+    buy_allowed: bool
+    country_code: str
+    state: str | None
+    methods: tuple[Any, ...]
+    def __init__(
+        self,
+        *,
+        allowed: bool = ...,
+        buy_allowed: bool = ...,
+        country_code: str,
+        state: str | None = ...,
+        methods: tuple[Any, ...],
+    ) -> None: ...
+
+class OnrampLimits(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    base_currency: str
+    base_min_amount: str
+    base_max_amount: str
+    crypto_min_amount: str
+    crypto_max_amount: str
+    payment_method: str
+    def __init__(
+        self,
+        *,
+        base_currency: str,
+        base_min_amount: str,
+        base_max_amount: str,
+        crypto_min_amount: str,
+        crypto_max_amount: str,
+        payment_method: str,
+    ) -> None: ...
+
+class OnrampQuote(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    base_currency: str
+    base_amount: str
+    crypto_currency: str
+    crypto_amount: str
+    crypto_price: str
+    fee_amount: str
+    extra_fee_amount: str
+    network_fee_amount: str
+    total_amount: str
+    payment_method: str
+    expires_date: int
+    def __init__(
+        self,
+        *,
+        base_currency: str,
+        base_amount: str,
+        crypto_currency: str,
+        crypto_amount: str,
+        crypto_price: str,
+        fee_amount: str,
+        extra_fee_amount: str,
+        network_fee_amount: str,
+        total_amount: str,
+        payment_method: str,
+        expires_date: int,
+    ) -> None: ...
+
+class OnrampSession(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    provider: str
+    session_id: str
+    url: str
+    expires_date: int
+    def __init__(self, *, provider: str, session_id: str, url: str, expires_date: int) -> None: ...
+
+class WalletStateEmpty(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    creating: bool
+    def __init__(self, *, creating: bool = ...) -> None: ...
+
+class WalletState(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    backup_enabled: bool
+    can_export_phrase: bool
+    can_enable_backup: bool
+    address: str
+    public_key: bytes
+    balance: int
+    def __init__(
+        self,
+        *,
+        backup_enabled: bool = ...,
+        can_export_phrase: bool = ...,
+        can_enable_backup: bool = ...,
+        address: str,
+        public_key: bytes,
+        balance: int,
+    ) -> None: ...
+
+class WalletUserAddress(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    user_id: int | None
+    address: str
+    public_key: bytes
+    def __init__(self, *, user_id: int | None = ..., address: str, public_key: bytes) -> None: ...
+
+class WalletUserAddresses(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    addresses: tuple[Any, ...]
+    users: tuple[Any, ...]
+    def __init__(self, *, addresses: tuple[Any, ...], users: tuple[Any, ...]) -> None: ...
+
+class WalletTransactionPeerUser(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    user_id: int
+    address: str
+    domain: str | None
+    def __init__(self, *, user_id: int, address: str, domain: str | None = ...) -> None: ...
+
+class WalletTransactionPeerAddress(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    address: str
+    domain: str | None
+    def __init__(self, *, address: str, domain: str | None = ...) -> None: ...
+
+class WalletTransactionPeerOnramp(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    address: str
+    domain: str | None
+    provider_name: str
+    def __init__(self, *, address: str, domain: str | None = ..., provider_name: str) -> None: ...
+
+class WalletTransactionPeerUnsupported(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    def __init__(self) -> None: ...
+
+class WalletTransaction(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    incoming: bool
+    gasless: bool
+    failed: bool
+    key_change: bool
+    comment_encrypted: bool
+    id: str
+    amount: int
+    fee: int
+    date: int
+    peer: Any
+    comment: str | None
+    tx_hash: str | None
+    nft: Any | None
+    def __init__(
+        self,
+        *,
+        incoming: bool = ...,
+        gasless: bool = ...,
+        failed: bool = ...,
+        key_change: bool = ...,
+        comment_encrypted: bool = ...,
+        id: str,
+        amount: int,
+        fee: int,
+        date: int,
+        peer: Any,
+        comment: str | None = ...,
+        tx_hash: str | None = ...,
+        nft: Any | None = ...,
+    ) -> None: ...
+
+class WalletTransactions(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    balance: int
+    transactions: tuple[Any, ...]
+    next_offset: str | None
+    chats: tuple[Any, ...]
+    users: tuple[Any, ...]
+    def __init__(
+        self,
+        *,
+        balance: int,
+        transactions: tuple[Any, ...],
+        next_offset: str | None = ...,
+        chats: tuple[Any, ...],
+        users: tuple[Any, ...],
+    ) -> None: ...
+
+class WalletSecretPhraseParts(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    token: str
+    dcs: tuple[int, ...]
+    def __init__(self, *, token: str, dcs: tuple[int, ...]) -> None: ...
+
+class WalletEncryptedSecretPhrasePart(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    data: bytes
+    def __init__(self, *, data: bytes) -> None: ...
+
+class WalletHolderDc(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    dc: int
+    public_key: bytes
+    def __init__(self, *, dc: int, public_key: bytes) -> None: ...
+
+class WalletProofChallenge(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    payload: str
+    expires: int
+    domain: str
+    def __init__(self, *, payload: str, expires: int, domain: str) -> None: ...
+
+class WalletOwnershipProof(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    timestamp: int
+    signature: bytes
+    def __init__(self, *, timestamp: int, signature: bytes) -> None: ...
+
+class InputWalletNew(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    def __init__(self) -> None: ...
+
+class InputWalletImported(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    public_key: bytes
+    anchor_public_key: bytes | None
+    proof: Any
+    def __init__(self, *, public_key: bytes, anchor_public_key: bytes | None = ..., proof: Any) -> None: ...
+
+class TonConnectManifest(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    url: str
+    name: str
+    icon: Any | None
+    def __init__(self, *, url: str, name: str, icon: Any | None = ...) -> None: ...
+
+class TonConnectSession(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    pending: bool
+    closing: bool
+    closed: bool
+    id: int
+    dapp_client_id: str
+    client_id: str | None
+    nonce: bytes
+    manifest: Any | None
+    manifest_error: int | None
+    date: int
+    def __init__(
+        self,
+        *,
+        pending: bool = ...,
+        closing: bool = ...,
+        closed: bool = ...,
+        id: int,
+        dapp_client_id: str,
+        client_id: str | None = ...,
+        nonce: bytes,
+        manifest: Any | None = ...,
+        manifest_error: int | None = ...,
+        date: int,
+    ) -> None: ...
+
+class WalletTonConnectChallenge(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    challenge: bytes
+    event_id: int
+    def __init__(self, *, challenge: bytes, event_id: int) -> None: ...
+
+class TonConnectNextEventId(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    event_id: int
+    def __init__(self, *, event_id: int) -> None: ...
+
+class TonConnectRequest(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    session_id: int
+    msg_id: int
+    body: bytes
+    expires: int
+    topic: str | None
+    trace_id: str | None
+    def __init__(
+        self,
+        *,
+        session_id: int,
+        msg_id: int,
+        body: bytes,
+        expires: int,
+        topic: str | None = ...,
+        trace_id: str | None = ...,
+    ) -> None: ...
+
+class WalletTonConnectPending(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    session: Any
+    requests: tuple[Any, ...]
+    def __init__(self, *, session: Any, requests: tuple[Any, ...]) -> None: ...
+
+class WalletTonConnectSessions(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    sessions: tuple[Any, ...]
+    def __init__(self, *, sessions: tuple[Any, ...]) -> None: ...
+
+class WalletExistingBalance(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    has_balance: bool
+    url: str
+    def __init__(self, *, has_balance: bool = ..., url: str) -> None: ...
+
+class WalletNftAttribute(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    trait_type: str
+    value: str
+    def __init__(self, *, trait_type: str, value: str) -> None: ...
+
+class WalletNftItem(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    collection_address: str | None
+    address: str
+    owner_address: str
+    index: str
+    name: str | None
+    description: str | None
+    image: Any | None
+    image_small: Any | None
+    content_url: Any | None
+    lottie: Any | None
+    attributes: tuple[Any, ...] | None
+    extra: Any | None
+    def __init__(
+        self,
+        *,
+        collection_address: str | None = ...,
+        address: str,
+        owner_address: str,
+        index: str,
+        name: str | None = ...,
+        description: str | None = ...,
+        image: Any | None = ...,
+        image_small: Any | None = ...,
+        content_url: Any | None = ...,
+        lottie: Any | None = ...,
+        attributes: tuple[Any, ...] | None = ...,
+        extra: Any | None = ...,
+    ) -> None: ...
+
+class WalletNftItems(TLConstructor):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    items: tuple[Any, ...]
+    next_offset: str | None
+    def __init__(self, *, items: tuple[Any, ...], next_offset: str | None = ...) -> None: ...
+
 class AuthFirebasePnvIntent(TLConstructor):
     CONSTRUCTOR_ID: ClassVar[int]
     QUALNAME: ClassVar[str]
@@ -18935,6 +19504,7 @@ class payments:
     CheckCanSendGiftResultOk = PaymentsCheckCanSendGiftResultOk
     CheckedGiftCode = PaymentsCheckedGiftCode
     ConnectedStarRefBots = PaymentsConnectedStarRefBots
+    CurrencyRates = PaymentsCurrencyRates
     ExportedInvoice = PaymentsExportedInvoice
     GiveawayInfo = PaymentsGiveawayInfo
     GiveawayInfoResults = PaymentsGiveawayInfoResults
@@ -19028,6 +19598,10 @@ class stories:
     StoryViews = StoriesStoryViews
     StoryViewsList = StoriesStoryViewsList
 
+class toncenter:
+    ApiResponse = ToncenterApiResponse
+    StreamingUrl = ToncenterStreamingUrl
+
 class updates:
     ChannelDifference = UpdatesChannelDifference
     ChannelDifferenceEmpty = UpdatesChannelDifferenceEmpty
@@ -19051,6 +19625,21 @@ class users:
     UserFull = UsersUserFull
     Users = UsersUsers
     UsersSlice = UsersUsersSlice
+
+class wallet:
+    EncryptedSecretPhrasePart = WalletEncryptedSecretPhrasePart
+    ExistingBalance = WalletExistingBalance
+    HolderDc = WalletHolderDc
+    NftAttribute = WalletNftAttribute
+    NftItem = WalletNftItem
+    NftItems = WalletNftItems
+    ProofChallenge = WalletProofChallenge
+    SecretPhraseParts = WalletSecretPhraseParts
+    TonConnectChallenge = WalletTonConnectChallenge
+    TonConnectPending = WalletTonConnectPending
+    TonConnectSessions = WalletTonConnectSessions
+    Transactions = WalletTransactions
+    UserAddresses = WalletUserAddresses
 
 ALL_TYPES: Sequence[type[TLConstructor]]
 CONSTRUCTOR_ID_MAP: Mapping[int, type[TLConstructor]]

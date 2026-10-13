@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: InputStorePaymentPurpose"
-description: "Layer 229 result-family index for 8 canonical constructors returning InputStorePaymentPurpose from tdlib."
+description: "Layer 230 result-family index for 8 canonical constructors returning InputStorePaymentPurpose from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `InputStorePaymentPurpose`
+## Layer 230 result family `InputStorePaymentPurpose`
 
 Selected canonical constructors in this family: 8.
 

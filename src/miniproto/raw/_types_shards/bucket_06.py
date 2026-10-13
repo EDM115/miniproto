@@ -2982,6 +2982,220 @@ class PaymentsUniqueStarGiftValueInfo(TLConstructor):
         ), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class TonConnectSession(TLConstructor):
+    pending: bool = False
+    closing: bool = False
+    closed: bool = False
+    id: int
+    dapp_client_id: str
+    client_id: str | None = None
+    nonce: bytes
+    manifest: Any | None = None
+    manifest_error: int | None = None
+    date: int
+    CONSTRUCTOR_ID: ClassVar[int] = 0x126556C6
+    QUALNAME: ClassVar[str] = "tonConnectSession"
+    RESULT_TYPE: ClassVar[str] = "TonConnectSession"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="pending",
+            python_name="pending",
+            type="true",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="closing",
+            python_name="closing",
+            type="true",
+            flag="flags",
+            flag_index=1,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="closed",
+            python_name="closed",
+            type="true",
+            flag="flags",
+            flag_index=2,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="id",
+            python_name="id",
+            type="long",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="dapp_client_id",
+            python_name="dapp_client_id",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="client_id",
+            python_name="client_id",
+            type="string",
+            flag="flags",
+            flag_index=3,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="nonce",
+            python_name="nonce",
+            type="bytes",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="manifest",
+            python_name="manifest",
+            type="TonConnectManifest",
+            flag="flags",
+            flag_index=4,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="manifest_error",
+            python_name="manifest_error",
+            type="int",
+            flag="flags",
+            flag_index=5,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="date",
+            python_name="date",
+            type="int",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.pending:
+            flags |= 1
+        if self.closing:
+            flags |= 2
+        if self.closed:
+            flags |= 4
+        if self.client_id is not None:
+            flags |= 8
+        if self.manifest is not None:
+            flags |= 16
+        if self.manifest_error is not None:
+            flags |= 32
+        output.extend(encode_int(flags))
+        output.extend(encode_long(self.id))
+        output.extend(encode_string(self.dapp_client_id))
+        if self.client_id is not None:
+            output.extend(encode_string(self.client_id))
+        output.extend(encode_bytes(self.nonce))
+        if self.manifest is not None:
+            output.extend(encode_value("TonConnectManifest", self.manifest))
+        if self.manifest_error is not None:
+            output.extend(encode_int(self.manifest_error))
+        output.extend(encode_int(self.date))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_pending = bool(flags & 1)
+        _value_closing = bool(flags & 2)
+        _value_closed = bool(flags & 4)
+        _value_id, cursor = decode_long(raw_data, cursor)
+        _value_dapp_client_id, cursor = decode_string(raw_data, cursor)
+        if bool(flags & 8):
+            _value_client_id, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_client_id = None
+        _value_nonce, cursor = decode_bytes(raw_data, cursor)
+        if bool(flags & 16):
+            _value_manifest, cursor = decode_value("TonConnectManifest", raw_data, cursor)
+        else:
+            _value_manifest = None
+        if bool(flags & 32):
+            _value_manifest_error, cursor = decode_int(raw_data, cursor)
+        else:
+            _value_manifest_error = None
+        _value_date, cursor = decode_int(raw_data, cursor)
+        return cls(
+            pending=_value_pending,
+            closing=_value_closing,
+            closed=_value_closed,
+            id=_value_id,
+            dapp_client_id=_value_dapp_client_id,
+            client_id=_value_client_id,
+            nonce=_value_nonce,
+            manifest=_value_manifest,
+            manifest_error=_value_manifest_error,
+            date=_value_date,
+        ), cursor
+
+
 class auth:
     SentCodeTypeApp = AuthSentCodeTypeApp
 
@@ -3022,6 +3236,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     TextWithEntities,
     Birthday,
     PaymentsUniqueStarGiftValueInfo,
+    TonConnectSession,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -3049,6 +3264,7 @@ __all__ = (
     "TextWithEntities",
     "Birthday",
     "PaymentsUniqueStarGiftValueInfo",
+    "TonConnectSession",
     "auth",
     "channels",
     "messages",

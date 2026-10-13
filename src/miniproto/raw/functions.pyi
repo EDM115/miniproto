@@ -388,13 +388,21 @@ class AuthFinishPasskeyLogin(TLRequest):
         self, *, credential: Any, from_dc_id: int | None = ..., from_auth_key_id: int | None = ...
     ) -> None: ...
 
+class AuthCancelWebTokenAuthorization(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    web_auth_token: str
+    def __init__(self, *, web_auth_token: str) -> None: ...
+
 class AuthInitFirebasePnvLogin(TLRequest):
     CONSTRUCTOR_ID: ClassVar[int]
     QUALNAME: ClassVar[str]
     RESULT_TYPE: ClassVar[str]
+    except_ids: tuple[int, ...] | None
     api_id: int
     api_hash: str
-    def __init__(self, *, api_id: int, api_hash: str) -> None: ...
+    def __init__(self, *, except_ids: tuple[int, ...] | None = ..., api_id: int, api_hash: str) -> None: ...
 
 class AuthFinishFirebasePnvLogin(TLRequest):
     CONSTRUCTOR_ID: ClassVar[int]
@@ -5802,9 +5810,9 @@ class BotsSetCustomVerification(TLRequest):
     enabled: bool
     bot: Any | None
     peer: Any
-    custom_description: str | None
+    custom_description: Any | None
     def __init__(
-        self, *, enabled: bool = ..., bot: Any | None = ..., peer: Any, custom_description: str | None = ...
+        self, *, enabled: bool = ..., bot: Any | None = ..., peer: Any, custom_description: Any | None = ...
     ) -> None: ...
 
 class BotsGetBotRecommendations(TLRequest):
@@ -5818,8 +5826,9 @@ class BotsCheckUsername(TLRequest):
     CONSTRUCTOR_ID: ClassVar[int]
     QUALNAME: ClassVar[str]
     RESULT_TYPE: ClassVar[str]
+    additional: bool
     username: str
-    def __init__(self, *, username: str) -> None: ...
+    def __init__(self, *, additional: bool = ..., username: str) -> None: ...
 
 class BotsCreateBot(TLRequest):
     CONSTRUCTOR_ID: ClassVar[int]
@@ -5878,6 +5887,22 @@ class BotsSetJoinChatResults(TLRequest):
     query_id: int
     result: Any
     def __init__(self, *, query_id: int, result: Any) -> None: ...
+
+class BotsAddUsername(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    bot: Any
+    username: str
+    def __init__(self, *, bot: Any, username: str) -> None: ...
+
+class BotsRemoveUsername(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    bot: Any
+    username: str
+    def __init__(self, *, bot: Any, username: str) -> None: ...
 
 class PaymentsGetPaymentForm(TLRequest):
     CONSTRUCTOR_ID: ClassVar[int]
@@ -6489,6 +6514,100 @@ class PaymentsCraftStarGift(TLRequest):
     RESULT_TYPE: ClassVar[str]
     stargift: tuple[Any, ...]
     def __init__(self, *, stargift: tuple[Any, ...]) -> None: ...
+
+class PaymentsGetCurrencyRates(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    def __init__(self) -> None: ...
+
+class PaymentsGetOnrampProviders(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    crypto_currency: str | None
+    def __init__(self, *, crypto_currency: str | None = ...) -> None: ...
+
+class PaymentsGetOnrampBaseCurrencies(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    provider: str
+    crypto_currency: str
+    def __init__(self, *, provider: str, crypto_currency: str) -> None: ...
+
+class PaymentsGetOnrampAvailability(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    provider: str
+    crypto_currency: str
+    base_currency: str | None
+    def __init__(self, *, provider: str, crypto_currency: str, base_currency: str | None = ...) -> None: ...
+
+class PaymentsGetOnrampLimits(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    provider: str
+    crypto_currency: str
+    base_currency: str
+    payment_method: str | None
+    def __init__(
+        self, *, provider: str, crypto_currency: str, base_currency: str, payment_method: str | None = ...
+    ) -> None: ...
+
+class PaymentsGetOnrampQuote(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    provider: str
+    crypto_currency: str
+    base_currency: str
+    base_amount: str | None
+    crypto_amount: str | None
+    payment_method: str | None
+    def __init__(
+        self,
+        *,
+        provider: str,
+        crypto_currency: str,
+        base_currency: str,
+        base_amount: str | None = ...,
+        crypto_amount: str | None = ...,
+        payment_method: str | None = ...,
+    ) -> None: ...
+
+class PaymentsCreateOnrampSession(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    provider: str
+    crypto_currency: str
+    address: str
+    payment_method: str | None
+    base_currency: str | None
+    base_amount: str | None
+    memo: str | None
+    theme: str | None
+    success_return_url: str | None
+    fail_return_url: str | None
+    crypto_amount: str | None
+    def __init__(
+        self,
+        *,
+        provider: str,
+        crypto_currency: str,
+        address: str,
+        payment_method: str | None = ...,
+        base_currency: str | None = ...,
+        base_amount: str | None = ...,
+        memo: str | None = ...,
+        theme: str | None = ...,
+        success_return_url: str | None = ...,
+        fail_return_url: str | None = ...,
+        crypto_amount: str | None = ...,
+    ) -> None: ...
 
 class StickersCreateStickerSet(TLRequest):
     CONSTRUCTOR_ID: ClassVar[int]
@@ -7992,6 +8111,239 @@ class EphemeralGetWelcomeMessages(TLRequest):
     hash: int
     def __init__(self, *, peer: Any, hash: int) -> None: ...
 
+class ToncenterPerformApiRequest(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    post: bool
+    endpoint: str
+    query: str | None
+    payload: str | None
+    def __init__(
+        self, *, post: bool = ..., endpoint: str, query: str | None = ..., payload: str | None = ...
+    ) -> None: ...
+
+class ToncenterGetStreamingUrl(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    def __init__(self) -> None: ...
+
+class WalletGetState(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    def __init__(self) -> None: ...
+
+class WalletGetUserAddresses(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    force: bool
+    id: tuple[Any, ...]
+    addresses: tuple[str, ...]
+    def __init__(self, *, force: bool = ..., id: tuple[Any, ...], addresses: tuple[str, ...]) -> None: ...
+
+class WalletGetTransactions(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    inbound: bool
+    outbound: bool
+    offset: str
+    limit: int
+    def __init__(self, *, inbound: bool = ..., outbound: bool = ..., offset: str, limit: int) -> None: ...
+
+class WalletGetTransactionsByIDs(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    id: tuple[str, ...]
+    def __init__(self, *, id: tuple[str, ...]) -> None: ...
+
+class WalletGetTransactionsByMsgHash(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    msg_hash: tuple[str, ...]
+    def __init__(self, *, msg_hash: tuple[str, ...]) -> None: ...
+
+class WalletExportSecretPhrase(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    password: Any | None
+    def __init__(self, *, password: Any | None = ...) -> None: ...
+
+class WalletFetchEncryptedSecretPhrasePart(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    token: str
+    public_key: bytes
+    def __init__(self, *, token: str, public_key: bytes) -> None: ...
+
+class WalletReplaceWallet(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    wallet: Any
+    password: Any | None
+    def __init__(self, *, wallet: Any, password: Any | None = ...) -> None: ...
+
+class WalletDisableBackup(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    password: Any | None
+    new_public_key: bytes | None
+    proof: Any | None
+    def __init__(
+        self, *, password: Any | None = ..., new_public_key: bytes | None = ..., proof: Any | None = ...
+    ) -> None: ...
+
+class WalletGetBackupHolderDcs(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    def __init__(self) -> None: ...
+
+class WalletEnableBackup(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    parts: tuple[bytes, ...]
+    new_public_key: bytes | None
+    proof: Any | None
+    def __init__(
+        self, *, parts: tuple[bytes, ...], new_public_key: bytes | None = ..., proof: Any | None = ...
+    ) -> None: ...
+
+class WalletGetProofChallenge(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    def __init__(self) -> None: ...
+
+class WalletSendTransfer(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    data_normal: bytes
+    data_gasless: bytes | None
+    user_id: Any
+    random_id: int
+    def __init__(
+        self, *, data_normal: bytes, data_gasless: bytes | None = ..., user_id: Any, random_id: int
+    ) -> None: ...
+
+class WalletGetGaslessInfo(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    def __init__(self) -> None: ...
+
+class WalletGetExistingWaltBalance(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    def __init__(self) -> None: ...
+
+class WalletGetNfts(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    offset: str
+    limit: int
+    def __init__(self, *, offset: str, limit: int) -> None: ...
+
+class WalletTonConnectCreateSession(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    dapp_client_id: str
+    manifest_url: str
+    def __init__(self, *, dapp_client_id: str, manifest_url: str) -> None: ...
+
+class WalletTonConnectRegisterKey(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    session_id: int
+    client_id: str
+    def __init__(self, *, session_id: int, client_id: str) -> None: ...
+
+class WalletTonConnectSubmitConnectResult(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    error: bool
+    session_id: int
+    challenge_answer: bytes
+    body: bytes
+    trace_id: str | None
+    def __init__(
+        self, *, error: bool = ..., session_id: int, challenge_answer: bytes, body: bytes, trace_id: str | None = ...
+    ) -> None: ...
+
+class WalletTonConnectGetPending(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    dapp_client_id: str | None
+    session_id: int | None
+    def __init__(self, *, dapp_client_id: str | None = ..., session_id: int | None = ...) -> None: ...
+
+class WalletTonConnectClaimRequest(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    declined: bool
+    session_id: int
+    msg_id: int
+    app_request_id: str
+    challenge_answer: bytes | None
+    def __init__(
+        self,
+        *,
+        declined: bool = ...,
+        session_id: int,
+        msg_id: int,
+        app_request_id: str,
+        challenge_answer: bytes | None = ...,
+    ) -> None: ...
+
+class WalletTonConnectSubmitResponse(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    session_id: int
+    msg_id: int
+    body: bytes
+    trace_id: str | None
+    def __init__(self, *, session_id: int, msg_id: int, body: bytes, trace_id: str | None = ...) -> None: ...
+
+class WalletTonConnectNextEventId(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    session_id: int
+    def __init__(self, *, session_id: int) -> None: ...
+
+class WalletTonConnectCloseSession(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    session_id: int
+    body: bytes | None
+    def __init__(self, *, session_id: int, body: bytes | None = ...) -> None: ...
+
+class WalletTonConnectGetSessions(TLRequest):
+    CONSTRUCTOR_ID: ClassVar[int]
+    QUALNAME: ClassVar[str]
+    RESULT_TYPE: ClassVar[str]
+    def __init__(self) -> None: ...
+
 class account:
     AcceptAuthorization = AccountAcceptAuthorization
     CancelPasswordEmail = AccountCancelPasswordEmail
@@ -8135,6 +8487,7 @@ class auth:
     AcceptLoginToken = AuthAcceptLoginToken
     BindTempAuthKey = AuthBindTempAuthKey
     CancelCode = AuthCancelCode
+    CancelWebTokenAuthorization = AuthCancelWebTokenAuthorization
     CheckPaidAuth = AuthCheckPaidAuth
     CheckPassword = AuthCheckPassword
     CheckRecoveryPassword = AuthCheckRecoveryPassword
@@ -8164,6 +8517,7 @@ class auth:
 
 class bots:
     AddPreviewMedia = BotsAddPreviewMedia
+    AddUsername = BotsAddUsername
     AllowSendMessage = BotsAllowSendMessage
     AnswerWebhookJSONQuery = BotsAnswerWebhookJSONQuery
     CanSendMessage = BotsCanSendMessage
@@ -8185,6 +8539,7 @@ class bots:
     GetPreviewMedias = BotsGetPreviewMedias
     GetRequestedWebViewButton = BotsGetRequestedWebViewButton
     InvokeWebViewCustomMethod = BotsInvokeWebViewCustomMethod
+    RemoveUsername = BotsRemoveUsername
     ReorderPreviewMedias = BotsReorderPreviewMedias
     ReorderUsernames = BotsReorderUsernames
     RequestWebViewButton = BotsRequestWebViewButton
@@ -8640,6 +8995,7 @@ class payments:
     ConnectStarRefBot = PaymentsConnectStarRefBot
     ConvertStarGift = PaymentsConvertStarGift
     CraftStarGift = PaymentsCraftStarGift
+    CreateOnrampSession = PaymentsCreateOnrampSession
     CreateStarGiftCollection = PaymentsCreateStarGiftCollection
     DeleteStarGiftCollection = PaymentsDeleteStarGiftCollection
     EditConnectedStarRefBot = PaymentsEditConnectedStarRefBot
@@ -8649,7 +9005,13 @@ class payments:
     GetConnectedStarRefBot = PaymentsGetConnectedStarRefBot
     GetConnectedStarRefBots = PaymentsGetConnectedStarRefBots
     GetCraftStarGifts = PaymentsGetCraftStarGifts
+    GetCurrencyRates = PaymentsGetCurrencyRates
     GetGiveawayInfo = PaymentsGetGiveawayInfo
+    GetOnrampAvailability = PaymentsGetOnrampAvailability
+    GetOnrampBaseCurrencies = PaymentsGetOnrampBaseCurrencies
+    GetOnrampLimits = PaymentsGetOnrampLimits
+    GetOnrampProviders = PaymentsGetOnrampProviders
+    GetOnrampQuote = PaymentsGetOnrampQuote
     GetPaymentForm = PaymentsGetPaymentForm
     GetPaymentReceipt = PaymentsGetPaymentReceipt
     GetPremiumGiftCodeOptions = PaymentsGetPremiumGiftCodeOptions
@@ -8820,6 +9182,10 @@ class stories:
     TogglePinnedToTop = StoriesTogglePinnedToTop
     UpdateAlbum = StoriesUpdateAlbum
 
+class toncenter:
+    GetStreamingUrl = ToncenterGetStreamingUrl
+    PerformApiRequest = ToncenterPerformApiRequest
+
 class updates:
     GetChannelDifference = UpdatesGetChannelDifference
     GetDifference = UpdatesGetDifference
@@ -8843,6 +9209,33 @@ class users:
     GetUsers = UsersGetUsers
     SetSecureValueErrors = UsersSetSecureValueErrors
     SuggestBirthday = UsersSuggestBirthday
+
+class wallet:
+    DisableBackup = WalletDisableBackup
+    EnableBackup = WalletEnableBackup
+    ExportSecretPhrase = WalletExportSecretPhrase
+    FetchEncryptedSecretPhrasePart = WalletFetchEncryptedSecretPhrasePart
+    GetBackupHolderDcs = WalletGetBackupHolderDcs
+    GetExistingWaltBalance = WalletGetExistingWaltBalance
+    GetGaslessInfo = WalletGetGaslessInfo
+    GetNfts = WalletGetNfts
+    GetProofChallenge = WalletGetProofChallenge
+    GetState = WalletGetState
+    GetTransactions = WalletGetTransactions
+    GetTransactionsByIDs = WalletGetTransactionsByIDs
+    GetTransactionsByMsgHash = WalletGetTransactionsByMsgHash
+    GetUserAddresses = WalletGetUserAddresses
+    ReplaceWallet = WalletReplaceWallet
+    SendTransfer = WalletSendTransfer
+    TonConnectClaimRequest = WalletTonConnectClaimRequest
+    TonConnectCloseSession = WalletTonConnectCloseSession
+    TonConnectCreateSession = WalletTonConnectCreateSession
+    TonConnectGetPending = WalletTonConnectGetPending
+    TonConnectGetSessions = WalletTonConnectGetSessions
+    TonConnectNextEventId = WalletTonConnectNextEventId
+    TonConnectRegisterKey = WalletTonConnectRegisterKey
+    TonConnectSubmitConnectResult = WalletTonConnectSubmitConnectResult
+    TonConnectSubmitResponse = WalletTonConnectSubmitResponse
 
 ALL_FUNCTIONS: Sequence[type[TLRequest]]
 CONSTRUCTOR_ID_MAP: Mapping[int, type[TLRequest]]

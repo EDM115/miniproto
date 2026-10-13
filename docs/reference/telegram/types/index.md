@@ -1,6 +1,6 @@
 ---
 title: "Telegram types"
-description: "Layer 229 index of 1663 canonical Telegram types from tdlib."
+description: "Layer 230 index of 1709 canonical Telegram types from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,9 +12,9 @@ namespace: "types"
 schema_source: "tdlib"
 ---
 
-## Layer 229 types
+## Layer 230 types
 
-Selected canonical types: 1663.
+Selected canonical types: 1709.
 
 ## Canonical source
 
@@ -323,6 +323,7 @@ https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/
 - [`contacts.topPeers`](/reference/telegram/types/contacts/top-peers/): `contacts.TopPeers`
 - [`contacts.topPeersDisabled`](/reference/telegram/types/contacts/top-peers-disabled/): `contacts.TopPeers`
 - [`contacts.topPeersNotModified`](/reference/telegram/types/contacts/top-peers-not-modified/): `contacts.TopPeers`
+- [`currencyRate`](/reference/telegram/types/base/currency-rate/): `CurrencyRate`
 - [`dataJSON`](/reference/telegram/types/base/data-json/): `DataJSON`
 - [`dcOption`](/reference/telegram/types/base/dc-option/): `DcOption`
 - [`defaultHistoryTTL`](/reference/telegram/types/base/default-history-ttl/): `DefaultHistoryTTL`
@@ -598,7 +599,6 @@ https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/
 - [`inputNotifyPeer`](/reference/telegram/types/base/input-notify-peer/): `InputNotifyPeer`
 - [`inputNotifyUsers`](/reference/telegram/types/base/input-notify-users/): `InputNotifyPeer`
 - [`inputPageBlockMap`](/reference/telegram/types/base/input-page-block-map/): `PageBlock`
-- [`inputPasskeyCredentialFirebasePNV`](/reference/telegram/types/base/input-passkey-credential-firebase-pnv/): `InputPasskeyCredential`
 - [`inputPasskeyCredentialPublicKey`](/reference/telegram/types/base/input-passkey-credential-public-key/): `InputPasskeyCredential`
 - [`inputPasskeyResponseLogin`](/reference/telegram/types/base/input-passkey-response-login/): `InputPasskeyResponse`
 - [`inputPasskeyResponseRegister`](/reference/telegram/types/base/input-passkey-response-register/): `InputPasskeyResponse`
@@ -719,6 +719,8 @@ https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/
 - [`inputWallPaper`](/reference/telegram/types/base/input-wall-paper/): `InputWallPaper`
 - [`inputWallPaperNoFile`](/reference/telegram/types/base/input-wall-paper-no-file/): `InputWallPaper`
 - [`inputWallPaperSlug`](/reference/telegram/types/base/input-wall-paper-slug/): `InputWallPaper`
+- [`inputWalletImported`](/reference/telegram/types/base/input-wallet-imported/): `InputWalletReplacement`
+- [`inputWalletNew`](/reference/telegram/types/base/input-wallet-new/): `InputWalletReplacement`
 - [`inputWebDocument`](/reference/telegram/types/base/input-web-document/): `InputWebDocument`
 - [`inputWebFileAudioAlbumThumbLocation`](/reference/telegram/types/base/input-web-file-audio-album-thumb-location/): `InputWebFileLocation`
 - [`inputWebFileGeoPointLocation`](/reference/telegram/types/base/input-web-file-geo-point-location/): `InputWebFileLocation`
@@ -786,6 +788,7 @@ https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/
 - [`messageActionGiftTon`](/reference/telegram/types/base/message-action-gift-ton/): `MessageAction`
 - [`messageActionGiveawayLaunch`](/reference/telegram/types/base/message-action-giveaway-launch/): `MessageAction`
 - [`messageActionGiveawayResults`](/reference/telegram/types/base/message-action-giveaway-results/): `MessageAction`
+- [`messageActionGramTransfer`](/reference/telegram/types/base/message-action-gram-transfer/): `MessageAction`
 - [`messageActionGroupCall`](/reference/telegram/types/base/message-action-group-call/): `MessageAction`
 - [`messageActionGroupCallScheduled`](/reference/telegram/types/base/message-action-group-call-scheduled/): `MessageAction`
 - [`messageActionHistoryClear`](/reference/telegram/types/base/message-action-history-clear/): `MessageAction`
@@ -825,6 +828,7 @@ https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/
 - [`messageActionTodoCompletions`](/reference/telegram/types/base/message-action-todo-completions/): `MessageAction`
 - [`messageActionTopicCreate`](/reference/telegram/types/base/message-action-topic-create/): `MessageAction`
 - [`messageActionTopicEdit`](/reference/telegram/types/base/message-action-topic-edit/): `MessageAction`
+- [`messageActionWalletTonConnectRequest`](/reference/telegram/types/base/message-action-wallet-ton-connect-request/): `MessageAction`
 - [`messageActionWebViewDataSent`](/reference/telegram/types/base/message-action-web-view-data-sent/): `MessageAction`
 - [`messageActionWebViewDataSentMe`](/reference/telegram/types/base/message-action-web-view-data-sent-me/): `MessageAction`
 - [`messageEmpty`](/reference/telegram/types/base/message-empty/): `Message`
@@ -849,6 +853,7 @@ https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/
 - [`messageEntitySpoiler`](/reference/telegram/types/base/message-entity-spoiler/): `MessageEntity`
 - [`messageEntityStrike`](/reference/telegram/types/base/message-entity-strike/): `MessageEntity`
 - [`messageEntityTextUrl`](/reference/telegram/types/base/message-entity-text-url/): `MessageEntity`
+- [`messageEntityTonAddress`](/reference/telegram/types/base/message-entity-ton-address/): `MessageEntity`
 - [`messageEntityUnderline`](/reference/telegram/types/base/message-entity-underline/): `MessageEntity`
 - [`messageEntityUnknown`](/reference/telegram/types/base/message-entity-unknown/): `MessageEntity`
 - [`messageEntityUrl`](/reference/telegram/types/base/message-entity-url/): `MessageEntity`
@@ -997,6 +1002,12 @@ https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/
 - [`notifyForumTopic`](/reference/telegram/types/base/notify-forum-topic/): `NotifyPeer`
 - [`notifyPeer`](/reference/telegram/types/base/notify-peer/): `NotifyPeer`
 - [`notifyUsers`](/reference/telegram/types/base/notify-users/): `NotifyPeer`
+- [`onrampAvailability`](/reference/telegram/types/base/onramp-availability/): `OnrampAvailability`
+- [`onrampLimits`](/reference/telegram/types/base/onramp-limits/): `OnrampLimits`
+- [`onrampMethodAvailability`](/reference/telegram/types/base/onramp-method-availability/): `OnrampMethodAvailability`
+- [`onrampProviderInfo`](/reference/telegram/types/base/onramp-provider-info/): `OnrampProviderInfo`
+- [`onrampQuote`](/reference/telegram/types/base/onramp-quote/): `OnrampQuote`
+- [`onrampSession`](/reference/telegram/types/base/onramp-session/): `OnrampSession`
 - [`outboxReadDate`](/reference/telegram/types/base/outbox-read-date/): `OutboxReadDate`
 - [`page`](/reference/telegram/types/base/page/): `Page`
 - [`pageBlockAnchor`](/reference/telegram/types/base/page-block-anchor/): `PageBlock`
@@ -1063,6 +1074,7 @@ https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/
 - [`payments.checkCanSendGiftResultOk`](/reference/telegram/types/payments/check-can-send-gift-result-ok/): `payments.CheckCanSendGiftResult`
 - [`payments.checkedGiftCode`](/reference/telegram/types/payments/checked-gift-code/): `payments.CheckedGiftCode`
 - [`payments.connectedStarRefBots`](/reference/telegram/types/payments/connected-star-ref-bots/): `payments.ConnectedStarRefBots`
+- [`payments.currencyRates`](/reference/telegram/types/payments/currency-rates/): `payments.CurrencyRates`
 - [`payments.exportedInvoice`](/reference/telegram/types/payments/exported-invoice/): `payments.ExportedInvoice`
 - [`payments.giveawayInfo`](/reference/telegram/types/payments/giveaway-info/): `payments.GiveawayInfo`
 - [`payments.giveawayInfoResults`](/reference/telegram/types/payments/giveaway-info-results/): `payments.GiveawayInfo`
@@ -1434,6 +1446,7 @@ https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/
 - [`textStrike`](/reference/telegram/types/base/text-strike/): `RichText`
 - [`textSubscript`](/reference/telegram/types/base/text-subscript/): `RichText`
 - [`textSuperscript`](/reference/telegram/types/base/text-superscript/): `RichText`
+- [`textTonAddress`](/reference/telegram/types/base/text-ton-address/): `RichText`
 - [`textUnderline`](/reference/telegram/types/base/text-underline/): `RichText`
 - [`textUrl`](/reference/telegram/types/base/text-url/): `RichText`
 - [`textWithEntities`](/reference/telegram/types/base/text-with-entities/): `TextWithEntities`
@@ -1443,6 +1456,12 @@ https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/
 - [`todoCompletion`](/reference/telegram/types/base/todo-completion/): `TodoCompletion`
 - [`todoItem`](/reference/telegram/types/base/todo-item/): `TodoItem`
 - [`todoList`](/reference/telegram/types/base/todo-list/): `TodoList`
+- [`tonConnectManifest`](/reference/telegram/types/base/ton-connect-manifest/): `TonConnectManifest`
+- [`tonConnectNextEventId`](/reference/telegram/types/base/ton-connect-next-event-id/): `TonConnectNextEventId`
+- [`tonConnectRequest`](/reference/telegram/types/base/ton-connect-request/): `TonConnectRequest`
+- [`tonConnectSession`](/reference/telegram/types/base/ton-connect-session/): `TonConnectSession`
+- [`toncenter.apiResponse`](/reference/telegram/types/toncenter/api-response/): `toncenter.ApiResponse`
+- [`toncenter.streamingUrl`](/reference/telegram/types/toncenter/streaming-url/): `toncenter.StreamingUrl`
 - [`topPeer`](/reference/telegram/types/base/top-peer/): `TopPeer`
 - [`topPeerCategoryBotsApp`](/reference/telegram/types/base/top-peer-category-bots-app/): `TopPeerCategory`
 - [`topPeerCategoryBotsGuestChat`](/reference/telegram/types/base/top-peer-category-bots-guest-chat/): `TopPeerCategory`
@@ -1597,6 +1616,7 @@ https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/
 - [`updateSavedRingtones`](/reference/telegram/types/base/update-saved-ringtones/): `Update`
 - [`updateSentPhoneCode`](/reference/telegram/types/base/update-sent-phone-code/): `Update`
 - [`updateSentStoryReaction`](/reference/telegram/types/base/update-sent-story-reaction/): `Update`
+- [`updateSentWalletTransaction`](/reference/telegram/types/base/update-sent-wallet-transaction/): `Update`
 - [`updateServiceNotification`](/reference/telegram/types/base/update-service-notification/): `Update`
 - [`updateShort`](/reference/telegram/types/base/update-short/): `Updates`
 - [`updateShortChatMessage`](/reference/telegram/types/base/update-short-chat-message/): `Updates`
@@ -1621,6 +1641,10 @@ https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/
 - [`updateUserPhone`](/reference/telegram/types/base/update-user-phone/): `Update`
 - [`updateUserStatus`](/reference/telegram/types/base/update-user-status/): `Update`
 - [`updateUserTyping`](/reference/telegram/types/base/update-user-typing/): `Update`
+- [`updateWalletGaslessInfo`](/reference/telegram/types/base/update-wallet-gasless-info/): `Update`
+- [`updateWalletState`](/reference/telegram/types/base/update-wallet-state/): `Update`
+- [`updateWalletTonConnectPendingDisconnect`](/reference/telegram/types/base/update-wallet-ton-connect-pending-disconnect/): `Update`
+- [`updateWalletTonConnectSession`](/reference/telegram/types/base/update-wallet-ton-connect-session/): `Update`
 - [`updateWebBrowserException`](/reference/telegram/types/base/update-web-browser-exception/): `Update`
 - [`updateWebBrowserSettings`](/reference/telegram/types/base/update-web-browser-settings/): `Update`
 - [`updateWebPage`](/reference/telegram/types/base/update-web-page/): `Update`
@@ -1668,6 +1692,28 @@ https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/
 - [`wallPaper`](/reference/telegram/types/base/wall-paper/): `WallPaper`
 - [`wallPaperNoFile`](/reference/telegram/types/base/wall-paper-no-file/): `WallPaper`
 - [`wallPaperSettings`](/reference/telegram/types/base/wall-paper-settings/): `WallPaperSettings`
+- [`wallet.encryptedSecretPhrasePart`](/reference/telegram/types/wallet/encrypted-secret-phrase-part/): `wallet.EncryptedSecretPhrasePart`
+- [`wallet.existingBalance`](/reference/telegram/types/wallet/existing-balance/): `wallet.ExistingBalance`
+- [`wallet.holderDc`](/reference/telegram/types/wallet/holder-dc/): `wallet.HolderDc`
+- [`wallet.nftAttribute`](/reference/telegram/types/wallet/nft-attribute/): `wallet.NftAttribute`
+- [`wallet.nftItem`](/reference/telegram/types/wallet/nft-item/): `wallet.NftItem`
+- [`wallet.nftItems`](/reference/telegram/types/wallet/nft-items/): `wallet.NftItems`
+- [`wallet.proofChallenge`](/reference/telegram/types/wallet/proof-challenge/): `wallet.ProofChallenge`
+- [`wallet.secretPhraseParts`](/reference/telegram/types/wallet/secret-phrase-parts/): `wallet.SecretPhraseParts`
+- [`wallet.tonConnectChallenge`](/reference/telegram/types/wallet/ton-connect-challenge/): `wallet.TonConnectChallenge`
+- [`wallet.tonConnectPending`](/reference/telegram/types/wallet/ton-connect-pending/): `wallet.TonConnectPending`
+- [`wallet.tonConnectSessions`](/reference/telegram/types/wallet/ton-connect-sessions/): `wallet.TonConnectSessions`
+- [`wallet.transactions`](/reference/telegram/types/wallet/transactions/): `wallet.Transactions`
+- [`wallet.userAddresses`](/reference/telegram/types/wallet/user-addresses/): `wallet.UserAddresses`
+- [`walletOwnershipProof`](/reference/telegram/types/base/wallet-ownership-proof/): `WalletOwnershipProof`
+- [`walletState`](/reference/telegram/types/base/wallet-state/): `WalletState`
+- [`walletStateEmpty`](/reference/telegram/types/base/wallet-state-empty/): `WalletState`
+- [`walletTransaction`](/reference/telegram/types/base/wallet-transaction/): `WalletTransaction`
+- [`walletTransactionPeerAddress`](/reference/telegram/types/base/wallet-transaction-peer-address/): `WalletTransactionPeer`
+- [`walletTransactionPeerOnramp`](/reference/telegram/types/base/wallet-transaction-peer-onramp/): `WalletTransactionPeer`
+- [`walletTransactionPeerUnsupported`](/reference/telegram/types/base/wallet-transaction-peer-unsupported/): `WalletTransactionPeer`
+- [`walletTransactionPeerUser`](/reference/telegram/types/base/wallet-transaction-peer-user/): `WalletTransactionPeer`
+- [`walletUserAddress`](/reference/telegram/types/base/wallet-user-address/): `WalletUserAddress`
 - [`webAuthorization`](/reference/telegram/types/base/web-authorization/): `WebAuthorization`
 - [`webDocument`](/reference/telegram/types/base/web-document/): `WebDocument`
 - [`webDocumentNoProxy`](/reference/telegram/types/base/web-document-no-proxy/): `WebDocument`

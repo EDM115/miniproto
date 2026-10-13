@@ -1685,6 +1685,208 @@ class ButtonTypeDefault(TLConstructor):
         return cls(), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class OnrampQuote(TLConstructor):
+    base_currency: str
+    base_amount: str
+    crypto_currency: str
+    crypto_amount: str
+    crypto_price: str
+    fee_amount: str
+    extra_fee_amount: str
+    network_fee_amount: str
+    total_amount: str
+    payment_method: str
+    expires_date: int
+    CONSTRUCTOR_ID: ClassVar[int] = 0x7A8011E9
+    QUALNAME: ClassVar[str] = "onrampQuote"
+    RESULT_TYPE: ClassVar[str] = "OnrampQuote"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="base_currency",
+            python_name="base_currency",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="base_amount",
+            python_name="base_amount",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="crypto_currency",
+            python_name="crypto_currency",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="crypto_amount",
+            python_name="crypto_amount",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="crypto_price",
+            python_name="crypto_price",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="fee_amount",
+            python_name="fee_amount",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="extra_fee_amount",
+            python_name="extra_fee_amount",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="network_fee_amount",
+            python_name="network_fee_amount",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="total_amount",
+            python_name="total_amount",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="payment_method",
+            python_name="payment_method",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="expires_date",
+            python_name="expires_date",
+            type="int",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_string(self.base_currency))
+        output.extend(encode_string(self.base_amount))
+        output.extend(encode_string(self.crypto_currency))
+        output.extend(encode_string(self.crypto_amount))
+        output.extend(encode_string(self.crypto_price))
+        output.extend(encode_string(self.fee_amount))
+        output.extend(encode_string(self.extra_fee_amount))
+        output.extend(encode_string(self.network_fee_amount))
+        output.extend(encode_string(self.total_amount))
+        output.extend(encode_string(self.payment_method))
+        output.extend(encode_int(self.expires_date))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_base_currency, cursor = decode_string(raw_data, cursor)
+        _value_base_amount, cursor = decode_string(raw_data, cursor)
+        _value_crypto_currency, cursor = decode_string(raw_data, cursor)
+        _value_crypto_amount, cursor = decode_string(raw_data, cursor)
+        _value_crypto_price, cursor = decode_string(raw_data, cursor)
+        _value_fee_amount, cursor = decode_string(raw_data, cursor)
+        _value_extra_fee_amount, cursor = decode_string(raw_data, cursor)
+        _value_network_fee_amount, cursor = decode_string(raw_data, cursor)
+        _value_total_amount, cursor = decode_string(raw_data, cursor)
+        _value_payment_method, cursor = decode_string(raw_data, cursor)
+        _value_expires_date, cursor = decode_int(raw_data, cursor)
+        return cls(
+            base_currency=_value_base_currency,
+            base_amount=_value_base_amount,
+            crypto_currency=_value_crypto_currency,
+            crypto_amount=_value_crypto_amount,
+            crypto_price=_value_crypto_price,
+            fee_amount=_value_fee_amount,
+            extra_fee_amount=_value_extra_fee_amount,
+            network_fee_amount=_value_network_fee_amount,
+            total_amount=_value_total_amount,
+            payment_method=_value_payment_method,
+            expires_date=_value_expires_date,
+        ), cursor
+
+
 class channels:
     ChannelParticipantsNotModified = ChannelsChannelParticipantsNotModified
 
@@ -1712,6 +1914,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     JoinChatBotResultApproved,
     EphemeralMessage,
     ButtonTypeDefault,
+    OnrampQuote,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -1738,6 +1941,7 @@ __all__ = (
     "JoinChatBotResultApproved",
     "EphemeralMessage",
     "ButtonTypeDefault",
+    "OnrampQuote",
     "channels",
     "CONSTRUCTOR_ID_MAP",
     "NAME_MAP",

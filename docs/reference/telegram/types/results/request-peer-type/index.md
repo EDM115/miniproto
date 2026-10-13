@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: RequestPeerType"
-description: "Layer 229 result-family index for 4 canonical constructors returning RequestPeerType from tdlib."
+description: "Layer 230 result-family index for 4 canonical constructors returning RequestPeerType from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `RequestPeerType`
+## Layer 230 result family `RequestPeerType`
 
 Selected canonical constructors in this family: 4.
 

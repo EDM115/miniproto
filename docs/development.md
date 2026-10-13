@@ -84,7 +84,7 @@ uv run miniproto-provision-benchmark-session --help
 uv run miniproto-schema-generate
 ```
 
-Run this after changing any pinned input under `tools/schema/`, `tools/schema/generate.py` or `tools/schema/parser.py`. It rewrites the Layer 229 lazy facades, stubs, registries, shards, errors, generated metadata and `docs/raw-api.md` from the normalized TDLib canonical model. Normal generation also refreshes only the schema layer and hash pins in `tools/schema/rust-fast-paths.json` before validating its reviewed selection and rendering the Rust/Python fast-path outputs; `--check` reports stale pins without rewriting them.
+Run this after changing any pinned input under `tools/schema/`, `tools/schema/generate.py` or `tools/schema/parser.py`. It rewrites the Layer 230 lazy facades, stubs, registries, shards, errors and generated metadata from the normalized TDLib canonical model. Normal generation also refreshes only the schema layer and hash pins in `tools/schema/rust-fast-paths.json`, then validates its reviewed selection and renders the Rust/Python fast-path outputs. The `--check` option reports stale pins without rewriting them. Review `docs/raw-api.md` separately because it is maintained by hand.
 
 ## Update Pinned Schema Inputs
 
@@ -92,7 +92,7 @@ Run this after changing any pinned input under `tools/schema/`, `tools/schema/ge
 uv run miniproto-schema-update
 ```
 
-This fetches the TDLib and Telegram Desktop TL schemas plus the core JSON, schema page, layer changelog and RPC error sources. It validates every source in memory before atomically staging the independent pins: verbatim TDLib `schema.tl`, normalized canonical `schema.json`, verbatim `schema-tdesktop.tl`, core mirrors, RPC errors, source diff and metadata. TDLib owns structure; Layer 229 comes only from Telegram Desktop's strict end-of-file marker after all shared declarations match; documentation falls back from TDLib to Telegram Desktop to core JSON. Run `uv run miniproto-schema-generate` afterwards to refresh generated raw modules and docs.
+This fetches the TDLib and Telegram Desktop TL schemas plus the core JSON, schema page, layer changelog and RPC error sources. It validates every source in memory before atomically staging the independent pins: verbatim TDLib `schema.tl`, normalized canonical `schema.json`, verbatim `schema-tdesktop.tl`, core mirrors, RPC errors, source diff and metadata. TDLib owns structure. Layer 230 comes only from Telegram Desktop's strict end-of-file marker after all shared declarations match. Documentation falls back from TDLib to Telegram Desktop to core JSON. Run `uv run miniproto-schema-generate` afterwards to refresh generated raw modules, then review `docs/raw-api.md` for hand-maintained claims.
 
 ## Schema Freshness Check
 
@@ -110,7 +110,7 @@ uv run miniproto-schema-update --check-upstream --report .tmp/schema-upstream-re
 
 This network-dependent check fails when any independently pinned upstream input differs, prints the stale pin paths and writes source hashes plus the declaration comparison to the requested JSON report without updating pins. The scheduled/manual `.github/workflows/schema-upstream.yml` job always uploads that report. Routine pull-request CI keeps using the offline generation check above so external availability cannot make deterministic CI flaky.
 
-When reviewing an update, inspect `tools/schema/schema-source-diff.json`, `tools/schema/schema-metadata.json` and the generated code diff before accepting it. Do not accept a newer file merely because its timestamp moved: a missing/malformed Desktop layer marker, any structural disagreement in shared TDLib/Desktop declarations, an unexpected constructor-ID collision or an unknown TL declaration is a hard failure. The current TDLib canonical snapshot intentionally omits Desktop's `null`, so the old generated `miniproto.raw.types.Null` class is no longer part of Layer 229.
+When reviewing an update, inspect `tools/schema/schema-source-diff.json`, `tools/schema/schema-metadata.json` and the generated code diff before accepting it. Do not accept a newer file merely because its timestamp moved: a missing/malformed Desktop layer marker, any structural disagreement in shared TDLib/Desktop declarations, an unexpected constructor-ID collision or an unknown TL declaration is a hard failure. The current TDLib canonical snapshot omits Desktop's `null`, so `miniproto.raw.types.Null` is absent from Layer 230.
 
 ## Documentation
 
@@ -226,7 +226,7 @@ Custom `RawSender` implementations must expose `request(body, *, content_related
 
 The transport frame pump is stateful and drains arbitrary fragmented or coalesced socket chunks into payload, quick-ACK and transport-error events. The native Rust codec is selected only when its complete capability is present; unavailable builds use the behaviorally identical Python codec, while malformed network input never triggers a fallback retry. Abridged, intermediate and padded-intermediate have distinct quick-ACK wire forms and padded-intermediate adds real random 0–15 byte outbound padding. Oversized declared frames are rejected before payload allocation and receive buffers larger than the 1 MiB retained threshold are released after draining.
 
-Selected Layer 229 media and MTProto service constructors use generated Rust encode/decode fast paths. `tools/schema/rust-fast-paths.json` is the reviewed 30-entry selection and hash/layer pin; `tools/schema/rust_fast.py` derives API layouts from normalized schema descriptors and emits `rust/miniproto/src/generated_tl.rs` plus `src/miniproto/tl/fast_metadata.py`. Unsupported, incomplete, changed, memoryview-sensitive or large generic cases remain on the canonical Python codec. Never hand-edit generated outputs; schema `--check` validates that the selection, IDs, layouts, layer and source hash still reconcile.
+Selected Layer 230 media and MTProto service constructors use generated Rust encode/decode fast paths. The reviewed selection in `tools/schema/rust-fast-paths.json` has 30 entries and pins their hashes and layer. `tools/schema/rust_fast.py` derives API layouts from normalized schema descriptors and emits `rust/miniproto/src/generated_tl.rs` plus `src/miniproto/tl/fast_metadata.py`. Unsupported, incomplete, changed, memoryview-sensitive or large generic cases remain on the canonical Python codec. Never hand-edit generated outputs. Schema `--check` validates that the selection, IDs, layouts, layer and source hash still reconcile.
 
 ## Live Media-Limit Benchmark
 

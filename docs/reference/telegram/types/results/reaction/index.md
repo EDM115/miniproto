@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: Reaction"
-description: "Layer 229 result-family index for 4 canonical constructors returning Reaction from tdlib."
+description: "Layer 230 result-family index for 4 canonical constructors returning Reaction from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `Reaction`
+## Layer 230 result family `Reaction`
 
 Selected canonical constructors in this family: 4.
 

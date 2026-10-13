@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: Photo"
-description: "Layer 229 result-family index for 2 canonical constructors returning Photo from tdlib."
+description: "Layer 230 result-family index for 2 canonical constructors returning Photo from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `Photo`
+## Layer 230 result family `Photo`
 
 Selected canonical constructors in this family: 2.
 

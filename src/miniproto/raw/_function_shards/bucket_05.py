@@ -1746,6 +1746,184 @@ class StoriesCreateAlbum(TLRequest):
         return cls(peer=_value_peer, title=_value_title, stories=_value_stories), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletEnableBackup(TLRequest):
+    parts: tuple[bytes, ...]
+    new_public_key: bytes | None = None
+    proof: Any | None = None
+    CONSTRUCTOR_ID: ClassVar[int] = 0x4500C525
+    QUALNAME: ClassVar[str] = "wallet.enableBackup"
+    RESULT_TYPE: ClassVar[str] = "WalletState"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="parts",
+            python_name="parts",
+            type="Vector<bytes>",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=True,
+            vector_item_type="bytes",
+        ),
+        TLField(
+            name="new_public_key",
+            python_name="new_public_key",
+            type="bytes",
+            flag="flags",
+            flag_index=1,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="proof",
+            python_name="proof",
+            type="WalletOwnershipProof",
+            flag="flags",
+            flag_index=2,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.new_public_key is not None:
+            flags |= 2
+        if self.proof is not None:
+            flags |= 4
+        output.extend(encode_int(flags))
+        output.extend(encode_vector(self.parts, "bytes"))
+        if self.new_public_key is not None:
+            output.extend(encode_bytes(self.new_public_key))
+        if self.proof is not None:
+            output.extend(encode_value("WalletOwnershipProof", self.proof))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_parts, cursor = decode_vector(raw_data, cursor, "bytes")
+        if bool(flags & 2):
+            _value_new_public_key, cursor = decode_bytes(raw_data, cursor)
+        else:
+            _value_new_public_key = None
+        if bool(flags & 4):
+            _value_proof, cursor = decode_value("WalletOwnershipProof", raw_data, cursor)
+        else:
+            _value_proof = None
+        return cls(parts=_value_parts, new_public_key=_value_new_public_key, proof=_value_proof), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletTonConnectGetPending(TLRequest):
+    dapp_client_id: str | None = None
+    session_id: int | None = None
+    CONSTRUCTOR_ID: ClassVar[int] = 0x11AEE065
+    QUALNAME: ClassVar[str] = "wallet.tonConnectGetPending"
+    RESULT_TYPE: ClassVar[str] = "wallet.TonConnectPending"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="dapp_client_id",
+            python_name="dapp_client_id",
+            type="string",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="session_id",
+            python_name="session_id",
+            type="long",
+            flag="flags",
+            flag_index=1,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.dapp_client_id is not None:
+            flags |= 1
+        if self.session_id is not None:
+            flags |= 2
+        output.extend(encode_int(flags))
+        if self.dapp_client_id is not None:
+            output.extend(encode_string(self.dapp_client_id))
+        if self.session_id is not None:
+            output.extend(encode_long(self.session_id))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        if bool(flags & 1):
+            _value_dapp_client_id, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_dapp_client_id = None
+        if bool(flags & 2):
+            _value_session_id, cursor = decode_long(raw_data, cursor)
+        else:
+            _value_session_id = None
+        return cls(dapp_client_id=_value_dapp_client_id, session_id=_value_session_id), cursor
+
+
 class account:
     GetRecentEmojiStatuses = AccountGetRecentEmojiStatuses
     SendChangePhoneCode = AccountSendChangePhoneCode
@@ -1798,6 +1976,11 @@ class stories:
     Report = StoriesReport
 
 
+class wallet:
+    EnableBackup = WalletEnableBackup
+    TonConnectGetPending = WalletTonConnectGetPending
+
+
 ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
     AuthBindTempAuthKey,
     AccountSendChangePhoneCode,
@@ -1821,6 +2004,8 @@ ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
     StoriesGetAllStories,
     StoriesReport,
     StoriesCreateAlbum,
+    WalletEnableBackup,
+    WalletTonConnectGetPending,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLRequest]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_FUNCTIONS}
 NAME_MAP: dict[str, type[TLRequest]] = {entry.QUALNAME: entry for entry in ALL_FUNCTIONS}
@@ -1847,6 +2032,8 @@ __all__ = (
     "StoriesGetAllStories",
     "StoriesReport",
     "StoriesCreateAlbum",
+    "WalletEnableBackup",
+    "WalletTonConnectGetPending",
     "account",
     "auth",
     "bots",
@@ -1857,6 +2044,7 @@ __all__ = (
     "payments",
     "phone",
     "stories",
+    "wallet",
     "CONSTRUCTOR_ID_MAP",
     "NAME_MAP",
 )

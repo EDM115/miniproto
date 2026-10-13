@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: ProfileTab"
-description: "Layer 229 result-family index for 8 canonical constructors returning ProfileTab from tdlib."
+description: "Layer 230 result-family index for 8 canonical constructors returning ProfileTab from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `ProfileTab`
+## Layer 230 result family `ProfileTab`
 
 Selected canonical constructors in this family: 8.
 

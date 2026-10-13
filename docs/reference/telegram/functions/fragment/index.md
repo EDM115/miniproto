@@ -1,6 +1,6 @@
 ---
 title: "Telegram functions: fragment"
-description: "Layer 229 index of 1 canonical Telegram functions in the fragment namespace from tdlib."
+description: "Layer 230 index of 1 canonical Telegram functions in the fragment namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "fragment"
 schema_source: "tdlib"
 ---
 
-## Layer 229 fragment functions
+## Layer 230 fragment functions
 
 Selected canonical functions in this namespace: 1.
 

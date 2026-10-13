@@ -1268,6 +1268,70 @@ class BotsReorderPreviewMedias(TLRequest):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class BotsAddUsername(TLRequest):
+    bot: Any
+    username: str
+    CONSTRUCTOR_ID: ClassVar[int] = 0x3501C08A
+    QUALNAME: ClassVar[str] = "bots.addUsername"
+    RESULT_TYPE: ClassVar[str] = "Bool"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="bot",
+            python_name="bot",
+            type="InputUser",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="username",
+            python_name="username",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_value("InputUser", self.bot))
+        output.extend(encode_string(self.username))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_bot, cursor = decode_value("InputUser", raw_data, cursor)
+        _value_username, cursor = decode_string(raw_data, cursor)
+        return cls(bot=_value_bot, username=_value_username), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class PaymentsRefundStarsCharge(TLRequest):
     user_id: Any
     charge_id: str
@@ -1938,6 +2002,7 @@ class aicompose:
 
 
 class bots:
+    AddUsername = BotsAddUsername
     ReorderPreviewMedias = BotsReorderPreviewMedias
     SetBotGroupDefaultAdminRights = BotsSetBotGroupDefaultAdminRights
 
@@ -2006,6 +2071,7 @@ ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
     UploadGetFileHashes,
     BotsSetBotGroupDefaultAdminRights,
     BotsReorderPreviewMedias,
+    BotsAddUsername,
     PaymentsRefundStarsCharge,
     PaymentsConnectStarRefBot,
     PaymentsTransferStarGift,
@@ -2035,6 +2101,7 @@ __all__ = (
     "UploadGetFileHashes",
     "BotsSetBotGroupDefaultAdminRights",
     "BotsReorderPreviewMedias",
+    "BotsAddUsername",
     "PaymentsRefundStarsCharge",
     "PaymentsConnectStarRefBot",
     "PaymentsTransferStarGift",

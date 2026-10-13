@@ -2534,6 +2534,192 @@ class StarsTransactionPeerFragment(TLConstructor):
         return cls(), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class PaymentsCurrencyRates(TLConstructor):
+    rates: tuple[Any, ...]
+    CONSTRUCTOR_ID: ClassVar[int] = 0xBBCCE4C2
+    QUALNAME: ClassVar[str] = "payments.currencyRates"
+    RESULT_TYPE: ClassVar[str] = "payments.CurrencyRates"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="rates",
+            python_name="rates",
+            type="Vector<CurrencyRate>",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=True,
+            vector_item_type="CurrencyRate",
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_vector(self.rates, "CurrencyRate"))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_rates, cursor = decode_vector(raw_data, cursor, "CurrencyRate")
+        return cls(rates=_value_rates), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class OnrampProviderInfo(TLConstructor):
+    supports_base_currencies: bool = False
+    supports_limits: bool = False
+    supports_quote: bool = False
+    id: str
+    name: str
+    crypto_currencies: tuple[str, ...]
+    CONSTRUCTOR_ID: ClassVar[int] = 0x0DC27582
+    QUALNAME: ClassVar[str] = "onrampProviderInfo"
+    RESULT_TYPE: ClassVar[str] = "OnrampProviderInfo"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="supports_base_currencies",
+            python_name="supports_base_currencies",
+            type="true",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="supports_limits",
+            python_name="supports_limits",
+            type="true",
+            flag="flags",
+            flag_index=1,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="supports_quote",
+            python_name="supports_quote",
+            type="true",
+            flag="flags",
+            flag_index=2,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="id",
+            python_name="id",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="name",
+            python_name="name",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="crypto_currencies",
+            python_name="crypto_currencies",
+            type="Vector<string>",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=True,
+            vector_item_type="string",
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.supports_base_currencies:
+            flags |= 1
+        if self.supports_limits:
+            flags |= 2
+        if self.supports_quote:
+            flags |= 4
+        output.extend(encode_int(flags))
+        output.extend(encode_string(self.id))
+        output.extend(encode_string(self.name))
+        output.extend(encode_vector(self.crypto_currencies, "string"))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_supports_base_currencies = bool(flags & 1)
+        _value_supports_limits = bool(flags & 2)
+        _value_supports_quote = bool(flags & 4)
+        _value_id, cursor = decode_string(raw_data, cursor)
+        _value_name, cursor = decode_string(raw_data, cursor)
+        _value_crypto_currencies, cursor = decode_vector(raw_data, cursor, "string")
+        return cls(
+            supports_base_currencies=_value_supports_base_currencies,
+            supports_limits=_value_supports_limits,
+            supports_quote=_value_supports_quote,
+            id=_value_id,
+            name=_value_name,
+            crypto_currencies=_value_crypto_currencies,
+        ), cursor
+
+
 class auth:
     SentCode = AuthSentCode
 
@@ -2548,6 +2734,10 @@ class contacts:
 
 class messages:
     DiscussionMessage = MessagesDiscussionMessage
+
+
+class payments:
+    CurrencyRates = PaymentsCurrencyRates
 
 
 ALL_TYPES: tuple[type[TLConstructor], ...] = (
@@ -2575,6 +2765,8 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     MediaAreaCoordinates,
     ChannelsSponsoredMessageReportResultChooseOption,
     StarsTransactionPeerFragment,
+    PaymentsCurrencyRates,
+    OnrampProviderInfo,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -2603,10 +2795,13 @@ __all__ = (
     "MediaAreaCoordinates",
     "ChannelsSponsoredMessageReportResultChooseOption",
     "StarsTransactionPeerFragment",
+    "PaymentsCurrencyRates",
+    "OnrampProviderInfo",
     "auth",
     "channels",
     "contacts",
     "messages",
+    "payments",
     "CONSTRUCTOR_ID_MAP",
     "NAME_MAP",
 )

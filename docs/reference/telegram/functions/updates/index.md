@@ -1,6 +1,6 @@
 ---
 title: "Telegram functions: updates"
-description: "Layer 229 index of 3 canonical Telegram functions in the updates namespace from tdlib."
+description: "Layer 230 index of 3 canonical Telegram functions in the updates namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "updates"
 schema_source: "tdlib"
 ---
 
-## Layer 229 updates functions
+## Layer 230 updates functions
 
 Selected canonical functions in this namespace: 3.
 

@@ -1,6 +1,6 @@
 ---
 title: "Telegram raw API"
-description: "Layer 229 Telegram raw API: 817 functions, 1663 type constructors, and 818 pinned RPC errors from tdlib."
+description: "Layer 230 Telegram raw API: 854 functions, 1709 type constructors, and 818 pinned RPC errors from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,10 +12,10 @@ namespace: "telegram"
 schema_source: "tdlib"
 ---
 
-## Layer 229 selected surface
+## Layer 230 selected surface
 
-- [Functions](/reference/telegram/functions/): 817 canonical methods
-- [Types](/reference/telegram/types/): 1663 canonical constructors
+- [Functions](/reference/telegram/functions/): 854 canonical methods
+- [Types](/reference/telegram/types/): 1709 canonical constructors
 - [RPC errors](/reference/telegram/errors/): 818 pinned error records
 
 Canonical structure source: `tdlib`.

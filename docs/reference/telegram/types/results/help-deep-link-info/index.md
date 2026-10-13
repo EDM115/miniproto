@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: help.DeepLinkInfo"
-description: "Layer 229 result-family index for 2 canonical constructors returning help.DeepLinkInfo from tdlib."
+description: "Layer 230 result-family index for 2 canonical constructors returning help.DeepLinkInfo from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `help.DeepLinkInfo`
+## Layer 230 result family `help.DeepLinkInfo`
 
 Selected canonical constructors in this family: 2.
 

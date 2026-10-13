@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: SecureValueType"
-description: "Layer 229 result-family index for 13 canonical constructors returning SecureValueType from tdlib."
+description: "Layer 230 result-family index for 13 canonical constructors returning SecureValueType from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `SecureValueType`
+## Layer 230 result family `SecureValueType`
 
 Selected canonical constructors in this family: 13.
 

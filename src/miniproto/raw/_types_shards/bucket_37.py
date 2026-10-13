@@ -1974,6 +1974,130 @@ class InlineButtonTypeBuy(TLConstructor):
         return cls(), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletTransactions(TLConstructor):
+    balance: int
+    transactions: tuple[Any, ...]
+    next_offset: str | None = None
+    chats: tuple[Any, ...]
+    users: tuple[Any, ...]
+    CONSTRUCTOR_ID: ClassVar[int] = 0x4322D5A5
+    QUALNAME: ClassVar[str] = "wallet.transactions"
+    RESULT_TYPE: ClassVar[str] = "wallet.Transactions"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="balance",
+            python_name="balance",
+            type="long",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="transactions",
+            python_name="transactions",
+            type="Vector<WalletTransaction>",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=True,
+            vector_item_type="WalletTransaction",
+        ),
+        TLField(
+            name="next_offset",
+            python_name="next_offset",
+            type="string",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="chats",
+            python_name="chats",
+            type="Vector<Chat>",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=True,
+            vector_item_type="Chat",
+        ),
+        TLField(
+            name="users",
+            python_name="users",
+            type="Vector<User>",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=True,
+            vector_item_type="User",
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.next_offset is not None:
+            flags |= 1
+        output.extend(encode_int(flags))
+        output.extend(encode_long(self.balance))
+        output.extend(encode_vector(self.transactions, "WalletTransaction"))
+        if self.next_offset is not None:
+            output.extend(encode_string(self.next_offset))
+        output.extend(encode_vector(self.chats, "Chat"))
+        output.extend(encode_vector(self.users, "User"))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_balance, cursor = decode_long(raw_data, cursor)
+        _value_transactions, cursor = decode_vector(raw_data, cursor, "WalletTransaction")
+        if bool(flags & 1):
+            _value_next_offset, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_next_offset = None
+        _value_chats, cursor = decode_vector(raw_data, cursor, "Chat")
+        _value_users, cursor = decode_vector(raw_data, cursor, "User")
+        return cls(
+            balance=_value_balance,
+            transactions=_value_transactions,
+            next_offset=_value_next_offset,
+            chats=_value_chats,
+            users=_value_users,
+        ), cursor
+
+
 class account:
     PasswordSettings = AccountPasswordSettings
 
@@ -1984,6 +2108,10 @@ class auth:
 
 class photos:
     Photos = PhotosPhotos
+
+
+class wallet:
+    Transactions = WalletTransactions
 
 
 ALL_TYPES: tuple[type[TLConstructor], ...] = (
@@ -2009,6 +2137,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     SuggestedPost,
     StarGiftAuctionRoundExtendable,
     InlineButtonTypeBuy,
+    WalletTransactions,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -2035,9 +2164,11 @@ __all__ = (
     "SuggestedPost",
     "StarGiftAuctionRoundExtendable",
     "InlineButtonTypeBuy",
+    "WalletTransactions",
     "account",
     "auth",
     "photos",
+    "wallet",
     "CONSTRUCTOR_ID_MAP",
     "NAME_MAP",
 )

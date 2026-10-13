@@ -1116,6 +1116,70 @@ class MessageEntityHashtag(TLConstructor):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class MessageEntityTonAddress(TLConstructor):
+    offset: int
+    length: int
+    CONSTRUCTOR_ID: ClassVar[int] = 0xFDABBFCD
+    QUALNAME: ClassVar[str] = "messageEntityTonAddress"
+    RESULT_TYPE: ClassVar[str] = "MessageEntity"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="offset",
+            python_name="offset",
+            type="int",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="length",
+            python_name="length",
+            type="int",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_int(self.offset))
+        output.extend(encode_int(self.length))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_offset, cursor = decode_int(raw_data, cursor)
+        _value_length, cursor = decode_int(raw_data, cursor)
+        return cls(offset=_value_offset, length=_value_length), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class ChannelParticipantsContacts(TLConstructor):
     q: str
     CONSTRUCTOR_ID: ClassVar[int] = 0xBB6AE88D
@@ -2836,6 +2900,141 @@ class MessagesPreparedInlineMessage(TLConstructor):
         ), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletOwnershipProof(TLConstructor):
+    timestamp: int
+    signature: bytes
+    CONSTRUCTOR_ID: ClassVar[int] = 0x60BCCB0D
+    QUALNAME: ClassVar[str] = "walletOwnershipProof"
+    RESULT_TYPE: ClassVar[str] = "WalletOwnershipProof"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="timestamp",
+            python_name="timestamp",
+            type="int",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="signature",
+            python_name="signature",
+            type="bytes",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_int(self.timestamp))
+        output.extend(encode_bytes(self.signature))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_timestamp, cursor = decode_int(raw_data, cursor)
+        _value_signature, cursor = decode_bytes(raw_data, cursor)
+        return cls(timestamp=_value_timestamp, signature=_value_signature), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletExistingBalance(TLConstructor):
+    has_balance: bool = False
+    url: str
+    CONSTRUCTOR_ID: ClassVar[int] = 0xBDE90A8D
+    QUALNAME: ClassVar[str] = "wallet.existingBalance"
+    RESULT_TYPE: ClassVar[str] = "wallet.ExistingBalance"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="has_balance",
+            python_name="has_balance",
+            type="true",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="url",
+            python_name="url",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.has_balance:
+            flags |= 1
+        output.extend(encode_int(flags))
+        output.extend(encode_string(self.url))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_has_balance = bool(flags & 1)
+        _value_url, cursor = decode_string(raw_data, cursor)
+        return cls(has_balance=_value_has_balance, url=_value_url), cursor
+
+
 class channels:
     AdminLogResults = ChannelsAdminLogResults
 
@@ -2862,6 +3061,10 @@ class storage:
     FilePdf = StorageFilePdf
 
 
+class wallet:
+    ExistingBalance = WalletExistingBalance
+
+
 ALL_TYPES: tuple[type[TLConstructor], ...] = (
     InputMediaInvoice,
     InputPhotoEmpty,
@@ -2876,6 +3079,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     UpdateGroupCallMessage,
     DcOption,
     MessageEntityHashtag,
+    MessageEntityTonAddress,
     ChannelParticipantsContacts,
     MessagesSavedGifs,
     PageBlockCollage,
@@ -2892,6 +3096,8 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     ContactsContactBirthdays,
     StarGiftUnique,
     MessagesPreparedInlineMessage,
+    WalletOwnershipProof,
+    WalletExistingBalance,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -2909,6 +3115,7 @@ __all__ = (
     "UpdateGroupCallMessage",
     "DcOption",
     "MessageEntityHashtag",
+    "MessageEntityTonAddress",
     "ChannelParticipantsContacts",
     "MessagesSavedGifs",
     "PageBlockCollage",
@@ -2925,12 +3132,15 @@ __all__ = (
     "ContactsContactBirthdays",
     "StarGiftUnique",
     "MessagesPreparedInlineMessage",
+    "WalletOwnershipProof",
+    "WalletExistingBalance",
     "channels",
     "chatlists",
     "contacts",
     "messages",
     "payments",
     "storage",
+    "wallet",
     "CONSTRUCTOR_ID_MAP",
     "NAME_MAP",
 )

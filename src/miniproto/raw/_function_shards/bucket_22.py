@@ -2156,6 +2156,262 @@ class PaymentsGetStarGiftAuctionState(TLRequest):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class PaymentsCreateOnrampSession(TLRequest):
+    provider: str
+    crypto_currency: str
+    address: str
+    payment_method: str | None = None
+    base_currency: str | None = None
+    base_amount: str | None = None
+    memo: str | None = None
+    theme: str | None = None
+    success_return_url: str | None = None
+    fail_return_url: str | None = None
+    crypto_amount: str | None = None
+    CONSTRUCTOR_ID: ClassVar[int] = 0xA2197CF6
+    QUALNAME: ClassVar[str] = "payments.createOnrampSession"
+    RESULT_TYPE: ClassVar[str] = "OnrampSession"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="provider",
+            python_name="provider",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="crypto_currency",
+            python_name="crypto_currency",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="address",
+            python_name="address",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="payment_method",
+            python_name="payment_method",
+            type="string",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="base_currency",
+            python_name="base_currency",
+            type="string",
+            flag="flags",
+            flag_index=1,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="base_amount",
+            python_name="base_amount",
+            type="string",
+            flag="flags",
+            flag_index=2,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="memo",
+            python_name="memo",
+            type="string",
+            flag="flags",
+            flag_index=3,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="theme",
+            python_name="theme",
+            type="string",
+            flag="flags",
+            flag_index=4,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="success_return_url",
+            python_name="success_return_url",
+            type="string",
+            flag="flags",
+            flag_index=5,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="fail_return_url",
+            python_name="fail_return_url",
+            type="string",
+            flag="flags",
+            flag_index=6,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="crypto_amount",
+            python_name="crypto_amount",
+            type="string",
+            flag="flags",
+            flag_index=7,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.payment_method is not None:
+            flags |= 1
+        if self.base_currency is not None:
+            flags |= 2
+        if self.base_amount is not None:
+            flags |= 4
+        if self.memo is not None:
+            flags |= 8
+        if self.theme is not None:
+            flags |= 16
+        if self.success_return_url is not None:
+            flags |= 32
+        if self.fail_return_url is not None:
+            flags |= 64
+        if self.crypto_amount is not None:
+            flags |= 128
+        output.extend(encode_int(flags))
+        output.extend(encode_string(self.provider))
+        output.extend(encode_string(self.crypto_currency))
+        output.extend(encode_string(self.address))
+        if self.payment_method is not None:
+            output.extend(encode_string(self.payment_method))
+        if self.base_currency is not None:
+            output.extend(encode_string(self.base_currency))
+        if self.base_amount is not None:
+            output.extend(encode_string(self.base_amount))
+        if self.memo is not None:
+            output.extend(encode_string(self.memo))
+        if self.theme is not None:
+            output.extend(encode_string(self.theme))
+        if self.success_return_url is not None:
+            output.extend(encode_string(self.success_return_url))
+        if self.fail_return_url is not None:
+            output.extend(encode_string(self.fail_return_url))
+        if self.crypto_amount is not None:
+            output.extend(encode_string(self.crypto_amount))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_provider, cursor = decode_string(raw_data, cursor)
+        _value_crypto_currency, cursor = decode_string(raw_data, cursor)
+        _value_address, cursor = decode_string(raw_data, cursor)
+        if bool(flags & 1):
+            _value_payment_method, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_payment_method = None
+        if bool(flags & 2):
+            _value_base_currency, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_base_currency = None
+        if bool(flags & 4):
+            _value_base_amount, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_base_amount = None
+        if bool(flags & 8):
+            _value_memo, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_memo = None
+        if bool(flags & 16):
+            _value_theme, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_theme = None
+        if bool(flags & 32):
+            _value_success_return_url, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_success_return_url = None
+        if bool(flags & 64):
+            _value_fail_return_url, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_fail_return_url = None
+        if bool(flags & 128):
+            _value_crypto_amount, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_crypto_amount = None
+        return cls(
+            provider=_value_provider,
+            crypto_currency=_value_crypto_currency,
+            address=_value_address,
+            payment_method=_value_payment_method,
+            base_currency=_value_base_currency,
+            base_amount=_value_base_amount,
+            memo=_value_memo,
+            theme=_value_theme,
+            success_return_url=_value_success_return_url,
+            fail_return_url=_value_fail_return_url,
+            crypto_amount=_value_crypto_amount,
+        ), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class StatsGetStoryPublicForwards(TLRequest):
     peer: Any
     id: int
@@ -2482,6 +2738,56 @@ class StoriesUpdateAlbum(TLRequest):
         ), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletGetTransactionsByIDs(TLRequest):
+    id: tuple[str, ...]
+    CONSTRUCTOR_ID: ClassVar[int] = 0x811CEAB6
+    QUALNAME: ClassVar[str] = "wallet.getTransactionsByIDs"
+    RESULT_TYPE: ClassVar[str] = "wallet.Transactions"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="id",
+            python_name="id",
+            type="Vector<string>",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=True,
+            vector_item_type="string",
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_vector(self.id, "string"))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_id, cursor = decode_vector(raw_data, cursor, "string")
+        return cls(id=_value_id), cursor
+
+
 class account:
     CancelPasswordEmail = AccountCancelPasswordEmail
     DeclinePasswordReset = AccountDeclinePasswordReset
@@ -2521,6 +2827,7 @@ class messages:
 
 
 class payments:
+    CreateOnrampSession = PaymentsCreateOnrampSession
     GetResaleStarGifts = PaymentsGetResaleStarGifts
     GetStarGiftAuctionState = PaymentsGetStarGiftAuctionState
     GetStarsRevenueStats = PaymentsGetStarsRevenueStats
@@ -2533,6 +2840,10 @@ class stats:
 class stories:
     GetStoriesArchive = StoriesGetStoriesArchive
     UpdateAlbum = StoriesUpdateAlbum
+
+
+class wallet:
+    GetTransactionsByIDs = WalletGetTransactionsByIDs
 
 
 ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
@@ -2562,9 +2873,11 @@ ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
     PaymentsGetStarsRevenueStats,
     PaymentsGetResaleStarGifts,
     PaymentsGetStarGiftAuctionState,
+    PaymentsCreateOnrampSession,
     StatsGetStoryPublicForwards,
     StoriesGetStoriesArchive,
     StoriesUpdateAlbum,
+    WalletGetTransactionsByIDs,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLRequest]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_FUNCTIONS}
 NAME_MAP: dict[str, type[TLRequest]] = {entry.QUALNAME: entry for entry in ALL_FUNCTIONS}
@@ -2595,9 +2908,11 @@ __all__ = (
     "PaymentsGetStarsRevenueStats",
     "PaymentsGetResaleStarGifts",
     "PaymentsGetStarGiftAuctionState",
+    "PaymentsCreateOnrampSession",
     "StatsGetStoryPublicForwards",
     "StoriesGetStoriesArchive",
     "StoriesUpdateAlbum",
+    "WalletGetTransactionsByIDs",
     "account",
     "auth",
     "bots",
@@ -2606,6 +2921,7 @@ __all__ = (
     "payments",
     "stats",
     "stories",
+    "wallet",
     "CONSTRUCTOR_ID_MAP",
     "NAME_MAP",
 )

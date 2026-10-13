@@ -1152,6 +1152,98 @@ class PaymentsGetStarGiftUpgradePreview(TLRequest):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class PaymentsGetOnrampAvailability(TLRequest):
+    provider: str
+    crypto_currency: str
+    base_currency: str | None = None
+    CONSTRUCTOR_ID: ClassVar[int] = 0x2EC29951
+    QUALNAME: ClassVar[str] = "payments.getOnrampAvailability"
+    RESULT_TYPE: ClassVar[str] = "OnrampAvailability"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="provider",
+            python_name="provider",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="crypto_currency",
+            python_name="crypto_currency",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="base_currency",
+            python_name="base_currency",
+            type="string",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.base_currency is not None:
+            flags |= 1
+        output.extend(encode_int(flags))
+        output.extend(encode_string(self.provider))
+        output.extend(encode_string(self.crypto_currency))
+        if self.base_currency is not None:
+            output.extend(encode_string(self.base_currency))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_provider, cursor = decode_string(raw_data, cursor)
+        _value_crypto_currency, cursor = decode_string(raw_data, cursor)
+        if bool(flags & 1):
+            _value_base_currency, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_base_currency = None
+        return cls(
+            provider=_value_provider, crypto_currency=_value_crypto_currency, base_currency=_value_base_currency
+        ), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class StickersRemoveStickerFromSet(TLRequest):
     sticker: Any
     CONSTRUCTOR_ID: ClassVar[int] = 0xF7760F51
@@ -1412,6 +1504,7 @@ class messages:
 
 
 class payments:
+    GetOnrampAvailability = PaymentsGetOnrampAvailability
     GetStarGiftUpgradePreview = PaymentsGetStarGiftUpgradePreview
 
 
@@ -1446,6 +1539,7 @@ ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
     ChannelsUpdateColor,
     ChannelsSetMainProfileTab,
     PaymentsGetStarGiftUpgradePreview,
+    PaymentsGetOnrampAvailability,
     StickersRemoveStickerFromSet,
     PhoneDeclineConferenceCallInvite,
     PhoneSaveDefaultSendAs,
@@ -1467,6 +1561,7 @@ __all__ = (
     "ChannelsUpdateColor",
     "ChannelsSetMainProfileTab",
     "PaymentsGetStarGiftUpgradePreview",
+    "PaymentsGetOnrampAvailability",
     "StickersRemoveStickerFromSet",
     "PhoneDeclineConferenceCallInvite",
     "PhoneSaveDefaultSendAs",

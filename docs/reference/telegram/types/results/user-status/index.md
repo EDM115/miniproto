@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: UserStatus"
-description: "Layer 229 result-family index for 6 canonical constructors returning UserStatus from tdlib."
+description: "Layer 230 result-family index for 6 canonical constructors returning UserStatus from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `UserStatus`
+## Layer 230 result family `UserStatus`
 
 Selected canonical constructors in this family: 6.
 

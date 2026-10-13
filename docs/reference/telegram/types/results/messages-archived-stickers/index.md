@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: messages.ArchivedStickers"
-description: "Layer 229 result-family index for 1 canonical constructors returning messages.ArchivedStickers from tdlib."
+description: "Layer 230 result-family index for 1 canonical constructors returning messages.ArchivedStickers from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `messages.ArchivedStickers`
+## Layer 230 result family `messages.ArchivedStickers`
 
 Selected canonical constructors in this family: 1.
 

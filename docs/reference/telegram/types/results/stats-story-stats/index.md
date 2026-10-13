@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: stats.StoryStats"
-description: "Layer 229 result-family index for 1 canonical constructors returning stats.StoryStats from tdlib."
+description: "Layer 230 result-family index for 1 canonical constructors returning stats.StoryStats from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `stats.StoryStats`
+## Layer 230 result family `stats.StoryStats`
 
 Selected canonical constructors in this family: 1.
 

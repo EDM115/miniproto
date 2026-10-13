@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: updates.ChannelDifference"
-description: "Layer 229 result-family index for 3 canonical constructors returning updates.ChannelDifference from tdlib."
+description: "Layer 230 result-family index for 3 canonical constructors returning updates.ChannelDifference from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `updates.ChannelDifference`
+## Layer 230 result family `updates.ChannelDifference`
 
 Selected canonical constructors in this family: 3.
 

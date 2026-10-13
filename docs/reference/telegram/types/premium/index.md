@@ -1,6 +1,6 @@
 ---
 title: "Telegram types: premium"
-description: "Layer 229 index of 3 canonical Telegram types in the premium namespace from tdlib."
+description: "Layer 230 index of 3 canonical Telegram types in the premium namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "premium"
 schema_source: "tdlib"
 ---
 
-## Layer 229 premium types
+## Layer 230 premium types
 
 Selected canonical types in this namespace: 3.
 

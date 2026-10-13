@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: SendMessageAction"
-description: "Layer 229 result-family index for 22 canonical constructors returning SendMessageAction from tdlib."
+description: "Layer 230 result-family index for 22 canonical constructors returning SendMessageAction from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `SendMessageAction`
+## Layer 230 result family `SendMessageAction`
 
 Selected canonical constructors in this family: 22.
 

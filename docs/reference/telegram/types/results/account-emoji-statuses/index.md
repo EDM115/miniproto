@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: account.EmojiStatuses"
-description: "Layer 229 result-family index for 2 canonical constructors returning account.EmojiStatuses from tdlib."
+description: "Layer 230 result-family index for 2 canonical constructors returning account.EmojiStatuses from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `account.EmojiStatuses`
+## Layer 230 result family `account.EmojiStatuses`
 
 Selected canonical constructors in this family: 2.
 

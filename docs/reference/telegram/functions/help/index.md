@@ -1,6 +1,6 @@
 ---
 title: "Telegram functions: help"
-description: "Layer 229 index of 25 canonical Telegram functions in the help namespace from tdlib."
+description: "Layer 230 index of 25 canonical Telegram functions in the help namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "help"
 schema_source: "tdlib"
 ---
 
-## Layer 229 help functions
+## Layer 230 help functions
 
 Selected canonical functions in this namespace: 25.
 

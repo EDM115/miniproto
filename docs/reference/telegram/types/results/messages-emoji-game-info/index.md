@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: messages.EmojiGameInfo"
-description: "Layer 229 result-family index for 2 canonical constructors returning messages.EmojiGameInfo from tdlib."
+description: "Layer 230 result-family index for 2 canonical constructors returning messages.EmojiGameInfo from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `messages.EmojiGameInfo`
+## Layer 230 result family `messages.EmojiGameInfo`
 
 Selected canonical constructors in this family: 2.
 

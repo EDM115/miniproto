@@ -1,6 +1,6 @@
 ---
 title: "Telegram types: fragment"
-description: "Layer 229 index of 1 canonical Telegram types in the fragment namespace from tdlib."
+description: "Layer 230 index of 1 canonical Telegram types in the fragment namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "fragment"
 schema_source: "tdlib"
 ---
 
-## Layer 229 fragment types
+## Layer 230 fragment types
 
 Selected canonical types in this namespace: 1.
 

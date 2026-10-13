@@ -349,6 +349,125 @@ class UpdateDeleteGroupCallMessages(TLConstructor):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class UpdateWalletGaslessInfo(TLConstructor):
+    available: bool = False
+    left: int
+    reset_at: int
+    min_amount: int
+    relayer_address: str
+    CONSTRUCTOR_ID: ClassVar[int] = 0xA8AE1CAC
+    QUALNAME: ClassVar[str] = "updateWalletGaslessInfo"
+    RESULT_TYPE: ClassVar[str] = "Update"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="available",
+            python_name="available",
+            type="true",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="left",
+            python_name="left",
+            type="int",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="reset_at",
+            python_name="reset_at",
+            type="int",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="min_amount",
+            python_name="min_amount",
+            type="long",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="relayer_address",
+            python_name="relayer_address",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.available:
+            flags |= 1
+        output.extend(encode_int(flags))
+        output.extend(encode_int(self.left))
+        output.extend(encode_int(self.reset_at))
+        output.extend(encode_long(self.min_amount))
+        output.extend(encode_string(self.relayer_address))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_available = bool(flags & 1)
+        _value_left, cursor = decode_int(raw_data, cursor)
+        _value_reset_at, cursor = decode_int(raw_data, cursor)
+        _value_min_amount, cursor = decode_long(raw_data, cursor)
+        _value_relayer_address, cursor = decode_string(raw_data, cursor)
+        return cls(
+            available=_value_available,
+            left=_value_left,
+            reset_at=_value_reset_at,
+            min_amount=_value_min_amount,
+            relayer_address=_value_relayer_address,
+        ), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class SendMessageUploadVideoAction(TLConstructor):
     progress: int
     CONSTRUCTOR_ID: ClassVar[int] = 0xE9763AEC
@@ -2524,6 +2643,63 @@ class InputRichMessageMarkdown(TLConstructor):
         return cls(rtl=_value_rtl, noautolink=_value_noautolink, markdown=_value_markdown, files=_value_files), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletStateEmpty(TLConstructor):
+    creating: bool = False
+    CONSTRUCTOR_ID: ClassVar[int] = 0x9CB9B2EC
+    QUALNAME: ClassVar[str] = "walletStateEmpty"
+    RESULT_TYPE: ClassVar[str] = "WalletState"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="creating",
+            python_name="creating",
+            type="true",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.creating:
+            flags |= 1
+        output.extend(encode_int(flags))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_creating = bool(flags & 1)
+        return cls(creating=_value_creating), cursor
+
+
 class help:
     ConfigSimple = HelpConfigSimple
 
@@ -2544,6 +2720,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     UpdateReadFeaturedEmojiStickers,
     UpdateDeleteQuickReply,
     UpdateDeleteGroupCallMessages,
+    UpdateWalletGaslessInfo,
     SendMessageUploadVideoAction,
     PrivacyValueAllowContacts,
     MessageEntityBlockquote,
@@ -2566,6 +2743,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     PaymentsStarGiftAuctionState,
     AiComposeToneExample,
     InputRichMessageMarkdown,
+    WalletStateEmpty,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -2576,6 +2754,7 @@ __all__ = (
     "UpdateReadFeaturedEmojiStickers",
     "UpdateDeleteQuickReply",
     "UpdateDeleteGroupCallMessages",
+    "UpdateWalletGaslessInfo",
     "SendMessageUploadVideoAction",
     "PrivacyValueAllowContacts",
     "MessageEntityBlockquote",
@@ -2598,6 +2777,7 @@ __all__ = (
     "PaymentsStarGiftAuctionState",
     "AiComposeToneExample",
     "InputRichMessageMarkdown",
+    "WalletStateEmpty",
     "help",
     "messages",
     "payments",

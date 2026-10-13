@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: BaseTheme"
-description: "Layer 229 result-family index for 5 canonical constructors returning BaseTheme from tdlib."
+description: "Layer 230 result-family index for 5 canonical constructors returning BaseTheme from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `BaseTheme`
+## Layer 230 result family `BaseTheme`
 
 Selected canonical constructors in this family: 5.
 

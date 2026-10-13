@@ -1,6 +1,6 @@
 ---
 title: "Telegram functions: payments"
-description: "Layer 229 index of 65 canonical Telegram functions in the payments namespace from tdlib."
+description: "Layer 230 index of 72 canonical Telegram functions in the payments namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,9 +12,9 @@ namespace: "payments"
 schema_source: "tdlib"
 ---
 
-## Layer 229 payments functions
+## Layer 230 payments functions
 
-Selected canonical functions in this namespace: 65.
+Selected canonical functions in this namespace: 72.
 
 ## Declarations
 
@@ -30,6 +30,7 @@ Selected canonical functions in this namespace: 65.
 - [`payments.connectStarRefBot`](/reference/telegram/functions/payments/connect-star-ref-bot/): `payments.ConnectedStarRefBots`
 - [`payments.convertStarGift`](/reference/telegram/functions/payments/convert-star-gift/): `Bool`
 - [`payments.craftStarGift`](/reference/telegram/functions/payments/craft-star-gift/): `Updates`
+- [`payments.createOnrampSession`](/reference/telegram/functions/payments/create-onramp-session/): `OnrampSession`
 - [`payments.createStarGiftCollection`](/reference/telegram/functions/payments/create-star-gift-collection/): `StarGiftCollection`
 - [`payments.deleteStarGiftCollection`](/reference/telegram/functions/payments/delete-star-gift-collection/): `Bool`
 - [`payments.editConnectedStarRefBot`](/reference/telegram/functions/payments/edit-connected-star-ref-bot/): `payments.ConnectedStarRefBots`
@@ -39,7 +40,13 @@ Selected canonical functions in this namespace: 65.
 - [`payments.getConnectedStarRefBot`](/reference/telegram/functions/payments/get-connected-star-ref-bot/): `payments.ConnectedStarRefBots`
 - [`payments.getConnectedStarRefBots`](/reference/telegram/functions/payments/get-connected-star-ref-bots/): `payments.ConnectedStarRefBots`
 - [`payments.getCraftStarGifts`](/reference/telegram/functions/payments/get-craft-star-gifts/): `payments.SavedStarGifts`
+- [`payments.getCurrencyRates`](/reference/telegram/functions/payments/get-currency-rates/): `payments.CurrencyRates`
 - [`payments.getGiveawayInfo`](/reference/telegram/functions/payments/get-giveaway-info/): `payments.GiveawayInfo`
+- [`payments.getOnrampAvailability`](/reference/telegram/functions/payments/get-onramp-availability/): `OnrampAvailability`
+- [`payments.getOnrampBaseCurrencies`](/reference/telegram/functions/payments/get-onramp-base-currencies/): `Vector<string>`
+- [`payments.getOnrampLimits`](/reference/telegram/functions/payments/get-onramp-limits/): `OnrampLimits`
+- [`payments.getOnrampProviders`](/reference/telegram/functions/payments/get-onramp-providers/): `Vector<OnrampProviderInfo>`
+- [`payments.getOnrampQuote`](/reference/telegram/functions/payments/get-onramp-quote/): `OnrampQuote`
 - [`payments.getPaymentForm`](/reference/telegram/functions/payments/get-payment-form/): `payments.PaymentForm`
 - [`payments.getPaymentReceipt`](/reference/telegram/functions/payments/get-payment-receipt/): `payments.PaymentReceipt`
 - [`payments.getPremiumGiftCodeOptions`](/reference/telegram/functions/payments/get-premium-gift-code-options/): `Vector<PremiumGiftCodeOption>`

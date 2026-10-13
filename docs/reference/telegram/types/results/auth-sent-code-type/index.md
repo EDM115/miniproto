@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: auth.SentCodeType"
-description: "Layer 229 result-family index for 11 canonical constructors returning auth.SentCodeType from tdlib."
+description: "Layer 230 result-family index for 11 canonical constructors returning auth.SentCodeType from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `auth.SentCodeType`
+## Layer 230 result family `auth.SentCodeType`
 
 Selected canonical constructors in this family: 11.
 

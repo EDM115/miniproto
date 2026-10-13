@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: messages.DialogFilters"
-description: "Layer 229 result-family index for 1 canonical constructors returning messages.DialogFilters from tdlib."
+description: "Layer 230 result-family index for 1 canonical constructors returning messages.DialogFilters from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `messages.DialogFilters`
+## Layer 230 result family `messages.DialogFilters`
 
 Selected canonical constructors in this family: 1.
 

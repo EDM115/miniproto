@@ -2614,6 +2614,96 @@ class BotsPopularAppBots(TLConstructor):
         return cls(next_offset=_value_next_offset, users=_value_users), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class InputWalletImported(TLConstructor):
+    public_key: bytes
+    anchor_public_key: bytes | None = None
+    proof: Any
+    CONSTRUCTOR_ID: ClassVar[int] = 0x66A66A3B
+    QUALNAME: ClassVar[str] = "inputWalletImported"
+    RESULT_TYPE: ClassVar[str] = "InputWalletReplacement"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="public_key",
+            python_name="public_key",
+            type="bytes",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="anchor_public_key",
+            python_name="anchor_public_key",
+            type="bytes",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="proof",
+            python_name="proof",
+            type="WalletOwnershipProof",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.anchor_public_key is not None:
+            flags |= 1
+        output.extend(encode_int(flags))
+        output.extend(encode_bytes(self.public_key))
+        if self.anchor_public_key is not None:
+            output.extend(encode_bytes(self.anchor_public_key))
+        output.extend(encode_value("WalletOwnershipProof", self.proof))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_public_key, cursor = decode_bytes(raw_data, cursor)
+        if bool(flags & 1):
+            _value_anchor_public_key, cursor = decode_bytes(raw_data, cursor)
+        else:
+            _value_anchor_public_key = None
+        _value_proof, cursor = decode_value("WalletOwnershipProof", raw_data, cursor)
+        return cls(public_key=_value_public_key, anchor_public_key=_value_anchor_public_key, proof=_value_proof), cursor
+
+
 class account:
     ConnectedBots = AccountConnectedBots
     Password = AccountPassword
@@ -2667,6 +2757,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     InputBusinessGreetingMessage,
     AccountConnectedBots,
     BotsPopularAppBots,
+    InputWalletImported,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -2698,6 +2789,7 @@ __all__ = (
     "InputBusinessGreetingMessage",
     "AccountConnectedBots",
     "BotsPopularAppBots",
+    "InputWalletImported",
     "account",
     "auth",
     "bots",

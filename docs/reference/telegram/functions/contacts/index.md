@@ -1,6 +1,6 @@
 ---
 title: "Telegram functions: contacts"
-description: "Layer 229 index of 28 canonical Telegram functions in the contacts namespace from tdlib."
+description: "Layer 230 index of 28 canonical Telegram functions in the contacts namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "contacts"
 schema_source: "tdlib"
 ---
 
-## Layer 229 contacts functions
+## Layer 230 contacts functions
 
 Selected canonical functions in this namespace: 28.
 

@@ -2203,6 +2203,8 @@ class StatsGroupTopAdmin(TLConstructor):
 class Username(TLConstructor):
     editable: bool = False
     active: bool = False
+    deletable: bool = False
+    expired: bool = False
     username: str
     CONSTRUCTOR_ID: ClassVar[int] = 0xB4073647
     QUALNAME: ClassVar[str] = "username"
@@ -2225,6 +2227,28 @@ class Username(TLConstructor):
             type="true",
             flag="flags",
             flag_index=1,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="deletable",
+            python_name="deletable",
+            type="true",
+            flag="flags",
+            flag_index=2,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="expired",
+            python_name="expired",
+            type="true",
+            flag="flags",
+            flag_index=3,
             is_optional=True,
             is_true_flag=True,
             is_vector=False,
@@ -2258,6 +2282,10 @@ class Username(TLConstructor):
             flags |= 1
         if self.active:
             flags |= 2
+        if self.deletable:
+            flags |= 4
+        if self.expired:
+            flags |= 8
         output.extend(encode_int(flags))
         output.extend(encode_string(self.username))
         return bytes(output)
@@ -2281,8 +2309,16 @@ class Username(TLConstructor):
         flags, cursor = decode_int(raw_data, cursor)
         _value_editable = bool(flags & 1)
         _value_active = bool(flags & 2)
+        _value_deletable = bool(flags & 4)
+        _value_expired = bool(flags & 8)
         _value_username, cursor = decode_string(raw_data, cursor)
-        return cls(editable=_value_editable, active=_value_active, username=_value_username), cursor
+        return cls(
+            editable=_value_editable,
+            active=_value_active,
+            deletable=_value_deletable,
+            expired=_value_expired,
+            username=_value_username,
+        ), cursor
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -3364,6 +3400,84 @@ class MessagesEmojiGameOutcome(TLConstructor):
         return cls(seed=_value_seed, stake_ton_amount=_value_stake_ton_amount, ton_amount=_value_ton_amount), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletProofChallenge(TLConstructor):
+    payload: str
+    expires: int
+    domain: str
+    CONSTRUCTOR_ID: ClassVar[int] = 0x99E41707
+    QUALNAME: ClassVar[str] = "wallet.proofChallenge"
+    RESULT_TYPE: ClassVar[str] = "wallet.ProofChallenge"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="payload",
+            python_name="payload",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="expires",
+            python_name="expires",
+            type="int",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="domain",
+            python_name="domain",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_string(self.payload))
+        output.extend(encode_int(self.expires))
+        output.extend(encode_string(self.domain))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_payload, cursor = decode_string(raw_data, cursor)
+        _value_expires, cursor = decode_int(raw_data, cursor)
+        _value_domain, cursor = decode_string(raw_data, cursor)
+        return cls(payload=_value_payload, expires=_value_expires, domain=_value_domain), cursor
+
+
 class chatlists:
     ExportedInvites = ChatlistsExportedInvites
 
@@ -3371,6 +3485,10 @@ class chatlists:
 class messages:
     EmojiGameOutcome = MessagesEmojiGameOutcome
     EmojiGroupsNotModified = MessagesEmojiGroupsNotModified
+
+
+class wallet:
+    ProofChallenge = WalletProofChallenge
 
 
 ALL_TYPES: tuple[type[TLConstructor], ...] = (
@@ -3401,6 +3519,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     StarGift,
     StarsRating,
     MessagesEmojiGameOutcome,
+    WalletProofChallenge,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -3432,8 +3551,10 @@ __all__ = (
     "StarGift",
     "StarsRating",
     "MessagesEmojiGameOutcome",
+    "WalletProofChallenge",
     "chatlists",
     "messages",
+    "wallet",
     "CONSTRUCTOR_ID_MAP",
     "NAME_MAP",
 )

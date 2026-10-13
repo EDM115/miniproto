@@ -1,5 +1,5 @@
 {
-  "layer": 229,
+  "layer": 230,
   "relationships": [
     {
       "relation": "accepts_type_family",
@@ -1652,6 +1652,22 @@
     {
       "relation": "accepts_type_family",
       "source": {
+        "constructor_id": "0x3501c08a",
+        "kind": "function",
+        "path": "telegram/functions/bots/add-username.md",
+        "qualified_name": "bots.addUsername"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/input-user/index.md",
+        "qualified_name": "InputUser",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "accepts_type_family",
+      "source": {
         "constructor_id": "0xf132e3ef",
         "kind": "function",
         "path": "telegram/functions/bots/allow-send-message.md",
@@ -2004,6 +2020,22 @@
     {
       "relation": "accepts_type_family",
       "source": {
+        "constructor_id": "0xc704147d",
+        "kind": "function",
+        "path": "telegram/functions/bots/remove-username.md",
+        "qualified_name": "bots.removeUsername"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/input-user/index.md",
+        "qualified_name": "InputUser",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "accepts_type_family",
+      "source": {
         "constructor_id": "0xb627f3aa",
         "kind": "function",
         "path": "telegram/functions/bots/reorder-preview-medias.md",
@@ -2228,7 +2260,7 @@
     {
       "relation": "accepts_type_family",
       "source": {
-        "constructor_id": "0x8b89dfbd",
+        "constructor_id": "0xf4946757",
         "kind": "function",
         "path": "telegram/functions/bots/set-custom-verification.md",
         "qualified_name": "bots.setCustomVerification"
@@ -2244,7 +2276,7 @@
     {
       "relation": "accepts_type_family",
       "source": {
-        "constructor_id": "0x8b89dfbd",
+        "constructor_id": "0xf4946757",
         "kind": "function",
         "path": "telegram/functions/bots/set-custom-verification.md",
         "qualified_name": "bots.setCustomVerification"
@@ -2254,6 +2286,22 @@
         "kind": "result_family",
         "path": "telegram/types/results/input-user/index.md",
         "qualified_name": "InputUser",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "accepts_type_family",
+      "source": {
+        "constructor_id": "0xf4946757",
+        "kind": "function",
+        "path": "telegram/functions/bots/set-custom-verification.md",
+        "qualified_name": "bots.setCustomVerification"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/text-with-entities/index.md",
+        "qualified_name": "TextWithEntities",
         "selected_layer": true
       }
     },
@@ -13282,6 +13330,134 @@
       }
     },
     {
+      "relation": "accepts_type_family",
+      "source": {
+        "constructor_id": "0x0b0bf0da",
+        "kind": "function",
+        "path": "telegram/functions/wallet/disable-backup.md",
+        "qualified_name": "wallet.disableBackup"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/input-check-password-srp/index.md",
+        "qualified_name": "InputCheckPasswordSRP",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "accepts_type_family",
+      "source": {
+        "constructor_id": "0x0b0bf0da",
+        "kind": "function",
+        "path": "telegram/functions/wallet/disable-backup.md",
+        "qualified_name": "wallet.disableBackup"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-ownership-proof/index.md",
+        "qualified_name": "WalletOwnershipProof",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "accepts_type_family",
+      "source": {
+        "constructor_id": "0x4500c525",
+        "kind": "function",
+        "path": "telegram/functions/wallet/enable-backup.md",
+        "qualified_name": "wallet.enableBackup"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-ownership-proof/index.md",
+        "qualified_name": "WalletOwnershipProof",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "accepts_type_family",
+      "source": {
+        "constructor_id": "0x9077c9ac",
+        "kind": "function",
+        "path": "telegram/functions/wallet/export-secret-phrase.md",
+        "qualified_name": "wallet.exportSecretPhrase"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/input-check-password-srp/index.md",
+        "qualified_name": "InputCheckPasswordSRP",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "accepts_type_family",
+      "source": {
+        "constructor_id": "0x5275dfdd",
+        "kind": "function",
+        "path": "telegram/functions/wallet/get-user-addresses.md",
+        "qualified_name": "wallet.getUserAddresses"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/input-user/index.md",
+        "qualified_name": "InputUser",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "accepts_type_family",
+      "source": {
+        "constructor_id": "0xd8c72eec",
+        "kind": "function",
+        "path": "telegram/functions/wallet/replace-wallet.md",
+        "qualified_name": "wallet.replaceWallet"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/input-check-password-srp/index.md",
+        "qualified_name": "InputCheckPasswordSRP",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "accepts_type_family",
+      "source": {
+        "constructor_id": "0xd8c72eec",
+        "kind": "function",
+        "path": "telegram/functions/wallet/replace-wallet.md",
+        "qualified_name": "wallet.replaceWallet"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/input-wallet-replacement/index.md",
+        "qualified_name": "InputWalletReplacement",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "accepts_type_family",
+      "source": {
+        "constructor_id": "0xd9e5d9e2",
+        "kind": "function",
+        "path": "telegram/functions/wallet/send-transfer.md",
+        "qualified_name": "wallet.sendTransfer"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/input-user/index.md",
+        "qualified_name": "InputUser",
+        "selected_layer": true
+      }
+    },
+    {
       "relation": "constructor_result_family",
       "source": {
         "constructor_id": "0x4679b65f",
@@ -15380,7 +15556,7 @@
     {
       "relation": "constructor_result_family",
       "source": {
-        "constructor_id": "0xf93cd45c",
+        "constructor_id": "0xf72e0ed9",
         "kind": "type",
         "path": "telegram/types/base/bot-verification.md",
         "qualified_name": "botVerification"
@@ -15396,7 +15572,7 @@
     {
       "relation": "constructor_result_family",
       "source": {
-        "constructor_id": "0xb0cd6617",
+        "constructor_id": "0xa12aefff",
         "kind": "type",
         "path": "telegram/types/base/bot-verifier-settings.md",
         "qualified_name": "botVerifierSettings"
@@ -18094,6 +18270,22 @@
         "kind": "result_family",
         "path": "telegram/types/results/contacts-top-peers/index.md",
         "qualified_name": "contacts.TopPeers",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x30d9743c",
+        "kind": "type",
+        "path": "telegram/types/base/currency-rate.md",
+        "qualified_name": "currencyRate"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/currency-rate/index.md",
+        "qualified_name": "CurrencyRate",
         "selected_layer": true
       }
     },
@@ -22500,22 +22692,6 @@
     {
       "relation": "constructor_result_family",
       "source": {
-        "constructor_id": "0x5b1ccb28",
-        "kind": "type",
-        "path": "telegram/types/base/input-passkey-credential-firebase-pnv.md",
-        "qualified_name": "inputPasskeyCredentialFirebasePNV"
-      },
-      "target": {
-        "constructor_id": null,
-        "kind": "result_family",
-        "path": "telegram/types/results/input-passkey-credential/index.md",
-        "qualified_name": "InputPasskeyCredential",
-        "selected_layer": true
-      }
-    },
-    {
-      "relation": "constructor_result_family",
-      "source": {
         "constructor_id": "0x3c27b78f",
         "kind": "type",
         "path": "telegram/types/base/input-passkey-credential-public-key.md",
@@ -24436,6 +24612,38 @@
     {
       "relation": "constructor_result_family",
       "source": {
+        "constructor_id": "0x66a66a3b",
+        "kind": "type",
+        "path": "telegram/types/base/input-wallet-imported.md",
+        "qualified_name": "inputWalletImported"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/input-wallet-replacement/index.md",
+        "qualified_name": "InputWalletReplacement",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x63a440dc",
+        "kind": "type",
+        "path": "telegram/types/base/input-wallet-new.md",
+        "qualified_name": "inputWalletNew"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/input-wallet-replacement/index.md",
+        "qualified_name": "InputWalletReplacement",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
         "constructor_id": "0x9bed434d",
         "kind": "type",
         "path": "telegram/types/base/input-web-document.md",
@@ -25508,6 +25716,22 @@
     {
       "relation": "constructor_result_family",
       "source": {
+        "constructor_id": "0x9329ea33",
+        "kind": "type",
+        "path": "telegram/types/base/message-action-gram-transfer.md",
+        "qualified_name": "messageActionGramTransfer"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/message-action/index.md",
+        "qualified_name": "MessageAction",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
         "constructor_id": "0x7a0d7f42",
         "kind": "type",
         "path": "telegram/types/base/message-action-group-call.md",
@@ -26132,6 +26356,22 @@
     {
       "relation": "constructor_result_family",
       "source": {
+        "constructor_id": "0x69b8c4bf",
+        "kind": "type",
+        "path": "telegram/types/base/message-action-wallet-ton-connect-request.md",
+        "qualified_name": "messageActionWalletTonConnectRequest"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/message-action/index.md",
+        "qualified_name": "MessageAction",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
         "constructor_id": "0xb4c38cb5",
         "kind": "type",
         "path": "telegram/types/base/message-action-web-view-data-sent.md",
@@ -26504,6 +26744,22 @@
         "kind": "type",
         "path": "telegram/types/base/message-entity-text-url.md",
         "qualified_name": "messageEntityTextUrl"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/message-entity/index.md",
+        "qualified_name": "MessageEntity",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0xfdabbfcd",
+        "kind": "type",
+        "path": "telegram/types/base/message-entity-ton-address.md",
+        "qualified_name": "messageEntityTonAddress"
       },
       "target": {
         "constructor_id": null,
@@ -28884,6 +29140,102 @@
     {
       "relation": "constructor_result_family",
       "source": {
+        "constructor_id": "0xf9c84973",
+        "kind": "type",
+        "path": "telegram/types/base/onramp-availability.md",
+        "qualified_name": "onrampAvailability"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/onramp-availability/index.md",
+        "qualified_name": "OnrampAvailability",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x7be2677e",
+        "kind": "type",
+        "path": "telegram/types/base/onramp-limits.md",
+        "qualified_name": "onrampLimits"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/onramp-limits/index.md",
+        "qualified_name": "OnrampLimits",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x9ec8c6a8",
+        "kind": "type",
+        "path": "telegram/types/base/onramp-method-availability.md",
+        "qualified_name": "onrampMethodAvailability"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/onramp-method-availability/index.md",
+        "qualified_name": "OnrampMethodAvailability",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x0dc27582",
+        "kind": "type",
+        "path": "telegram/types/base/onramp-provider-info.md",
+        "qualified_name": "onrampProviderInfo"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/onramp-provider-info/index.md",
+        "qualified_name": "OnrampProviderInfo",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x7a8011e9",
+        "kind": "type",
+        "path": "telegram/types/base/onramp-quote.md",
+        "qualified_name": "onrampQuote"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/onramp-quote/index.md",
+        "qualified_name": "OnrampQuote",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0xd1e42e24",
+        "kind": "type",
+        "path": "telegram/types/base/onramp-session.md",
+        "qualified_name": "onrampSession"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/onramp-session/index.md",
+        "qualified_name": "OnrampSession",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
         "constructor_id": "0x3bb842ac",
         "kind": "type",
         "path": "telegram/types/base/outbox-read-date.md",
@@ -29934,6 +30286,22 @@
         "kind": "result_family",
         "path": "telegram/types/results/payments-connected-star-ref-bots/index.md",
         "qualified_name": "payments.ConnectedStarRefBots",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0xbbcce4c2",
+        "kind": "type",
+        "path": "telegram/types/payments/currency-rates.md",
+        "qualified_name": "payments.currencyRates"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/payments-currency-rates/index.md",
+        "qualified_name": "payments.CurrencyRates",
         "selected_layer": true
       }
     },
@@ -35876,6 +36244,22 @@
     {
       "relation": "constructor_result_family",
       "source": {
+        "constructor_id": "0x3cd2a36a",
+        "kind": "type",
+        "path": "telegram/types/base/text-ton-address.md",
+        "qualified_name": "textTonAddress"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/rich-text/index.md",
+        "qualified_name": "RichText",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
         "constructor_id": "0xc12622c4",
         "kind": "type",
         "path": "telegram/types/base/text-underline.md",
@@ -36014,6 +36398,102 @@
         "kind": "result_family",
         "path": "telegram/types/results/todo-list/index.md",
         "qualified_name": "TodoList",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x12229264",
+        "kind": "type",
+        "path": "telegram/types/base/ton-connect-manifest.md",
+        "qualified_name": "tonConnectManifest"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/ton-connect-manifest/index.md",
+        "qualified_name": "TonConnectManifest",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x582464e3",
+        "kind": "type",
+        "path": "telegram/types/base/ton-connect-next-event-id.md",
+        "qualified_name": "tonConnectNextEventId"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/ton-connect-next-event-id/index.md",
+        "qualified_name": "TonConnectNextEventId",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0xa15f8513",
+        "kind": "type",
+        "path": "telegram/types/base/ton-connect-request.md",
+        "qualified_name": "tonConnectRequest"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/ton-connect-request/index.md",
+        "qualified_name": "TonConnectRequest",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x126556c6",
+        "kind": "type",
+        "path": "telegram/types/base/ton-connect-session.md",
+        "qualified_name": "tonConnectSession"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/ton-connect-session/index.md",
+        "qualified_name": "TonConnectSession",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0xac8dfe19",
+        "kind": "type",
+        "path": "telegram/types/toncenter/api-response.md",
+        "qualified_name": "toncenter.apiResponse"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/toncenter-api-response/index.md",
+        "qualified_name": "toncenter.ApiResponse",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x19887601",
+        "kind": "type",
+        "path": "telegram/types/toncenter/streaming-url.md",
+        "qualified_name": "toncenter.streamingUrl"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/toncenter-streaming-url/index.md",
+        "qualified_name": "toncenter.StreamingUrl",
         "selected_layer": true
       }
     },
@@ -38484,6 +38964,22 @@
     {
       "relation": "constructor_result_family",
       "source": {
+        "constructor_id": "0xb1434d4a",
+        "kind": "type",
+        "path": "telegram/types/base/update-sent-wallet-transaction.md",
+        "qualified_name": "updateSentWalletTransaction"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/update/index.md",
+        "qualified_name": "Update",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
         "constructor_id": "0xebe46819",
         "kind": "type",
         "path": "telegram/types/base/update-service-notification.md",
@@ -38856,6 +39352,70 @@
         "kind": "type",
         "path": "telegram/types/base/update-user-typing.md",
         "qualified_name": "updateUserTyping"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/update/index.md",
+        "qualified_name": "Update",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0xa8ae1cac",
+        "kind": "type",
+        "path": "telegram/types/base/update-wallet-gasless-info.md",
+        "qualified_name": "updateWalletGaslessInfo"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/update/index.md",
+        "qualified_name": "Update",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x6ac3f2aa",
+        "kind": "type",
+        "path": "telegram/types/base/update-wallet-state.md",
+        "qualified_name": "updateWalletState"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/update/index.md",
+        "qualified_name": "Update",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0xd1ee8199",
+        "kind": "type",
+        "path": "telegram/types/base/update-wallet-ton-connect-pending-disconnect.md",
+        "qualified_name": "updateWalletTonConnectPendingDisconnect"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/update/index.md",
+        "qualified_name": "Update",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x50a38e0e",
+        "kind": "type",
+        "path": "telegram/types/base/update-wallet-ton-connect-session.md",
+        "qualified_name": "updateWalletTonConnectSession"
       },
       "target": {
         "constructor_id": null,
@@ -39614,6 +40174,358 @@
         "kind": "result_family",
         "path": "telegram/types/results/wall-paper-settings/index.md",
         "qualified_name": "WallPaperSettings",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x18e82537",
+        "kind": "type",
+        "path": "telegram/types/wallet/encrypted-secret-phrase-part.md",
+        "qualified_name": "wallet.encryptedSecretPhrasePart"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-encrypted-secret-phrase-part/index.md",
+        "qualified_name": "wallet.EncryptedSecretPhrasePart",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0xbde90a8d",
+        "kind": "type",
+        "path": "telegram/types/wallet/existing-balance.md",
+        "qualified_name": "wallet.existingBalance"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-existing-balance/index.md",
+        "qualified_name": "wallet.ExistingBalance",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0xf9d612ef",
+        "kind": "type",
+        "path": "telegram/types/wallet/holder-dc.md",
+        "qualified_name": "wallet.holderDc"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-holder-dc/index.md",
+        "qualified_name": "wallet.HolderDc",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x4c1ef10e",
+        "kind": "type",
+        "path": "telegram/types/wallet/nft-attribute.md",
+        "qualified_name": "wallet.nftAttribute"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-nft-attribute/index.md",
+        "qualified_name": "wallet.NftAttribute",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x3441fd1c",
+        "kind": "type",
+        "path": "telegram/types/wallet/nft-item.md",
+        "qualified_name": "wallet.nftItem"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-nft-item/index.md",
+        "qualified_name": "wallet.NftItem",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x794d486f",
+        "kind": "type",
+        "path": "telegram/types/wallet/nft-items.md",
+        "qualified_name": "wallet.nftItems"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-nft-items/index.md",
+        "qualified_name": "wallet.NftItems",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x99e41707",
+        "kind": "type",
+        "path": "telegram/types/wallet/proof-challenge.md",
+        "qualified_name": "wallet.proofChallenge"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-proof-challenge/index.md",
+        "qualified_name": "wallet.ProofChallenge",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0xe6d0ef01",
+        "kind": "type",
+        "path": "telegram/types/wallet/secret-phrase-parts.md",
+        "qualified_name": "wallet.secretPhraseParts"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-secret-phrase-parts/index.md",
+        "qualified_name": "wallet.SecretPhraseParts",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x4bc89693",
+        "kind": "type",
+        "path": "telegram/types/wallet/ton-connect-challenge.md",
+        "qualified_name": "wallet.tonConnectChallenge"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-ton-connect-challenge/index.md",
+        "qualified_name": "wallet.TonConnectChallenge",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x85c0f124",
+        "kind": "type",
+        "path": "telegram/types/wallet/ton-connect-pending.md",
+        "qualified_name": "wallet.tonConnectPending"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-ton-connect-pending/index.md",
+        "qualified_name": "wallet.TonConnectPending",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x0e1f6896",
+        "kind": "type",
+        "path": "telegram/types/wallet/ton-connect-sessions.md",
+        "qualified_name": "wallet.tonConnectSessions"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-ton-connect-sessions/index.md",
+        "qualified_name": "wallet.TonConnectSessions",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x4322d5a5",
+        "kind": "type",
+        "path": "telegram/types/wallet/transactions.md",
+        "qualified_name": "wallet.transactions"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-transactions/index.md",
+        "qualified_name": "wallet.Transactions",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x928e7b55",
+        "kind": "type",
+        "path": "telegram/types/wallet/user-addresses.md",
+        "qualified_name": "wallet.userAddresses"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-user-addresses/index.md",
+        "qualified_name": "wallet.UserAddresses",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x60bccb0d",
+        "kind": "type",
+        "path": "telegram/types/base/wallet-ownership-proof.md",
+        "qualified_name": "walletOwnershipProof"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-ownership-proof/index.md",
+        "qualified_name": "WalletOwnershipProof",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x95c5346b",
+        "kind": "type",
+        "path": "telegram/types/base/wallet-state.md",
+        "qualified_name": "walletState"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-state/index.md",
+        "qualified_name": "WalletState",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x9cb9b2ec",
+        "kind": "type",
+        "path": "telegram/types/base/wallet-state-empty.md",
+        "qualified_name": "walletStateEmpty"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-state/index.md",
+        "qualified_name": "WalletState",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x952dc143",
+        "kind": "type",
+        "path": "telegram/types/base/wallet-transaction.md",
+        "qualified_name": "walletTransaction"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-transaction/index.md",
+        "qualified_name": "WalletTransaction",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x062cc1bc",
+        "kind": "type",
+        "path": "telegram/types/base/wallet-transaction-peer-address.md",
+        "qualified_name": "walletTransactionPeerAddress"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-transaction-peer/index.md",
+        "qualified_name": "WalletTransactionPeer",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0xe595186e",
+        "kind": "type",
+        "path": "telegram/types/base/wallet-transaction-peer-onramp.md",
+        "qualified_name": "walletTransactionPeerOnramp"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-transaction-peer/index.md",
+        "qualified_name": "WalletTransactionPeer",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0x728bed5a",
+        "kind": "type",
+        "path": "telegram/types/base/wallet-transaction-peer-unsupported.md",
+        "qualified_name": "walletTransactionPeerUnsupported"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-transaction-peer/index.md",
+        "qualified_name": "WalletTransactionPeer",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0xd4ea706d",
+        "kind": "type",
+        "path": "telegram/types/base/wallet-transaction-peer-user.md",
+        "qualified_name": "walletTransactionPeerUser"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-transaction-peer/index.md",
+        "qualified_name": "WalletTransactionPeer",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "constructor_result_family",
+      "source": {
+        "constructor_id": "0xfe78eecc",
+        "kind": "type",
+        "path": "telegram/types/base/wallet-user-address.md",
+        "qualified_name": "walletUserAddress"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-user-address/index.md",
+        "qualified_name": "WalletUserAddress",
         "selected_layer": true
       }
     },
@@ -42100,6 +43012,22 @@
     {
       "relation": "returns_type_family",
       "source": {
+        "constructor_id": "0x490dada1",
+        "kind": "function",
+        "path": "telegram/functions/auth/cancel-web-token-authorization.md",
+        "qualified_name": "auth.cancelWebTokenAuthorization"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/bool/index.md",
+        "qualified_name": "Bool",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
         "constructor_id": "0x56e59f9c",
         "kind": "function",
         "path": "telegram/functions/auth/check-paid-auth.md",
@@ -42308,7 +43236,7 @@
     {
       "relation": "returns_type_family",
       "source": {
-        "constructor_id": "0x777df37a",
+        "constructor_id": "0x644f15c0",
         "kind": "function",
         "path": "telegram/functions/auth/init-firebase-pnv-login.md",
         "qualified_name": "auth.initFirebasePnvLogin"
@@ -42532,6 +43460,22 @@
     {
       "relation": "returns_type_family",
       "source": {
+        "constructor_id": "0x3501c08a",
+        "kind": "function",
+        "path": "telegram/functions/bots/add-username.md",
+        "qualified_name": "bots.addUsername"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/bool/index.md",
+        "qualified_name": "Bool",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
         "constructor_id": "0xf132e3ef",
         "kind": "function",
         "path": "telegram/functions/bots/allow-send-message.md",
@@ -42596,7 +43540,7 @@
     {
       "relation": "returns_type_family",
       "source": {
-        "constructor_id": "0x87f2219b",
+        "constructor_id": "0xe3ac4c61",
         "kind": "function",
         "path": "telegram/functions/bots/check-username.md",
         "qualified_name": "bots.checkUsername"
@@ -42868,6 +43812,22 @@
     {
       "relation": "returns_type_family",
       "source": {
+        "constructor_id": "0xc704147d",
+        "kind": "function",
+        "path": "telegram/functions/bots/remove-username.md",
+        "qualified_name": "bots.removeUsername"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/bool/index.md",
+        "qualified_name": "Bool",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
         "constructor_id": "0xb627f3aa",
         "kind": "function",
         "path": "telegram/functions/bots/reorder-preview-medias.md",
@@ -43028,7 +43988,7 @@
     {
       "relation": "returns_type_family",
       "source": {
-        "constructor_id": "0x8b89dfbd",
+        "constructor_id": "0xf4946757",
         "kind": "function",
         "path": "telegram/functions/bots/set-custom-verification.md",
         "qualified_name": "bots.setCustomVerification"
@@ -50004,6 +50964,22 @@
     {
       "relation": "returns_type_family",
       "source": {
+        "constructor_id": "0xa2197cf6",
+        "kind": "function",
+        "path": "telegram/functions/payments/create-onramp-session.md",
+        "qualified_name": "payments.createOnrampSession"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/onramp-session/index.md",
+        "qualified_name": "OnrampSession",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
         "constructor_id": "0x1f4a0e87",
         "kind": "function",
         "path": "telegram/functions/payments/create-star-gift-collection.md",
@@ -50148,6 +51124,22 @@
     {
       "relation": "returns_type_family",
       "source": {
+        "constructor_id": "0xd35983e8",
+        "kind": "function",
+        "path": "telegram/functions/payments/get-currency-rates.md",
+        "qualified_name": "payments.getCurrencyRates"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/payments-currency-rates/index.md",
+        "qualified_name": "payments.CurrencyRates",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
         "constructor_id": "0xf4239425",
         "kind": "function",
         "path": "telegram/functions/payments/get-giveaway-info.md",
@@ -50158,6 +51150,70 @@
         "kind": "result_family",
         "path": "telegram/types/results/payments-giveaway-info/index.md",
         "qualified_name": "payments.GiveawayInfo",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0x2ec29951",
+        "kind": "function",
+        "path": "telegram/functions/payments/get-onramp-availability.md",
+        "qualified_name": "payments.getOnrampAvailability"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/onramp-availability/index.md",
+        "qualified_name": "OnrampAvailability",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0x80e851fd",
+        "kind": "function",
+        "path": "telegram/functions/payments/get-onramp-limits.md",
+        "qualified_name": "payments.getOnrampLimits"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/onramp-limits/index.md",
+        "qualified_name": "OnrampLimits",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0x3f3e00dc",
+        "kind": "function",
+        "path": "telegram/functions/payments/get-onramp-providers.md",
+        "qualified_name": "payments.getOnrampProviders"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/onramp-provider-info/index.md",
+        "qualified_name": "OnrampProviderInfo",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0xe06645fa",
+        "kind": "function",
+        "path": "telegram/functions/payments/get-onramp-quote.md",
+        "qualified_name": "payments.getOnrampQuote"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/onramp-quote/index.md",
+        "qualified_name": "OnrampQuote",
         "selected_layer": true
       }
     },
@@ -52564,6 +53620,38 @@
     {
       "relation": "returns_type_family",
       "source": {
+        "constructor_id": "0xcdaf63c7",
+        "kind": "function",
+        "path": "telegram/functions/toncenter/get-streaming-url.md",
+        "qualified_name": "toncenter.getStreamingUrl"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/toncenter-streaming-url/index.md",
+        "qualified_name": "toncenter.StreamingUrl",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0x8d7bdd61",
+        "kind": "function",
+        "path": "telegram/functions/toncenter/perform-api-request.md",
+        "qualified_name": "toncenter.performApiRequest"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/toncenter-api-response/index.md",
+        "qualified_name": "toncenter.ApiResponse",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
         "constructor_id": "0x03173d78",
         "kind": "function",
         "path": "telegram/functions/updates/get-channel-difference.md",
@@ -52846,6 +53934,406 @@
         "kind": "result_family",
         "path": "telegram/types/results/updates/index.md",
         "qualified_name": "Updates",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0x0b0bf0da",
+        "kind": "function",
+        "path": "telegram/functions/wallet/disable-backup.md",
+        "qualified_name": "wallet.disableBackup"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-state/index.md",
+        "qualified_name": "WalletState",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0x4500c525",
+        "kind": "function",
+        "path": "telegram/functions/wallet/enable-backup.md",
+        "qualified_name": "wallet.enableBackup"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-state/index.md",
+        "qualified_name": "WalletState",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0x9077c9ac",
+        "kind": "function",
+        "path": "telegram/functions/wallet/export-secret-phrase.md",
+        "qualified_name": "wallet.exportSecretPhrase"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-secret-phrase-parts/index.md",
+        "qualified_name": "wallet.SecretPhraseParts",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0xf53925cf",
+        "kind": "function",
+        "path": "telegram/functions/wallet/fetch-encrypted-secret-phrase-part.md",
+        "qualified_name": "wallet.fetchEncryptedSecretPhrasePart"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-encrypted-secret-phrase-part/index.md",
+        "qualified_name": "wallet.EncryptedSecretPhrasePart",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0xd179d494",
+        "kind": "function",
+        "path": "telegram/functions/wallet/get-backup-holder-dcs.md",
+        "qualified_name": "wallet.getBackupHolderDcs"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-holder-dc/index.md",
+        "qualified_name": "wallet.HolderDc",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0x691f4360",
+        "kind": "function",
+        "path": "telegram/functions/wallet/get-existing-walt-balance.md",
+        "qualified_name": "wallet.getExistingWaltBalance"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-existing-balance/index.md",
+        "qualified_name": "wallet.ExistingBalance",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0x742df0a1",
+        "kind": "function",
+        "path": "telegram/functions/wallet/get-gasless-info.md",
+        "qualified_name": "wallet.getGaslessInfo"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/updates/index.md",
+        "qualified_name": "Updates",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0x8c12f3a4",
+        "kind": "function",
+        "path": "telegram/functions/wallet/get-nfts.md",
+        "qualified_name": "wallet.getNfts"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-nft-items/index.md",
+        "qualified_name": "wallet.NftItems",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0x2025e697",
+        "kind": "function",
+        "path": "telegram/functions/wallet/get-proof-challenge.md",
+        "qualified_name": "wallet.getProofChallenge"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-proof-challenge/index.md",
+        "qualified_name": "wallet.ProofChallenge",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0xab83b33a",
+        "kind": "function",
+        "path": "telegram/functions/wallet/get-state.md",
+        "qualified_name": "wallet.getState"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-state/index.md",
+        "qualified_name": "WalletState",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0xa8830a83",
+        "kind": "function",
+        "path": "telegram/functions/wallet/get-transactions.md",
+        "qualified_name": "wallet.getTransactions"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-transactions/index.md",
+        "qualified_name": "wallet.Transactions",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0x811ceab6",
+        "kind": "function",
+        "path": "telegram/functions/wallet/get-transactions-by-ids.md",
+        "qualified_name": "wallet.getTransactionsByIDs"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-transactions/index.md",
+        "qualified_name": "wallet.Transactions",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0xa6bb795d",
+        "kind": "function",
+        "path": "telegram/functions/wallet/get-transactions-by-msg-hash.md",
+        "qualified_name": "wallet.getTransactionsByMsgHash"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-transactions/index.md",
+        "qualified_name": "wallet.Transactions",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0x5275dfdd",
+        "kind": "function",
+        "path": "telegram/functions/wallet/get-user-addresses.md",
+        "qualified_name": "wallet.getUserAddresses"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-user-addresses/index.md",
+        "qualified_name": "wallet.UserAddresses",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0xd8c72eec",
+        "kind": "function",
+        "path": "telegram/functions/wallet/replace-wallet.md",
+        "qualified_name": "wallet.replaceWallet"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-state/index.md",
+        "qualified_name": "WalletState",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0xd9e5d9e2",
+        "kind": "function",
+        "path": "telegram/functions/wallet/send-transfer.md",
+        "qualified_name": "wallet.sendTransfer"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/updates/index.md",
+        "qualified_name": "Updates",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0x66b57b41",
+        "kind": "function",
+        "path": "telegram/functions/wallet/ton-connect-claim-request.md",
+        "qualified_name": "wallet.tonConnectClaimRequest"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/bool/index.md",
+        "qualified_name": "Bool",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0xd63f61ce",
+        "kind": "function",
+        "path": "telegram/functions/wallet/ton-connect-close-session.md",
+        "qualified_name": "wallet.tonConnectCloseSession"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/bool/index.md",
+        "qualified_name": "Bool",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0xcc931046",
+        "kind": "function",
+        "path": "telegram/functions/wallet/ton-connect-create-session.md",
+        "qualified_name": "wallet.tonConnectCreateSession"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/ton-connect-session/index.md",
+        "qualified_name": "TonConnectSession",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0x11aee065",
+        "kind": "function",
+        "path": "telegram/functions/wallet/ton-connect-get-pending.md",
+        "qualified_name": "wallet.tonConnectGetPending"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-ton-connect-pending/index.md",
+        "qualified_name": "wallet.TonConnectPending",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0xa7ffb56e",
+        "kind": "function",
+        "path": "telegram/functions/wallet/ton-connect-get-sessions.md",
+        "qualified_name": "wallet.tonConnectGetSessions"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-ton-connect-sessions/index.md",
+        "qualified_name": "wallet.TonConnectSessions",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0x775d7244",
+        "kind": "function",
+        "path": "telegram/functions/wallet/ton-connect-next-event-id.md",
+        "qualified_name": "wallet.tonConnectNextEventId"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/ton-connect-next-event-id/index.md",
+        "qualified_name": "TonConnectNextEventId",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0x338bcf1c",
+        "kind": "function",
+        "path": "telegram/functions/wallet/ton-connect-register-key.md",
+        "qualified_name": "wallet.tonConnectRegisterKey"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/wallet-ton-connect-challenge/index.md",
+        "qualified_name": "wallet.TonConnectChallenge",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0xc2c00779",
+        "kind": "function",
+        "path": "telegram/functions/wallet/ton-connect-submit-connect-result.md",
+        "qualified_name": "wallet.tonConnectSubmitConnectResult"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/bool/index.md",
+        "qualified_name": "Bool",
+        "selected_layer": true
+      }
+    },
+    {
+      "relation": "returns_type_family",
+      "source": {
+        "constructor_id": "0xfac67d3c",
+        "kind": "function",
+        "path": "telegram/functions/wallet/ton-connect-submit-response.md",
+        "qualified_name": "wallet.tonConnectSubmitResponse"
+      },
+      "target": {
+        "constructor_id": null,
+        "kind": "result_family",
+        "path": "telegram/types/results/bool/index.md",
+        "qualified_name": "Bool",
         "selected_layer": true
       }
     },
@@ -61956,7 +63444,7 @@
     {
       "relation": "rpc_error",
       "source": {
-        "constructor_id": "0x87f2219b",
+        "constructor_id": "0xe3ac4c61",
         "kind": "function",
         "path": "telegram/functions/bots/check-username.md",
         "qualified_name": "bots.checkUsername"
@@ -61972,7 +63460,7 @@
     {
       "relation": "rpc_error",
       "source": {
-        "constructor_id": "0x87f2219b",
+        "constructor_id": "0xe3ac4c61",
         "kind": "function",
         "path": "telegram/functions/bots/check-username.md",
         "qualified_name": "bots.checkUsername"
@@ -61988,7 +63476,7 @@
     {
       "relation": "rpc_error",
       "source": {
-        "constructor_id": "0x87f2219b",
+        "constructor_id": "0xe3ac4c61",
         "kind": "function",
         "path": "telegram/functions/bots/check-username.md",
         "qualified_name": "bots.checkUsername"
@@ -62004,7 +63492,7 @@
     {
       "relation": "rpc_error",
       "source": {
-        "constructor_id": "0x87f2219b",
+        "constructor_id": "0xe3ac4c61",
         "kind": "function",
         "path": "telegram/functions/bots/check-username.md",
         "qualified_name": "bots.checkUsername"
@@ -62020,7 +63508,7 @@
     {
       "relation": "rpc_error",
       "source": {
-        "constructor_id": "0x87f2219b",
+        "constructor_id": "0xe3ac4c61",
         "kind": "function",
         "path": "telegram/functions/bots/check-username.md",
         "qualified_name": "bots.checkUsername"
@@ -63748,7 +65236,7 @@
     {
       "relation": "rpc_error",
       "source": {
-        "constructor_id": "0x8b89dfbd",
+        "constructor_id": "0xf4946757",
         "kind": "function",
         "path": "telegram/functions/bots/set-custom-verification.md",
         "qualified_name": "bots.setCustomVerification"
@@ -63764,7 +65252,7 @@
     {
       "relation": "rpc_error",
       "source": {
-        "constructor_id": "0x8b89dfbd",
+        "constructor_id": "0xf4946757",
         "kind": "function",
         "path": "telegram/functions/bots/set-custom-verification.md",
         "qualified_name": "bots.setCustomVerification"
@@ -63780,7 +65268,7 @@
     {
       "relation": "rpc_error",
       "source": {
-        "constructor_id": "0x8b89dfbd",
+        "constructor_id": "0xf4946757",
         "kind": "function",
         "path": "telegram/functions/bots/set-custom-verification.md",
         "qualified_name": "bots.setCustomVerification"
@@ -63796,7 +65284,7 @@
     {
       "relation": "rpc_error",
       "source": {
-        "constructor_id": "0x8b89dfbd",
+        "constructor_id": "0xf4946757",
         "kind": "function",
         "path": "telegram/functions/bots/set-custom-verification.md",
         "qualified_name": "bots.setCustomVerification"
@@ -63812,7 +65300,7 @@
     {
       "relation": "rpc_error",
       "source": {
-        "constructor_id": "0x8b89dfbd",
+        "constructor_id": "0xf4946757",
         "kind": "function",
         "path": "telegram/functions/bots/set-custom-verification.md",
         "qualified_name": "bots.setCustomVerification"

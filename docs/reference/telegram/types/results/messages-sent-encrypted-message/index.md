@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: messages.SentEncryptedMessage"
-description: "Layer 229 result-family index for 2 canonical constructors returning messages.SentEncryptedMessage from tdlib."
+description: "Layer 230 result-family index for 2 canonical constructors returning messages.SentEncryptedMessage from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `messages.SentEncryptedMessage`
+## Layer 230 result family `messages.SentEncryptedMessage`
 
 Selected canonical constructors in this family: 2.
 

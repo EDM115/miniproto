@@ -597,6 +597,56 @@ class UpdatePaidReactionPrivacy(TLConstructor):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class UpdateWalletTonConnectSession(TLConstructor):
+    session: Any
+    CONSTRUCTOR_ID: ClassVar[int] = 0x50A38E0E
+    QUALNAME: ClassVar[str] = "updateWalletTonConnectSession"
+    RESULT_TYPE: ClassVar[str] = "Update"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="session",
+            python_name="session",
+            type="TonConnectSession",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_value("TonConnectSession", self.session))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_session, cursor = decode_value("TonConnectSession", raw_data, cursor)
+        return cls(session=_value_session), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class SendMessageTypingAction(TLConstructor):
     pass
     CONSTRUCTOR_ID: ClassVar[int] = 0x16BF744E
@@ -1511,6 +1561,70 @@ class AccountWebBrowserSettingsNotModified(TLConstructor):
         return cls(), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletNftAttribute(TLConstructor):
+    trait_type: str
+    value: str
+    CONSTRUCTOR_ID: ClassVar[int] = 0x4C1EF10E
+    QUALNAME: ClassVar[str] = "wallet.nftAttribute"
+    RESULT_TYPE: ClassVar[str] = "wallet.NftAttribute"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="trait_type",
+            python_name="trait_type",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="value",
+            python_name="value",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_string(self.trait_type))
+        output.extend(encode_string(self.value))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_trait_type, cursor = decode_string(raw_data, cursor)
+        _value_value, cursor = decode_string(raw_data, cursor)
+        return cls(trait_type=_value_trait_type, value=_value_value), cursor
+
+
 class account:
     WebBrowserSettingsNotModified = AccountWebBrowserSettingsNotModified
 
@@ -1536,6 +1650,10 @@ class updates:
     ChannelDifference = UpdatesChannelDifference
 
 
+class wallet:
+    NftAttribute = WalletNftAttribute
+
+
 ALL_TYPES: tuple[type[TLConstructor], ...] = (
     StorageFileJpeg,
     InputNotifyChats,
@@ -1544,6 +1662,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     UpdateGroupCallParticipants,
     UpdateBotMessageReaction,
     UpdatePaidReactionPrivacy,
+    UpdateWalletTonConnectSession,
     SendMessageTypingAction,
     InputPrivacyValueAllowAll,
     PrivacyValueAllowChatParticipants,
@@ -1559,6 +1678,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     HelpPeerColorsNotModified,
     StoriesCanSendStoryCount,
     AccountWebBrowserSettingsNotModified,
+    WalletNftAttribute,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -1570,6 +1690,7 @@ __all__ = (
     "UpdateGroupCallParticipants",
     "UpdateBotMessageReaction",
     "UpdatePaidReactionPrivacy",
+    "UpdateWalletTonConnectSession",
     "SendMessageTypingAction",
     "InputPrivacyValueAllowAll",
     "PrivacyValueAllowChatParticipants",
@@ -1585,12 +1706,14 @@ __all__ = (
     "HelpPeerColorsNotModified",
     "StoriesCanSendStoryCount",
     "AccountWebBrowserSettingsNotModified",
+    "WalletNftAttribute",
     "account",
     "help",
     "messages",
     "storage",
     "stories",
     "updates",
+    "wallet",
     "CONSTRUCTOR_ID_MAP",
     "NAME_MAP",
 )

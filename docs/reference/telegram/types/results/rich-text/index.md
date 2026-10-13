@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: RichText"
-description: "Layer 229 result-family index for 31 canonical constructors returning RichText from tdlib."
+description: "Layer 230 result-family index for 32 canonical constructors returning RichText from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,9 +12,9 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `RichText`
+## Layer 230 result family `RichText`
 
-Selected canonical constructors in this family: 31.
+Selected canonical constructors in this family: 32.
 
 ## Constructors
 
@@ -47,5 +47,6 @@ Selected canonical constructors in this family: 31.
 - [`textStrike`](/reference/telegram/types/base/text-strike/): `RichText`
 - [`textSubscript`](/reference/telegram/types/base/text-subscript/): `RichText`
 - [`textSuperscript`](/reference/telegram/types/base/text-superscript/): `RichText`
+- [`textTonAddress`](/reference/telegram/types/base/text-ton-address/): `RichText`
 - [`textUnderline`](/reference/telegram/types/base/text-underline/): `RichText`
 - [`textUrl`](/reference/telegram/types/base/text-url/): `RichText`

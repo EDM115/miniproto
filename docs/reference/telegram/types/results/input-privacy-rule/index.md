@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: InputPrivacyRule"
-description: "Layer 229 result-family index for 12 canonical constructors returning InputPrivacyRule from tdlib."
+description: "Layer 230 result-family index for 12 canonical constructors returning InputPrivacyRule from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `InputPrivacyRule`
+## Layer 230 result family `InputPrivacyRule`
 
 Selected canonical constructors in this family: 12.
 

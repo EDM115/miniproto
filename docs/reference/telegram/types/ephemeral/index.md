@@ -1,6 +1,6 @@
 ---
 title: "Telegram types: ephemeral"
-description: "Layer 229 index of 2 canonical Telegram types in the ephemeral namespace from tdlib."
+description: "Layer 230 index of 2 canonical Telegram types in the ephemeral namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "ephemeral"
 schema_source: "tdlib"
 ---
 
-## Layer 229 ephemeral types
+## Layer 230 ephemeral types
 
 Selected canonical types in this namespace: 2.
 

@@ -35,6 +35,96 @@ from miniproto.tl.codec import (
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class AuthInitFirebasePnvLogin(TLRequest):
+    except_ids: tuple[int, ...] | None = None
+    api_id: int
+    api_hash: str
+    CONSTRUCTOR_ID: ClassVar[int] = 0x644F15C0
+    QUALNAME: ClassVar[str] = "auth.initFirebasePnvLogin"
+    RESULT_TYPE: ClassVar[str] = "auth.FirebasePnvIntent"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="except_ids",
+            python_name="except_ids",
+            type="Vector<long>",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=True,
+            vector_item_type="long",
+        ),
+        TLField(
+            name="api_id",
+            python_name="api_id",
+            type="int",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="api_hash",
+            python_name="api_hash",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.except_ids is not None:
+            flags |= 1
+        output.extend(encode_int(flags))
+        if self.except_ids is not None:
+            output.extend(encode_vector(self.except_ids, "long"))
+        output.extend(encode_int(self.api_id))
+        output.extend(encode_string(self.api_hash))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        if bool(flags & 1):
+            _value_except_ids, cursor = decode_vector(raw_data, cursor, "long")
+        else:
+            _value_except_ids = None
+        _value_api_id, cursor = decode_int(raw_data, cursor)
+        _value_api_hash, cursor = decode_string(raw_data, cursor)
+        return cls(except_ids=_value_except_ids, api_id=_value_api_id, api_hash=_value_api_hash), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class AccountConfirmPasswordEmail(TLRequest):
     code: str
     CONSTRUCTOR_ID: ClassVar[int] = 0x8FDF1920
@@ -2503,12 +2593,52 @@ class PremiumGetBoostsList(TLRequest):
         return cls(gifts=_value_gifts, peer=_value_peer, offset=_value_offset, limit=_value_limit), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletGetExistingWaltBalance(TLRequest):
+    pass
+    CONSTRUCTOR_ID: ClassVar[int] = 0x691F4360
+    QUALNAME: ClassVar[str] = "wallet.getExistingWaltBalance"
+    RESULT_TYPE: ClassVar[str] = "wallet.ExistingBalance"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = ()
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        return cls(), cursor
+
+
 class account:
     ConfirmPasswordEmail = AccountConfirmPasswordEmail
     CreateTheme = AccountCreateTheme
     DeleteAutoSaveExceptions = AccountDeleteAutoSaveExceptions
     SetAuthorizationTTL = AccountSetAuthorizationTTL
     UpdatePersonalChannel = AccountUpdatePersonalChannel
+
+
+class auth:
+    InitFirebasePnvLogin = AuthInitFirebasePnvLogin
 
 
 class channels:
@@ -2570,7 +2700,12 @@ class stories:
     GetChatsToSend = StoriesGetChatsToSend
 
 
+class wallet:
+    GetExistingWaltBalance = WalletGetExistingWaltBalance
+
+
 ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
+    AuthInitFirebasePnvLogin,
     AccountConfirmPasswordEmail,
     AccountCreateTheme,
     AccountSetAuthorizationTTL,
@@ -2605,10 +2740,12 @@ ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
     StoriesExportStoryLink,
     StoriesGetChatsToSend,
     PremiumGetBoostsList,
+    WalletGetExistingWaltBalance,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLRequest]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_FUNCTIONS}
 NAME_MAP: dict[str, type[TLRequest]] = {entry.QUALNAME: entry for entry in ALL_FUNCTIONS}
 __all__ = (
+    "AuthInitFirebasePnvLogin",
     "AccountConfirmPasswordEmail",
     "AccountCreateTheme",
     "AccountSetAuthorizationTTL",
@@ -2643,7 +2780,9 @@ __all__ = (
     "StoriesExportStoryLink",
     "StoriesGetChatsToSend",
     "PremiumGetBoostsList",
+    "WalletGetExistingWaltBalance",
     "account",
+    "auth",
     "channels",
     "contacts",
     "help",
@@ -2654,6 +2793,7 @@ __all__ = (
     "stats",
     "stickers",
     "stories",
+    "wallet",
     "CONSTRUCTOR_ID_MAP",
     "NAME_MAP",
 )

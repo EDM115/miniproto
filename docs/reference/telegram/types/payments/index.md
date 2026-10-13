@@ -1,6 +1,6 @@
 ---
 title: "Telegram types: payments"
-description: "Layer 229 index of 37 canonical Telegram types in the payments namespace from tdlib."
+description: "Layer 230 index of 38 canonical Telegram types in the payments namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,9 +12,9 @@ namespace: "payments"
 schema_source: "tdlib"
 ---
 
-## Layer 229 payments types
+## Layer 230 payments types
 
-Selected canonical types in this namespace: 37.
+Selected canonical types in this namespace: 38.
 
 ## Declarations
 
@@ -23,6 +23,7 @@ Selected canonical types in this namespace: 37.
 - [`payments.checkCanSendGiftResultOk`](/reference/telegram/types/payments/check-can-send-gift-result-ok/): `payments.CheckCanSendGiftResult`
 - [`payments.checkedGiftCode`](/reference/telegram/types/payments/checked-gift-code/): `payments.CheckedGiftCode`
 - [`payments.connectedStarRefBots`](/reference/telegram/types/payments/connected-star-ref-bots/): `payments.ConnectedStarRefBots`
+- [`payments.currencyRates`](/reference/telegram/types/payments/currency-rates/): `payments.CurrencyRates`
 - [`payments.exportedInvoice`](/reference/telegram/types/payments/exported-invoice/): `payments.ExportedInvoice`
 - [`payments.giveawayInfo`](/reference/telegram/types/payments/giveaway-info/): `payments.GiveawayInfo`
 - [`payments.giveawayInfoResults`](/reference/telegram/types/payments/giveaway-info-results/): `payments.GiveawayInfo`

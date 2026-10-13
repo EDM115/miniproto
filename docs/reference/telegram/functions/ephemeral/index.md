@@ -1,6 +1,6 @@
 ---
 title: "Telegram functions: ephemeral"
-description: "Layer 229 index of 8 canonical Telegram functions in the ephemeral namespace from tdlib."
+description: "Layer 230 index of 8 canonical Telegram functions in the ephemeral namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "ephemeral"
 schema_source: "tdlib"
 ---
 
-## Layer 229 ephemeral functions
+## Layer 230 ephemeral functions
 
 Selected canonical functions in this namespace: 8.
 

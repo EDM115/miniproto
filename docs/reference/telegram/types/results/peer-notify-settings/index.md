@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: PeerNotifySettings"
-description: "Layer 229 result-family index for 1 canonical constructors returning PeerNotifySettings from tdlib."
+description: "Layer 230 result-family index for 1 canonical constructors returning PeerNotifySettings from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `PeerNotifySettings`
+## Layer 230 result family `PeerNotifySettings`
 
 Selected canonical constructors in this family: 1.
 

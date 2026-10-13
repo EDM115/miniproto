@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: phone.JoinAsPeers"
-description: "Layer 229 result-family index for 1 canonical constructors returning phone.JoinAsPeers from tdlib."
+description: "Layer 230 result-family index for 1 canonical constructors returning phone.JoinAsPeers from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `phone.JoinAsPeers`
+## Layer 230 result family `phone.JoinAsPeers`
 
 Selected canonical constructors in this family: 1.
 

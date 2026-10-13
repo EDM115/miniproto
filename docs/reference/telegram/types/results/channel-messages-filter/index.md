@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: ChannelMessagesFilter"
-description: "Layer 229 result-family index for 2 canonical constructors returning ChannelMessagesFilter from tdlib."
+description: "Layer 230 result-family index for 2 canonical constructors returning ChannelMessagesFilter from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `ChannelMessagesFilter`
+## Layer 230 result family `ChannelMessagesFilter`
 
 Selected canonical constructors in this family: 2.
 

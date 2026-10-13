@@ -300,6 +300,131 @@ class InputPhotoLegacyFileLocation(TLConstructor):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class MessageActionGramTransfer(TLConstructor):
+    comment_encrypted: bool = False
+    amount: int
+    peer_address: str
+    transaction_id: str
+    comment: str | None = None
+    CONSTRUCTOR_ID: ClassVar[int] = 0x9329EA33
+    QUALNAME: ClassVar[str] = "messageActionGramTransfer"
+    RESULT_TYPE: ClassVar[str] = "MessageAction"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="comment_encrypted",
+            python_name="comment_encrypted",
+            type="true",
+            flag="flags",
+            flag_index=1,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="amount",
+            python_name="amount",
+            type="long",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="peer_address",
+            python_name="peer_address",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="transaction_id",
+            python_name="transaction_id",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="comment",
+            python_name="comment",
+            type="string",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.comment_encrypted:
+            flags |= 2
+        if self.comment is not None:
+            flags |= 1
+        output.extend(encode_int(flags))
+        output.extend(encode_long(self.amount))
+        output.extend(encode_string(self.peer_address))
+        output.extend(encode_string(self.transaction_id))
+        if self.comment is not None:
+            output.extend(encode_string(self.comment))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_comment_encrypted = bool(flags & 2)
+        _value_amount, cursor = decode_long(raw_data, cursor)
+        _value_peer_address, cursor = decode_string(raw_data, cursor)
+        _value_transaction_id, cursor = decode_string(raw_data, cursor)
+        if bool(flags & 1):
+            _value_comment, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_comment = None
+        return cls(
+            comment_encrypted=_value_comment_encrypted,
+            amount=_value_amount,
+            peer_address=_value_peer_address,
+            transaction_id=_value_transaction_id,
+            comment=_value_comment,
+        ), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class Dialog(TLConstructor):
     pinned: bool = False
     unread_mark: bool = False
@@ -2215,6 +2340,132 @@ class AccountWebBrowserSettings(TLConstructor):
         ), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class OnrampAvailability(TLConstructor):
+    allowed: bool = False
+    buy_allowed: bool = False
+    country_code: str
+    state: str | None = None
+    methods: tuple[Any, ...]
+    CONSTRUCTOR_ID: ClassVar[int] = 0xF9C84973
+    QUALNAME: ClassVar[str] = "onrampAvailability"
+    RESULT_TYPE: ClassVar[str] = "OnrampAvailability"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="allowed",
+            python_name="allowed",
+            type="true",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="buy_allowed",
+            python_name="buy_allowed",
+            type="true",
+            flag="flags",
+            flag_index=1,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="country_code",
+            python_name="country_code",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="state",
+            python_name="state",
+            type="string",
+            flag="flags",
+            flag_index=2,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="methods",
+            python_name="methods",
+            type="Vector<OnrampMethodAvailability>",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=True,
+            vector_item_type="OnrampMethodAvailability",
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.allowed:
+            flags |= 1
+        if self.buy_allowed:
+            flags |= 2
+        if self.state is not None:
+            flags |= 4
+        output.extend(encode_int(flags))
+        output.extend(encode_string(self.country_code))
+        if self.state is not None:
+            output.extend(encode_string(self.state))
+        output.extend(encode_vector(self.methods, "OnrampMethodAvailability"))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_allowed = bool(flags & 1)
+        _value_buy_allowed = bool(flags & 2)
+        _value_country_code, cursor = decode_string(raw_data, cursor)
+        if bool(flags & 4):
+            _value_state, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_state = None
+        _value_methods, cursor = decode_vector(raw_data, cursor, "OnrampMethodAvailability")
+        return cls(
+            allowed=_value_allowed,
+            buy_allowed=_value_buy_allowed,
+            country_code=_value_country_code,
+            state=_value_state,
+            methods=_value_methods,
+        ), cursor
+
+
 class account:
     ChatThemes = AccountChatThemes
     WebBrowserSettings = AccountWebBrowserSettings
@@ -2233,6 +2484,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     IpPort,
     InputMediaGame,
     InputPhotoLegacyFileLocation,
+    MessageActionGramTransfer,
     Dialog,
     DialogCommunity,
     MessagesDialogsSlice,
@@ -2252,6 +2504,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     StarGiftAttributeIdPattern,
     PaymentsStarGiftCollections,
     AccountWebBrowserSettings,
+    OnrampAvailability,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -2259,6 +2512,7 @@ __all__ = (
     "IpPort",
     "InputMediaGame",
     "InputPhotoLegacyFileLocation",
+    "MessageActionGramTransfer",
     "Dialog",
     "DialogCommunity",
     "MessagesDialogsSlice",
@@ -2278,6 +2532,7 @@ __all__ = (
     "StarGiftAttributeIdPattern",
     "PaymentsStarGiftCollections",
     "AccountWebBrowserSettings",
+    "OnrampAvailability",
     "account",
     "messages",
     "payments",

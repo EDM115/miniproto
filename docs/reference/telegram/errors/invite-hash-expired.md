@@ -20,7 +20,7 @@ The invite link has expired.
 
 - code: 400
 - parameterized: no
-- mapped methods: `channels.exportInvite` (not in selected Layer 229 schema), [`channels.joinChannel`](/reference/telegram/functions/channels/join-channel/), [`invokeWithLayer`](/reference/telegram/functions/base/invoke-with-layer/), [`messages.checkChatInvite`](/reference/telegram/functions/messages/check-chat-invite/), [`messages.deleteExportedChatInvite`](/reference/telegram/functions/messages/delete-exported-chat-invite/), [`messages.editExportedChatInvite`](/reference/telegram/functions/messages/edit-exported-chat-invite/), [`messages.getChatInviteImporters`](/reference/telegram/functions/messages/get-chat-invite-importers/), [`messages.getExportedChatInvite`](/reference/telegram/functions/messages/get-exported-chat-invite/), [`messages.hideAllChatJoinRequests`](/reference/telegram/functions/messages/hide-all-chat-join-requests/), [`messages.importChatInvite`](/reference/telegram/functions/messages/import-chat-invite/)
+- mapped methods: `channels.exportInvite` (not in selected Layer 230 schema), [`channels.joinChannel`](/reference/telegram/functions/channels/join-channel/), [`invokeWithLayer`](/reference/telegram/functions/base/invoke-with-layer/), [`messages.checkChatInvite`](/reference/telegram/functions/messages/check-chat-invite/), [`messages.deleteExportedChatInvite`](/reference/telegram/functions/messages/delete-exported-chat-invite/), [`messages.editExportedChatInvite`](/reference/telegram/functions/messages/edit-exported-chat-invite/), [`messages.getChatInviteImporters`](/reference/telegram/functions/messages/get-chat-invite-importers/), [`messages.getExportedChatInvite`](/reference/telegram/functions/messages/get-exported-chat-invite/), [`messages.hideAllChatJoinRequests`](/reference/telegram/functions/messages/hide-all-chat-join-requests/), [`messages.importChatInvite`](/reference/telegram/functions/messages/import-chat-invite/)
 
 ## Python error class
 
@@ -35,9 +35,9 @@ Public access: `miniproto.errors.InviteHashExpired`.
 - structural source: `tdlib`
 - RPC error source: https://core.telegram.org/api/errors
 - prose merge precedence: TDLib → Telegram Desktop → Core JSON
-- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 229 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
+- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 230 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
 
 ## Source-diff notes
 
-- tdlib_vs_core: changed_count=78; core_only_count=18; overlap_count=2285; tdlib_only_count=195
-- tdlib_vs_tdesktop: changed_count=0; overlap_count=2470; tdesktop_only=null; tdlib_only=accessPointRule, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret
+- tdlib_vs_core: changed_count=55; core_only_count=18; overlap_count=2338; tdlib_only_count=225
+- tdlib_vs_tdesktop: changed_count=0; overlap_count=2553; tdesktop_only=null; tdlib_only=accessPointRule, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret

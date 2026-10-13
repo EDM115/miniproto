@@ -1,6 +1,6 @@
 # Schema Tooling
 
-Status: deterministic Telegram Schema Layer 229 pinning and generation is active. TDLib `master` is the canonical structural source, Telegram Desktop `dev` supplies the layer after strict overlap validation and core RPC error metadata remains independently pinned at layer 227.
+Status: deterministic Telegram Schema Layer 230 pinning and generation is active. TDLib `master` is the canonical structural source, Telegram Desktop `dev` supplies the layer after strict overlap validation and core RPC error metadata remains independently pinned at layer 227.
 
 ## Pinned Inputs
 
@@ -40,7 +40,7 @@ uv run miniproto-schema-generate --check
 uv run pytest tests/test_schema_parser.py tests/test_schema_update.py tests/test_schema_generation.py tests/test_tl_codec.py tests/test_invoke.py
 ```
 
-Review `tools/schema/schema-source-diff.json`, `tools/schema/schema-metadata.json`, the generated raw API diff and the focused test results before accepting an update. A newer source is not sufficient evidence: the Desktop layer marker and TDLib/Desktop overlap validation must both succeed. The current TDLib snapshot adds 12 declarations relative to Telegram Desktop and omits Desktop's `null`; consequently, the previously generated `miniproto.raw.types.Null` class is intentionally absent from Layer 229.
+Review `tools/schema/schema-source-diff.json`, `tools/schema/schema-metadata.json`, the generated raw API code diff and the focused test results before accepting an update. A newer source is not sufficient evidence: the Desktop layer marker and TDLib/Desktop overlap validation must both succeed. The current TDLib snapshot adds 10 declarations relative to Telegram Desktop: `accessPointRule`, `help.configSimple`, `inputPeerPhotoFileLocationLegacy`, `inputStickerSetThumbLegacy`, `invokeWithApnsSecretPrefix`, `invokeWithBusinessConnectionPrefix`, `invokeWithGooglePlayIntegrityPrefix`, `invokeWithReCaptchaPrefix`, `ipPort` and `ipPortSecret`. Telegram Desktop also declares `null`, which TDLib omits, so the previously generated `miniproto.raw.types.Null` class remains absent from Layer 230.
 
 ## Generate
 
@@ -48,7 +48,7 @@ Review `tools/schema/schema-source-diff.json`, `tools/schema/schema-metadata.jso
 uv run miniproto-schema-generate
 ```
 
-This rewrites `src/miniproto/raw/base.py`, lazy type/function facades and stubs, registry and implementation shards, RPC error mappings, `docs/raw-api.md` and generator-owned metadata from the pinned inputs. It also removes stale generator-owned shards.
+This rewrites `src/miniproto/raw/base.py`, lazy type/function facades and stubs, registry and implementation shards, RPC error mappings and generator-owned metadata from the pinned inputs. It also removes stale generator-owned shards. Review `docs/raw-api.md` separately and update its hand-maintained schema claims after an input change.
 
 ## Deterministic Offline Stale Check
 

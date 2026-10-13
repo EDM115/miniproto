@@ -20,7 +20,7 @@ The user's privacy settings do not allow you to do this.
 
 - code: 403
 - parameterized: no
-- mapped methods: [`channels.editAdmin`](/reference/telegram/functions/channels/edit-admin/), `channels.editCreator` (not in selected Layer 229 schema), [`channels.inviteToChannel`](/reference/telegram/functions/channels/invite-to-channel/), [`help.getConfig`](/reference/telegram/functions/help/get-config/), [`messages.addChatUser`](/reference/telegram/functions/messages/add-chat-user/), [`messages.editChatCreator`](/reference/telegram/functions/messages/edit-chat-creator/), [`messages.getOutboxReadDate`](/reference/telegram/functions/messages/get-outbox-read-date/), [`phone.requestCall`](/reference/telegram/functions/phone/request-call/)
+- mapped methods: [`channels.editAdmin`](/reference/telegram/functions/channels/edit-admin/), `channels.editCreator` (not in selected Layer 230 schema), [`channels.inviteToChannel`](/reference/telegram/functions/channels/invite-to-channel/), [`help.getConfig`](/reference/telegram/functions/help/get-config/), [`messages.addChatUser`](/reference/telegram/functions/messages/add-chat-user/), [`messages.editChatCreator`](/reference/telegram/functions/messages/edit-chat-creator/), [`messages.getOutboxReadDate`](/reference/telegram/functions/messages/get-outbox-read-date/), [`phone.requestCall`](/reference/telegram/functions/phone/request-call/)
 
 ## Python error class
 
@@ -35,9 +35,9 @@ Public access: `miniproto.errors.UserPrivacyRestricted`.
 - structural source: `tdlib`
 - RPC error source: https://core.telegram.org/api/errors
 - prose merge precedence: TDLib → Telegram Desktop → Core JSON
-- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 229 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
+- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 230 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
 
 ## Source-diff notes
 
-- tdlib_vs_core: changed_count=78; core_only_count=18; overlap_count=2285; tdlib_only_count=195
-- tdlib_vs_tdesktop: changed_count=0; overlap_count=2470; tdesktop_only=null; tdlib_only=accessPointRule, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret
+- tdlib_vs_core: changed_count=55; core_only_count=18; overlap_count=2338; tdlib_only_count=225
+- tdlib_vs_tdesktop: changed_count=0; overlap_count=2553; tdesktop_only=null; tdlib_only=accessPointRule, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret

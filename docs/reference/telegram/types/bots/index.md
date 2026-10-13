@@ -1,6 +1,6 @@
 ---
 title: "Telegram types: bots"
-description: "Layer 229 index of 6 canonical Telegram types in the bots namespace from tdlib."
+description: "Layer 230 index of 6 canonical Telegram types in the bots namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "bots"
 schema_source: "tdlib"
 ---
 
-## Layer 229 bots types
+## Layer 230 bots types
 
 Selected canonical types in this namespace: 6.
 

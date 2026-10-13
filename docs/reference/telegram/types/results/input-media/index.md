@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: InputMedia"
-description: "Layer 229 result-family index for 20 canonical constructors returning InputMedia from tdlib."
+description: "Layer 230 result-family index for 20 canonical constructors returning InputMedia from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `InputMedia`
+## Layer 230 result family `InputMedia`
 
 Selected canonical constructors in this family: 20.
 

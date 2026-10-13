@@ -1,6 +1,6 @@
 ---
 title: "Telegram types: account"
-description: "Layer 229 index of 40 canonical Telegram types in the account namespace from tdlib."
+description: "Layer 230 index of 40 canonical Telegram types in the account namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "account"
 schema_source: "tdlib"
 ---
 
-## Layer 229 account types
+## Layer 230 account types
 
 Selected canonical types in this namespace: 40.
 

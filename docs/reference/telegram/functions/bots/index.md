@@ -1,6 +1,6 @@
 ---
 title: "Telegram functions: bots"
-description: "Layer 229 index of 38 canonical Telegram functions in the bots namespace from tdlib."
+description: "Layer 230 index of 40 canonical Telegram functions in the bots namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,13 +12,14 @@ namespace: "bots"
 schema_source: "tdlib"
 ---
 
-## Layer 229 bots functions
+## Layer 230 bots functions
 
-Selected canonical functions in this namespace: 38.
+Selected canonical functions in this namespace: 40.
 
 ## Declarations
 
 - [`bots.addPreviewMedia`](/reference/telegram/functions/bots/add-preview-media/): `BotPreviewMedia`
+- [`bots.addUsername`](/reference/telegram/functions/bots/add-username/): `Bool`
 - [`bots.allowSendMessage`](/reference/telegram/functions/bots/allow-send-message/): `Updates`
 - [`bots.answerWebhookJSONQuery`](/reference/telegram/functions/bots/answer-webhook-jsonquery/): `Bool`
 - [`bots.canSendMessage`](/reference/telegram/functions/bots/can-send-message/): `Bool`
@@ -40,6 +41,7 @@ Selected canonical functions in this namespace: 38.
 - [`bots.getPreviewMedias`](/reference/telegram/functions/bots/get-preview-medias/): `Vector<BotPreviewMedia>`
 - [`bots.getRequestedWebViewButton`](/reference/telegram/functions/bots/get-requested-web-view-button/): `KeyboardButton`
 - [`bots.invokeWebViewCustomMethod`](/reference/telegram/functions/bots/invoke-web-view-custom-method/): `DataJSON`
+- [`bots.removeUsername`](/reference/telegram/functions/bots/remove-username/): `Bool`
 - [`bots.reorderPreviewMedias`](/reference/telegram/functions/bots/reorder-preview-medias/): `Bool`
 - [`bots.reorderUsernames`](/reference/telegram/functions/bots/reorder-usernames/): `Bool`
 - [`bots.requestWebViewButton`](/reference/telegram/functions/bots/request-web-view-button/): `bots.RequestedButton`

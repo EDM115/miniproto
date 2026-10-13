@@ -1,6 +1,6 @@
 ---
 title: "Telegram functions"
-description: "Layer 229 index of 817 canonical Telegram functions from tdlib."
+description: "Layer 230 index of 854 canonical Telegram functions from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,9 +12,9 @@ namespace: "functions"
 schema_source: "tdlib"
 ---
 
-## Layer 229 functions
+## Layer 230 functions
 
-Selected canonical functions: 817.
+Selected canonical functions: 854.
 
 ## Canonical source
 
@@ -160,6 +160,7 @@ https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/
 - [`auth.acceptLoginToken`](/reference/telegram/functions/auth/accept-login-token/): `Authorization`
 - [`auth.bindTempAuthKey`](/reference/telegram/functions/auth/bind-temp-auth-key/): `Bool`
 - [`auth.cancelCode`](/reference/telegram/functions/auth/cancel-code/): `Bool`
+- [`auth.cancelWebTokenAuthorization`](/reference/telegram/functions/auth/cancel-web-token-authorization/): `Bool`
 - [`auth.checkPaidAuth`](/reference/telegram/functions/auth/check-paid-auth/): `auth.SentCode`
 - [`auth.checkPassword`](/reference/telegram/functions/auth/check-password/): `auth.Authorization`
 - [`auth.checkRecoveryPassword`](/reference/telegram/functions/auth/check-recovery-password/): `Bool`
@@ -187,6 +188,7 @@ https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/
 - [`auth.signIn`](/reference/telegram/functions/auth/sign-in/): `auth.Authorization`
 - [`auth.signUp`](/reference/telegram/functions/auth/sign-up/): `auth.Authorization`
 - [`bots.addPreviewMedia`](/reference/telegram/functions/bots/add-preview-media/): `BotPreviewMedia`
+- [`bots.addUsername`](/reference/telegram/functions/bots/add-username/): `Bool`
 - [`bots.allowSendMessage`](/reference/telegram/functions/bots/allow-send-message/): `Updates`
 - [`bots.answerWebhookJSONQuery`](/reference/telegram/functions/bots/answer-webhook-jsonquery/): `Bool`
 - [`bots.canSendMessage`](/reference/telegram/functions/bots/can-send-message/): `Bool`
@@ -208,6 +210,7 @@ https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/
 - [`bots.getPreviewMedias`](/reference/telegram/functions/bots/get-preview-medias/): `Vector<BotPreviewMedia>`
 - [`bots.getRequestedWebViewButton`](/reference/telegram/functions/bots/get-requested-web-view-button/): `KeyboardButton`
 - [`bots.invokeWebViewCustomMethod`](/reference/telegram/functions/bots/invoke-web-view-custom-method/): `DataJSON`
+- [`bots.removeUsername`](/reference/telegram/functions/bots/remove-username/): `Bool`
 - [`bots.reorderPreviewMedias`](/reference/telegram/functions/bots/reorder-preview-medias/): `Bool`
 - [`bots.reorderUsernames`](/reference/telegram/functions/bots/reorder-usernames/): `Bool`
 - [`bots.requestWebViewButton`](/reference/telegram/functions/bots/request-web-view-button/): `bots.RequestedButton`
@@ -656,6 +659,7 @@ https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/
 - [`payments.connectStarRefBot`](/reference/telegram/functions/payments/connect-star-ref-bot/): `payments.ConnectedStarRefBots`
 - [`payments.convertStarGift`](/reference/telegram/functions/payments/convert-star-gift/): `Bool`
 - [`payments.craftStarGift`](/reference/telegram/functions/payments/craft-star-gift/): `Updates`
+- [`payments.createOnrampSession`](/reference/telegram/functions/payments/create-onramp-session/): `OnrampSession`
 - [`payments.createStarGiftCollection`](/reference/telegram/functions/payments/create-star-gift-collection/): `StarGiftCollection`
 - [`payments.deleteStarGiftCollection`](/reference/telegram/functions/payments/delete-star-gift-collection/): `Bool`
 - [`payments.editConnectedStarRefBot`](/reference/telegram/functions/payments/edit-connected-star-ref-bot/): `payments.ConnectedStarRefBots`
@@ -665,7 +669,13 @@ https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/
 - [`payments.getConnectedStarRefBot`](/reference/telegram/functions/payments/get-connected-star-ref-bot/): `payments.ConnectedStarRefBots`
 - [`payments.getConnectedStarRefBots`](/reference/telegram/functions/payments/get-connected-star-ref-bots/): `payments.ConnectedStarRefBots`
 - [`payments.getCraftStarGifts`](/reference/telegram/functions/payments/get-craft-star-gifts/): `payments.SavedStarGifts`
+- [`payments.getCurrencyRates`](/reference/telegram/functions/payments/get-currency-rates/): `payments.CurrencyRates`
 - [`payments.getGiveawayInfo`](/reference/telegram/functions/payments/get-giveaway-info/): `payments.GiveawayInfo`
+- [`payments.getOnrampAvailability`](/reference/telegram/functions/payments/get-onramp-availability/): `OnrampAvailability`
+- [`payments.getOnrampBaseCurrencies`](/reference/telegram/functions/payments/get-onramp-base-currencies/): `Vector<string>`
+- [`payments.getOnrampLimits`](/reference/telegram/functions/payments/get-onramp-limits/): `OnrampLimits`
+- [`payments.getOnrampProviders`](/reference/telegram/functions/payments/get-onramp-providers/): `Vector<OnrampProviderInfo>`
+- [`payments.getOnrampQuote`](/reference/telegram/functions/payments/get-onramp-quote/): `OnrampQuote`
 - [`payments.getPaymentForm`](/reference/telegram/functions/payments/get-payment-form/): `payments.PaymentForm`
 - [`payments.getPaymentReceipt`](/reference/telegram/functions/payments/get-payment-receipt/): `payments.PaymentReceipt`
 - [`payments.getPremiumGiftCodeOptions`](/reference/telegram/functions/payments/get-premium-gift-code-options/): `Vector<PremiumGiftCodeOption>`
@@ -821,6 +831,8 @@ https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/
 - [`stories.togglePinned`](/reference/telegram/functions/stories/toggle-pinned/): `Vector<int>`
 - [`stories.togglePinnedToTop`](/reference/telegram/functions/stories/toggle-pinned-to-top/): `Bool`
 - [`stories.updateAlbum`](/reference/telegram/functions/stories/update-album/): `StoryAlbum`
+- [`toncenter.getStreamingUrl`](/reference/telegram/functions/toncenter/get-streaming-url/): `toncenter.StreamingUrl`
+- [`toncenter.performApiRequest`](/reference/telegram/functions/toncenter/perform-api-request/): `toncenter.ApiResponse`
 - [`updates.getChannelDifference`](/reference/telegram/functions/updates/get-channel-difference/): `updates.ChannelDifference`
 - [`updates.getDifference`](/reference/telegram/functions/updates/get-difference/): `updates.Difference`
 - [`updates.getState`](/reference/telegram/functions/updates/get-state/): `updates.State`
@@ -839,3 +851,28 @@ https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/
 - [`users.getUsers`](/reference/telegram/functions/users/get-users/): `Vector<User>`
 - [`users.setSecureValueErrors`](/reference/telegram/functions/users/set-secure-value-errors/): `Bool`
 - [`users.suggestBirthday`](/reference/telegram/functions/users/suggest-birthday/): `Updates`
+- [`wallet.disableBackup`](/reference/telegram/functions/wallet/disable-backup/): `WalletState`
+- [`wallet.enableBackup`](/reference/telegram/functions/wallet/enable-backup/): `WalletState`
+- [`wallet.exportSecretPhrase`](/reference/telegram/functions/wallet/export-secret-phrase/): `wallet.SecretPhraseParts`
+- [`wallet.fetchEncryptedSecretPhrasePart`](/reference/telegram/functions/wallet/fetch-encrypted-secret-phrase-part/): `wallet.EncryptedSecretPhrasePart`
+- [`wallet.getBackupHolderDcs`](/reference/telegram/functions/wallet/get-backup-holder-dcs/): `Vector<wallet.HolderDc>`
+- [`wallet.getExistingWaltBalance`](/reference/telegram/functions/wallet/get-existing-walt-balance/): `wallet.ExistingBalance`
+- [`wallet.getGaslessInfo`](/reference/telegram/functions/wallet/get-gasless-info/): `Updates`
+- [`wallet.getNfts`](/reference/telegram/functions/wallet/get-nfts/): `wallet.NftItems`
+- [`wallet.getProofChallenge`](/reference/telegram/functions/wallet/get-proof-challenge/): `wallet.ProofChallenge`
+- [`wallet.getState`](/reference/telegram/functions/wallet/get-state/): `WalletState`
+- [`wallet.getTransactions`](/reference/telegram/functions/wallet/get-transactions/): `wallet.Transactions`
+- [`wallet.getTransactionsByIDs`](/reference/telegram/functions/wallet/get-transactions-by-ids/): `wallet.Transactions`
+- [`wallet.getTransactionsByMsgHash`](/reference/telegram/functions/wallet/get-transactions-by-msg-hash/): `wallet.Transactions`
+- [`wallet.getUserAddresses`](/reference/telegram/functions/wallet/get-user-addresses/): `wallet.UserAddresses`
+- [`wallet.replaceWallet`](/reference/telegram/functions/wallet/replace-wallet/): `WalletState`
+- [`wallet.sendTransfer`](/reference/telegram/functions/wallet/send-transfer/): `Updates`
+- [`wallet.tonConnectClaimRequest`](/reference/telegram/functions/wallet/ton-connect-claim-request/): `Bool`
+- [`wallet.tonConnectCloseSession`](/reference/telegram/functions/wallet/ton-connect-close-session/): `Bool`
+- [`wallet.tonConnectCreateSession`](/reference/telegram/functions/wallet/ton-connect-create-session/): `TonConnectSession`
+- [`wallet.tonConnectGetPending`](/reference/telegram/functions/wallet/ton-connect-get-pending/): `wallet.TonConnectPending`
+- [`wallet.tonConnectGetSessions`](/reference/telegram/functions/wallet/ton-connect-get-sessions/): `wallet.TonConnectSessions`
+- [`wallet.tonConnectNextEventId`](/reference/telegram/functions/wallet/ton-connect-next-event-id/): `TonConnectNextEventId`
+- [`wallet.tonConnectRegisterKey`](/reference/telegram/functions/wallet/ton-connect-register-key/): `wallet.TonConnectChallenge`
+- [`wallet.tonConnectSubmitConnectResult`](/reference/telegram/functions/wallet/ton-connect-submit-connect-result/): `Bool`
+- [`wallet.tonConnectSubmitResponse`](/reference/telegram/functions/wallet/ton-connect-submit-response/): `Bool`

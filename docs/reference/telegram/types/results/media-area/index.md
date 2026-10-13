@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: MediaArea"
-description: "Layer 229 result-family index for 9 canonical constructors returning MediaArea from tdlib."
+description: "Layer 230 result-family index for 9 canonical constructors returning MediaArea from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `MediaArea`
+## Layer 230 result family `MediaArea`
 
 Selected canonical constructors in this family: 9.
 

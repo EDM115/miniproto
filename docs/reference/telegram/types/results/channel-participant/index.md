@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: ChannelParticipant"
-description: "Layer 229 result-family index for 6 canonical constructors returning ChannelParticipant from tdlib."
+description: "Layer 230 result-family index for 6 canonical constructors returning ChannelParticipant from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `ChannelParticipant`
+## Layer 230 result family `ChannelParticipant`
 
 Selected canonical constructors in this family: 6.
 

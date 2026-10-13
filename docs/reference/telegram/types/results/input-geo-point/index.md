@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: InputGeoPoint"
-description: "Layer 229 result-family index for 2 canonical constructors returning InputGeoPoint from tdlib."
+description: "Layer 230 result-family index for 2 canonical constructors returning InputGeoPoint from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `InputGeoPoint`
+## Layer 230 result family `InputGeoPoint`
 
 Selected canonical constructors in this family: 2.
 

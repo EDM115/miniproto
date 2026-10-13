@@ -2144,6 +2144,254 @@ class InputChatThemeUniqueGift(TLConstructor):
         return cls(slug=_value_slug), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class OnrampSession(TLConstructor):
+    provider: str
+    session_id: str
+    url: str
+    expires_date: int
+    CONSTRUCTOR_ID: ClassVar[int] = 0xD1E42E24
+    QUALNAME: ClassVar[str] = "onrampSession"
+    RESULT_TYPE: ClassVar[str] = "OnrampSession"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="provider",
+            python_name="provider",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="session_id",
+            python_name="session_id",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="url",
+            python_name="url",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="expires_date",
+            python_name="expires_date",
+            type="int",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_string(self.provider))
+        output.extend(encode_string(self.session_id))
+        output.extend(encode_string(self.url))
+        output.extend(encode_int(self.expires_date))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_provider, cursor = decode_string(raw_data, cursor)
+        _value_session_id, cursor = decode_string(raw_data, cursor)
+        _value_url, cursor = decode_string(raw_data, cursor)
+        _value_expires_date, cursor = decode_int(raw_data, cursor)
+        return cls(
+            provider=_value_provider, session_id=_value_session_id, url=_value_url, expires_date=_value_expires_date
+        ), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class TonConnectManifest(TLConstructor):
+    url: str
+    name: str
+    icon: Any | None = None
+    CONSTRUCTOR_ID: ClassVar[int] = 0x12229264
+    QUALNAME: ClassVar[str] = "tonConnectManifest"
+    RESULT_TYPE: ClassVar[str] = "TonConnectManifest"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="url",
+            python_name="url",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="name",
+            python_name="name",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="icon",
+            python_name="icon",
+            type="WebDocument",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.icon is not None:
+            flags |= 1
+        output.extend(encode_int(flags))
+        output.extend(encode_string(self.url))
+        output.extend(encode_string(self.name))
+        if self.icon is not None:
+            output.extend(encode_value("WebDocument", self.icon))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_url, cursor = decode_string(raw_data, cursor)
+        _value_name, cursor = decode_string(raw_data, cursor)
+        if bool(flags & 1):
+            _value_icon, cursor = decode_value("WebDocument", raw_data, cursor)
+        else:
+            _value_icon = None
+        return cls(url=_value_url, name=_value_name, icon=_value_icon), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletTonConnectPending(TLConstructor):
+    session: Any
+    requests: tuple[Any, ...]
+    CONSTRUCTOR_ID: ClassVar[int] = 0x85C0F124
+    QUALNAME: ClassVar[str] = "wallet.tonConnectPending"
+    RESULT_TYPE: ClassVar[str] = "wallet.TonConnectPending"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="session",
+            python_name="session",
+            type="TonConnectSession",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="requests",
+            python_name="requests",
+            type="Vector<TonConnectRequest>",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=True,
+            vector_item_type="TonConnectRequest",
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_value("TonConnectSession", self.session))
+        output.extend(encode_vector(self.requests, "TonConnectRequest"))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_session, cursor = decode_value("TonConnectSession", raw_data, cursor)
+        _value_requests, cursor = decode_vector(raw_data, cursor, "TonConnectRequest")
+        return cls(session=_value_session, requests=_value_requests), cursor
+
+
 class bots:
     PreviewInfo = BotsPreviewInfo
 
@@ -2158,6 +2406,10 @@ class storage:
 
 class users:
     SavedMusicNotModified = UsersSavedMusicNotModified
+
+
+class wallet:
+    TonConnectPending = WalletTonConnectPending
 
 
 ALL_TYPES: tuple[type[TLConstructor], ...] = (
@@ -2188,6 +2440,9 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     TodoCompletion,
     UsersSavedMusicNotModified,
     InputChatThemeUniqueGift,
+    OnrampSession,
+    TonConnectManifest,
+    WalletTonConnectPending,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -2219,10 +2474,14 @@ __all__ = (
     "TodoCompletion",
     "UsersSavedMusicNotModified",
     "InputChatThemeUniqueGift",
+    "OnrampSession",
+    "TonConnectManifest",
+    "WalletTonConnectPending",
     "bots",
     "messages",
     "storage",
     "users",
+    "wallet",
     "CONSTRUCTOR_ID_MAP",
     "NAME_MAP",
 )

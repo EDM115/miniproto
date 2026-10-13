@@ -3233,6 +3233,146 @@ class InputRichMessage(TLConstructor):
         ), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class CurrencyRate(TLConstructor):
+    currency: str
+    rate: float
+    CONSTRUCTOR_ID: ClassVar[int] = 0x30D9743C
+    QUALNAME: ClassVar[str] = "currencyRate"
+    RESULT_TYPE: ClassVar[str] = "CurrencyRate"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="currency",
+            python_name="currency",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="rate",
+            python_name="rate",
+            type="double",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_string(self.currency))
+        output.extend(encode_double(self.rate))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_currency, cursor = decode_string(raw_data, cursor)
+        _value_rate, cursor = decode_double(raw_data, cursor)
+        return cls(currency=_value_currency, rate=_value_rate), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletTransactionPeerAddress(TLConstructor):
+    address: str
+    domain: str | None = None
+    CONSTRUCTOR_ID: ClassVar[int] = 0x062CC1BC
+    QUALNAME: ClassVar[str] = "walletTransactionPeerAddress"
+    RESULT_TYPE: ClassVar[str] = "WalletTransactionPeer"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="address",
+            python_name="address",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="domain",
+            python_name="domain",
+            type="string",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.domain is not None:
+            flags |= 1
+        output.extend(encode_int(flags))
+        output.extend(encode_string(self.address))
+        if self.domain is not None:
+            output.extend(encode_string(self.domain))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_address, cursor = decode_string(raw_data, cursor)
+        if bool(flags & 1):
+            _value_domain, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_domain = None
+        return cls(address=_value_address, domain=_value_domain), cursor
+
+
 class account:
     WebAuthorizations = AccountWebAuthorizations
 
@@ -3291,6 +3431,8 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     StarGiftAttributeIdModel,
     PaymentsStarGiftActiveAuctions,
     InputRichMessage,
+    CurrencyRate,
+    WalletTransactionPeerAddress,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -3322,6 +3464,8 @@ __all__ = (
     "StarGiftAttributeIdModel",
     "PaymentsStarGiftActiveAuctions",
     "InputRichMessage",
+    "CurrencyRate",
+    "WalletTransactionPeerAddress",
     "account",
     "messages",
     "payments",

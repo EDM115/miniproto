@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: stories.CanSendStoryCount"
-description: "Layer 229 result-family index for 1 canonical constructors returning stories.CanSendStoryCount from tdlib."
+description: "Layer 230 result-family index for 1 canonical constructors returning stories.CanSendStoryCount from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `stories.CanSendStoryCount`
+## Layer 230 result family `stories.CanSendStoryCount`
 
 Selected canonical constructors in this family: 1.
 

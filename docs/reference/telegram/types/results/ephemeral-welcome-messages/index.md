@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: ephemeral.WelcomeMessages"
-description: "Layer 229 result-family index for 2 canonical constructors returning ephemeral.WelcomeMessages from tdlib."
+description: "Layer 230 result-family index for 2 canonical constructors returning ephemeral.WelcomeMessages from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `ephemeral.WelcomeMessages`
+## Layer 230 result family `ephemeral.WelcomeMessages`
 
 Selected canonical constructors in this family: 2.
 

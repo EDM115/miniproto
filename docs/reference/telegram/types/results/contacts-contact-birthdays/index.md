@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: contacts.ContactBirthdays"
-description: "Layer 229 result-family index for 1 canonical constructors returning contacts.ContactBirthdays from tdlib."
+description: "Layer 230 result-family index for 1 canonical constructors returning contacts.ContactBirthdays from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `contacts.ContactBirthdays`
+## Layer 230 result family `contacts.ContactBirthdays`
 
 Selected canonical constructors in this family: 1.
 

@@ -1,6 +1,6 @@
 ---
 title: "Telegram types: users"
-description: "Layer 229 index of 5 canonical Telegram types in the users namespace from tdlib."
+description: "Layer 230 index of 5 canonical Telegram types in the users namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "users"
 schema_source: "tdlib"
 ---
 
-## Layer 229 users types
+## Layer 230 users types
 
 Selected canonical types in this namespace: 5.
 

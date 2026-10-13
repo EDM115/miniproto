@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: InputChatPhoto"
-description: "Layer 229 result-family index for 3 canonical constructors returning InputChatPhoto from tdlib."
+description: "Layer 230 result-family index for 3 canonical constructors returning InputChatPhoto from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `InputChatPhoto`
+## Layer 230 result family `InputChatPhoto`
 
 Selected canonical constructors in this family: 3.
 

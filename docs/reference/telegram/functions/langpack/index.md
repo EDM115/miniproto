@@ -1,6 +1,6 @@
 ---
 title: "Telegram functions: langpack"
-description: "Layer 229 index of 5 canonical Telegram functions in the langpack namespace from tdlib."
+description: "Layer 230 index of 5 canonical Telegram functions in the langpack namespace from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "langpack"
 schema_source: "tdlib"
 ---
 
-## Layer 229 langpack functions
+## Layer 230 langpack functions
 
 Selected canonical functions in this namespace: 5.
 

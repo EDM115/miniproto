@@ -1978,6 +1978,134 @@ class ConnectedBot(TLConstructor):
         ), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class ToncenterStreamingUrl(TLConstructor):
+    url: str
+    expires: int
+    CONSTRUCTOR_ID: ClassVar[int] = 0x19887601
+    QUALNAME: ClassVar[str] = "toncenter.streamingUrl"
+    RESULT_TYPE: ClassVar[str] = "toncenter.StreamingUrl"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="url",
+            python_name="url",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="expires",
+            python_name="expires",
+            type="int",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_string(self.url))
+        output.extend(encode_int(self.expires))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_url, cursor = decode_string(raw_data, cursor)
+        _value_expires, cursor = decode_int(raw_data, cursor)
+        return cls(url=_value_url, expires=_value_expires), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletSecretPhraseParts(TLConstructor):
+    token: str
+    dcs: tuple[int, ...]
+    CONSTRUCTOR_ID: ClassVar[int] = 0xE6D0EF01
+    QUALNAME: ClassVar[str] = "wallet.secretPhraseParts"
+    RESULT_TYPE: ClassVar[str] = "wallet.SecretPhraseParts"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="token",
+            python_name="token",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="dcs",
+            python_name="dcs",
+            type="Vector<int>",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=True,
+            vector_item_type="int",
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_string(self.token))
+        output.extend(encode_vector(self.dcs, "int"))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_token, cursor = decode_string(raw_data, cursor)
+        _value_dcs, cursor = decode_vector(raw_data, cursor, "int")
+        return cls(token=_value_token, dcs=_value_dcs), cursor
+
+
 class account:
     Takeout = AccountTakeout
 
@@ -1990,8 +2118,16 @@ class stories:
     AllStories = StoriesAllStories
 
 
+class toncenter:
+    StreamingUrl = ToncenterStreamingUrl
+
+
 class updates:
     DifferenceSlice = UpdatesDifferenceSlice
+
+
+class wallet:
+    SecretPhraseParts = WalletSecretPhraseParts
 
 
 ALL_TYPES: tuple[type[TLConstructor], ...] = (
@@ -2019,6 +2155,8 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     BusinessAwayMessageScheduleOutsideWorkHours,
     InputQuickReplyShortcut,
     ConnectedBot,
+    ToncenterStreamingUrl,
+    WalletSecretPhraseParts,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -2047,10 +2185,14 @@ __all__ = (
     "BusinessAwayMessageScheduleOutsideWorkHours",
     "InputQuickReplyShortcut",
     "ConnectedBot",
+    "ToncenterStreamingUrl",
+    "WalletSecretPhraseParts",
     "account",
     "auth",
     "stories",
+    "toncenter",
     "updates",
+    "wallet",
     "CONSTRUCTOR_ID_MAP",
     "NAME_MAP",
 )

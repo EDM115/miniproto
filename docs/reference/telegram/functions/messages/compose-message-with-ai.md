@@ -91,7 +91,7 @@ Known selected constructors: [`messages.composedMessageWithAI`](/reference/teleg
 
 ## Related methods
 
-[`aicompose.deleteTone`](/reference/telegram/functions/aicompose/delete-tone/), [`aicompose.getTone`](/reference/telegram/functions/aicompose/get-tone/), [`aicompose.getToneExample`](/reference/telegram/functions/aicompose/get-tone-example/), [`aicompose.saveTone`](/reference/telegram/functions/aicompose/save-tone/), [`aicompose.updateTone`](/reference/telegram/functions/aicompose/update-tone/), [`contacts.addContact`](/reference/telegram/functions/contacts/add-contact/), [`contacts.updateContactNote`](/reference/telegram/functions/contacts/update-contact-note/), [`messages.composeRichMessageWithAI`](/reference/telegram/functions/messages/compose-rich-message-with-ai/), [`messages.editFactCheck`](/reference/telegram/functions/messages/edit-fact-check/), [`messages.summarizeText`](/reference/telegram/functions/messages/summarize-text/), [`messages.translateText`](/reference/telegram/functions/messages/translate-text/), [`phone.sendGroupCallMessage`](/reference/telegram/functions/phone/send-group-call-message/)
+[`aicompose.deleteTone`](/reference/telegram/functions/aicompose/delete-tone/), [`aicompose.getTone`](/reference/telegram/functions/aicompose/get-tone/), [`aicompose.getToneExample`](/reference/telegram/functions/aicompose/get-tone-example/), [`aicompose.saveTone`](/reference/telegram/functions/aicompose/save-tone/), [`aicompose.updateTone`](/reference/telegram/functions/aicompose/update-tone/), [`bots.setCustomVerification`](/reference/telegram/functions/bots/set-custom-verification/), [`contacts.addContact`](/reference/telegram/functions/contacts/add-contact/), [`contacts.updateContactNote`](/reference/telegram/functions/contacts/update-contact-note/), [`messages.composeRichMessageWithAI`](/reference/telegram/functions/messages/compose-rich-message-with-ai/), [`messages.editFactCheck`](/reference/telegram/functions/messages/edit-fact-check/), [`messages.summarizeText`](/reference/telegram/functions/messages/summarize-text/), [`messages.translateText`](/reference/telegram/functions/messages/translate-text/), [`phone.sendGroupCallMessage`](/reference/telegram/functions/phone/send-group-call-message/)
 
 ## Availability evidence
 
@@ -102,9 +102,9 @@ Known selected constructors: [`messages.composedMessageWithAI`](/reference/teleg
 - structural source: `tdlib`
 - canonical schema: https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/telegram_api.tl
 - prose merge precedence: TDLib → Telegram Desktop → Core JSON
-- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 229 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
+- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 230 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
 
 ## Source-diff notes
 
-- tdlib_vs_core: changed_count=78; core_only_count=18; overlap_count=2285; tdlib_only_count=195
-- tdlib_vs_tdesktop: changed_count=0; overlap_count=2470; tdesktop_only=null; tdlib_only=accessPointRule, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret
+- tdlib_vs_core: changed_count=55; core_only_count=18; overlap_count=2338; tdlib_only_count=225
+- tdlib_vs_tdesktop: changed_count=0; overlap_count=2553; tdesktop_only=null; tdlib_only=accessPointRule, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret

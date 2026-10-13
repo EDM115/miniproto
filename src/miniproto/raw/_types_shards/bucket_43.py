@@ -1969,6 +1969,142 @@ class InputRichFilePhoto(TLConstructor):
         return cls(id=_value_id, photo=_value_photo), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletState(TLConstructor):
+    backup_enabled: bool = False
+    can_export_phrase: bool = False
+    can_enable_backup: bool = False
+    address: str
+    public_key: bytes
+    balance: int
+    CONSTRUCTOR_ID: ClassVar[int] = 0x95C5346B
+    QUALNAME: ClassVar[str] = "walletState"
+    RESULT_TYPE: ClassVar[str] = "WalletState"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="backup_enabled",
+            python_name="backup_enabled",
+            type="true",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="can_export_phrase",
+            python_name="can_export_phrase",
+            type="true",
+            flag="flags",
+            flag_index=1,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="can_enable_backup",
+            python_name="can_enable_backup",
+            type="true",
+            flag="flags",
+            flag_index=2,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="address",
+            python_name="address",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="public_key",
+            python_name="public_key",
+            type="bytes",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="balance",
+            python_name="balance",
+            type="long",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.backup_enabled:
+            flags |= 1
+        if self.can_export_phrase:
+            flags |= 2
+        if self.can_enable_backup:
+            flags |= 4
+        output.extend(encode_int(flags))
+        output.extend(encode_string(self.address))
+        output.extend(encode_bytes(self.public_key))
+        output.extend(encode_long(self.balance))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_backup_enabled = bool(flags & 1)
+        _value_can_export_phrase = bool(flags & 2)
+        _value_can_enable_backup = bool(flags & 4)
+        _value_address, cursor = decode_string(raw_data, cursor)
+        _value_public_key, cursor = decode_bytes(raw_data, cursor)
+        _value_balance, cursor = decode_long(raw_data, cursor)
+        return cls(
+            backup_enabled=_value_backup_enabled,
+            can_export_phrase=_value_can_export_phrase,
+            can_enable_backup=_value_can_enable_backup,
+            address=_value_address,
+            public_key=_value_public_key,
+            balance=_value_balance,
+        ), cursor
+
+
 class help:
     PeerColorProfileSet = HelpPeerColorProfileSet
 
@@ -2006,6 +2142,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     StoriesAlbumsNotModified,
     StarGiftAttributeRarityRare,
     InputRichFilePhoto,
+    WalletState,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
 NAME_MAP: dict[str, type[TLConstructor]] = {entry.QUALNAME: entry for entry in ALL_TYPES}
@@ -2034,6 +2171,7 @@ __all__ = (
     "StoriesAlbumsNotModified",
     "StarGiftAttributeRarityRare",
     "InputRichFilePhoto",
+    "WalletState",
     "help",
     "messages",
     "stories",

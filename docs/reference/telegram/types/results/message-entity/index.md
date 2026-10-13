@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: MessageEntity"
-description: "Layer 229 result-family index for 25 canonical constructors returning MessageEntity from tdlib."
+description: "Layer 230 result-family index for 26 canonical constructors returning MessageEntity from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,9 +12,9 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `MessageEntity`
+## Layer 230 result family `MessageEntity`
 
-Selected canonical constructors in this family: 25.
+Selected canonical constructors in this family: 26.
 
 ## Constructors
 
@@ -40,6 +40,7 @@ Selected canonical constructors in this family: 25.
 - [`messageEntitySpoiler`](/reference/telegram/types/base/message-entity-spoiler/): `MessageEntity`
 - [`messageEntityStrike`](/reference/telegram/types/base/message-entity-strike/): `MessageEntity`
 - [`messageEntityTextUrl`](/reference/telegram/types/base/message-entity-text-url/): `MessageEntity`
+- [`messageEntityTonAddress`](/reference/telegram/types/base/message-entity-ton-address/): `MessageEntity`
 - [`messageEntityUnderline`](/reference/telegram/types/base/message-entity-underline/): `MessageEntity`
 - [`messageEntityUnknown`](/reference/telegram/types/base/message-entity-unknown/): `MessageEntity`
 - [`messageEntityUrl`](/reference/telegram/types/base/message-entity-url/): `MessageEntity`

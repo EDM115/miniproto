@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: EmailVerifyPurpose"
-description: "Layer 229 result-family index for 3 canonical constructors returning EmailVerifyPurpose from tdlib."
+description: "Layer 230 result-family index for 3 canonical constructors returning EmailVerifyPurpose from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `EmailVerifyPurpose`
+## Layer 230 result family `EmailVerifyPurpose`
 
 Selected canonical constructors in this family: 3.
 

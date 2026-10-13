@@ -1761,6 +1761,96 @@ class AuctionBidLevel(TLConstructor):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class WalletUserAddress(TLConstructor):
+    user_id: int | None = None
+    address: str
+    public_key: bytes
+    CONSTRUCTOR_ID: ClassVar[int] = 0xFE78EECC
+    QUALNAME: ClassVar[str] = "walletUserAddress"
+    RESULT_TYPE: ClassVar[str] = "WalletUserAddress"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="user_id",
+            python_name="user_id",
+            type="long",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="address",
+            python_name="address",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="public_key",
+            python_name="public_key",
+            type="bytes",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.user_id is not None:
+            flags |= 1
+        output.extend(encode_int(flags))
+        if self.user_id is not None:
+            output.extend(encode_long(self.user_id))
+        output.extend(encode_string(self.address))
+        output.extend(encode_bytes(self.public_key))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        if bool(flags & 1):
+            _value_user_id, cursor = decode_long(raw_data, cursor)
+        else:
+            _value_user_id = None
+        _value_address, cursor = decode_string(raw_data, cursor)
+        _value_public_key, cursor = decode_bytes(raw_data, cursor)
+        return cls(user_id=_value_user_id, address=_value_address, public_key=_value_public_key), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class AuthFirebasePnvIntent(TLConstructor):
     nonce: str
     digital_credential_payload: str
@@ -1868,6 +1958,7 @@ ALL_TYPES: tuple[type[TLConstructor], ...] = (
     BusinessAwayMessageScheduleCustom,
     HelpTimezonesListNotModified,
     AuctionBidLevel,
+    WalletUserAddress,
     AuthFirebasePnvIntent,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLConstructor]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_TYPES}
@@ -1894,6 +1985,7 @@ __all__ = (
     "BusinessAwayMessageScheduleCustom",
     "HelpTimezonesListNotModified",
     "AuctionBidLevel",
+    "WalletUserAddress",
     "AuthFirebasePnvIntent",
     "account",
     "auth",

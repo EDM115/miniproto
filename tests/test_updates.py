@@ -23,7 +23,7 @@ from miniproto.mtproto.codec import MessageContainer, MessageContainerItem, RpcR
 from miniproto.raw import functions, types
 from miniproto.session.models import PeerCacheEntry, UpdateState, session_record_from_mapping
 from miniproto.session.storage import SessionPayload
-from miniproto.types import Message, Peer
+from miniproto.types import Message, Peer, Update
 from miniproto.updates.state import EntityReference, UpdateCursor, merge_peer_cache_entries
 
 AUTH_KEY = b"u" * 256
@@ -338,6 +338,28 @@ def test_identityless_updates_are_not_collapsed_by_type_name() -> None:
         await client.disconnect()
 
     run(scenario())
+
+
+# fmt: off
+def test_layer230_identityless_wallet_updates_preserve_distinct_raw_states() -> None:
+    async def scenario() -> None:
+        client = FakeUpdateClient(ClientConfig(api_id=1, api_hash="hash", session_storage=storage_with_state()))
+        first_raw = types.UpdateWalletState.deserialize(bytes.fromhex("aaf2c36a ecb2b99c 01000000"))
+        second_raw = types.UpdateWalletState.deserialize(bytes.fromhex("aaf2c36a 6b34c595 05000000 03616263 02102000 0807060504030201"))
+        await client.connect()
+        try:
+            first = await client._update_manager._process_raw_update(first_raw)
+            second = await client._update_manager._process_raw_update(second_raw)
+            assert [type(event) for event in first + second] == [Update, Update]
+            assert first[0].raw is first_raw
+            assert second[0].raw is second_raw
+            assert first_raw.state == types.WalletStateEmpty(creating=True)
+            assert second_raw.state == types.WalletState(backup_enabled=True, can_enable_backup=True, address="abc", public_key=b"\x10\x20", balance=0x0102030405060708)
+        finally:
+            await client.disconnect()
+
+    run(scenario())
+# fmt: on
 
 
 def test_zero_global_cursors_detect_missing_initial_ranges() -> None:

@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: InputPeer"
-description: "Layer 229 result-family index for 7 canonical constructors returning InputPeer from tdlib."
+description: "Layer 230 result-family index for 7 canonical constructors returning InputPeer from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `InputPeer`
+## Layer 230 result family `InputPeer`
 
 Selected canonical constructors in this family: 7.
 

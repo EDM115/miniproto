@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: PeerColor"
-description: "Layer 229 result-family index for 3 canonical constructors returning PeerColor from tdlib."
+description: "Layer 230 result-family index for 3 canonical constructors returning PeerColor from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `PeerColor`
+## Layer 230 result family `PeerColor`
 
 Selected canonical constructors in this family: 3.
 

@@ -10,7 +10,7 @@ source_path: "tools/schema/schema.json"
 source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
 namespace: "base"
 schema_source: "tdlib"
-constructor_id: "0xb0cd6617"
+constructor_id: "0xa12aefff"
 ---
 
 # `botVerifierSettings`
@@ -20,7 +20,7 @@ No description provided by the pinned schema.
 ## Signature
 
 ```tl
-botVerifierSettings#b0cd6617 flags:# can_modify_custom_description:flags.1?true icon:long company:string custom_description:flags.0?string = BotVerifierSettings;
+botVerifierSettings#a12aefff flags:# can_modify_custom_description:flags.1?true icon:long company:string custom_description:flags.0?TextWithEntities = BotVerifierSettings;
 ```
 
 ## Result type
@@ -35,7 +35,7 @@ botVerifierSettings#b0cd6617 flags:# can_modify_custom_description:flags.1?true 
 | can_modify_custom_description | flags.1?true | flags.1 | — | No description provided by the pinned schema. |
 | icon | long | — | — | No description provided by the pinned schema. |
 | company | string | — | — | No description provided by the pinned schema. |
-| custom_description | flags.0?string | flags.0 | — | No description provided by the pinned schema. |
+| custom_description | flags.0?TextWithEntities | flags.0 | — | No description provided by the pinned schema. |
 
 ## Flags
 
@@ -75,9 +75,9 @@ constructor_type = BotVerifierSettings
 - structural source: `tdlib`
 - canonical schema: https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/telegram_api.tl
 - prose merge precedence: TDLib → Telegram Desktop → Core JSON
-- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 229 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
+- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 230 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
 
 ## Source-diff notes
 
-- tdlib_vs_core: changed_count=78; core_only_count=18; overlap_count=2285; tdlib_only_count=195
-- tdlib_vs_tdesktop: changed_count=0; overlap_count=2470; tdesktop_only=null; tdlib_only=accessPointRule, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret
+- tdlib_vs_core: changed_count=55; core_only_count=18; overlap_count=2338; tdlib_only_count=225
+- tdlib_vs_tdesktop: changed_count=0; overlap_count=2553; tdesktop_only=null; tdlib_only=accessPointRule, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret

@@ -1991,6 +1991,68 @@ class PaymentsResolveStarGiftOffer(TLRequest):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class PaymentsGetOnrampProviders(TLRequest):
+    crypto_currency: str | None = None
+    CONSTRUCTOR_ID: ClassVar[int] = 0x3F3E00DC
+    QUALNAME: ClassVar[str] = "payments.getOnrampProviders"
+    RESULT_TYPE: ClassVar[str] = "Vector<OnrampProviderInfo>"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="crypto_currency",
+            python_name="crypto_currency",
+            type="string",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.crypto_currency is not None:
+            flags |= 1
+        output.extend(encode_int(flags))
+        if self.crypto_currency is not None:
+            output.extend(encode_string(self.crypto_currency))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        if bool(flags & 1):
+            _value_crypto_currency, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_crypto_currency = None
+        return cls(crypto_currency=_value_crypto_currency), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class StickersChangeSticker(TLRequest):
     sticker: Any
     emoji: str | None = None
@@ -2186,6 +2248,176 @@ class StoriesGetPinnedStories(TLRequest):
         return cls(peer=_value_peer, offset_id=_value_offset_id, limit=_value_limit), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletTonConnectRegisterKey(TLRequest):
+    session_id: int
+    client_id: str
+    CONSTRUCTOR_ID: ClassVar[int] = 0x338BCF1C
+    QUALNAME: ClassVar[str] = "wallet.tonConnectRegisterKey"
+    RESULT_TYPE: ClassVar[str] = "wallet.TonConnectChallenge"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="session_id",
+            python_name="session_id",
+            type="long",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="client_id",
+            python_name="client_id",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_long(self.session_id))
+        output.extend(encode_string(self.client_id))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_session_id, cursor = decode_long(raw_data, cursor)
+        _value_client_id, cursor = decode_string(raw_data, cursor)
+        return cls(session_id=_value_session_id, client_id=_value_client_id), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletTonConnectSubmitResponse(TLRequest):
+    session_id: int
+    msg_id: int
+    body: bytes
+    trace_id: str | None = None
+    CONSTRUCTOR_ID: ClassVar[int] = 0xFAC67D3C
+    QUALNAME: ClassVar[str] = "wallet.tonConnectSubmitResponse"
+    RESULT_TYPE: ClassVar[str] = "Bool"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="session_id",
+            python_name="session_id",
+            type="long",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="msg_id",
+            python_name="msg_id",
+            type="int",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="body",
+            python_name="body",
+            type="bytes",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="trace_id",
+            python_name="trace_id",
+            type="string",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.trace_id is not None:
+            flags |= 1
+        output.extend(encode_int(flags))
+        output.extend(encode_long(self.session_id))
+        output.extend(encode_int(self.msg_id))
+        output.extend(encode_bytes(self.body))
+        if self.trace_id is not None:
+            output.extend(encode_string(self.trace_id))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_session_id, cursor = decode_long(raw_data, cursor)
+        _value_msg_id, cursor = decode_int(raw_data, cursor)
+        _value_body, cursor = decode_bytes(raw_data, cursor)
+        if bool(flags & 1):
+            _value_trace_id, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_trace_id = None
+        return cls(
+            session_id=_value_session_id, msg_id=_value_msg_id, body=_value_body, trace_id=_value_trace_id
+        ), cursor
+
+
 class account:
     GetMultiWallPapers = AccountGetMultiWallPapers
     ResetAuthorization = AccountResetAuthorization
@@ -2217,6 +2449,7 @@ class messages:
 
 
 class payments:
+    GetOnrampProviders = PaymentsGetOnrampProviders
     ResolveStarGiftOffer = PaymentsResolveStarGiftOffer
     SaveStarGift = PaymentsSaveStarGift
 
@@ -2227,6 +2460,11 @@ class stickers:
 
 class stories:
     GetPinnedStories = StoriesGetPinnedStories
+
+
+class wallet:
+    TonConnectRegisterKey = WalletTonConnectRegisterKey
+    TonConnectSubmitResponse = WalletTonConnectSubmitResponse
 
 
 ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
@@ -2247,8 +2485,11 @@ ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
     ChannelsToggleSignatures,
     PaymentsSaveStarGift,
     PaymentsResolveStarGiftOffer,
+    PaymentsGetOnrampProviders,
     StickersChangeSticker,
     StoriesGetPinnedStories,
+    WalletTonConnectRegisterKey,
+    WalletTonConnectSubmitResponse,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLRequest]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_FUNCTIONS}
 NAME_MAP: dict[str, type[TLRequest]] = {entry.QUALNAME: entry for entry in ALL_FUNCTIONS}
@@ -2270,8 +2511,11 @@ __all__ = (
     "ChannelsToggleSignatures",
     "PaymentsSaveStarGift",
     "PaymentsResolveStarGiftOffer",
+    "PaymentsGetOnrampProviders",
     "StickersChangeSticker",
     "StoriesGetPinnedStories",
+    "WalletTonConnectRegisterKey",
+    "WalletTonConnectSubmitResponse",
     "account",
     "auth",
     "channels",
@@ -2280,6 +2524,7 @@ __all__ = (
     "payments",
     "stickers",
     "stories",
+    "wallet",
     "CONSTRUCTOR_ID_MAP",
     "NAME_MAP",
 )

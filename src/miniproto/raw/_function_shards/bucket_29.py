@@ -1293,41 +1293,17 @@ class BotsGetBotInfo(TLRequest):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class BotsSetCustomVerification(TLRequest):
-    enabled: bool = False
-    bot: Any | None = None
-    peer: Any
-    custom_description: str | None = None
-    CONSTRUCTOR_ID: ClassVar[int] = 0x8B89DFBD
-    QUALNAME: ClassVar[str] = "bots.setCustomVerification"
+class BotsRemoveUsername(TLRequest):
+    bot: Any
+    username: str
+    CONSTRUCTOR_ID: ClassVar[int] = 0xC704147D
+    QUALNAME: ClassVar[str] = "bots.removeUsername"
     RESULT_TYPE: ClassVar[str] = "Bool"
     TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
-        TLField(
-            name="enabled",
-            python_name="enabled",
-            type="true",
-            flag="flags",
-            flag_index=1,
-            is_optional=True,
-            is_true_flag=True,
-            is_vector=False,
-            vector_item_type=None,
-        ),
         TLField(
             name="bot",
             python_name="bot",
             type="InputUser",
-            flag="flags",
-            flag_index=0,
-            is_optional=True,
-            is_true_flag=False,
-            is_vector=False,
-            vector_item_type=None,
-        ),
-        TLField(
-            name="peer",
-            python_name="peer",
-            type="InputPeer",
             flag=None,
             flag_index=None,
             is_optional=False,
@@ -1336,20 +1312,18 @@ class BotsSetCustomVerification(TLRequest):
             vector_item_type=None,
         ),
         TLField(
-            name="custom_description",
-            python_name="custom_description",
+            name="username",
+            python_name="username",
             type="string",
-            flag="flags",
-            flag_index=2,
-            is_optional=True,
+            flag=None,
+            flag_index=None,
+            is_optional=False,
             is_true_flag=False,
             is_vector=False,
             vector_item_type=None,
         ),
     )
-    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
-        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
-    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
 
     def serialize(self) -> bytes:
         return self._serialize(boxed=True)
@@ -1358,19 +1332,8 @@ class BotsSetCustomVerification(TLRequest):
         output = bytearray()
         if boxed:
             output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
-        flags = 0
-        if self.enabled:
-            flags |= 2
-        if self.bot is not None:
-            flags |= 1
-        if self.custom_description is not None:
-            flags |= 4
-        output.extend(encode_int(flags))
-        if self.bot is not None:
-            output.extend(encode_value("InputUser", self.bot))
-        output.extend(encode_value("InputPeer", self.peer))
-        if self.custom_description is not None:
-            output.extend(encode_string(self.custom_description))
+        output.extend(encode_value("InputUser", self.bot))
+        output.extend(encode_string(self.username))
         return bytes(output)
 
     @classmethod
@@ -1388,21 +1351,9 @@ class BotsSetCustomVerification(TLRequest):
             constructor_id, cursor = decode_constructor_id(raw_data, cursor)
             if constructor_id != cls.CONSTRUCTOR_ID:
                 raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
-        flags = 0
-        flags, cursor = decode_int(raw_data, cursor)
-        _value_enabled = bool(flags & 2)
-        if bool(flags & 1):
-            _value_bot, cursor = decode_value("InputUser", raw_data, cursor)
-        else:
-            _value_bot = None
-        _value_peer, cursor = decode_value("InputPeer", raw_data, cursor)
-        if bool(flags & 4):
-            _value_custom_description, cursor = decode_string(raw_data, cursor)
-        else:
-            _value_custom_description = None
-        return cls(
-            enabled=_value_enabled, bot=_value_bot, peer=_value_peer, custom_description=_value_custom_description
-        ), cursor
+        _value_bot, cursor = decode_value("InputUser", raw_data, cursor)
+        _value_username, cursor = decode_string(raw_data, cursor)
+        return cls(bot=_value_bot, username=_value_username), cursor
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -1531,6 +1482,115 @@ class PaymentsGetStarGiftCollections(TLRequest):
         _value_peer, cursor = decode_value("InputPeer", raw_data, cursor)
         _value_hash, cursor = decode_long(raw_data, cursor)
         return cls(peer=_value_peer, hash=_value_hash), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class PaymentsGetOnrampLimits(TLRequest):
+    provider: str
+    crypto_currency: str
+    base_currency: str
+    payment_method: str | None = None
+    CONSTRUCTOR_ID: ClassVar[int] = 0x80E851FD
+    QUALNAME: ClassVar[str] = "payments.getOnrampLimits"
+    RESULT_TYPE: ClassVar[str] = "OnrampLimits"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="provider",
+            python_name="provider",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="crypto_currency",
+            python_name="crypto_currency",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="base_currency",
+            python_name="base_currency",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="payment_method",
+            python_name="payment_method",
+            type="string",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.payment_method is not None:
+            flags |= 1
+        output.extend(encode_int(flags))
+        output.extend(encode_string(self.provider))
+        output.extend(encode_string(self.crypto_currency))
+        output.extend(encode_string(self.base_currency))
+        if self.payment_method is not None:
+            output.extend(encode_string(self.payment_method))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_provider, cursor = decode_string(raw_data, cursor)
+        _value_crypto_currency, cursor = decode_string(raw_data, cursor)
+        _value_base_currency, cursor = decode_string(raw_data, cursor)
+        if bool(flags & 1):
+            _value_payment_method, cursor = decode_string(raw_data, cursor)
+        else:
+            _value_payment_method = None
+        return cls(
+            provider=_value_provider,
+            crypto_currency=_value_crypto_currency,
+            base_currency=_value_base_currency,
+            payment_method=_value_payment_method,
+        ), cursor
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -1714,6 +1774,141 @@ class CommunitiesToggleAllPeerLinkRequestApproval(TLRequest):
         return cls(reject=_value_reject, community=_value_community), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletGetUserAddresses(TLRequest):
+    force: bool = False
+    id: tuple[Any, ...]
+    addresses: tuple[str, ...]
+    CONSTRUCTOR_ID: ClassVar[int] = 0x5275DFDD
+    QUALNAME: ClassVar[str] = "wallet.getUserAddresses"
+    RESULT_TYPE: ClassVar[str] = "wallet.UserAddresses"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="force",
+            python_name="force",
+            type="true",
+            flag="flags",
+            flag_index=0,
+            is_optional=True,
+            is_true_flag=True,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="id",
+            python_name="id",
+            type="Vector<InputUser>",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=True,
+            vector_item_type="InputUser",
+        ),
+        TLField(
+            name="addresses",
+            python_name="addresses",
+            type="Vector<string>",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=True,
+            vector_item_type="string",
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = (
+        TLFlagGroup(name="flags", python_name="flags", before_field_index=0),
+    )
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        flags = 0
+        if self.force:
+            flags |= 1
+        output.extend(encode_int(flags))
+        output.extend(encode_vector(self.id, "InputUser"))
+        output.extend(encode_vector(self.addresses, "string"))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        flags = 0
+        flags, cursor = decode_int(raw_data, cursor)
+        _value_force = bool(flags & 1)
+        _value_id, cursor = decode_vector(raw_data, cursor, "InputUser")
+        _value_addresses, cursor = decode_vector(raw_data, cursor, "string")
+        return cls(force=_value_force, id=_value_id, addresses=_value_addresses), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletGetTransactionsByMsgHash(TLRequest):
+    msg_hash: tuple[str, ...]
+    CONSTRUCTOR_ID: ClassVar[int] = 0xA6BB795D
+    QUALNAME: ClassVar[str] = "wallet.getTransactionsByMsgHash"
+    RESULT_TYPE: ClassVar[str] = "wallet.Transactions"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="msg_hash",
+            python_name="msg_hash",
+            type="Vector<string>",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=True,
+            vector_item_type="string",
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_vector(self.msg_hash, "string"))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_msg_hash, cursor = decode_vector(raw_data, cursor, "string")
+        return cls(msg_hash=_value_msg_hash), cursor
+
+
 class account:
     DeleteWebBrowserSettingsExceptions = AccountDeleteWebBrowserSettingsExceptions
     GetAccountTTL = AccountGetAccountTTL
@@ -1723,7 +1918,7 @@ class account:
 
 class bots:
     GetBotInfo = BotsGetBotInfo
-    SetCustomVerification = BotsSetCustomVerification
+    RemoveUsername = BotsRemoveUsername
 
 
 class channels:
@@ -1760,11 +1955,17 @@ class messages:
 
 class payments:
     AssignAppStoreTransaction = PaymentsAssignAppStoreTransaction
+    GetOnrampLimits = PaymentsGetOnrampLimits
     GetStarGiftCollections = PaymentsGetStarGiftCollections
 
 
 class upload:
     SaveBigFilePart = UploadSaveBigFilePart
+
+
+class wallet:
+    GetTransactionsByMsgHash = WalletGetTransactionsByMsgHash
+    GetUserAddresses = WalletGetUserAddresses
 
 
 ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
@@ -1786,11 +1987,14 @@ ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
     HelpGetPeerProfileColors,
     ChannelsReorderUsernames,
     BotsGetBotInfo,
-    BotsSetCustomVerification,
+    BotsRemoveUsername,
     PaymentsAssignAppStoreTransaction,
     PaymentsGetStarGiftCollections,
+    PaymentsGetOnrampLimits,
     ChatlistsEditExportedInvite,
     CommunitiesToggleAllPeerLinkRequestApproval,
+    WalletGetUserAddresses,
+    WalletGetTransactionsByMsgHash,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLRequest]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_FUNCTIONS}
 NAME_MAP: dict[str, type[TLRequest]] = {entry.QUALNAME: entry for entry in ALL_FUNCTIONS}
@@ -1813,11 +2017,14 @@ __all__ = (
     "HelpGetPeerProfileColors",
     "ChannelsReorderUsernames",
     "BotsGetBotInfo",
-    "BotsSetCustomVerification",
+    "BotsRemoveUsername",
     "PaymentsAssignAppStoreTransaction",
     "PaymentsGetStarGiftCollections",
+    "PaymentsGetOnrampLimits",
     "ChatlistsEditExportedInvite",
     "CommunitiesToggleAllPeerLinkRequestApproval",
+    "WalletGetUserAddresses",
+    "WalletGetTransactionsByMsgHash",
     "account",
     "bots",
     "channels",
@@ -1828,6 +2035,7 @@ __all__ = (
     "messages",
     "payments",
     "upload",
+    "wallet",
     "CONSTRUCTOR_ID_MAP",
     "NAME_MAP",
 )

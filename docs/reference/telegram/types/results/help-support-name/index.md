@@ -1,6 +1,6 @@
 ---
 title: "Telegram result family: help.SupportName"
-description: "Layer 229 result-family index for 1 canonical constructors returning help.SupportName from tdlib."
+description: "Layer 230 result-family index for 1 canonical constructors returning help.SupportName from tdlib."
 generated: true
 editUrl: false
 language: "telegram"
@@ -12,7 +12,7 @@ namespace: "results"
 schema_source: "tdlib"
 ---
 
-## Layer 229 result family `help.SupportName`
+## Layer 230 result family `help.SupportName`
 
 Selected canonical constructors in this family: 1.
 

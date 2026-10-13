@@ -1865,6 +1865,120 @@ class CommunitiesGetPeerLinkRequests(TLRequest):
         return cls(community=_value_community, offset=_value_offset, limit=_value_limit), cursor
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletGetNfts(TLRequest):
+    offset: str
+    limit: int
+    CONSTRUCTOR_ID: ClassVar[int] = 0x8C12F3A4
+    QUALNAME: ClassVar[str] = "wallet.getNfts"
+    RESULT_TYPE: ClassVar[str] = "wallet.NftItems"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="offset",
+            python_name="offset",
+            type="string",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+        TLField(
+            name="limit",
+            python_name="limit",
+            type="int",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_string(self.offset))
+        output.extend(encode_int(self.limit))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_offset, cursor = decode_string(raw_data, cursor)
+        _value_limit, cursor = decode_int(raw_data, cursor)
+        return cls(offset=_value_offset, limit=_value_limit), cursor
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WalletTonConnectNextEventId(TLRequest):
+    session_id: int
+    CONSTRUCTOR_ID: ClassVar[int] = 0x775D7244
+    QUALNAME: ClassVar[str] = "wallet.tonConnectNextEventId"
+    RESULT_TYPE: ClassVar[str] = "TonConnectNextEventId"
+    TL_FIELDS: ClassVar[tuple[TLField, ...]] = (
+        TLField(
+            name="session_id",
+            python_name="session_id",
+            type="long",
+            flag=None,
+            flag_index=None,
+            is_optional=False,
+            is_true_flag=False,
+            is_vector=False,
+            vector_item_type=None,
+        ),
+    )
+    TL_FLAG_GROUPS: ClassVar[tuple[TLFlagGroup, ...]] = ()
+
+    def serialize(self) -> bytes:
+        return self._serialize(boxed=True)
+
+    def _serialize(self, *, boxed: bool = True) -> bytes:
+        output = bytearray()
+        if boxed:
+            output.extend(encode_constructor_id(self.CONSTRUCTOR_ID))
+        output.extend(encode_long(self.session_id))
+        return bytes(output)
+
+    @classmethod
+    def deserialize(cls, data: bytes | memoryview) -> Self:
+        obj, offset = cls._deserialize(data)
+        if offset != len(data):
+            raise TLCodecError("TL object payload has trailing bytes")
+        return obj
+
+    @classmethod
+    def _deserialize(cls, data: bytes | memoryview, offset: int = 0, *, boxed: bool = True) -> tuple[Self, int]:
+        raw_data = data
+        cursor = offset
+        if boxed:
+            constructor_id, cursor = decode_constructor_id(raw_data, cursor)
+            if constructor_id != cls.CONSTRUCTOR_ID:
+                raise TLCodecError(f"expected constructor 0x{cls.CONSTRUCTOR_ID:08x}, got 0x{constructor_id:08x}")
+        _value_session_id, cursor = decode_long(raw_data, cursor)
+        return cls(session_id=_value_session_id), cursor
+
+
 class account:
     ResetWallPapers = AccountResetWallPapers
     UpdateBusinessGreetingMessage = AccountUpdateBusinessGreetingMessage
@@ -1916,6 +2030,11 @@ class stories:
     TogglePeerStoriesHidden = StoriesTogglePeerStoriesHidden
 
 
+class wallet:
+    GetNfts = WalletGetNfts
+    TonConnectNextEventId = WalletTonConnectNextEventId
+
+
 ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
     InvokeWithGooglePlayIntegrityPrefix,
     InvokeWithGooglePlayIntegrity,
@@ -1943,6 +2062,8 @@ ALL_FUNCTIONS: tuple[type[TLRequest], ...] = (
     StoriesTogglePeerStoriesHidden,
     SmsjobsFinishJob,
     CommunitiesGetPeerLinkRequests,
+    WalletGetNfts,
+    WalletTonConnectNextEventId,
 )
 CONSTRUCTOR_ID_MAP: dict[int, type[TLRequest]] = {entry.CONSTRUCTOR_ID: entry for entry in ALL_FUNCTIONS}
 NAME_MAP: dict[str, type[TLRequest]] = {entry.QUALNAME: entry for entry in ALL_FUNCTIONS}
@@ -1973,6 +2094,8 @@ __all__ = (
     "StoriesTogglePeerStoriesHidden",
     "SmsjobsFinishJob",
     "CommunitiesGetPeerLinkRequests",
+    "WalletGetNfts",
+    "WalletTonConnectNextEventId",
     "account",
     "auth",
     "communities",
@@ -1982,6 +2105,7 @@ __all__ = (
     "smsjobs",
     "stats",
     "stories",
+    "wallet",
     "CONSTRUCTOR_ID_MAP",
     "NAME_MAP",
 )

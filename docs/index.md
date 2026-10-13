@@ -1,12 +1,12 @@
 ---
 title: MTProto, without the framework tax.
-description: miniproto is a fast, async-first Telegram MTProto client core for Python with explicit lifecycle, secure sessions, generated Layer 229 bindings and bundled Rust acceleration.
+description: miniproto is a fast, async-first Telegram MTProto client core for Python with explicit lifecycle, secure sessions, generated Layer 230 bindings and bundled Rust acceleration.
 slug: /
 template: splash
 generated: false
 hero:
   title: MTProto, without the framework tax.
-  tagline: A compact, async-first Telegram client core with explicit state, generated Layer 229 bindings, secure sessions and bundled Rust acceleration where measurements justify it.
+  tagline: A compact, async-first Telegram client core with explicit state, generated Layer 230 bindings, secure sessions and bundled Rust acceleration where measurements justify it.
   actions:
     - text: Five-minute quickstart
       link: ./start/quickstart/
@@ -22,7 +22,7 @@ hero:
 
 <div class="mp-mechanism" role="list" aria-label="miniproto architecture">
   <article role="listitem"><span>01</span><strong>Python intent</strong><p>Lifecycle, authorization, peers, updates, messages, media, sessions, retries and typed errors remain inspectable Python APIs.</p></article>
-  <article role="listitem"><span>02</span><strong>Layer 229 schema</strong><p>Generated constructors expose Telegram's complete raw surface, with source metadata and cross-linked result and error relationships.</p></article>
+  <article role="listitem"><span>02</span><strong>Layer 230 schema</strong><p>Generated constructors expose Telegram's complete raw surface, with source metadata and cross-linked result and error relationships.</p></article>
   <article role="listitem"><span>03</span><strong>Measured Rust paths</strong><p>Transport framing, cryptography and hot TL constructors select native paths when available and verified, then fall back explicitly.</p></article>
 </div>
 
@@ -76,7 +76,7 @@ The generated Markdown is reviewed and versioned with the source. The website bu
 
 <div class="mp-reference-links">
   <a href="./reference/python/miniproto/"><strong>Python reference</strong><span>Public modules, classes, methods, parameters, aliases and source links extracted statically with Griffe.</span></a>
-  <a href="./reference/telegram/"><strong>Telegram reference</strong><span>Every Layer 229 function, type, constructor, parameter, known RPC error and Python-visible import path.</span></a>
+  <a href="./reference/telegram/"><strong>Telegram reference</strong><span>Every Layer 230 function, type, constructor, parameter, known RPC error and Python-visible import path.</span></a>
   <a href="./reference/rust/miniproto-native/"><strong>Rust reference</strong><span>Public and PyO3-facing items normalized from nightly rustdoc JSON and cargo-docs-md.</span></a>
 </div>
 
