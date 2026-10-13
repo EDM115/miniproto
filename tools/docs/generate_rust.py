@@ -122,9 +122,7 @@ def generate_rustdoc_json(
     manifest_path = manifest_path.resolve()
     target_dir = target_dir.resolve()
     result = runner(
-        rustdoc_command(manifest_path=manifest_path, target_dir=target_dir),
-        check=False,
-        cwd=manifest_path.parent,
+        rustdoc_command(manifest_path=manifest_path, target_dir=target_dir), check=False, cwd=manifest_path.parent
     )
     if result.returncode:
         raise RustDocumentationError(f"nightly rustdoc JSON generation failed for {manifest_path}")

@@ -13,7 +13,7 @@ import random
 import secrets
 import tempfile
 import time
-from collections.abc import AsyncIterable, Awaitable, Callable, Iterable, Iterator
+from collections.abc import AsyncIterable, Awaitable, Callable, Generator, Iterable
 from contextlib import AbstractContextManager, contextmanager, suppress
 from dataclasses import dataclass
 from pathlib import Path
@@ -402,7 +402,7 @@ async def _prepare_upload_source(source: FileSource, *, file_name: str | None, c
         stat = await asyncio.to_thread(path.stat)
 
         @contextmanager
-        def open_path() -> Iterator[BinaryIO]:
+        def open_path() -> Generator[BinaryIO]:
             """Open the path afresh for the upload reader context."""
             with path.open("rb") as handle:
                 yield handle
@@ -414,7 +414,7 @@ async def _prepare_upload_source(source: FileSource, *, file_name: str | None, c
         payload = bytes(source)
 
         @contextmanager
-        def open_bytes() -> Iterator[BinaryIO]:
+        def open_bytes() -> Generator[BinaryIO]:
             """Expose immutable input bytes through a fresh in-memory reader."""
             yield io.BytesIO(payload)
 
@@ -429,7 +429,7 @@ async def _prepare_upload_source(source: FileSource, *, file_name: str | None, c
         reader.seek(start)
 
         @contextmanager
-        def open_existing_reader() -> Iterator[BinaryIO]:
+        def open_existing_reader() -> Generator[BinaryIO]:
             """Reset the seekable source to its initial offset for this upload."""
             reader.seek(start)
             yield reader
@@ -475,7 +475,7 @@ async def _materialize_unknown_source(source: object, *, file_name: str | None, 
         temporary.flush()
 
         @contextmanager
-        def open_temporary() -> Iterator[BinaryIO]:
+        def open_temporary() -> Generator[BinaryIO]:
             """Rewind the completed temporary spool for a consumer context."""
             temporary.seek(0)
             yield cast(BinaryIO, temporary)

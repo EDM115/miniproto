@@ -510,8 +510,8 @@ def _owner_tuple(owners: OwnerKeys) -> tuple[PeerKey, ...]:
         owners: One peer key or an ordered tuple of peer keys.
     """
     if isinstance(owners[0], str):
-        return (cast("PeerKey", owners),)
-    return cast("tuple[PeerKey, ...]", owners)
+        return (owners,)
+    return owners
 
 
 def _add_owner(index: dict[Any, OwnerKeys], value: Any, key: PeerKey, order_by_key: Mapping[PeerKey, int]) -> None:

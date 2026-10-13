@@ -337,7 +337,7 @@ Wire representation supported by the generated fast-constructor codec.
 
 ##### `impl Clone for FastWireType`
 
-- <span id="fastwiretype-clone"></span>`fn clone(&self) -> FastWireType` — [`FastWireType`](#fastwiretype)
+- <span id="fastwiretype-clone"></span>`fn clone(&self) -> Self`
 
 ##### `impl Copy for FastWireType`
 
@@ -388,7 +388,7 @@ One generated field action used to encode or decode a fast TL constructor.
 
 ##### `impl Clone for FastFieldSpec`
 
-- <span id="fastfieldspec-clone"></span>`fn clone(&self) -> FastFieldSpec` — [`FastFieldSpec`](#fastfieldspec)
+- <span id="fastfieldspec-clone"></span>`fn clone(&self) -> Self`
 
 ##### `impl Copy for FastFieldSpec`
 
@@ -1174,7 +1174,7 @@ Returns `ValueError` for an unrepresentable count or `MemoryError` on allocation
 fn decode_i32_vector(data: &[u8], offset: usize) -> PyResult<(Vec<i32>, usize)>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:907-920`*
+*Defined in `rust/miniproto/src/tl.rs:907-918`*
 
 Decodes a generic TL vector of signed 32-bit values at `offset`.
 
@@ -1191,7 +1191,7 @@ Returns values with the next offset or Python errors for malformed sizes or allo
 fn encode_i64_vector(values: &[i64]) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:929-941`*
+*Defined in `rust/miniproto/src/tl.rs:927-939`*
 
 Serializes signed 64-bit values as a generic boxed TL vector.
 
@@ -1207,7 +1207,7 @@ Returns `ValueError` for an unrepresentable count or `MemoryError` on allocation
 fn decode_i64_vector(data: &[u8], offset: usize) -> PyResult<(Vec<i64>, usize)>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:951-964`*
+*Defined in `rust/miniproto/src/tl.rs:949-960`*
 
 Decodes a generic TL vector of signed 64-bit values at `offset`.
 
@@ -1224,7 +1224,7 @@ Returns values with the next offset or Python errors for malformed sizes or allo
 fn decode_vector_layout(data: &[u8], offset: usize, element_width: usize) -> PyResult<(usize, usize, usize)>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:979-1014`*
+*Defined in `rust/miniproto/src/tl.rs:975-1010`*
 
 Validates a generic vector header and returns its count, payload start and next offset.
 
@@ -1246,7 +1246,7 @@ for externally supplied `data`; its `expect` calls follow exact-width checked sl
 fn normalize_vector_offset(offset: i128) -> PyResult<usize>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:1023-1027`*
+*Defined in `rust/miniproto/src/tl.rs:1019-1023`*
 
 Converts the Python-facing signed offset to a safe Rust index.
 
@@ -1262,7 +1262,7 @@ Returns `ValueError` for negative or unrepresentable offsets.
 fn validate_vector_allocation(count: usize, element_width: usize) -> PyResult<()>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:1037-1045`*
+*Defined in `rust/miniproto/src/tl.rs:1033-1041`*
 
 Checks that a decoded vector's requested allocation fits the platform's `isize` limit.
 
@@ -1279,7 +1279,7 @@ Returns `ValueError` before allocation on overflow or an excessive capacity.
 fn checked_vector_capacity(count: usize, element_width: usize) -> PyResult<usize>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:1055-1067`*
+*Defined in `rust/miniproto/src/tl.rs:1051-1063`*
 
 Computes encoder capacity including the eight-byte TL vector header.
 

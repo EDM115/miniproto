@@ -1763,7 +1763,7 @@
       "path": "python/miniproto/event_loop/backend-name.md",
       "qualified_name": "miniproto.event_loop.backend_name",
       "route": "/reference/python/miniproto/event_loop/backend-name/",
-      "sha256": "c8234788d155c48e336490c4871fd16cda5c0ecbfbae87737600126c3e690f1c",
+      "sha256": "a0113d56d12e9082ca021e24fec98ff2952c4a0e8746cc16f582cbd2f5dd515b",
       "source_path": "src/miniproto/event_loop.py"
     },
     {
@@ -1772,7 +1772,7 @@
       "path": "python/miniproto/event_loop/backend-version.md",
       "qualified_name": "miniproto.event_loop.backend_version",
       "route": "/reference/python/miniproto/event_loop/backend-version/",
-      "sha256": "8b6fbeb4feaaffaa80739b12d659d324682a93ec6e9e1cf3aa07ce44be8cf295",
+      "sha256": "9ab312a31958102109b171a77149f97e0b16ea5cbc109ba87c4bc2aba1c8c886",
       "source_path": "src/miniproto/event_loop.py"
     },
     {
@@ -1781,7 +1781,7 @@
       "path": "python/miniproto/event_loop/backend.md",
       "qualified_name": "miniproto.event_loop.backend",
       "route": "/reference/python/miniproto/event_loop/backend/",
-      "sha256": "daa60ef8123007975ff3c3b1ffb758d6b41f0129d1679f5d8ee62fbd77403a37",
+      "sha256": "7de689ded7054ca08846b3cdae833b59e5d1177f0627a55100ca1e628835a851",
       "source_path": "src/miniproto/event_loop.py"
     },
     {
@@ -1799,7 +1799,7 @@
       "path": "python/miniproto/event_loop/install-error.md",
       "qualified_name": "miniproto.event_loop.install_error",
       "route": "/reference/python/miniproto/event_loop/install-error/",
-      "sha256": "2bca6886ff4af7ef3f8ab253c2c8f9f10a3557103f48a61858e1b7897d9fdf52",
+      "sha256": "17e86bdec6c7b7a9a39256af041ebfdea849b9ae0544c6c0472a6b993980c104",
       "source_path": "src/miniproto/event_loop.py"
     },
     {
@@ -1808,7 +1808,7 @@
       "path": "python/miniproto/event_loop/install.md",
       "qualified_name": "miniproto.event_loop.install",
       "route": "/reference/python/miniproto/event_loop/install/",
-      "sha256": "4717f6c7402f02cffbf90df043e5656e7915c26281a9e0e6557de84aa65a8e6b",
+      "sha256": "243d8d7cef1e113bf18857eccb21194c3367d01eec07ed482f19dadcb869a10e",
       "source_path": "src/miniproto/event_loop.py"
     },
     {
@@ -1817,7 +1817,7 @@
       "path": "python/miniproto/event_loop/installed.md",
       "qualified_name": "miniproto.event_loop.installed",
       "route": "/reference/python/miniproto/event_loop/installed/",
-      "sha256": "2cbb55bf205dd3dc719974d48ff338021fa7b486f3b4e27d4c0e75fab4b43016",
+      "sha256": "bd875240e118dd124530b9c5aceac45d3806e48ead80f5e5bdb462ab66e8da8a",
       "source_path": "src/miniproto/event_loop.py"
     },
     {
@@ -1826,7 +1826,7 @@
       "path": "python/miniproto/event_loop/new-event-loop.md",
       "qualified_name": "miniproto.event_loop.new_event_loop",
       "route": "/reference/python/miniproto/event_loop/new-event-loop/",
-      "sha256": "6fc21a089fcc975e707ede908bc783326a1dd890ca1377d568df4be945b8bfdd",
+      "sha256": "849f6d4a49ef42dc1cc99e2a288238522467da94be640fcd0c4d43de8cb59960",
       "source_path": "src/miniproto/event_loop.py"
     },
     {
@@ -1835,7 +1835,7 @@
       "path": "python/miniproto/event_loop/optimized-available.md",
       "qualified_name": "miniproto.event_loop.optimized_available",
       "route": "/reference/python/miniproto/event_loop/optimized-available/",
-      "sha256": "0f45cc75b0f9d8775eae990d90de4f19a71f6ca964f088949c45d781a6c9a75a",
+      "sha256": "9cf6247203628234c5fb13ff4fa8bc4710103ada03069a11ad0fa35c70553ccf",
       "source_path": "src/miniproto/event_loop.py"
     },
     {
@@ -1844,7 +1844,7 @@
       "path": "python/miniproto/event_loop/run.md",
       "qualified_name": "miniproto.event_loop.run",
       "route": "/reference/python/miniproto/event_loop/run/",
-      "sha256": "e30b8d13625952c6efcaa0a6b174dd47f5e4cf025afbcb9d9a8c4f09953424ae",
+      "sha256": "e2c52e3c7c3d538fc17a4b472b1e57a0e1a5d5a2fe287e1422f2d30ebce18a63",
       "source_path": "src/miniproto/event_loop.py"
     },
     {
@@ -4733,7 +4733,7 @@
       "path": "rust/miniproto-native/crypto/index.md",
       "qualified_name": "miniproto_native::crypto",
       "route": "/reference/rust/miniproto-native/crypto/",
-      "sha256": "fe86aa99e8108bf0b6513d7fd7a33bc1e15ec61b211ab3f134fedb1784f51d59",
+      "sha256": "3a3d38015f0910e661ccf55ae889c3c88650bcec148d257cf3127846eeffc003",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4904,7 +4904,7 @@
       "path": "rust/miniproto-native/mtproto/index.md",
       "qualified_name": "miniproto_native::mtproto",
       "route": "/reference/rust/miniproto-native/mtproto/",
-      "sha256": "c650e97910b654a444c41e030249c81feac306d79e541d42c868557522b0acf2",
+      "sha256": "21f1e6dc6ef4f67dcae59ab937ba7a3b56dccdc0185b20afa1269637989b4b1a",
       "source_path": "rust/miniproto/src/mtproto.rs"
     },
     {
@@ -4940,7 +4940,7 @@
       "path": "rust/miniproto-native/tl/index.md",
       "qualified_name": "miniproto_native::tl",
       "route": "/reference/rust/miniproto-native/tl/",
-      "sha256": "16c997d0f2be81aade041d49c91440af1e887bcf4edc58739c01ba7f5fd211a5",
+      "sha256": "b3c60fc7d03f923772ca11c5cb1f000df862ebeedefb113626ef841134b5f445",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5156,7 +5156,7 @@
       "path": "rust/miniproto-native/transport/index.md",
       "qualified_name": "miniproto_native::transport",
       "route": "/reference/rust/miniproto-native/transport/",
-      "sha256": "ed25e86bdb418ec3d0b6b9af5247e016f33539d4e5ab1ea056010da3e45f8166",
+      "sha256": "685464118a2b2cf99f82847ca8cafc5ceeec015164879fd30d37881062a664c7",
       "source_path": "rust/miniproto/src/transport.rs"
     },
     {
@@ -41001,10 +41001,10 @@
   "schema_version": 1,
   "sources": {
     "docs/reference-surface.toml": "c809a172b7fed0696d7fa454f4cc502034f4d326f5f1b18c771ac7fb5753cc85",
-    "rust/miniproto/src/crypto.rs": "76d88cf7c91eaf5f1ac3fefede58c43aebb55c3767679f69a71f79a134c1d958",
+    "rust/miniproto/src/crypto.rs": "05bd6a6eb8b00e335274635808e19d94120205f996130738cbd362a8d98f31bb",
     "rust/miniproto/src/lib.rs": "a1a81de2aa4d5656c93390aa5c8302dc106260fd0358b994560666c30275cb7d",
     "rust/miniproto/src/mtproto.rs": "13548b81330084a3f9c7d54cb9c8ebccc5bb96fcd19504e5b28b731a6b6c5076",
-    "rust/miniproto/src/tl.rs": "ef8da42e4724e7cc2cf34a5059cc3ce7bf5b473fe4904805b7477e7544e0c8a6",
+    "rust/miniproto/src/tl.rs": "57d785e052968628c1002beb2e5fd93454841e388ea0a6360030b86f69ba0a2d",
     "rust/miniproto/src/transport.rs": "4e2195d9ed71a279f900d81922d4b40ff10495240fc6e4ac363b33d0ab7fbc5f",
     "src/miniproto/__init__.py": "c0eb831aca219c8c94cd1ae55eea58e8e90e2c055b39f3090f5571532d20a52a",
     "src/miniproto/_cli.py": "dabce8f0cc5f5ec9660805d6309344ae199aec1baedfe3aa9d483f2cd0898808",
@@ -41028,7 +41028,7 @@
     "src/miniproto/crypto/mtproto.py": "8d3884b50cd845952bffb625f9a82e3aeb27a78e4f837e36faca486c8a1feed7",
     "src/miniproto/crypto/native.py": "e684fef3607c8de89bd0a50e14d6a0ae0d718a0581d0f086f2fd9aa9de5bcfc6",
     "src/miniproto/errors.py": "9d8d1c22a3d3cb2e62a0a3070e5236e01cc702e4362badeb20a57754453f4f93",
-    "src/miniproto/event_loop.py": "8f9e8af41d289bf727f3ad3223f5ee4ffcc98adbaaa901e5b90f03dfafad3b06",
+    "src/miniproto/event_loop.py": "ba328ef6bf68e829cf5d3df29730172cc8a35c16220619b8a6a0989c6ca284f8",
     "src/miniproto/file_id.py": "40e3814f2b79602ab91f6d5d4462e894ca22e3961aa28024dc6332b624b66e55",
     "src/miniproto/invoke.py": "93ac8fa7d8e6358a2da7f61e58e182f3367936133d2aa7719411399132c4c7b7",
     "src/miniproto/media/__init__.py": "b84107d36ea3e3b8966f08f54aae33625c21defc83a06115394d80711d956d57",
@@ -41037,14 +41037,14 @@
     "src/miniproto/media/multi_session.py": "f607f6a23c0df51b4c0daf8965b646cb8cda7157c96bcc8c61298d2c468d3133",
     "src/miniproto/media/retry.py": "2d7fc538676bc9c93672589d28d1eb606e3ad39fdf96c7fe84018388f7ec6393",
     "src/miniproto/media/scheduler.py": "be3b7f5c4da86612169175209dde1654de4a0039b134db79e2f81f263f535016",
-    "src/miniproto/media/upload.py": "d85f022debb26fc6b9a57a8e2262d3a796d557fe5ac3c4fbf36fb898dbeb86dc",
+    "src/miniproto/media/upload.py": "0704e746a251a23340a03500a5334ff686b8d9ae4f9bc766041332642ea7f96b",
     "src/miniproto/messages.py": "70eea7a0f5a70be5001da8a0dacedfb459a88b241b6d11facc365852e819183b",
     "src/miniproto/mtproto/__init__.py": "1b6451d4fb1f5e1bddc2dd889f283a7708d1b18f8f710c2176a21283187ad838",
     "src/miniproto/mtproto/codec.py": "2424e6d8ce4772d8e0310d4a0c746825615409191f5096360fed17143abcaa58",
     "src/miniproto/mtproto/quick_ack.py": "f8d88ba4cd657f662cf5bcc1f9238e5f75ff7ce1ce41526679f7671b18c49b08",
     "src/miniproto/mtproto/state.py": "acc80c4bab7c79beee49ac0ea3817d73e740952cd1743a5f948c42afaf620a49",
     "src/miniproto/observability.py": "df40e6575d2277534f728557d88be5e517c5d23fd50c582821958003a030eef7",
-    "src/miniproto/peers.py": "fa7ead6897e84fb8eae2caf0dc6c61dbd070043894d99438a00a7e5a9ff412b3",
+    "src/miniproto/peers.py": "35d1e7f101cfe0110eea2ea04f91ea2b8c6f3d77c2932458cf88b4b1c898921d",
     "src/miniproto/security/__init__.py": "ca21a61a97c33af47110e20f7c64eb46a44337bce56eb26d5d4355af13165976",
     "src/miniproto/security/redaction.py": "37ac1ec147c5ec1a72b1371d274b695b23581afd539ef6cb4c8d5e89d55d1d18",
     "src/miniproto/session/__init__.py": "23e9aeab951555b851cb306bd32ea2e334a78f97d120130d49f2023077a24d90",
@@ -41063,7 +41063,7 @@
     "tools/docs/__main__.py": "e76e4f1db85f1487e5f5119e48e69ec114fb5165cbe36975e3305629b2d43da3",
     "tools/docs/audit.py": "b4d468c3845a4c314ea3114f21232b4f8161878d9020f9c754945c2b763f4d8f",
     "tools/docs/generate_python.py": "09b2f632dd79a607be56aa86356a3e4c93f140fed7f8a8c9df101e971e58864c",
-    "tools/docs/generate_rust.py": "298cf0e06691ad15ff0b9775ad8423930cbfc21f05bc5ace23a4393f0568e0c5",
+    "tools/docs/generate_rust.py": "13ebdc5138577ac95eb2cf1ec0d465f8df335eee86218bc1485e2f594428a974",
     "tools/docs/generate_telegram.py": "e24538456cd0ae8249e9f6b21fca37466a4fea2953b649955ee5fb1e8f60723b",
     "tools/docs/manifest.py": "46e30be3c350bf4654033c484b88ba389a185eea8b1ef8c0ab3d21131dc4ba6c",
     "tools/docs/model.py": "5b992da6c8fd840f5dc91d3f07c47db051b35749cd901a655629b009ac46f856",

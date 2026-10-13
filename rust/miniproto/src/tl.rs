@@ -911,10 +911,8 @@ fn decode_i32_vector(data: &[u8], offset: usize) -> PyResult<(Vec<i32>, usize)> 
     values
         .try_reserve_exact(count)
         .map_err(|_| PyMemoryError::new_err("failed to allocate TL vector"))?;
-    for bytes in data[payload_offset..next_offset].chunks_exact(4) {
-        values.push(i32::from_le_bytes(
-            bytes.try_into().expect("vector element width checked"),
-        ));
+    for &bytes in data[payload_offset..next_offset].as_chunks::<4>().0 {
+        values.push(i32::from_le_bytes(bytes));
     }
     Ok((values, next_offset))
 }
@@ -955,10 +953,8 @@ fn decode_i64_vector(data: &[u8], offset: usize) -> PyResult<(Vec<i64>, usize)> 
     values
         .try_reserve_exact(count)
         .map_err(|_| PyMemoryError::new_err("failed to allocate TL vector"))?;
-    for bytes in data[payload_offset..next_offset].chunks_exact(8) {
-        values.push(i64::from_le_bytes(
-            bytes.try_into().expect("vector element width checked"),
-        ));
+    for &bytes in data[payload_offset..next_offset].as_chunks::<8>().0 {
+        values.push(i64::from_le_bytes(bytes));
     }
     Ok((values, next_offset))
 }

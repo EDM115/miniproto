@@ -17,9 +17,10 @@ _BACKEND_LOAD_ERROR: Exception | None = None
 _INSTALL_ERROR: Exception | None = None
 _INSTALLED = False
 _STDLIB_DEBUG_FALLBACK_THROUGH = {
+    # Latest releases still capture unsafe frames during async-generator finalization
     # https://github.com/MagicStack/uvloop/issues/715
-    "uvloop": (0, 22, 1),
-    "winloop": (0, 6, 3),
+    "uvloop": (0, 23, 0),
+    "winloop": (0, 8, 0),
 }
 
 

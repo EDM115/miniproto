@@ -25,6 +25,8 @@ def test_parser_handles_real_flags_vectors_generics_and_reserved_names() -> None
     story_header = next(entry for entry in schema.constructors if entry.name == "storyFwdHeader")
     from_param = next(param for param in story_header.params if param.name == "from")
     assert from_param.python_name == "from_"
+
+
 def test_parser_reads_json_schema_slice(tmp_path: Path) -> None:
     schema_path = tmp_path / "schema.json"
     schema_path.write_text(

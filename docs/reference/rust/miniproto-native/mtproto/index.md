@@ -145,7 +145,7 @@ Decoded contents of a validated encrypted MTProto packet for Rust-internal calle
 
 ##### `impl PartialEq for DecodedEncryptedMessage`
 
-- <span id="decodedencryptedmessage-partialeq-eq"></span>`fn eq(&self, other: &DecodedEncryptedMessage) -> bool` — [`DecodedEncryptedMessage`](#decodedencryptedmessage)
+- <span id="decodedencryptedmessage-partialeq-eq"></span>`fn eq(&self, other: &Self) -> bool`
 
 ##### `impl Same for DecodedEncryptedMessage`
 

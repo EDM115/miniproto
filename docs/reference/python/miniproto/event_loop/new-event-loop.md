@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.event_loop.new_event_loop"
 source_path: "src/miniproto/event_loop.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/event_loop.py#L146"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/event_loop.py#L147"
 module: "miniproto.event_loop"
 ---
 

@@ -129,7 +129,7 @@ TL;DR : use `miniproto` if you want to create your own framework or have "low-le
 ## Documentation and project links
 
 - [Documentation](https://miniproto.edm115.dev/) : authored guides plus searchable generated Python, Telegram and Rust reference pages
-- [Documentation backup](https://edm115.github.io/miniproto/) : in case the main site is down, always reflect the latest changes on the `master` branch
+- [*Documentation backup*](https://edm115.github.io/miniproto/) : in case the main site is down, always reflect the latest changes on the `master` branch
 - [Architecture](https://miniproto.edm115.dev/concepts/architecture/) : ownership boundaries and the Python/schema/Rust execution model
 - [Development commands](https://miniproto.edm115.dev/project/development/) : schema, docs, quality, tests, benchmarks, builds and release diagnostics
 - [Release guide](https://miniproto.edm115.dev/project/release/) : attested build artifacts, OIDC publishing, immutable releases and recovery boundaries
@@ -139,7 +139,7 @@ TL;DR : use `miniproto` if you want to create your own framework or have "low-le
 
 ---
 
-This project has been largely inspired by the following projects :
+This project has been largely inspired by the following ones :
 
 - [Pyrogram](https://github.com/pyrogram/pyrogram)
   - [Pyroblack](https://github.com/eyMarv/pyroblack)

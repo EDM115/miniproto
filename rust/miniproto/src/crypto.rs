@@ -662,8 +662,7 @@ pub(crate) fn aes_256_ige_encrypt_raw(
         .try_into()
         .expect("validated IV length");
     let mut output = Vec::with_capacity(plaintext.len());
-    for block in plaintext.chunks_exact(AES_BLOCK_SIZE) {
-        let plain_block: [u8; AES_BLOCK_SIZE] = block.try_into().expect("chunk size is 16");
+    for &plain_block in plaintext.as_chunks::<AES_BLOCK_SIZE>().0 {
         let mut mixed = xor_block(&plain_block, &previous_cipher);
         cipher.encrypt_block((&mut mixed).into());
         let cipher_block = xor_block(&mixed, &previous_plain);
@@ -700,8 +699,7 @@ pub(crate) fn aes_256_ige_decrypt_raw(
         .try_into()
         .expect("validated IV length");
     let mut output = Vec::with_capacity(ciphertext.len());
-    for block in ciphertext.chunks_exact(AES_BLOCK_SIZE) {
-        let cipher_block: [u8; AES_BLOCK_SIZE] = block.try_into().expect("chunk size is 16");
+    for &cipher_block in ciphertext.as_chunks::<AES_BLOCK_SIZE>().0 {
         let mut mixed = xor_block(&cipher_block, &previous_plain);
         cipher.decrypt_block((&mut mixed).into());
         let plain_block = xor_block(&mixed, &previous_cipher);
@@ -733,8 +731,7 @@ pub(crate) fn aes_256_cbc_encrypt_raw(
         .map_err(|_| PyValueError::new_err("AES-256 key must be 32 bytes"))?;
     let mut previous: [u8; AES_BLOCK_SIZE] = iv.try_into().expect("validated IV length");
     let mut output = Vec::with_capacity(plaintext.len());
-    for block in plaintext.chunks_exact(AES_BLOCK_SIZE) {
-        let plain_block: [u8; AES_BLOCK_SIZE] = block.try_into().expect("chunk size is 16");
+    for &plain_block in plaintext.as_chunks::<AES_BLOCK_SIZE>().0 {
         let mut cipher_block = xor_block(&plain_block, &previous);
         cipher.encrypt_block((&mut cipher_block).into());
         output.extend_from_slice(&cipher_block);
@@ -764,8 +761,7 @@ pub(crate) fn aes_256_cbc_decrypt_raw(
         .map_err(|_| PyValueError::new_err("AES-256 key must be 32 bytes"))?;
     let mut previous: [u8; AES_BLOCK_SIZE] = iv.try_into().expect("validated IV length");
     let mut output = Vec::with_capacity(ciphertext.len());
-    for block in ciphertext.chunks_exact(AES_BLOCK_SIZE) {
-        let cipher_block: [u8; AES_BLOCK_SIZE] = block.try_into().expect("chunk size is 16");
+    for &cipher_block in ciphertext.as_chunks::<AES_BLOCK_SIZE>().0 {
         let mut plain_block = cipher_block;
         cipher.decrypt_block((&mut plain_block).into());
         plain_block = xor_block(&plain_block, &previous);

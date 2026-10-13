@@ -889,7 +889,7 @@ Returns `ValueError` for unequal lengths and does not use the GIL.
 fn aes_256_ige_encrypt_raw(plaintext: &[u8], key: &[u8], iv: &[u8]) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:648-675`*
+*Defined in `rust/miniproto/src/crypto.rs:648-674`*
 
 Encrypts a block-aligned byte slice using AES-256 IGE for Rust callers.
 
@@ -907,7 +907,7 @@ Returns `ValueError` unless the key, IV and plaintext lengths meet AES-IGE requi
 fn aes_256_ige_decrypt_raw(ciphertext: &[u8], key: &[u8], iv: &[u8]) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:686-713`*
+*Defined in `rust/miniproto/src/crypto.rs:685-711`*
 
 Decrypts a block-aligned AES-256 IGE ciphertext for Rust callers.
 
@@ -925,7 +925,7 @@ Returns `ValueError` unless the key, IV and ciphertext lengths meet AES-IGE requ
 fn aes_256_cbc_encrypt_raw(plaintext: &[u8], key: &[u8], iv: &[u8]) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:724-744`*
+*Defined in `rust/miniproto/src/crypto.rs:722-741`*
 
 Encrypts a block-aligned byte slice with unpadded AES-256 CBC.
 
@@ -943,7 +943,7 @@ Returns `ValueError` unless the key, IV and plaintext lengths are valid.
 fn aes_256_cbc_decrypt_raw(ciphertext: &[u8], key: &[u8], iv: &[u8]) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:755-776`*
+*Defined in `rust/miniproto/src/crypto.rs:752-772`*
 
 Decrypts a block-aligned unpadded AES-256 CBC ciphertext.
 
@@ -961,7 +961,7 @@ Returns `ValueError` unless the key, IV and ciphertext lengths are valid.
 fn aes_256_ctr_crypt_raw(data: &[u8], key: &[u8], iv: &[u8]) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:787-801`*
+*Defined in `rust/miniproto/src/crypto.rs:783-797`*
 
 XORs bytes with an AES-256 CTR keystream; the same operation encrypts and decrypts.
 
@@ -979,7 +979,7 @@ Returns `ValueError` unless `key` is 32 bytes and `iv` is one AES block.
 fn aes_256_gcm_encrypt_raw(plaintext: &[u8], key: &[u8], nonce: &[u8], associated_data: &[u8]) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:813-834`*
+*Defined in `rust/miniproto/src/crypto.rs:809-830`*
 
 Authenticated-encrypts plaintext with AES-256 GCM and returns ciphertext plus tag.
 
@@ -998,7 +998,7 @@ Returns `ValueError` for an invalid key or nonce or if the cipher rejects the op
 fn aes_256_gcm_decrypt_raw(ciphertext_and_tag: &[u8], key: &[u8], nonce: &[u8], associated_data: &[u8]) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:846-867`*
+*Defined in `rust/miniproto/src/crypto.rs:842-863`*
 
 Authenticated-decrypts AES-256 GCM ciphertext-and-tag data.
 
@@ -1017,7 +1017,7 @@ Returns `ValueError` for invalid key/nonce material or a failed authentication c
 fn scrypt_derive_raw(password: &[u8], salt: &[u8], n: u32, r: u32, p: u32, length: usize) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:882-918`*
+*Defined in `rust/miniproto/src/crypto.rs:878-914`*
 
 Runs scrypt with validated protocol-level output limits for Rust callers.
 
@@ -1039,7 +1039,7 @@ failure.  This is a synchronous, GIL-free primitive.
 fn pq_factorize_raw(pq: u64) -> PyResult<(u64, u64)>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:927-941`*
+*Defined in `rust/miniproto/src/crypto.rs:923-937`*
 
 Finds and orders the two nontrivial factors of an MTProto `pq` value.
 
@@ -1055,7 +1055,7 @@ Returns `ValueError` for values below four or values that are not composite.
 fn validate_auth_key(auth_key: &[u8]) -> PyResult<()>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:950-955`*
+*Defined in `rust/miniproto/src/crypto.rs:946-951`*
 
 Validates the fixed 256-byte MTProto authorization-key width.
 
@@ -1071,7 +1071,7 @@ Returns `ValueError` rather than allowing fixed-offset protocol code to panic.
 fn validate_msg_key(msg_key: &[u8]) -> PyResult<()>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:964-969`*
+*Defined in `rust/miniproto/src/crypto.rs:960-965`*
 
 Validates the fixed 16-byte MTProto message-key width.
 
@@ -1087,7 +1087,7 @@ Returns `ValueError` on a malformed input slice.
 fn validate_block_multiple(data: &[u8]) -> PyResult<()>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:978-985`*
+*Defined in `rust/miniproto/src/crypto.rs:974-981`*
 
 Validates that AES block-mode input has a whole-number count of AES blocks.
 
@@ -1103,7 +1103,7 @@ Returns `ValueError` when the byte length is not divisible by 16.
 fn validate_aes_key(key: &[u8]) -> PyResult<()>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:992-997`*
+*Defined in `rust/miniproto/src/crypto.rs:988-993`*
 
 Validates a 32-byte AES-256 key and returns `ValueError` otherwise.
 
@@ -1117,7 +1117,7 @@ Validates a 32-byte AES-256 key and returns `ValueError` otherwise.
 fn validate_ige_iv(iv: &[u8]) -> PyResult<()>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:1004-1009`*
+*Defined in `rust/miniproto/src/crypto.rs:1000-1005`*
 
 Validates the two-block, 32-byte IV required by AES-IGE.
 
@@ -1131,7 +1131,7 @@ Validates the two-block, 32-byte IV required by AES-IGE.
 fn validate_cbc_ctr_iv(iv: &[u8]) -> PyResult<()>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:1016-1021`*
+*Defined in `rust/miniproto/src/crypto.rs:1012-1017`*
 
 Validates the one-block IV or counter used by CBC and CTR modes.
 
@@ -1145,7 +1145,7 @@ Validates the one-block IV or counter used by CBC and CTR modes.
 fn validate_gcm_nonce(nonce: &[u8]) -> PyResult<()>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:1028-1033`*
+*Defined in `rust/miniproto/src/crypto.rs:1024-1029`*
 
 Validates the 12-byte nonce mandated by this AES-GCM interface.
 
@@ -1159,7 +1159,7 @@ Validates the 12-byte nonce mandated by this AES-GCM interface.
 fn direction_offset(client_to_server: bool) -> usize
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:1040-1042`*
+*Defined in `rust/miniproto/src/crypto.rs:1036-1038`*
 
 Returns the MTProto key-schedule offset for the requested packet direction.
 
@@ -1173,7 +1173,7 @@ Returns the MTProto key-schedule offset for the requested packet direction.
 fn xor_block(left: &[u8; 16], right: &[u8; 16]) -> [u8; 16]
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:1050-1056`*
+*Defined in `rust/miniproto/src/crypto.rs:1046-1052`*
 
 Computes a fixed-width XOR block used by the AES block-mode loops.
 
@@ -1188,7 +1188,7 @@ Computes a fixed-width XOR block used by the AES block-mode loops.
 fn increment_counter(counter: &mut [u8; 16])
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:1063-1071`*
+*Defined in `rust/miniproto/src/crypto.rs:1059-1067`*
 
 Advances a big-endian AES-CTR counter in place, wrapping at the full block width.
 
@@ -1202,7 +1202,7 @@ Advances a big-endian AES-CTR counter in place, wrapping at the full block width
 fn gcd(left: u64, right: u64) -> u64
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:1079-1086`*
+*Defined in `rust/miniproto/src/crypto.rs:1075-1082`*
 
 Computes the greatest common divisor used by Pollard-rho factorization.
 
@@ -1217,7 +1217,7 @@ Computes the greatest common divisor used by Pollard-rho factorization.
 fn mul_mod(left: u64, right: u64, modulus: u64) -> u64
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:1100-1102`*
+*Defined in `rust/miniproto/src/crypto.rs:1096-1098`*
 
 Multiplies modulo `modulus` with a widened intermediate to avoid `u64` overflow.
 
@@ -1238,7 +1238,7 @@ pass a nonzero modulus; `u128` widening prevents multiplication overflow for all
 fn pow_mod(base: u64, exponent: u64, modulus: u64) -> u64
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:1116-1126`*
+*Defined in `rust/miniproto/src/crypto.rs:1112-1122`*
 
 Computes modular exponentiation for deterministic Miller-Rabin witnesses.
 
@@ -1259,7 +1259,7 @@ overflow is avoided by delegating products to `mul_mod` with its widened interme
 fn is_prime_u64(value: u64) -> bool
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:1133-1172`*
+*Defined in `rust/miniproto/src/crypto.rs:1129-1168`*
 
 Deterministically tests whether a `u64` is prime using fixed Miller-Rabin witnesses.
 
@@ -1273,7 +1273,7 @@ Deterministically tests whether a `u64` is prime using fixed Miller-Rabin witnes
 fn factor_u64(value: u64) -> u64
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:1179-1207`*
+*Defined in `rust/miniproto/src/crypto.rs:1175-1203`*
 
 Returns one factor of a composite `u64` using trial division and Pollard-rho iteration.
 

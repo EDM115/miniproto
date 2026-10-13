@@ -24,9 +24,9 @@ classifiers = [
 ]
 dependencies = [
   # Remove the Windows ARM64 exclusion after https://github.com/pyca/cryptography/pull/15350 ships in a release with regular and free-threaded wheels on PyPI
-  "cryptography~=50.0.0; sys_platform != 'win32' or (platform_machine != 'ARM64' and platform_machine != 'arm64' and platform_machine != 'aarch64')",
-  "uvloop~=0.22.1; sys_platform == 'linux' or sys_platform == 'darwin'",
-  "winloop~=0.6.3; sys_platform == 'win32' or sys_platform == 'cygwin' or sys_platform == 'cli'",
+  "cryptography~=50.0.2; sys_platform != 'win32' or (platform_machine != 'ARM64' and platform_machine != 'arm64' and platform_machine != 'aarch64')",
+  "uvloop~=0.23.0; sys_platform == 'linux' or sys_platform == 'darwin'",
+  "winloop~=0.8.0; sys_platform == 'win32' or sys_platform == 'cygwin' or sys_platform == 'cli'",
 ]
 
 [project.optional-dependencies]
@@ -34,12 +34,12 @@ dev = [
   "maturin~=1.15.0",
   "pytest~=9.1.1",
   "PyYAML~=6.0.3",
-  "ruff~=0.16.4",
-  "ty~=0.0.74",
+  "ruff~=0.17.0",
+  "ty~=0.0.86",
 ]
 docs = [
-  "griffe~=2.2.0",
-  "griffe2md~=1.5.0",
+  "griffe~=2.3.2",
+  "griffe2md~=1.5.1",
 ]
 
 [project.urls]

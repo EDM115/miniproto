@@ -26,14 +26,14 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v10.0.1
+      - uses: astral-sh/setup-uv@v10.3.0
         with:
           python-version: "3.14"
           enable-cache: true
           cache-suffix: docs
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@v6.1.0
         with:
           package_json_file: docs-site/package.json
 
@@ -43,7 +43,7 @@ jobs:
           check-latest: true
           node-version: 26
 
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
         with:
           toolchain: nightly
 

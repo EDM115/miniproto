@@ -608,7 +608,7 @@ Supported Telegram TCP framing modes selected by their Python wire-name strings.
 
 ##### `impl Clone for TransportMode`
 
-- <span id="transportmode-clone"></span>`fn clone(&self) -> TransportMode` — [`TransportMode`](#transportmode)
+- <span id="transportmode-clone"></span>`fn clone(&self) -> Self`
 
 ##### `impl Copy for TransportMode`
 
@@ -620,7 +620,7 @@ Supported Telegram TCP framing modes selected by their Python wire-name strings.
 
 ##### `impl PartialEq for TransportMode`
 
-- <span id="transportmode-partialeq-eq"></span>`fn eq(&self, other: &TransportMode) -> bool` — [`TransportMode`](#transportmode)
+- <span id="transportmode-partialeq-eq"></span>`fn eq(&self, other: &Self) -> bool`
 
 ##### `impl Same for TransportMode`
 
@@ -675,7 +675,7 @@ One native frame-pump result before it is converted to a Python return shape.
 
 ##### `impl PartialEq for FrameEvent`
 
-- <span id="frameevent-partialeq-eq"></span>`fn eq(&self, other: &FrameEvent) -> bool` — [`FrameEvent`](#frameevent)
+- <span id="frameevent-partialeq-eq"></span>`fn eq(&self, other: &Self) -> bool`
 
 ##### `impl Same for FrameEvent`
 

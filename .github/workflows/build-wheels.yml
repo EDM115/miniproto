@@ -39,28 +39,28 @@ jobs:
             arch: x86_64
             target: x86_64-unknown-linux-gnu
             compatibility: "2_17"
-            container: quay.io/pypa/manylinux2014_x86_64@2026.08.24-1
+            container: quay.io/pypa/manylinux2014_x86_64:2026.10.10-1
             docker-platform: linux/amd64
             qemu: ""
           - libc: glibc
             arch: aarch64
             target: aarch64-unknown-linux-gnu
             compatibility: "2_17"
-            container: quay.io/pypa/manylinux2014_aarch64@2026.08.24-1
+            container: quay.io/pypa/manylinux2014_aarch64:2026.10.10-1
             docker-platform: linux/arm64
             qemu: arm64
           - libc: musl
             arch: x86_64
             target: x86_64-unknown-linux-musl
             compatibility: musllinux_1_2
-            container: quay.io/pypa/musllinux_1_2_x86_64@2026.08.24-1
+            container: quay.io/pypa/musllinux_1_2_x86_64:2026.10.10-1
             docker-platform: linux/amd64
             qemu: ""
           - libc: musl
             arch: aarch64
             target: aarch64-unknown-linux-musl
             compatibility: musllinux_1_2
-            container: quay.io/pypa/musllinux_1_2_aarch64@2026.08.24-1
+            container: quay.io/pypa/musllinux_1_2_aarch64:2026.10.10-1
             docker-platform: linux/arm64
             qemu: arm64
     steps:
@@ -80,7 +80,7 @@ jobs:
           target: ${{ matrix.platform.target }}
           manylinux: ${{ matrix.platform.compatibility }}
           container: ${{ matrix.platform.container }}
-          rust-toolchain: "1.98"
+          rust-toolchain: "1.99.0"
           args: --release --locked --compatibility pypi -i ${{ matrix.python.interpreter }} --out dist
 
       - name: Install and exercise wheel in its target Linux container
@@ -151,12 +151,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python.python-version }}
           architecture: ${{ matrix.platform.python-architecture }}
 
-      - uses: astral-sh/setup-uv@v10.0.1
+      - uses: astral-sh/setup-uv@v10.3.0
         with:
           enable-cache: true
           cache-suffix: wheel-${{ matrix.platform.platform }}-${{ matrix.platform.arch }}-py${{ matrix.python.python-version }}
@@ -168,7 +168,7 @@ jobs:
           maturin-version: v1.15.0
           target: ${{ matrix.platform.target }}
           manylinux: "off"
-          rust-toolchain: "1.98"
+          rust-toolchain: "1.99.0"
           args: --release --locked --compatibility pypi -i python --out dist
 
       - name: Install and exercise wheel in clean runner Python
@@ -244,15 +244,15 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v10.0.1
+      - uses: astral-sh/setup-uv@v10.3.0
         with:
           python-version: "3.14"
           enable-cache: true
           cache-suffix: release-sdist
 
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
         with:
-          toolchain: "1.98"
+          toolchain: "1.99.0"
 
       - name: Build Python source distribution
         run: |
@@ -296,9 +296,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
         with:
-          toolchain: "1.98"
+          toolchain: "1.99.0"
 
       - name: Inspect Cargo package contents
         run: cargo package --locked -p miniproto --list
