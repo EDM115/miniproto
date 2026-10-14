@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.types.Peer"
 source_path: "src/miniproto/types.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/types.py#L17"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/types.py#L20"
 aliases: ["miniproto.Peer"]
 module: "miniproto.types"
 ---

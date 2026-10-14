@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.errors.SessionStorageError"
 source_path: "src/miniproto/errors.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L502"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L504"
 aliases: ["miniproto.SessionStorageError"]
 module: "miniproto.errors"
 ---

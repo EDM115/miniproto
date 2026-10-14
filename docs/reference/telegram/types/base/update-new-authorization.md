@@ -55,12 +55,12 @@ from miniproto.raw.types import UpdateNewAuthorization
 
 Public access: `miniproto.raw.types.UpdateNewAuthorization`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import UpdateNewAuthorization
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = UpdateNewAuthorization
 ```
 

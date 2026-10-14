@@ -50,12 +50,12 @@ from miniproto.raw.types import ChannelParticipantsMentions
 
 Public access: `miniproto.raw.types.ChannelParticipantsMentions`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import ChannelParticipantsMentions
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = ChannelParticipantsMentions
 ```
 

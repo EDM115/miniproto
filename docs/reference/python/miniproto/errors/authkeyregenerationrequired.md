@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.errors.AuthKeyRegenerationRequired"
 source_path: "src/miniproto/errors.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L428"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L430"
 aliases: ["miniproto.AuthKeyRegenerationRequired"]
 module: "miniproto.errors"
 ---

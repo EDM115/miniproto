@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::tl::tl_decode_string"
 source_path: "rust/miniproto/src/tl.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L682"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L674"
 aliases: ["miniproto._native.tl_decode_string"]
 python_visible: true
 ---
@@ -15,7 +15,7 @@ python_visible: true
 ## Provenance
 
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L682)
+- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L674)
 - Python exposure: `miniproto._native.tl_decode_string` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -37,7 +37,7 @@ fn tl_decode_string(data: &[u8], offset: usize) -> _
 fn tl_decode_string(data: &[u8], offset: usize) -> PyResult<(String, usize)>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:682-687`*
+*Defined in `rust/miniproto/src/tl.rs:674-679`*
 
 Decodes Python `tl_decode_string(data, offset)` as UTF-8 and returns it with the next offset.
 

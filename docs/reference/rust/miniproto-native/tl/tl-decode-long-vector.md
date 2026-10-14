@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::tl::tl_decode_long_vector"
 source_path: "rust/miniproto/src/tl.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L749"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L741"
 aliases: ["miniproto._native.tl_decode_long_vector"]
 python_visible: true
 ---
@@ -15,7 +15,7 @@ python_visible: true
 ## Provenance
 
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L749)
+- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L741)
 - Python exposure: `miniproto._native.tl_decode_long_vector` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -38,7 +38,7 @@ fn tl_decode_long_vector(py: _, data: _, offset: i128) -> _
 fn tl_decode_long_vector(py: Python<'_>, data: Vec<u8>, offset: i128) -> PyResult<(Vec<i64>, usize)>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:749-757`*
+*Defined in `rust/miniproto/src/tl.rs:741-749`*
 
 Decodes Python `tl_decode_long_vector(data, offset)` into values and a next offset.
 

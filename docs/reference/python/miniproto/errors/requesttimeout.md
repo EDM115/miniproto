@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.errors.RequestTimeout"
 source_path: "src/miniproto/errors.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L143"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L145"
 aliases: ["miniproto.RequestTimeout"]
 module: "miniproto.errors"
 ---

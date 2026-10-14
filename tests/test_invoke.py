@@ -1025,8 +1025,7 @@ def test_invoke_does_not_drop_replacement_sender_from_stale_failure() -> None:
         first.release.set()
         result = await task
         assert result == nearest_dc()
-        # Per-request failures never tear down connections anymore; the stale sender
-        # is simply left alone and the retry proceeds on the replacement.
+        # A stale failure must leave the replacement sender connected so the retry can use it
         assert first.disconnected == 0
         assert second.disconnected == 0
         assert len(second.requests) == 1

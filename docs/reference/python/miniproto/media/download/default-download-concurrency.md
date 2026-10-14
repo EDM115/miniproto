@@ -7,7 +7,7 @@ language: "python"
 kind: "attribute"
 qualified_name: "miniproto.media.download.DEFAULT_DOWNLOAD_CONCURRENCY"
 source_path: "src/miniproto/media/download.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L75"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L68"
 aliases: ["miniproto.media.DEFAULT_DOWNLOAD_CONCURRENCY"]
 module: "miniproto.media.download"
 ---

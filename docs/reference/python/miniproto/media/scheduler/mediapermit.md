@@ -19,10 +19,7 @@ MediaPermit(scheduler: _MediaScheduler, state: _TransferState, charged_bytes: in
 
 A charged scheduler reservation that must eventually be released.
 
-Use as an async context manager or call :meth:`release`. The first release
-returns capacity; repeated releases are harmless and return capacity at most
-once. Holding a permit keeps its charged bytes and transfer operation slot
-active, even after transfer closure, until it is released.
+Use as an async context manager or call :meth:`release`. The first release returns capacity, repeated releases do nothing. A live permit keeps its byte charge and transfer slot active after transfer closure until its owner releases it.
 
 Bind a newly granted charge to its scheduler and transfer state.
 

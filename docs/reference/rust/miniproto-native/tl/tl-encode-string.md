@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::tl::tl_encode_string"
 source_path: "rust/miniproto/src/tl.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L669"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L661"
 aliases: ["miniproto._native.tl_encode_string"]
 python_visible: true
 ---
@@ -15,7 +15,7 @@ python_visible: true
 ## Provenance
 
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L669)
+- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L661)
 - Python exposure: `miniproto._native.tl_encode_string` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -26,7 +26,7 @@ fn tl_encode_string(value: &str) -> _
 
 ## Arguments
 
-- `value`: UTF-8 Rust string to encode as TL bytes.
+- `value`: Its UTF-8 encoding must contain at most `2**24 - 1` bytes. This function does not check the limit.
 
 ## cargo-docs-md rendering
 
@@ -36,10 +36,10 @@ fn tl_encode_string(value: &str) -> _
 fn tl_encode_string(value: &str) -> Vec<u8>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:669-671`*
+*Defined in `rust/miniproto/src/tl.rs:661-663`*
 
 Encodes Python `tl_encode_string(value)` as UTF-8 TL bytes.
 
 # Arguments
 
-- `value`: UTF-8 Rust string to encode as TL bytes.
+- `value`: Its UTF-8 encoding must contain at most `2**24 - 1` bytes. This function does not check the limit.

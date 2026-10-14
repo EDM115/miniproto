@@ -42,12 +42,12 @@ from miniproto.raw.functions import BotsGetPreviewInfo
 
 Public access: `miniproto.raw.functions.BotsGetPreviewInfo`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.functions import BotsGetPreviewInfo
 
-# Naming the raw request class is local only; it performs no I/O or network request.
+# Refer to the raw request class without constructing it or calling Telegram
 request_type = BotsGetPreviewInfo
 ```
 

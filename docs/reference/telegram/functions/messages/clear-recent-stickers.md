@@ -48,12 +48,12 @@ from miniproto.raw.functions import MessagesClearRecentStickers
 
 Public access: `miniproto.raw.functions.MessagesClearRecentStickers`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.functions import MessagesClearRecentStickers
 
-# Naming the raw request class is local only; it performs no I/O or network request.
+# Refer to the raw request class without constructing it or calling Telegram
 request_type = MessagesClearRecentStickers
 ```
 

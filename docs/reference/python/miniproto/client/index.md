@@ -18,4 +18,4 @@ High-level asynchronous MTProto client, including lifecycle, messaging, updates 
 ## Public objects
 
 - [`UpdateT`](./updatet/) — Public attribute `miniproto.client.UpdateT`.
-- [`Client`](./client/) — Async client facade for MTProto operations.
+- [`Client`](./client/) — Async MTProto client for authorization, raw RPCs, messages, updates and media.

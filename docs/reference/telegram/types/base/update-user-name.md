@@ -44,12 +44,12 @@ from miniproto.raw.types import UpdateUserName
 
 Public access: `miniproto.raw.types.UpdateUserName`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import UpdateUserName
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = UpdateUserName
 ```
 

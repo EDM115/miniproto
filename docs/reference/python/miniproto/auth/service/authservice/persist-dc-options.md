@@ -1,6 +1,6 @@
 ---
 title: "miniproto.auth.service.AuthService.persist_dc_options"
-description: "Normalize ``help.Config`` DC options and atomically store them in the session."
+description: "Normalize DC options from ``help.getConfig`` and atomically store them in the session."
 generated: true
 editUrl: false
 language: "python"
@@ -18,7 +18,7 @@ module: "miniproto.auth.service"
 persist_dc_options(raw_config: object) -> tuple[DCOption, ...]
 ```
 
-Normalize ``help.Config`` DC options and atomically store them in the session.
+Normalize DC options from ``help.getConfig`` and atomically store them in the session.
 
 **Parameters:**
 

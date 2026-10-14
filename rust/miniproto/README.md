@@ -4,9 +4,9 @@
 
 ## Current package boundary
 
-The `0.1.x` crate is published to crates.io for source provenance, documentation and exact version parity with the Python distribution. Its library target is named `miniproto_native` and currently builds only a `cdylib` for the Python accelerator.  
-This package is not yet a supported standalone Rust library API. Depending on it from another Rust project and writing `use miniproto_native::...` is deliberately deferred until the crate exposes an `rlib`, separates the PyO3 boundary from its Rust-facing modules, documents a stability policy and passes external-consumer tests.  
-Install the supported Python package with :
+The `0.1.x` Cargo package records source provenance for the bundled accelerator and stays version-aligned with the Python distribution. Its library target is named `miniproto_native` and builds only a `cdylib` for the Python extension.
+The crate does not yet provide a supported standalone Rust API. Direct Rust use is deferred until it exposes an `rlib`, separates the PyO3 boundary from Rust-facing modules, documents an API stability policy and passes external-consumer tests.
+Install the supported Python package with:
 
 ```zsh
 uv add miniproto

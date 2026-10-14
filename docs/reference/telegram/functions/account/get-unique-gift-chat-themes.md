@@ -43,12 +43,12 @@ from miniproto.raw.functions import AccountGetUniqueGiftChatThemes
 
 Public access: `miniproto.raw.functions.AccountGetUniqueGiftChatThemes`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.functions import AccountGetUniqueGiftChatThemes
 
-# Naming the raw request class is local only; it performs no I/O or network request.
+# Refer to the raw request class without constructing it or calling Telegram
 request_type = AccountGetUniqueGiftChatThemes
 ```
 

@@ -41,12 +41,12 @@ from miniproto.raw.types import MessagesEmojiGameUnavailable
 
 Public access: `miniproto.raw.types.MessagesEmojiGameUnavailable`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import MessagesEmojiGameUnavailable
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = MessagesEmojiGameUnavailable
 ```
 

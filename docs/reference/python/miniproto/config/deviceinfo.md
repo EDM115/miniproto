@@ -20,7 +20,7 @@ DeviceInfo(device_model: str = 'miniproto', system_version: str = 'unknown', app
 
 Application and device identity sent when initializing a Telegram session.
 
-Defaults identify this library without probing the host system; callers may supply platform-specific values when Telegram-facing metadata must be customized.
+Defaults identify this library without probing the host system. Supply platform-specific values to customize the metadata sent to Telegram.
 
 **Attributes:**
 

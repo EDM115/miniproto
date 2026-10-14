@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.media.scheduler.MediaSchedulerRegistry.open_transfer"
 source_path: "src/miniproto/media/scheduler.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/scheduler.py#L700"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/scheduler.py#L698"
 module: "miniproto.media.scheduler"
 ---
 
@@ -24,7 +24,7 @@ Open a transfer with foreground priority by default.
 - **dc_id** (<code>[int](#int)</code>) – Positive Telegram data-centre identifier.
 - **direction** (<code>[MediaDirection](#miniproto.media.scheduler.MediaDirection)</code>) – Whether requests upload or download.
 - **total_size** (<code>[int](#int) | None</code>) – Known size or ``None`` to conservatively classify it as large.
-- **priority** (<code>[MediaPriority](#miniproto.media.scheduler.MediaPriority)</code>) – ``foreground`` by default; background still receives periodic grants.
+- **priority** (<code>[MediaPriority](#miniproto.media.scheduler.MediaPriority)</code>) – ``foreground`` by default, eligible background requests get preference after eight foreground grants.
 
 **Raises:**
 

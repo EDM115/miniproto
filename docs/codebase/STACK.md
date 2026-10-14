@@ -13,12 +13,12 @@ generated: false
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
 | Public implementation      | Python package with a `src/` layout                                                                                          | `pyproject.toml`, `src/miniproto/__init__.py`          |
 | Python runtime             | CPython 3.13+; CI covers 3.13, 3.14 and GIL-disabled 3.14t                                                                  | `pyproject.toml`, `.github/workflows/ci.yml`           |
-| Native runtime             | Rust 2024 edition, minimum Rust 1.98, compiled as the `miniproto_native` `cdylib`                                            | `rust/miniproto/Cargo.toml`                            |
+| Native runtime             | Rust 2024 edition, minimum Rust 1.99, compiled as the `miniproto_native` `cdylib`                                            | `rust/miniproto/Cargo.toml`                            |
 | Python build system        | Maturin/PyO3 mixed Python-Rust package                                                                                       | `pyproject.toml`, `rust/miniproto/Cargo.toml`          |
 | Package managers           | `uv` for Python, Cargo for Rust, the current pnpm 11 release for the site                                                    | `uv.lock`, `Cargo.lock`, `docs-site/package.json`      |
-| Documentation frontend     | Astro 7.2.2 and Starlight 0.41.7, statically prerendered with Pagefind 1.5.2                                                 | `docs-site/package.json`, `docs-site/astro.config.ts`  |
+| Documentation frontend     | Astro 7.3.8 and Starlight 0.42.6, statically prerendered with Pagefind 1.5.2                                                 | `docs-site/package.json`, `docs-site/astro.config.ts`  |
 | Documentation Node runtime | The current Node.js 26 release with strict Astro TypeScript configuration                                                    | `docs-site/.node-version`, `docs-site/tsconfig.json`   |
-| Documentation container    | Node.js 26.7.0 on Alpine 3.24 for the optional source build; unprivileged NGINX 1.31.3 on Alpine 3.24 for the static runtime | `docs-site/Dockerfile`, `docs-site/nginx.conf`         |
+| Documentation container    | `node:26-alpine` source build, `alpine:3` artifact check and `nginxinc/nginx-unprivileged:stable-alpine` runtime. Source builds use manifest-selected pnpm `11.28.5` | `docs-site/Dockerfile`, `docs-site/package.json`, `docs-site/nginx.conf` |
 
 The Python API is the supported product surface. The Rust crate is packaged primarily as the private `miniproto._native` acceleration module; its `0.1.x` public Rust API is not separately stability-promised. Nightly Rust is used only to generate rustdoc JSON and does not replace stable Rust for builds, tests, wheels or releases.
 
@@ -29,7 +29,7 @@ The Python API is the supported product surface. The Rust crate is packaged prim
 | `cryptography`                               | 50.0.2 in the current lock, excluded on Windows ARM64                     | AES/Scrypt fallback where installed and CFFI dependency   | `pyproject.toml`, `uv.lock`                    |
 | `uvloop`                                     | 0.23.0 in the current lock on Linux/macOS                                 | Optional optimized asyncio loop selected lazily           | `pyproject.toml`, `uv.lock`, `src/miniproto/event_loop.py` |
 | `winloop`                                    | 0.8.0 in the current lock on Windows                                      | Optional optimized asyncio loop selected lazily           | `pyproject.toml`, `uv.lock`, `src/miniproto/event_loop.py` |
-| PyO3                                         | `~0.29.2` with experimental async support                                 | Python extension bindings and free-threaded compatibility | `rust/miniproto/Cargo.toml`                     |
+| PyO3                                         | `~0.29.3` with experimental async support                                 | Python extension bindings and free-threaded compatibility | `rust/miniproto/Cargo.toml`                     |
 | RustCrypto AES/GCM/cipher/hash/Scrypt crates | Exact or compatible versions in Cargo metadata and lockfile               | Native MTProto, hashing and protected-session operations | `rust/miniproto/Cargo.toml`, `Cargo.lock`       |
 | SQLite                                       | Python standard-library `sqlite3`                                         | Per-domain encrypted durable session storage              | `src/miniproto/session/storage.py`              |
 
@@ -39,15 +39,15 @@ There is no application web framework, ORM, remote database client, telemetry ex
 
 | Tool                                      | Purpose                                                                                         | Evidence                                                                 |
 | ----------------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| Ruff 0.16.3                               | Python formatting, imports, linting, security/style rules                                       | `pyproject.toml`, `uv.lock`                                              |
-| ty 0.0.72                                 | Python static type checking against Python 3.13 semantics                                       | `pyproject.toml`, `uv.lock`                                              |
+| Ruff 0.17.0                               | Python formatting, imports, linting, security/style rules                                       | `pyproject.toml`, `uv.lock`                                              |
+| ty 0.0.86                                 | Python static type checking against Python 3.13 semantics                                       | `pyproject.toml`, `uv.lock`                                              |
 | pytest 9.1.1                              | Unit, fake-server, integration, stress, workflow and documentation tests                       | `pyproject.toml`, `tests/`                                               |
 | Maturin 1.15.0                            | Editable native builds, wheels and source distributions                                        | `pyproject.toml`, `.github/workflows/build-wheels.yml`                   |
-| Griffe 2.2.0 + griffe2md 1.5.0            | Static Python API extraction and Markdown rendering without importing the package               | `pyproject.toml`, `tools/docs/generate_python.py`                        |
+| Griffe 2.3.2 + griffe2md 1.5.1            | Static Python API extraction and Markdown rendering without importing the package               | `pyproject.toml`, `tools/docs/generate_python.py`                        |
 | Nightly Rust + cargo-docs-md              | Rustdoc JSON extraction and Markdown fragments for committed Rust reference pages               | `tools/docs/generate_rust.py`                                           |
 | Astro/Starlight/Pagefind/Playwright/Sharp | Static docs, search, browser acceptance and deterministic brand derivatives                    | `docs-site/package.json`, `docs-site/playwright.config.ts`               |
-| Oxfmt 0.63.0 + Oxlint 1.78.0              | Formatting for supported docs-site files and type-aware linting for maintained TypeScript        | `docs-site/package.json`, `docs-site/oxfmt.config.ts`, `docs-site/oxlint.config.ts` |
-| Jiti 2.7.0 + `@types/node` 26.2.0         | Direct execution and Node.js typing for the docs-site TypeScript helper CLIs                     | `docs-site/package.json`, `docs-site/scripts/`                                     |
+| Oxfmt 0.73.0 + Oxlint 1.88.0              | Formatting for supported docs-site files and type-aware linting for maintained TypeScript        | `docs-site/package.json`, `docs-site/oxfmt.config.ts`, `docs-site/oxlint.config.ts` |
+| Jiti 2.7.0 + `@types/node` 26.6.5         | Direct execution and Node.js typing for the docs-site TypeScript helper CLIs                     | `docs-site/package.json`, `docs-site/scripts/`                                     |
 | GitHub Actions                            | Python/Rust quality, benchmarks, schema freshness, docs, live opt-ins, attested dispatch-only release artifacts and protected OIDC publication | `.github/workflows/`                                                     |
 
 ## Key commands

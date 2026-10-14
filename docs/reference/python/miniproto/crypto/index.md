@@ -15,9 +15,7 @@ module: "miniproto.crypto"
 
 Public cryptographic primitives for MTProto and encrypted session storage.
 
-Exports preserve behavior across the optional Rust extension and fallback
-implementations.  Individual wrappers document their backend dispatch,
-cryptographic input constraints and validation behavior.
+The optional Rust extension and Python fallback produce the same results for supported inputs. Individual wrappers document input requirements and backend selection.
 
 ## Public objects
 

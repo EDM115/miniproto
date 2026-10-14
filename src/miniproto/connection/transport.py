@@ -100,12 +100,9 @@ class Transport(Protocol):
 StreamPair = tuple[asyncio.StreamReader, asyncio.StreamWriter]
 StreamConnector = Callable[[ConnectionEndpoint, TransportConfig], Awaitable[StreamPair]]
 _LOGGER = get_logger("connection.transport")
-# 16 MiB/s at ~100 ms RTT needs ~2 MiB of TCP window; ask for 1 MiB minimum
-# per direction (best-effort, the kernel may clamp or double it).
+# 16 MiB/s at roughly 100 ms RTT needs roughly 2 MiB of TCP window, so request at least 1 MiB per direction and allow for kernel adjustments
 _MIN_SOCKET_BUFFER_BYTES = 1024 * 1024
-# Small writes (requests, acks) skip the per-packet drain()/timeout allocation;
-# anything that pushes the write buffer past this threshold still applies
-# backpressure, so 512 KiB upload parts keep their flow control.
+# Small writes skip drain()/timeout allocation while buffered data stays below this threshold, retaining backpressure for 512 KiB upload parts
 _WRITE_DRAIN_THRESHOLD_BYTES = 256 * 1024
 
 
@@ -184,7 +181,7 @@ async def _open_proxy_connection(endpoint: ConnectionEndpoint, proxy_url: str) -
 
     Args:
         endpoint: Final MTProto destination requested through the proxy.
-        proxy_url: HTTP(S), SOCKS or SOCKS5 URL with optional credentials.
+        proxy_url: HTTP CONNECT or SOCKS5 URL with optional credentials. ``http`` and ``https`` both use plain TCP to the proxy here, while ``socks`` and ``socks5`` select SOCKS5.
     """
     proxy = _parse_proxy_url(proxy_url)
     reader, writer = await asyncio.open_connection(proxy.host, proxy.port)
@@ -205,7 +202,7 @@ async def _open_proxy_connection(endpoint: ConnectionEndpoint, proxy_url: str) -
 
 
 def _parse_proxy_url(proxy_url: str) -> _ProxyConfig:
-    """Parse a supported proxy URL and apply SOCKS/HTTP default ports.
+    """Parse a proxy URL and apply SOCKS/HTTP default ports.
 
     Args:
         proxy_url: User-configured proxy URL to normalize.
@@ -226,7 +223,7 @@ def _parse_proxy_url(proxy_url: str) -> _ProxyConfig:
 async def _handshake_http_connect(
     reader: asyncio.StreamReader, writer: asyncio.StreamWriter, endpoint: ConnectionEndpoint, proxy: _ProxyConfig
 ) -> None:
-    """Issue an authenticated HTTP CONNECT request and require a 200 response.
+    """Issue HTTP CONNECT with optional Basic credentials and require a 200 response.
 
     Args:
         reader: Connected proxy stream used to read the HTTP response headers.
@@ -315,8 +312,7 @@ async def _read_socks5_bound_address(reader: asyncio.StreamReader, address_type:
     """Consume the variable-length bound-address part of a SOCKS5 response.
 
     Args:
-        reader: Proxy stream positioned immediately after a SOCKS5 response
-            status byte.
+        reader: Proxy stream positioned after the four-byte SOCKS5 response header, before its bound address.
         address_type: SOCKS5 address-family tag that determines bytes to discard.
     """
     if address_type == 1:
@@ -515,8 +511,8 @@ class StreamTransportBase:
                 ``read_timeout``; idle transports with no pending read do not
                 time out.
             TransportFlood: If Telegram sends transport error 429.
-            TransportError: If framing is invalid, oversized or a different
-                transport error frame is received.
+            ProtocolValidationError: If the frame codec rejects malformed or oversized inbound framing.
+            TransportError: If another transport error frame arrives or a custom reader returns an oversized payload.
 
         Notes:
             This is a single-reader operation. Do not await it concurrently with
@@ -531,8 +527,7 @@ class StreamTransportBase:
                 "transport.recv", started, outcome="error", error_type="TransportClosed", level=logging.INFO
             )
             raise TransportClosed("transport is not connected")
-        # A single idle watchdog per connection enforces the read deadline instead
-        # of allocating an asyncio.timeout context (heap timer) per packet.
+        # One watchdog per connection enforces read deadlines without allocating a timeout context for each packet
         if self._reads_waiting == 0:
             self._last_activity = time.monotonic()
         self._reads_waiting += 1
@@ -548,9 +543,7 @@ class StreamTransportBase:
                     "transport.recv", started, outcome="error", error_type="TransportTimeout", level=logging.WARNING
                 )
                 raise TransportTimeout("transport read timed out") from exc
-            # Telegram routinely closes media connections as a throttling/load-shedding
-            # signal; a server-side EOF is normal operation, not an error worth ERROR
-            # logs (Telethon logs INFO, Pyrogram nothing, TDLib INFO).
+            # The sender can recover a remote EOF, so record the close at INFO and leave terminal failure reporting to the caller
             _emit_transport_event(
                 "transport.recv", started, outcome="error", error_type="TransportClosed", level=logging.INFO
             )
@@ -634,9 +627,7 @@ class StreamTransportBase:
     async def _watchdog_loop(self) -> None:
         """Enforce the read deadline with one timer per connection.
 
-        Only reads that are actually waiting count against the deadline; a
-        connection with no outstanding read never times out (the sender's
-        keepalive pings guarantee regular traffic on healthy connections).
+        Only outstanding reads count against the deadline. Reads and writes refresh the activity timestamp, and an idle connection with no pending read does not time out.
         """
         timeout = self.config.read_timeout
         while not self._closed:
@@ -647,8 +638,7 @@ class StreamTransportBase:
                     record_metric("transport.read_watchdog_timeouts", 1)
                     writer = self._writer
                     if writer is not None:
-                        # Aborting the connection wakes the blocked read with
-                        # EOF/reset, which recv() converts to TransportTimeout.
+                        # Closing the connection wakes the blocked read with EOF/reset, which recv() converts to TransportTimeout
                         writer.close()
                     return
                 await asyncio.sleep(remaining)
@@ -729,11 +719,9 @@ class StreamTransportBase:
 
 
 def _apply_socket_options(writer: asyncio.StreamWriter) -> None:
-    """Best-effort TCP tuning: NODELAY, keepalive and >=1 MiB buffers.
+    """Request TCP_NODELAY, keepalive and at least 1 MiB buffers where supported.
 
-    uvloop sets NODELAY by default but stdlib asyncio (notably the Windows
-    Proactor loop) does not and default kernel buffers are too small for
-    16 MiB/s at WAN round-trip times.
+    Asyncio already enables TCP_NODELAY for TCP connections. Reapplying it also covers custom connectors. Buffer requests support higher throughput at longer round-trip times, but the operating system may adjust the requested sizes.
 
     Args:
         writer: Connected stream writer whose underlying socket is tuned when

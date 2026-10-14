@@ -55,12 +55,12 @@ from miniproto.raw.types import UpdateBusinessBotCallbackQuery
 
 Public access: `miniproto.raw.types.UpdateBusinessBotCallbackQuery`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import UpdateBusinessBotCallbackQuery
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = UpdateBusinessBotCallbackQuery
 ```
 

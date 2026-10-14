@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.types.Update"
 source_path: "src/miniproto/types.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/types.py#L125"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/types.py#L128"
 aliases: ["miniproto.Update"]
 module: "miniproto.types"
 ---

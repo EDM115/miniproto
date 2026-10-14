@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::tl::tl_encode_bytes"
 source_path: "rust/miniproto/src/tl.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L646"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L638"
 aliases: ["miniproto._native.tl_encode_bytes"]
 python_visible: true
 ---
@@ -15,7 +15,7 @@ python_visible: true
 ## Provenance
 
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L646)
+- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L638)
 - Python exposure: `miniproto._native.tl_encode_bytes` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -26,7 +26,7 @@ fn tl_encode_bytes(value: &[u8]) -> _
 
 ## Arguments
 
-- `value`: Bytes to prefix and pad according to TL rules.
+- `value`: Must contain at most `2**24 - 1` bytes. This function does not check the limit.
 
 ## cargo-docs-md rendering
 
@@ -36,10 +36,10 @@ fn tl_encode_bytes(value: &[u8]) -> _
 fn tl_encode_bytes(value: &[u8]) -> Vec<u8>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:646-648`*
+*Defined in `rust/miniproto/src/tl.rs:638-640`*
 
 Encodes Python `tl_encode_bytes(value)` with TL's short/long length prefix and zero padding.
 
 # Arguments
 
-- `value`: Bytes to prefix and pad according to TL rules.
+- `value`: Must contain at most `2**24 - 1` bytes. This function does not check the limit.

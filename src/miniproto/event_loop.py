@@ -17,7 +17,7 @@ _BACKEND_LOAD_ERROR: Exception | None = None
 _INSTALL_ERROR: Exception | None = None
 _INSTALLED = False
 _STDLIB_DEBUG_FALLBACK_THROUGH = {
-    # Latest releases still capture unsafe frames during async-generator finalization
+    # Bound the debug async-generator finalization workaround to these backend versions
     # https://github.com/MagicStack/uvloop/issues/715
     "uvloop": (0, 23, 0),
     "winloop": (0, 8, 0),
@@ -106,13 +106,10 @@ def install() -> bool:
         3.16+ rejects policy installation.
 
     Raises:
-        DeprecationWarning: Always warns because policy installation is a
-            deprecated asyncio integration path.
+        DeprecationWarning: If the warning filter treats the emitted deprecation warning as an error.
 
     Notes:
-        This process-global operation is not safe to race with other tasks that
-        create loops. Prefer :func:`run` or ``asyncio.Runner`` with
-        :func:`new_event_loop` for scoped lifecycle control.
+        This call emits a ``DeprecationWarning``. The process-global policy change must not race with loop creation. Prefer :func:`run` or ``asyncio.Runner`` with :func:`new_event_loop` for a scoped lifecycle.
     """
     global _INSTALLED, _INSTALL_ERROR
     warnings.warn(
@@ -171,8 +168,7 @@ def run[T](main: Coroutine[Any, Any, T], *, debug: bool | None = None) -> T:
 
     Args:
         main: The coroutine to execute until it returns or raises.
-        debug: Passed to ``asyncio.Runner``. ``None`` preserves asyncio's
-            default; known backend/debug incompatibilities use the stdlib loop.
+        debug: Passed to ``asyncio.Runner``. ``None`` preserves asyncio's default. Explicit ``True`` selects the stdlib loop for the backend versions covered by the compatibility fallback.
 
     Returns:
         The coroutine's result.

@@ -1,13 +1,13 @@
 ---
 title: "miniproto.media.scheduler.MediaTransfer.rebind"
-description: "Move future queued work to ``dc_id`` while live permits drain in place."
+description: "Move queued and future requests to ``dc_id`` while live permits drain in place."
 generated: true
 editUrl: false
 language: "python"
 kind: "function"
 qualified_name: "miniproto.media.scheduler.MediaTransfer.rebind"
 source_path: "src/miniproto/media/scheduler.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/scheduler.py#L622"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/scheduler.py#L620"
 module: "miniproto.media.scheduler"
 ---
 
@@ -17,7 +17,7 @@ module: "miniproto.media.scheduler"
 rebind(dc_id: int) -> None
 ```
 
-Move future queued work to ``dc_id`` while live permits drain in place.
+Move queued and future requests to ``dc_id`` while live permits drain in place.
 
 **Parameters:**
 

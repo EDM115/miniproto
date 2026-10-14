@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.client.Client.edit_message"
 source_path: "src/miniproto/client.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L801"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L829"
 aliases: ["miniproto.Client.edit_message"]
 module: "miniproto.client"
 ---
@@ -38,3 +38,7 @@ Explicit ``entities`` take precedence over ``parse_mode``. Request timeout, floo
 - **request_timeout** (<code>[float](#float) | None</code>) – Optional per-request timeout overriding client configuration.
 - **flood_sleep_threshold** (<code>[int](#int) | None</code>) – Optional maximum flood-wait seconds to sleep automatically.
 - **retry** (<code>[bool](#bool) | None</code>) – Whether to force or suppress retry eligibility.
+
+**Returns:**
+
+- <code>[Message](#miniproto.types.Message)</code> – The first concrete message in the response, or an ID-``0`` fallback with submitted text and current UTC time if Telegram returns no message object.

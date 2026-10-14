@@ -25,5 +25,5 @@ Immutable metric event recorded with a unit, attributes and wall-clock timestamp
 - [**name**](#miniproto.observability.MetricEvent.name) (<code>[str](#str)</code>) – Metric name.
 - [**value**](#miniproto.observability.MetricEvent.value) (<code>[float](#float)</code>) – Numeric measurement.
 - [**unit**](#miniproto.observability.MetricEvent.unit) (<code>[str](#str)</code>) – Unit label, defaulting to ``"count"``.
-- [**attributes**](#miniproto.observability.MetricEvent.attributes) (<code>[Mapping](#collections.abc.Mapping)[[str](#str), [object](#object)]</code>) – Immutable-by-convention metric dimensions copied at record time.
+- [**attributes**](#miniproto.observability.MetricEvent.attributes) (<code>[Mapping](#collections.abc.Mapping)[[str](#str), [object](#object)]</code>) – Metric dimensions, shallow-copied by ``InMemoryMetrics.record_metric``. Constructing ``MetricEvent`` directly retains the supplied mapping.
 - [**timestamp**](#miniproto.observability.MetricEvent.timestamp) (<code>[float](#float)</code>) – Wall-clock record time in seconds since the epoch.

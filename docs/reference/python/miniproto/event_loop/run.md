@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.event_loop.run"
 source_path: "src/miniproto/event_loop.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/event_loop.py#L169"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/event_loop.py#L166"
 module: "miniproto.event_loop"
 ---
 
@@ -22,8 +22,7 @@ Run one coroutine with an optimized ``asyncio.Runner`` when possible.
 **Parameters:**
 
 - **main** (<code>[Coroutine](#collections.abc.Coroutine)[[Any](#typing.Any), [Any](#typing.Any), [run[T]](#miniproto.event_loop.run[T])]</code>) – The coroutine to execute until it returns or raises.
-- **debug** (<code>[bool](#bool) | None</code>) – Passed to ``asyncio.Runner``. ``None`` preserves asyncio's
-default; known backend/debug incompatibilities use the stdlib loop.
+- **debug** (<code>[bool](#bool) | None</code>) – Passed to ``asyncio.Runner``. ``None`` preserves asyncio's default. Explicit ``True`` selects the stdlib loop for the backend versions covered by the compatibility fallback.
 
 **Returns:**
 

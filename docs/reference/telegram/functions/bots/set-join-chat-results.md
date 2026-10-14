@@ -42,12 +42,12 @@ from miniproto.raw.functions import BotsSetJoinChatResults
 
 Public access: `miniproto.raw.functions.BotsSetJoinChatResults`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.functions import BotsSetJoinChatResults
 
-# Naming the raw request class is local only; it performs no I/O or network request.
+# Refer to the raw request class without constructing it or calling Telegram
 request_type = BotsSetJoinChatResults
 ```
 

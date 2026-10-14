@@ -44,12 +44,12 @@ from miniproto.raw.types import SavedPhoneContact
 
 Public access: `miniproto.raw.types.SavedPhoneContact`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import SavedPhoneContact
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = SavedPhoneContact
 ```
 

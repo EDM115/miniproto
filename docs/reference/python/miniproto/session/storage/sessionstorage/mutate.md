@@ -22,4 +22,8 @@ Atomically apply a synchronous transform to an isolated current snapshot.
 
 **Parameters:**
 
-- **transform** (<code>[Callable](#collections.abc.Callable)[[[Mapping](#collections.abc.Mapping)[[str](#str), [Any](#typing.Any)] | None], [SessionPayload](#miniproto.session.storage.SessionPayload) | None]</code>) – Synchronous callback receiving detached stored data and returning replacement data or ``None``.
+- **transform** (<code>[Callable](#collections.abc.Callable)[[[Mapping](#collections.abc.Mapping)[[str](#str), [Any](#typing.Any)] | None], [SessionPayload](#miniproto.session.storage.SessionPayload) | None]</code>) – Synchronous callback receiving detached stored data and returning replacement data. Returning ``None`` clears the session.
+
+**Returns:**
+
+- <code>[Mapping](#collections.abc.Mapping)[[str](#str), [Any](#typing.Any)] | None</code> – A detached snapshot of the committed replacement, or ``None`` after clearing.

@@ -1,4 +1,7 @@
-"""Small immutable public value types produced by high-level client helpers."""
+"""Frozen public value types produced by client helpers and update conversion.
+
+Freezing prevents attribute reassignment. Raw payloads and metadata may remain mutable.
+"""
 
 from __future__ import annotations
 
@@ -108,8 +111,8 @@ class Message:
         peer: Conversation containing the message.
         text: Parsed message text.
         date: Telegram timestamp.
-        media: Optional normalized attachment.
-        entities: Parsed text entities.
+        media: Optional normalized attachment from messaging helpers. Pushed ``NewMessage`` updates retain the raw TL media object instead.
+        entities: Formatting entities from messaging helpers. Pushed-update conversion leaves this tuple empty.
         raw: Optional underlying TL message.
     """
 
@@ -142,7 +145,7 @@ class NewMessage(Update):
     Attributes:
         date: Inherited update timestamp, generated as current UTC time when omitted.
         raw: Inherited optional original Telegram TL object.
-        message: Normalized message when conversion succeeded.
+        message: Converted message when supported, with raw TL media retained for pushed updates. Use ``media_from_raw`` from ``miniproto.media`` to obtain a normalized ``Media`` and its ``file_id``.
         metadata: Additional update-specific values.
     """
 

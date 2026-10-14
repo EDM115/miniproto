@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.session.storage.EncryptedSQLiteSessionStorage"
 source_path: "src/miniproto/session/storage.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/storage.py#L214"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/storage.py#L227"
 aliases: ["miniproto.EncryptedSQLiteSessionStorage","miniproto.session.EncryptedSQLiteSessionStorage"]
 module: "miniproto.session.storage"
 ---
@@ -20,10 +20,9 @@ EncryptedSQLiteSessionStorage(path: str | os.PathLike[str], key: bytes | str | N
 
 Thread-safe SQLite persistence with per-domain authenticated encryption.
 
-Encryption and MAC keys derive from supplied key material. Reads and writes
-run off the event loop, while SQLite ``BEGIN IMMEDIATE`` serializes mutations.
-Legacy single-record payloads migrate to independently encrypted domains on
-the next replacement or mutation.
+Encryption and MAC keys derive from supplied key material. Reads and writes run on worker threads. SQLite ``BEGIN IMMEDIATE`` serializes mutations. Legacy single-record payloads migrate to separate encrypted domains on the next replacement or mutation.
+
+Cancelling a direct async call can leave its worker running and a write may still commit. The client storage wrapper waits for backend completion and reconciles its cache before propagating cancellation.
 
 Open a lazy encrypted database using explicit or environment key material.
 

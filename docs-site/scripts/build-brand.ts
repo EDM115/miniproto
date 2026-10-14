@@ -14,10 +14,12 @@ const options = new Set(process.argv.slice(2));
 const checking = options.has("--check");
 if (options.has("--help") || options.has("-h")) {
   console.log("Usage: jiti scripts/build-brand.ts [--check]");
-  console.log("Build or verify the production SVG and social-card derivatives.");
+  console.log("Build brand assets or check SVG content and the PNG signature and dimensions.");
   console.log("");
   console.log("Options:");
-  console.log("  --check  Verify every committed derivative without writing files.");
+  // Keep this CLI sentence on one source line
+  // oxfmt-ignore
+  console.log("  --check  Check SVG derivatives and the PNG signature and dimensions without writing files.");
   console.log("  -h, --help  Show this help message and exit.");
   process.exit(0);
 }
@@ -91,12 +93,14 @@ if (drift.length > 0) {
   throw new Error(`Brand derivatives are stale:\n${drift.map((file) => `- ${file}`).join("\n")}`);
 }
 if (checking) {
-  console.log(`Brand derivatives are current (${outputs.size + 1} files).`);
+  // Keep this CLI sentence on one source line
+  // oxfmt-ignore
+  console.log(`SVG derivatives match and the PNG signature and dimensions are valid (${outputs.size + 1} files).`);
 } else {
   console.log(`Brand derivatives built (${outputs.size} files).`);
 }
 
-/** Validate the committed raster portably without rerendering fonts through a platform-specific SVG engine. */
+/** Check the PNG signature and dimensions without rerendering fonts through a platform-specific SVG engine */
 async function isExpectedPng(filePath: string, width: number, height: number): Promise<boolean> {
   let contents: Buffer;
   try {
@@ -147,8 +151,8 @@ function buildSocialCard({
   <path d="M0 516H1200" stroke="#C7F406" stroke-opacity=".18"/>
   <text class="display" x="78" y="126" fill="#C7F406" font-size="30" letter-spacing="1.5">0.1.0 ALPHA</text>
   <text class="display" x="78" y="258" fill="#F8FFF5" font-size="104" letter-spacing="-4">miniproto</text>
-  <text x="84" y="324" fill="#C1D6CF" font-family="system-ui,sans-serif" font-size="31">MTProto, without the framework tax.</text>
-  <text data-role="supporting-description" fill="#8EA9A2" font-family="system-ui,sans-serif" font-size="22"><tspan x="84" y="382">Python intent · Layer 229 schema</tspan><tspan x="84" y="416">measured Rust fast paths</tspan></text>
+  <text x="84" y="324" fill="#C1D6CF" font-family="system-ui,sans-serif" font-size="31">An async MTProto client for Python</text>
+  <text data-role="supporting-description" fill="#8EA9A2" font-family="system-ui,sans-serif" font-size="22"><tspan x="84" y="382">Python API · Layer 230 schema</tspan><tspan x="84" y="416">Rust acceleration</tspan></text>
   <g aria-hidden="true" transform="translate(718 90) scale(.98)">${markGeometry}</g>
   <rect data-role="repository-marker" x="78" y="566" width="14" height="14" rx="4" fill="#C7F406"/>
   <text data-role="repository-link" x="110" y="580" fill="#C1D6CF" font-family="ui-monospace,monospace" font-size="18">github.com/EDM115/miniproto</text>

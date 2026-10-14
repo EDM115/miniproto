@@ -41,12 +41,12 @@ from miniproto.raw.functions import AuthCheckPassword
 
 Public access: `miniproto.raw.functions.AuthCheckPassword`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.functions import AuthCheckPassword
 
-# Naming the raw request class is local only; it performs no I/O or network request.
+# Refer to the raw request class without constructing it or calling Telegram
 request_type = AuthCheckPassword
 ```
 

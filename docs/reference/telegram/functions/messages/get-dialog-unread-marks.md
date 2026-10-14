@@ -48,12 +48,12 @@ from miniproto.raw.functions import MessagesGetDialogUnreadMarks
 
 Public access: `miniproto.raw.functions.MessagesGetDialogUnreadMarks`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.functions import MessagesGetDialogUnreadMarks
 
-# Naming the raw request class is local only; it performs no I/O or network request.
+# Refer to the raw request class without constructing it or calling Telegram
 request_type = MessagesGetDialogUnreadMarks
 ```
 

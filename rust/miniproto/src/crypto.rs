@@ -1,10 +1,6 @@
 //! Native cryptographic primitives used by MTProto and its Python fallback-compatible API.
 //!
-//! Each `#[pyfunction]` is exported under its Rust name in `miniproto._native`.  Byte-heavy
-//! wrappers conditionally release the GIL, while `*_raw` functions are Rust-only building blocks
-//! that never require it. PyO3 rejects incompatible Python argument conversion first, preserving
-//! its `TypeError`, `OverflowError` or source exception; algorithm and byte-shape validation in
-//! this module intentionally return Python `ValueError`. No caller-facing unsafe API is exposed.
+//! Each `#[pyfunction]` is exported under its Rust name in `miniproto._native`. Selected wrappers detach for large workloads, while `*_raw` functions operate without Python objects. PyO3 conversion errors propagate unchanged, and algorithm or byte-shape validation returns `ValueError`. Python wrappers may select a fallback even when these native exports are available.
 
 use aes::Aes256;
 use aes_gcm::aead::consts::U12;
@@ -36,8 +32,7 @@ const SCRYPT_MAX_WORK_BYTES: usize = 1024 * 1024 * 1024;
 
 /// Runs `f` without the GIL when its input work estimate exceeds the native threshold.
 ///
-/// `work_bytes` is an estimate used solely for GIL scheduling; `f` must satisfy PyO3's `Ungil`
-/// requirements.  This helper preserves synchronous results and does not itself allocate.
+/// `work_bytes` controls thread detachment, and `f` must satisfy PyO3's `Ungil` requirements. Detachment releases the GIL on GIL-enabled builds. The computation remains synchronous.
 ///
 /// # Arguments
 ///
@@ -141,7 +136,7 @@ fn mtproto_auth_key_id(auth_key: &[u8]) -> PyResult<Vec<u8>> {
 ///
 /// - `py`: The acquired GIL token used to detach a large hash operation.
 /// - `auth_key`: The 256-byte MTProto authorization key.
-/// - `plaintext_with_padding`: Block-aligned inner plaintext that contributes to the message key.
+/// - `plaintext_with_padding`: Inner plaintext including padding, with no alignment or padding validation here
 /// - `client_to_server`: Selects the directional MTProto key offset.
 #[pyfunction]
 fn mtproto_message_key(
@@ -163,9 +158,7 @@ fn mtproto_message_key(
 
 /// Derives the AES-256 key and IV used by Python `mtproto_derive_aes_key_iv`.
 ///
-/// Returns `(key, iv)` and validates both fixed-width inputs. Valid inputs total 272 bytes
-/// (`auth_key` 256 plus `msg_key` 16), so this wrapper never exceeds the detach threshold and
-/// performs the derivation while holding the GIL.
+/// Returns `(key, iv)` after validating both inputs. Valid inputs total 272 bytes (`auth_key` 256 plus `msg_key` 16), so successful derivations run below the detach threshold.
 ///
 /// # Arguments
 ///
@@ -862,7 +855,7 @@ pub(crate) fn aes_256_gcm_decrypt_raw(
         .map_err(|_| PyValueError::new_err("AES-GCM authentication failed"))
 }
 
-/// Runs scrypt with validated protocol-level output limits for Rust callers.
+/// Runs scrypt with the library's output and resource limits for Rust callers
 ///
 /// Returns `ValueError` for invalid cost parameters, an unsupported output length or derivation
 /// failure.  This is a synchronous, GIL-free primitive.
@@ -1085,8 +1078,7 @@ fn gcd(mut left: u64, mut right: u64) -> u64 {
 ///
 /// # Panics
 ///
-/// Panics if `modulus` is zero because the remainder operation is undefined. Callers must also
-/// pass a nonzero modulus; `u128` widening prevents multiplication overflow for all `u64` inputs.
+/// A zero `modulus` panics at the remainder operation. Widening the product to `u128` prevents multiplication overflow for `u64` inputs.
 ///
 /// # Arguments
 ///
@@ -1101,8 +1093,7 @@ fn mul_mod(left: u64, right: u64, modulus: u64) -> u64 {
 ///
 /// # Panics
 ///
-/// Panics if `modulus` is zero because both reduction paths use remainder operations. Arithmetic
-/// overflow is avoided by delegating products to `mul_mod` with its widened intermediate.
+/// A zero `modulus` panics when `exponent` is nonzero. Products use `mul_mod` and its widened intermediate to avoid multiplication overflow.
 ///
 /// # Arguments
 ///
@@ -1260,7 +1251,7 @@ mod tests {
     }
 
     #[test]
-    /// Locks down AES-GCM and scrypt interoperability vectors.
+    /// Checks a fixed scrypt vector, AES-GCM round-tripping and associated-data authentication
     fn aes_gcm_and_scrypt_match_stable_vectors() {
         let key = scrypt_derive_raw(b"password", b"NaCl", 16_384, 8, 1, 32).unwrap();
         assert_eq!(

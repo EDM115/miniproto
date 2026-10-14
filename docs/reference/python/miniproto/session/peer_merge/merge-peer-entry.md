@@ -1,6 +1,6 @@
 ---
 title: "miniproto.session.peer_merge.merge_peer_entry"
-description: "Prefer fresh fields while retaining existing hashes and populated metadata."
+description: "Apply incoming peer metadata while preserving a missing access hash."
 generated: true
 editUrl: false
 language: "python"
@@ -17,9 +17,11 @@ module: "miniproto.session.peer_merge"
 merge_peer_entry(current: PeerCacheEntry, incoming: PeerCacheEntry) -> PeerCacheEntry
 ```
 
-Prefer fresh fields while retaining existing hashes and populated metadata.
+Apply incoming peer metadata while preserving a missing access hash.
+
+A full entry marked ``_miniproto_complete`` replaces raw metadata and may clear username or phone values. Partial entries retain existing values where incoming aliases are empty.
 
 **Parameters:**
 
 - **current** (<code>[PeerCacheEntry](#miniproto.session.models.PeerCacheEntry)</code>) – Existing canonical peer cache entry.
-- **incoming** (<code>[PeerCacheEntry](#miniproto.session.models.PeerCacheEntry)</code>) – New entry whose populated fields take precedence.
+- **incoming** (<code>[PeerCacheEntry](#miniproto.session.models.PeerCacheEntry)</code>) – New entry whose completeness marker determines whether missing aliases clear existing values.

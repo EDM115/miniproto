@@ -124,7 +124,7 @@ def safe_repr(value: object) -> str:
         value: Arbitrary value intended for diagnostic output.
 
     Returns:
-        The safe representation of the redacted value.
+        The representation after redacting supported shapes. Other objects retain their own ``repr``, unrecognized text and field names may still contain secrets.
     """
     return repr(_redact_nested(value))
 

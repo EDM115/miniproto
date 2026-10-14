@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.errors.PasswordInvalid"
 source_path: "src/miniproto/errors.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L368"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L370"
 aliases: ["miniproto.PasswordInvalid"]
 module: "miniproto.errors"
 ---

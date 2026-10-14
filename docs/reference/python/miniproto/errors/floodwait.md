@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.errors.FloodWait"
 source_path: "src/miniproto/errors.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L297"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L299"
 aliases: ["miniproto.FloodWait"]
 module: "miniproto.errors"
 ---

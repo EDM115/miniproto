@@ -1,9 +1,6 @@
 """Telegram CDN retrieval, AES-CTR decryption and ``FileHash``-bounded integrity checks.
 
-The module accepts and returns ordinary immutable ``bytes``. Ciphertext,
-plaintext, redirect keys, IVs and temporary counter buffers are not explicitly
-zeroized; callers that require memory sanitization must manage their own process
-and buffer-lifetime boundary.
+The module accepts and returns immutable ``bytes``. It does not zeroize ciphertext, plaintext, redirect keys, IVs or temporary counter buffers. Callers that require memory sanitization must manage process and buffer lifetimes.
 """
 
 from __future__ import annotations
@@ -20,16 +17,13 @@ CDN_HASH_BLOCK_SIZE = 128 * 1024
 
 
 class CdnError(RuntimeError):
-    """Raised when a CDN response cannot be reuploaded, decrypted or interpreted."""
+    """Base exception for unsupported CDN responses and integrity failures."""
 
 
 class CdnIntegrityError(CdnError):
     """Raised when a CDN range lacks valid ``FileHash`` coverage or verification fails.
 
-    This includes missing hash metadata, non-positive declared ``FileHash.limit``,
-    a response shorter than that declared limit and SHA-256 mismatches. The
-    declared limit controls exactly how many decrypted bytes form each verified
-    range; it is not assumed to be a fixed-size block.
+    This includes missing hash metadata, non-positive ``FileHash.limit``, responses shorter than a declared hash interval, SHA-256 mismatches and intervals that cannot fit a legal CDN request. Each declared limit determines the exact number of decrypted bytes to hash.
     """
 
 
@@ -38,13 +32,13 @@ type RawInvoker = Callable[..., Awaitable[object]]
 
 @dataclass(frozen=True, slots=True)
 class CdnRedirect:
-    """Validated information supplied by Telegram when a file moves to its CDN.
+    """Metadata supplied by Telegram when it redirects a file to its CDN.
 
     Attributes:
         dc_id: CDN data-center identifier.
-        file_token: Opaque token authorizing CDN file and hash requests.
-        encryption_key: 32-byte AES-CTR key for CDN ciphertext; retained as immutable bytes and not zeroized.
-        encryption_iv: 16-byte initial counter block for CDN ciphertext; retained as immutable bytes and not zeroized.
+        file_token: Opaque bearer token for CDN file, hash and reupload requests.
+        encryption_key: Expected 32-byte AES-CTR key, validated at decryption, retained as immutable bytes without zeroization.
+        encryption_iv: Expected 16-byte IV, validated at decryption. Its first 12 bytes form the counter prefix, the file block offset replaces its final four bytes. Retained without zeroization.
         file_hashes: Hash metadata supplied with the redirect.
         raw: Original raw Telegram redirect object.
     """
@@ -73,15 +67,15 @@ async def get_cdn_file_part(
         cdn_invoke: Async CDN-DC invoker used only for ``upload.getCdnFile``.
         redirect: CDN credentials and encryption metadata returned by Telegram.
         offset: Byte offset of the requested range and CTR stream.
-        limit: Maximum ciphertext/plaintext bytes to retrieve.
+        limit: Maximum plaintext bytes to return. Retrieval covers complete hash intervals and can overfetch aligned ciphertext ranges.
         request_timeout: Optional per-RPC timeout in seconds.
 
     Returns:
-        The decrypted, integrity-verified bytes returned for the requested range.
+        The requested slice of complete SHA-256-verified plaintext intervals, at most ``limit`` bytes.
 
     Raises:
-        CdnIntegrityError: The range lacks coverage, has an invalid/short declared
-            hash range or its digest mismatches.
+        ValueError: ``offset`` or ``limit`` is invalid, or redirect key/IV lengths or the CTR offset violate decryption constraints.
+        CdnIntegrityError: The range lacks complete valid hash coverage, its digest mismatches or a hash interval cannot fit a legal CDN request.
         CdnError: Telegram returns an unsupported CDN response.
         asyncio.CancelledError: The caller cancels the awaited transfer.
     """
@@ -158,27 +152,21 @@ async def verify_cdn_part(
     known_hashes: dict[int, types.FileHash] | None = None,
     request_timeout: float | None = None,
 ) -> None:
-    """Verify a decrypted CDN chunk against Telegram's 128 KiB SHA-256 file hashes.
+    """Verify a decrypted CDN chunk against complete declared SHA-256 hash intervals.
 
     Args:
         invoke: Async raw-RPC invoker used to request missing CDN hash metadata.
         redirect: CDN token and redirect-provided hash metadata for this file.
         offset: File offset of the first byte in ``data``.
-        data: Already-decrypted CDN bytes to validate; bytes are not zeroized.
-        known_hashes: Optional mutable offset-to-hash cache shared by the caller.
-            Redirect hashes seed a new cache when it is omitted.
+        data: Decrypted bytes beginning at a hash interval's exact offset, bytes are not zeroized.
+        known_hashes: Optional mutable offset-to-hash cache shared by the caller, redirect hashes seed a new cache only when it is omitted.
         request_timeout: Optional per-RPC timeout in seconds for missing hash fetches.
 
     Raises:
-        CdnIntegrityError: Any byte lacks a valid complete hash block, hash metadata
-            is invalid or a SHA-256 digest mismatches.
+        CdnIntegrityError: Any byte lacks a complete declared hash interval, hash metadata is invalid or a SHA-256 digest mismatches.
         asyncio.CancelledError: The awaited metadata request is cancelled.
 
-    Hashes delivered with the redirect seed the lookup; uncovered blocks are
-    fetched from the master DC with ``upload.getCdnFileHashes``. Every byte of
-    ``data`` must be covered by a verified hash. Each raw ``FileHash.limit``
-    defines the exact number of bytes sliced and hashed for its offset, so a
-    short chunk cannot be treated as a partial successful block.
+    Missing metadata is fetched from the master DC with ``upload.getCdnFileHashes``. ``data`` must contain complete consecutive hash intervals, each starting at the declared ``FileHash.offset`` and containing exactly ``FileHash.limit`` bytes. This helper does not retrieve missing plaintext for partial intervals.
     """
     if not data:
         return
@@ -239,10 +227,10 @@ def decrypt_cdn_chunk(data: bytes, *, key: bytes, iv: bytes, offset: int = 0) ->
     """Decrypt a CDN ciphertext range with the counter aligned to its file offset.
 
     Args:
-        data: Ciphertext bytes for a contiguous CDN response; immutable buffers are not zeroized.
-        key: Exactly 32 bytes of AES key material; immutable buffers are not zeroized.
-        iv: Exactly 16 bytes forming the initial CTR counter; immutable buffers are not zeroized.
-        offset: Non-negative file offset of ``data``; defaults to ``0``.
+        data: Ciphertext bytes for a contiguous CDN response, immutable buffers are not zeroized.
+        key: Exactly 32 bytes of AES key material, immutable buffers are not zeroized.
+        iv: Exactly 16 bytes, the first 12 form the counter prefix and the final four are replaced with ``offset // 16``. Immutable buffers are not zeroized.
+        offset: Non-negative file byte offset of ``data``, defaults to ``0``, its block index must fit in 32 bits.
 
     Returns:
         Plaintext bytes of the same length as ``data``.
@@ -266,10 +254,10 @@ def decrypt_cdn_chunk(data: bytes, *, key: bytes, iv: bytes, offset: int = 0) ->
 
 
 def _file_hash_map(file_hashes: tuple[object, ...]) -> dict[int, types.FileHash]:
-    """Index valid file-hash objects by their starting offsets.
+    """Index raw ``FileHash`` objects by starting offset, retaining the first duplicate.
 
     Args:
-        file_hashes: Redirect-provided raw hash candidates to filter and index.
+        file_hashes: Redirect-provided candidates, filtered by type without validating interval bounds or digests.
     """
     hashes: dict[int, types.FileHash] = {}
     for item in _iter_file_hashes(file_hashes):
@@ -297,6 +285,9 @@ def _cdn_wire_range(hash_offset: int, hash_limit: int) -> tuple[int, int]:
     Args:
         hash_offset: Start of the Telegram hash interval.
         hash_limit: Complete byte length authenticated by that hash.
+
+    Raises:
+        CdnIntegrityError: No 4 KiB-aligned request of at most one MiB covers the interval within a single one-MiB boundary.
     """
     wire_offset = hash_offset - (hash_offset % 4096)
     required = hash_offset + hash_limit - wire_offset

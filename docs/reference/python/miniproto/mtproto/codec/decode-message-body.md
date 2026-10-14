@@ -1,6 +1,6 @@
 ---
 title: "miniproto.mtproto.codec.decode_message_body"
-description: "Decode recognized MTProto service bodies, preserving unknown data as a view."
+description: "Decode recognized MTProto service bodies, returning unknown input unchanged."
 generated: true
 editUrl: false
 language: "python"
@@ -18,7 +18,7 @@ module: "miniproto.mtproto.codec"
 decode_message_body(data: ByteBuffer) -> ByteBuffer | object
 ```
 
-Decode recognized MTProto service bodies, preserving unknown data as a view.
+Decode recognized MTProto service bodies, returning unknown input unchanged.
 
 **Parameters:**
 

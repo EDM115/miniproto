@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.client.Client.connect"
 source_path: "src/miniproto/client.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L421"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L439"
 aliases: ["miniproto.Client.connect"]
 module: "miniproto.client"
 ---
@@ -20,7 +20,7 @@ connect() -> None
 
 Mark the client connected and start update handling when enabled.
 
-The method is serialized with ``disconnect`` and is safe to call repeatedly. If update startup fails, it rolls back the connection state and closes any sender it created.
+Repeated calls retain the running update manager. The method serializes with ``disconnect`` and rolls back local connection state if startup fails. Network senders remain lazy unless an imported session requires update-state bootstrap.
 
 **Raises:**
 

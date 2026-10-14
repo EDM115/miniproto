@@ -1,6 +1,6 @@
 ---
 title: "miniproto.auth.key_exchange.ServerDHInnerData"
-description: "Validated plaintext DH group and server public value from Telegram."
+description: "Decoded plaintext DH parameters, validated separately by the key exchange."
 generated: true
 editUrl: false
 language: "python"
@@ -18,7 +18,7 @@ module: "miniproto.auth.key_exchange"
 ServerDHInnerData(nonce: int, server_nonce: int, g: int, dh_prime: bytes, g_a: bytes, server_time: int) -> None
 ```
 
-Validated plaintext DH group and server public value from Telegram.
+Decoded plaintext DH parameters, validated separately by the key exchange.
 
 **Parameters:**
 

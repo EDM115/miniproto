@@ -51,12 +51,12 @@ from miniproto.raw.types import UpdateMoveStickerSetToTop
 
 Public access: `miniproto.raw.types.UpdateMoveStickerSetToTop`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import UpdateMoveStickerSetToTop
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = UpdateMoveStickerSetToTop
 ```
 

@@ -42,12 +42,12 @@ from miniproto.raw.functions import ChannelsReadHistory
 
 Public access: `miniproto.raw.functions.ChannelsReadHistory`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.functions import ChannelsReadHistory
 
-# Naming the raw request class is local only; it performs no I/O or network request.
+# Refer to the raw request class without constructing it or calling Telegram
 request_type = ChannelsReadHistory
 ```
 

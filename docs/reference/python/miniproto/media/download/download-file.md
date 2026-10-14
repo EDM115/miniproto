@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.media.download.download_file"
 source_path: "src/miniproto/media/download.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L1366"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L1339"
 aliases: ["miniproto.media.download_file"]
 module: "miniproto.media.download"
 ---
@@ -24,59 +24,50 @@ Download media into memory, a path or a caller-owned binary stream.
 
 - **invoke** (<code>[RawInvoker](#miniproto.media.download.RawInvoker)</code>) – Async raw-RPC invoker used for Telegram file requests.
 - **location** (<code>[object](#object)</code>) – Telegram input file location to retrieve.
-- **destination** (<code>[Destination](#miniproto.media.download.Destination)</code>) – ``None`` for in-memory bytes, a path to create/overwrite or an open binary stream.
-- **offset** (<code>[int](#int)</code>) – Starting byte offset; defaults to ``0``.
+- **destination** (<code>[Destination](#miniproto.media.download.Destination)</code>) – ``None`` for in-memory bytes, a path to create/overwrite or an open binary stream written from its current position.
+- **offset** (<code>[int](#int)</code>) – Starting byte offset, a multiple of 1 KiB, defaults to ``0``.
 - **limit** (<code>[int](#int) | None</code>) – Exact requested byte count or ``None`` to continue until EOF.
-- **part_size** (<code>[int](#int)</code>) – Initial power-of-two request size; defaults to 512 KiB.
-- **resume** (<code>[bool](#bool)</code>) – Append to an existing path from its 1 KiB-aligned size; defaults to ``False``.
-- **progress** (<code>[ProgressCallback](#miniproto.media.upload.ProgressCallback) | None</code>) – Optional synchronous or async ``(current, total)`` callback;
-``current`` is committed operation bytes and begins at any retained
-resume prefix, while ``total`` is ``limit`` or otherwise ``total_size``.
-- **precise** (<code>[bool](#bool)</code>) – Request Telegram's 1 KiB precise mode; enabled automatically when required.
+- **part_size** (<code>[int](#int)</code>) – Initial power-of-two request size from 1 KiB through one MiB, defaults to 512 KiB.
+- **resume** (<code>[bool](#bool)</code>) – Retain an existing path's 1 KiB-aligned prefix and fetch from ``offset`` plus that length, defaults to ``False``. It does not verify the retained prefix.
+- **progress** (<code>[ProgressCallback](#miniproto.media.upload.ProgressCallback) | None</code>) – Optional synchronous or async ``(current, total)`` callback. ``current`` counts acknowledged operation bytes including a retained resume prefix, ``total`` is the effective ``limit`` or otherwise ``total_size``.
+- **precise** (<code>[bool](#bool)</code>) – Request Telegram's 1 KiB precise mode, enabled automatically when required.
 - **cdn_supported** (<code>[bool](#bool)</code>) – Permit CDN redirects and their mandatory block verification.
 - **total_size** (<code>[int](#int) | None</code>) – Known full file size used to preserve finite concurrent coverage.
-- **request_timeout** (<code>[float](#float) | None</code>) – Optional timeout passed to each raw request.
-- **max_retries** (<code>[int](#int)</code>) – Non-flood transient retry budget per part; defaults to ``2``.
-- **flood_sleep_threshold** (<code>[int](#int) | None</code>) – Retry eligible flood waits at or below this number of seconds; ``None`` disables them.
-Eligible waits retain their slot and are separately capped at 16 per part.
-- **max_buffer_size** (<code>[int](#int) | None</code>) – Legacy maximum in-flight byte window alias.
-- **concurrency** (<code>[int](#int)</code>) – Maximum concurrent requests and queued writes.
-- **adaptive_concurrency** (<code>[bool](#bool)</code>) – Adapt the active request window to connection failures.
+- **request_timeout** (<code>[float](#float) | None</code>) – Optional timeout in seconds passed to each raw request.
+- **max_retries** (<code>[int](#int)</code>) – Non-flood transient retry budget per part, defaults to two.
+- **flood_sleep_threshold** (<code>[int](#int) | None</code>) – Maximum retryable server flood wait in seconds, defaults to 30, ``None`` disables flood retries. Eligible waits retain their local slot and use a separate 16-retry cap per part.
+- **max_buffer_size** (<code>[int](#int) | None</code>) – Legacy byte window alias used when ``max_in_flight_bytes`` is absent.
+- **concurrency** (<code>[int](#int)</code>) – Maximum active part requests for finite ranges and queued destination writes, defaults to six. Unknown-length transfers use one part request at a time.
+- **adaptive_concurrency** (<code>[bool](#bool)</code>) – Reduce new request slots on disconnects/timeouts, recover after clean completions, or keep one slot after a premium flood wait.
 - **launch_stagger** (<code>[bool](#bool)</code>) – Pace start and flood-recovery request launches.
-- **max_in_flight_bytes** (<code>[int](#int) | None</code>) – Maximum requested bytes not yet released by the stream.
-- **adaptive_part_size** (<code>[bool](#bool)</code>) – Probe larger legal part sizes for large transfers.
+- **max_in_flight_bytes** (<code>[int](#int) | None</code>) – Local wire-byte window for part requests, separate from the writer queue and retained output. Defaults to 8 MiB, increased to ``part_size * concurrency`` for a larger finite-range window.
+- **adaptive_part_size** (<code>[bool](#bool)</code>) – Probe larger legal parts for transfers of at least 8 MiB or unknown size.
 - **max_part_size** (<code>[int](#int)</code>) – Upper bound for adaptive parts, no greater than one MiB.
-- **range_cache** (<code>[DownloadRangeCache](#miniproto.media.download.DownloadRangeCache) | [bool](#bool) | None</code>) – Exact-range cache instance, ``True`` for shared cache or disabled value.
-- **range_cache_key** (<code>[str](#str) | None</code>) – Stable media identity for range-cache sharing.
+- **range_cache** (<code>[DownloadRangeCache](#miniproto.media.download.DownloadRangeCache) | [bool](#bool) | None</code>) – Borrowed cache instance or ``True`` for shared cache. ``False`` disables caching, ``None`` selects the shared cache only when read-ahead is enabled.
+- **range_cache_key** (<code>[str](#str) | None</code>) – Stable media identity required for caching and read-ahead, this raw-location API does not infer it.
 - **range_cache_max_bytes** (<code>[int](#int)</code>) – Capacity used by an implicit shared cache.
-- **read_ahead_bytes** (<code>[int](#int)</code>) – Best-effort range prefetch budget; disabled for a full-file transfer.
-- **verify_plain_hashes** (<code>[bool](#bool)</code>) – Verify non-CDN data with Telegram plain-file SHA-256 metadata.
+- **read_ahead_bytes** (<code>[int](#int)</code>) – Speculative cache-fill distance ahead of consumed parts. Disabled for open-ended requests or finite ranges reaching the known EOF.
+- **verify_plain_hashes** (<code>[bool](#bool)</code>) – Verify non-CDN data against complete SHA-256 hash intervals, fetching missing interval bytes before writing the requested slice. Retained resume bytes are not checked.
 - **file_reference_refresher** (<code>[FileReferenceRefresher](#miniproto.media.download.FileReferenceRefresher) | None</code>) – Optional sync/async callback for one stale-reference refresh per part.
 
 **Returns:**
 
-- <code>[MediaDownloadResult](#miniproto.media.download.MediaDownloadResult)</code> – Metadata including the resolved output. ``data`` is populated only for
-- <code>[MediaDownloadResult](#miniproto.media.download.MediaDownloadResult)</code> – an in-memory destination; caller-provided streams remain open.
+- <code>[MediaDownloadResult](#miniproto.media.download.MediaDownloadResult)</code> – Metadata including the output path or stream. With ``destination=None``, ``data`` contains the downloaded bytes and ``destination`` holds the internal ``BytesIO``. Caller-provided streams remain open.
 
 <details class="destination-ownership-and-rollback" open markdown="1">
 <summary>Destination Ownership and Rollback</summary>
 
-``None`` creates an internal ``BytesIO`` returned as ``data`` and clears it
-on failure. A path creates parent directories; a new path is removed on
-cancellation/failure, while an existing non-resume path is overwritten
-rather than restored. A resumed path preserves its existing prefix after
-truncating any non-1-KiB tail and failure truncates it back to that
-aligned prefix. A caller ``BytesIO`` is restored to its original contents
-and position; arbitrary caller streams remain open and are not generally
-restorable. Payload/key buffers are not explicitly zeroized.
+``None`` creates an internal ``BytesIO``. Paths create parent directories and overwrite existing non-resume contents. Resume truncates any non-1-KiB tail and retains at most the requested limit. Cleanup removes new paths, truncates existing paths to the retained prefix, clears internal buffers and restores caller ``BytesIO`` contents and position. Other caller streams remain open without rollback.
+An exception from progress reporting or a completed write acknowledgement during error handling can interrupt cleanup. Payload/key buffers are not explicitly zeroized. The local byte window excludes the writer queue, cached payloads, prefetch and extra hash-verification requests.
 
 </details>
 
 **Raises:**
 
 - <code>[ValueError](#ValueError)</code> – An offset, limit, part/cache/window option is invalid.
-- <code>[TypeError](#TypeError)</code> – A boolean option has the wrong type.
+- <code>[TypeError](#TypeError)</code> – ``verify_plain_hashes`` or ``launch_stagger`` is not boolean.
 - <code>[MediaDownloadError](#miniproto.media.download.MediaDownloadError)</code> – A response, finite range or destination write is invalid.
-- <code>[MediaIntegrityError](#miniproto.media.download.MediaIntegrityError)</code> – CDN or requested plain-file integrity verification fails.
+- <code>[MediaIntegrityError](#miniproto.media.download.MediaIntegrityError)</code> – Optional plain-file integrity verification fails.
+- <code>[CdnIntegrityError](#miniproto.media.cdn.CdnIntegrityError)</code> – CDN hash coverage or digest verification fails.
 - <code>[OSError](#OSError)</code> – A path destination cannot be created, written or restored.
-- <code>[CancelledError](#asyncio.CancelledError)</code> – The transfer is cancelled; created paths are removed and owned buffers restored.
+- <code>[CancelledError](#asyncio.CancelledError)</code> – The transfer is cancelled, subject to the cleanup conditions above.

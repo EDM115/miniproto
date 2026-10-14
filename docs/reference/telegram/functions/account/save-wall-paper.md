@@ -43,12 +43,12 @@ from miniproto.raw.functions import AccountSaveWallPaper
 
 Public access: `miniproto.raw.functions.AccountSaveWallPaper`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.functions import AccountSaveWallPaper
 
-# Naming the raw request class is local only; it performs no I/O or network request.
+# Refer to the raw request class without constructing it or calling Telegram
 request_type = AccountSaveWallPaper
 ```
 

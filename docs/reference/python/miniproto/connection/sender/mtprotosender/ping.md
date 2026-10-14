@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.connection.sender.MTProtoSender.ping"
 source_path: "src/miniproto/connection/sender.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/sender.py#L539"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/sender.py#L535"
 aliases: ["miniproto.connection.MTProtoSender.ping"]
 module: "miniproto.connection.sender"
 ---
@@ -26,8 +26,9 @@ Send a retry-safe ``ping_delay_disconnect`` and require its ``Pong``.
 
 **Raises:**
 
-- <code>[TransportError](#miniproto.connection.transport.TransportError)</code> – If the request fails, times out or returns a body
-other than ``Pong``.
+- <code>[TransportError](#miniproto.connection.transport.TransportError)</code> – If transport handling fails or the result is not ``Pong``.
+- <code>[TimeoutError](#TimeoutError)</code> – If the ping result does not arrive before ``read_timeout``.
+- <code>[ProtocolValidationError](#miniproto.errors.ProtocolValidationError)</code> – If inbound protocol validation fails.
 
 <details class="notes" open markdown="1">
 <summary>Notes</summary>

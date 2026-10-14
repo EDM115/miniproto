@@ -19,13 +19,13 @@ def backoff_delay(
     """Calculate a jittered exponential delay for a transient non-flood retry.
 
     Args:
-        attempt: Zero-based failed attempt; ``0`` produces approximately ``base`` seconds.
-        base: Initial delay in seconds; defaults to :data:`DEFAULT_BACKOFF_BASE`.
-        cap: Maximum unjittered delay in seconds; defaults to :data:`DEFAULT_BACKOFF_CAP`.
-        jitter: Symmetric random fraction applied to the capped delay; defaults to :data:`DEFAULT_BACKOFF_JITTER`.
+        attempt: Zero-based exponent, ``0`` produces approximately ``base`` seconds, negative values use ``0``.
+        base: Initial delay in seconds, defaults to :data:`DEFAULT_BACKOFF_BASE`.
+        cap: Maximum unjittered delay in seconds, defaults to :data:`DEFAULT_BACKOFF_CAP`.
+        jitter: Symmetric random fraction applied after capping, defaults to :data:`DEFAULT_BACKOFF_JITTER`.
 
     Returns:
-        A non-negative sleep duration in seconds. Randomization prevents synchronized retries.
+        A non-negative sleep duration in seconds. Jitter can raise the result above ``cap``.
     """
     delay = min(cap, base * (2 ** max(0, attempt)))
     spread = delay * jitter

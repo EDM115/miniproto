@@ -34,3 +34,4 @@ Import a native, Telethon v1 or Pyrogram string into a validated record.
 
 - <code>[SessionEnvelopeError](#miniproto.errors.SessionEnvelopeError)</code> – If the string, envelope, protected-native authentication or format is invalid.
 - <code>[TypeError](#TypeError)</code> – If ``value`` is not a string.
+- <code>[ValueError](#ValueError)</code> – If a native payload's datetime marker contains an invalid ISO timestamp.

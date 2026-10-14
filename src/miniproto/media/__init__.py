@@ -1,8 +1,4 @@
-"""Public media-transfer APIs for downloading, uploading, CDN decryption and range caching.
-
-The exports intentionally group high-level download and upload helpers with the
-typed results, source/destination aliases and CDN integrity errors they use.
-"""
+"""Public download, upload, CDN decryption and range-cache APIs."""
 
 from miniproto.media.cdn import CdnError, CdnIntegrityError, CdnRedirect, decrypt_cdn_chunk
 from miniproto.media.download import (

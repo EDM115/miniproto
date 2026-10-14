@@ -44,12 +44,12 @@ from miniproto.raw.types import PasswordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter1
 
 Public access: `miniproto.raw.types.PasswordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000SHA256ModPow`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import PasswordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000SHA256ModPow
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = PasswordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000SHA256ModPow
 ```
 

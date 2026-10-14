@@ -43,12 +43,12 @@ from miniproto.raw.types import SecureValueError
 
 Public access: `miniproto.raw.types.SecureValueError`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import SecureValueError
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = SecureValueError
 ```
 

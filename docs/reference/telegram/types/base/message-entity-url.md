@@ -42,12 +42,12 @@ from miniproto.raw.types import MessageEntityUrl
 
 Public access: `miniproto.raw.types.MessageEntityUrl`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import MessageEntityUrl
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = MessageEntityUrl
 ```
 

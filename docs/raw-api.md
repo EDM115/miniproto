@@ -5,7 +5,7 @@ slug: /concepts/raw-api/
 generated: false
 ---
 
-Status: generated Telegram Schema Layer 230 surface with implemented runtime transport support and lazy raw loading.
+Layer 230 raw API generated from the pinned schema, with lazy loading and runtime transport support.
 
 ## Source
 
@@ -46,11 +46,11 @@ Facade imports stay lightweight: they load generated facades and the registry, n
 
 ## Current Runtime Scope
 
-The runtime handles binary TL primitive encoding, generated object serialization/deserialization, flags, vectors, boxed constructors, RPC error metadata, gzip-packed payloads, message containers, transport framing, quick-ACK correlation and RPC response correlation. A reviewed manifest selects 30 Layer 230 media and MTProto service constructors for generated Rust encode/decode paths. Complete supported signatures take the native path, while every other constructor remains on the generic Python codec.
+The runtime handles binary TL primitive encoding, generated object serialization/deserialization, flags, vectors, boxed constructors, RPC error metadata, gzip-packed payloads, message containers, transport framing, quick-ACK correlation and RPC response correlation. `TransportConfig.max_payload_size` limits each decompressed gzip wrapper, defaults to 16 MiB and also applies to direct `Client` result and pushed-update decoding. One nested decode path accepts at most 16 wrappers. A reviewed manifest selects 30 Layer 230 media and MTProto service constructors for generated Rust encode/decode paths. Complete supported signatures take the native path; every other constructor uses the generic Python codec.
 
 ## Current Limits
 
-Quick ACK is opt-in and confirms only early transport receipt, never RPC completion. No credentialed live Telegram trace has been run; deterministic framing, native/fallback parity, reconnect/resend, callback and encrypted fake-server cases cover all three TCP modes.
+Quick ACK is opt-in and confirms early transport receipt, not RPC completion. The repository has deterministic tests for framing, native/fallback parity, reconnect and resend, callbacks, and encrypted fake-server exchanges. Those local tests do not establish live Telegram or account behavior.
 
 ## Samples
 

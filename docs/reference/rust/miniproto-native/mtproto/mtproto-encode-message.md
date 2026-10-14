@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::mtproto::mtproto_encode_message"
 source_path: "rust/miniproto/src/mtproto.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/mtproto.rs#L114"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/mtproto.rs#L106"
 aliases: ["miniproto._native.mtproto_encode_message"]
 python_visible: true
 ---
@@ -15,7 +15,7 @@ python_visible: true
 ## Provenance
 
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/mtproto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/mtproto.rs#L114)
+- Source: [`rust/miniproto/src/mtproto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/mtproto.rs#L106)
 - Python exposure: `miniproto._native.mtproto_encode_message` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -44,16 +44,11 @@ fn mtproto_encode_message(py: _, auth_key: _, server_salt: u64, session_id: u64,
 fn mtproto_encode_message(py: Python<'_>, auth_key: Vec<u8>, server_salt: u64, session_id: u64, msg_id: i64, seq_no: i32, body: Vec<u8>, client_to_server: bool, padding: Option<Vec<u8>>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/mtproto.rs:114-138`*
+*Defined in `rust/miniproto/src/mtproto.rs:106-130`*
 
 Encodes one encrypted MTProto envelope as Python `mtproto_encode_message`.
 
-The salt, session/message identifiers, sequence number, body length, `body` and padding form
-the inner envelope; `auth_key` encrypts it but is not itself serialized in that envelope.
-`client_to_server` chooses MTProto's directional key offset; optional `padding` replaces random
-padding. Returns auth-key-id/message-key/ciphertext concatenated in wire
-order or `ValueError` for invalid key, body or padding.  For large byte inputs it releases
-the GIL while performing the native work.
+Serializes the salt, session ID, message ID, sequence number, body length, body and padding, then encrypts them with `auth_key`. Returns the auth-key ID, message key and ciphertext in wire order. `client_to_server` selects the key schedule, and explicit `padding` replaces generated randomness. Invalid key, body or padding values raise `ValueError`, while integer conversion errors propagate from PyO3. Large workloads detach from Python.
 
 # Arguments
 

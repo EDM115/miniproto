@@ -7,7 +7,7 @@ generated: false
 
 # Task-oriented guides
 
-These guides connect the public API to the operating constraints that tend to matter after a prototype becomes a service. They describe the current `0.1.x` Alpha behavior; use the generated API reference for individual symbols and [development notes](../development.md) for the complete local command reference.
+Use these guides to operate the current `0.1.x` Alpha API. See the generated API reference for individual symbols and [development notes](../development.md) for local commands.
 
 - [Updates and recovery](./updates.md) explains queue limits, persistent cursors, difference recovery, handler ordering and cancellation.
 - [String-session migration](./string-sessions.md) covers native, Telethon and Pyrogram session strings and the import safety checks.

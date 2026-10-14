@@ -57,12 +57,12 @@ from miniproto.raw.types import InputRichMessage
 
 Public access: `miniproto.raw.types.InputRichMessage`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import InputRichMessage
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = InputRichMessage
 ```
 

@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.invoke.method_name_for_request"
 source_path: "src/miniproto/invoke.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L455"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L449"
 module: "miniproto.invoke"
 ---
 

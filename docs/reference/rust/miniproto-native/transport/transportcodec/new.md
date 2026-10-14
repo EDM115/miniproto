@@ -7,7 +7,7 @@ language: "rust"
 kind: "method"
 qualified_name: "miniproto_native::transport::TransportCodec::new"
 source_path: "rust/miniproto/src/transport.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L159"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L152"
 aliases: ["miniproto._native.TransportCodec"]
 python_visible: true
 ---
@@ -15,7 +15,7 @@ python_visible: true
 ## Provenance
 
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/transport.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L159)
+- Source: [`rust/miniproto/src/transport.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L152)
 - Python exposure: `miniproto._native.TransportCodec` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -38,9 +38,7 @@ fn new(mode: &str, max_payload_size: usize, server_side: bool) -> _
 
   
 
-  `mode` must be a supported Python transport name and `max_payload_size` must be positive;
-
-  otherwise this constructor raises `ValueError`.
+  An unsupported `mode` or zero payload bound raises `ValueError`. A negative bound or one larger than `usize` raises `OverflowError` during PyO3 conversion.
 
   
 

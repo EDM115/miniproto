@@ -186,7 +186,7 @@ class AuthService:
         return authorization
 
     async def persist_dc_options(self, raw_config: object) -> tuple[DCOption, ...]:
-        """Normalize ``help.Config`` DC options and atomically store them in the session.
+        """Normalize DC options from ``help.getConfig`` and atomically store them in the session.
 
         Args:
             raw_config: Telegram configuration result exposing ``dc_options`` and optional ``this_dc``.
@@ -211,10 +211,11 @@ class AuthService:
         return dc_options
 
     async def select_current_dc(self) -> DCOption:
-        """Return the preferred non-media endpoint for the persisted current DC.
+        """Select an endpoint for the persisted DC, preferring non-media candidates.
 
         Raises:
-            InvalidDatacenter: If the session has no saved endpoint for its current DC.
+            InvalidDatacenter: If the session has no saved DC options.
+            ValueError: If the saved options contain no endpoint for the current DC.
         """
         record = await self._load_record()
         dc_id = record.dc_id or self.config.dc_id

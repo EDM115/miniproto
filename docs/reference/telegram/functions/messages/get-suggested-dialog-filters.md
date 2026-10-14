@@ -41,12 +41,12 @@ from miniproto.raw.functions import MessagesGetSuggestedDialogFilters
 
 Public access: `miniproto.raw.functions.MessagesGetSuggestedDialogFilters`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.functions import MessagesGetSuggestedDialogFilters
 
-# Naming the raw request class is local only; it performs no I/O or network request.
+# Refer to the raw request class without constructing it or calling Telegram
 request_type = MessagesGetSuggestedDialogFilters
 ```
 

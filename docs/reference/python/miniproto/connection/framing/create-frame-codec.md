@@ -1,13 +1,13 @@
 ---
 title: "miniproto.connection.framing.create_frame_codec"
-description: "Create the fastest available codec for one MTProto TCP framing mode."
+description: "Select the native TCP framing codec when available, otherwise the Python codec."
 generated: true
 editUrl: false
 language: "python"
 kind: "function"
 qualified_name: "miniproto.connection.framing.create_frame_codec"
 source_path: "src/miniproto/connection/framing.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/framing.py#L508"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/framing.py#L507"
 module: "miniproto.connection.framing"
 ---
 
@@ -17,7 +17,7 @@ module: "miniproto.connection.framing"
 create_frame_codec(mode: TransportMode | str, *, max_payload_size: int, server_side: bool = False) -> TransportFrameCodec
 ```
 
-Create the fastest available codec for one MTProto TCP framing mode.
+Select the native TCP framing codec when available, otherwise the Python codec.
 
 **Parameters:**
 
@@ -32,6 +32,6 @@ Create the fastest available codec for one MTProto TCP framing mode.
 
 **Raises:**
 
-- <code>[ValueError](#ValueError)</code> – If the fallback codec receives an unsupported mode or an
-invalid payload bound.
+- <code>[ValueError](#ValueError)</code> – If the selected codec rejects the mode or payload bound.
+- <code>[OverflowError](#OverflowError)</code> – If a native payload bound cannot fit the platform's unsigned size type.
 - <code>[RuntimeError](#RuntimeError)</code> – If the native extension is found but cannot initialize.

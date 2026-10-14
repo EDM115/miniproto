@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.file_id.try_encode_file_id"
 source_path: "src/miniproto/file_id.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/file_id.py#L153"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/file_id.py#L160"
 aliases: ["miniproto.try_encode_file_id"]
 module: "miniproto.file_id"
 ---
@@ -26,4 +26,4 @@ Best-effort variant of :func:`encode_file_id`.
 
 **Returns:**
 
-- <code>[str](#str) | None</code> – The encoded local ID or ``None`` for absent or unsupported media.
+- <code>[str](#str) | None</code> – The encoded local ID or ``None`` for absent media or a ``TypeError``/``ValueError`` during encoding. A returned ID still needs valid source fields to pass decoding.

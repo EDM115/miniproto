@@ -29,14 +29,14 @@ Process Telegram updates into public events while persisting recovery state.
 <details class="lifecycle" open markdown="1">
 <summary>Lifecycle</summary>
 
-``start`` restores state and launches a raw-update drainer. ``stop`` cancels that drainer but does not close or sentinel the public queue; consumers of ``iter_updates`` remain blocked until cancellation or a future event.
+``start`` restores state and launches a raw-update drainer. ``stop`` cancels that drainer and leaves the public queue open. A waiting ``iter_updates`` consumer stays blocked until cancellation or a future event.
 
 </details>
 
 <details class="persistence" open markdown="1">
 <summary>Persistence</summary>
 
-Raw update processing holds a state lock, applies cursor/entity/duplicate changes and persists them before emitted public events are queued and handlers are called. Persisted state is therefore ahead of or equal to, observable delivery; it does not provide application-level exactly-once handling.
+Raw processing serializes cursor, entity and duplicate changes under a state lock, then persists them before queueing public events or calling handlers. Delivery can fail after persistence, so cursor state cannot prove that an application handled an update.
 
 </details>
 

@@ -61,8 +61,7 @@ DEFAULT_BENCHMARK_FILE_DIR = Path(".tmp")
 LEGACY_DEFAULT_BENCHMARK_FILE = DEFAULT_BENCHMARK_FILE_DIR / "miniproto-live-bench-2000mib.bin"
 DEFAULT_UPLOAD_REQUEST_TIMEOUT = 45.0
 DEFAULT_UPLOAD_MEDIA_LANES = 2
-# Library defaults post TASK-P1-1: 2 lanes x ~3 pipelined requests inside an
-# 8 MiB rolling window (mtcute ships 2x3; MTKruto 2x2x1MiB).
+# Match the runtime's six-request download window and two media lanes
 DEFAULT_DOWNLOAD_CONCURRENCY = 6
 DEFAULT_DOWNLOAD_MEDIA_LANES = 2
 
@@ -625,7 +624,7 @@ def parse_args(argv: list[str] | None = None, env: Mapping[str, str] | None = No
             env_value(values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_CONCURRENCY", str(DEFAULT_DOWNLOAD_CONCURRENCY))
             or str(DEFAULT_DOWNLOAD_CONCURRENCY)
         ),
-        help="maximum concurrent upload.getFile requests for known-size downloads; defaults to 1 because Telegram flood waits can erase concurrency gains",
+        help=f"maximum concurrent upload.getFile requests for known-size downloads, defaults to MINIPROTO_LIVE_BENCH_DOWNLOAD_CONCURRENCY or {DEFAULT_DOWNLOAD_CONCURRENCY}",
     )
     download_media_lanes = env_value(
         values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_MEDIA_LANES", str(DEFAULT_DOWNLOAD_MEDIA_LANES)
@@ -643,13 +642,13 @@ def parse_args(argv: list[str] | None = None, env: Mapping[str, str] | None = No
         dest="download_adaptive_concurrency",
         action="store_true",
         default=download_adaptive_default,
-        help="adaptively reduce and slowly re-grow concurrent download requests after flood waits or disconnects",
+        help="Connection failures reduce the active window. Clean requests regrow it after cooldown. Ordinary flood waits pause growth. Premium flood waits force one slot for the rest of the transfer.",
     )
     download_adaptive.add_argument(
         "--no-download-adaptive-concurrency",
         dest="download_adaptive_concurrency",
         action="store_false",
-        help="disable adaptive download request pacing for comparison runs",
+        help="disable connection-health adjustments to the active download window for comparison runs",
     )
     launch_stagger_default = env_bool(values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_LAUNCH_STAGGER", default=True)
     parser.add_argument(
@@ -712,7 +711,7 @@ def parse_args(argv: list[str] | None = None, env: Mapping[str, str] | None = No
         "--download-max-in-flight-bytes",
         type=int,
         default=int(download_max_in_flight) if download_max_in_flight else None,
-        help="cap in-flight download bytes across active upload.getFile requests; empty uses chunk_size * concurrency",
+        help="cap in-flight download bytes across active upload.getFile requests, omit for max(8 MiB, chunk size * effective concurrency)",
     )
     download_adaptive_part_default = env_bool(values, "MINIPROTO_LIVE_BENCH_DOWNLOAD_ADAPTIVE_PART_SIZE", default=True)
     download_adaptive_part = parser.add_mutually_exclusive_group()
@@ -1342,7 +1341,7 @@ async def authorized_client(actor: Actor, args: argparse.Namespace, env: Mapping
 
 
 def upload_limit_parts_from_env_or_default(env: Mapping[str, str], dc_id: int) -> int:
-    """Return configured upload part count or Telegram's default 4,000-part limit.
+    """Return the configured upload part count or the benchmark default of 4,000.
 
     ``dc_id`` is retained for a DC-specific future policy but currently has no effect.
 
@@ -1370,7 +1369,7 @@ def effective_upload_request_timeout(args: argparse.Namespace) -> float:
 
 
 def effective_download_request_timeout(args: argparse.Namespace) -> float:
-    """Return download-part timeout seconds, defaulting to the safer configured cap.
+    """Return the explicit download timeout or cap the base request timeout at 30 seconds.
 
     Args:
         args: Parsed CLI namespace containing optional download timeout overrides.
@@ -1385,7 +1384,7 @@ def benchmark_peer_for_actor(actor: Actor, env: Mapping[str, str]) -> str:
     """Select a non-empty actor-specific benchmark peer from live environment configuration.
 
     Raises:
-        SystemExit: If the actor has no configured peer or is configured to message itself.
+        SystemExit: If the bot peer is absent or names the bot's own account.
 
     Args:
         actor: User or bot role selecting its environment peer variable.

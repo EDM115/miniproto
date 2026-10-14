@@ -56,12 +56,12 @@ from miniproto.raw.functions import AccountUpdateTheme
 
 Public access: `miniproto.raw.functions.AccountUpdateTheme`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.functions import AccountUpdateTheme
 
-# Naming the raw request class is local only; it performs no I/O or network request.
+# Refer to the raw request class without constructing it or calling Telegram
 request_type = AccountUpdateTheme
 ```
 

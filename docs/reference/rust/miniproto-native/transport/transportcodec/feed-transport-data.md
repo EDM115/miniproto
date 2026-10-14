@@ -7,7 +7,7 @@ language: "rust"
 kind: "method"
 qualified_name: "miniproto_native::transport::TransportCodec::feed_transport_data"
 source_path: "rust/miniproto/src/transport.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L212"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L205"
 aliases: ["miniproto._native.TransportCodec.feed_transport_data"]
 python_visible: true
 ---
@@ -15,7 +15,7 @@ python_visible: true
 ## Provenance
 
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/transport.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L212)
+- Source: [`rust/miniproto/src/transport.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L205)
 - Python exposure: `miniproto._native.TransportCodec.feed_transport_data` (confirmed from adjacent PyO3 attributes)
 
 ## Signature

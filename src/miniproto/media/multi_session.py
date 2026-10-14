@@ -1,8 +1,6 @@
 """Deterministic multi-session range planning and ordered download-part assembly.
 
-Assembly consumes local completed part paths in caller-supplied order. It does
-not schedule sessions, delete parts, restore caller-owned streams or zeroize
-in-memory assembled bytes. Path outputs are replaced atomically after validation.
+Assembly reads completed part files in caller-supplied order and leaves them caller-owned. Caller streams remain open at their post-write position, in-memory bytes are not zeroized, and path outputs are replaced atomically after size validation. Session scheduling belongs to the client.
 """
 
 from __future__ import annotations
@@ -42,7 +40,7 @@ def download_session_count(total_size: int) -> int:
         total_size: Total media size in bytes.
 
     Returns:
-        One, two or four sessions according to Telegram-friendly thresholds.
+        One session for files up to 50 MiB, two for files above 50 MiB through 250 MiB, four for larger files.
 
     Raises:
         ValueError: ``total_size`` is not positive.
@@ -61,8 +59,8 @@ def plan_download_ranges(total_size: int, *, session_count: int, alignment: int 
 
     Args:
         total_size: Positive total file size in bytes.
-        session_count: Requested number of parallel sessions; excess sessions are omitted.
-        alignment: Positive byte alignment for every non-tail range; defaults to one MiB.
+        session_count: Requested number of parallel sessions, capped by the number of full alignment units, with one range for smaller files.
+        alignment: Positive byte alignment for every offset and non-tail range length, defaults to one MiB.
 
     Returns:
         Ordered, gap-free ranges whose limits sum exactly to ``total_size``.
@@ -107,17 +105,11 @@ def assemble_download_parts(
         The resolved output destination and bytes only when ``destination`` is ``None``.
 
     Destination Effects:
-        A path destination has parents created, is assembled into a temporary
-        sibling, flushed and atomically replaced only after exact-size validation;
-        an existing path therefore survives assembly failure. A caller binary stream
-        stays open at its post-write position and cannot be rolled back after a write
-        failure. ``None`` creates an internal ``BytesIO`` whose immutable returned
-        bytes are not zeroized. Completed range-part files remain caller-owned.
+        A path destination creates parent directories, writes to a temporary sibling, flushes and calls ``fsync`` before replacing the target after exact-size validation. An existing target survives failures before replacement. A caller stream stays open at its post-write position, without rollback after a write failure. ``None`` returns immutable bytes without zeroization. Completed part files remain caller-owned.
 
     Raises:
         OSError: A part or path destination cannot be read, created or written.
-        RuntimeError: Part metadata or copied data does not contain exactly
-            ``expected_size`` bytes. Path destinations are not replaced on this error.
+        RuntimeError: Part metadata or copied data does not contain exactly ``expected_size`` bytes, or the destination reports an incomplete write. Path destinations are not replaced on this error.
     """
     source_size = sum(part_path.stat().st_size for part_path in part_paths)
     if source_size != expected_size:

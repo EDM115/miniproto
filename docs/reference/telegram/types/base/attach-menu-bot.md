@@ -63,12 +63,12 @@ from miniproto.raw.types import AttachMenuBot
 
 Public access: `miniproto.raw.types.AttachMenuBot`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import AttachMenuBot
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = AttachMenuBot
 ```
 

@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.crypto.native.aes_256_gcm_decrypt"
 source_path: "src/miniproto/crypto/native.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/native.py#L924"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/native.py#L896"
 aliases: ["miniproto.crypto.aes_256_gcm_decrypt"]
 module: "miniproto.crypto.native"
 ---
@@ -35,5 +35,4 @@ Authenticate and decrypt AES-256-GCM session bytes.
 
 - <code>[ValueError](#ValueError)</code> – If the key/nonce is invalid or tag authentication fails.
 
-Selects Rust only if its optional session-crypto capability is available,
-otherwise ``cryptography``.  Never use returned plaintext after an error.
+Uses Rust when its optional session-crypto capability is available, otherwise ``cryptography``.

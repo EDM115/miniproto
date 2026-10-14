@@ -42,12 +42,12 @@ from miniproto.raw.types import WalletSecretPhraseParts
 
 Public access: `miniproto.raw.types.WalletSecretPhraseParts`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import WalletSecretPhraseParts
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = WalletSecretPhraseParts
 ```
 

@@ -1,12 +1,6 @@
 """Measure parity-checked native and fallback crypto, envelope and TL workloads.
 
-Durations are per-call wall-clock milliseconds sampled after one warmup call
-(except the explicitly first-run DH fixtures).  Reports retain all samples and
-their median; native and Python calls are compared only after exact normalized
-output parity succeeds.  Cases are omitted when the compiled module or the
-``cryptography`` fallback is unavailable, so a ratio is never a cross-platform
-or generalized speed claim.  CPU governor, interpreter build, extension build,
-cryptography provider and current system load can materially change results.
+Durations are wall-clock milliseconds per call after one warmup call, except for the first-run DH fixtures. Reports retain all samples and their median, and include a native/fallback ratio only after normalized output parity passes. Unavailable implementations appear as null results. Ratios describe this host and workload. CPU governor, interpreter and extension builds, crypto provider and system load can change them.
 """
 
 from __future__ import annotations

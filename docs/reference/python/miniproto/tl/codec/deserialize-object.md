@@ -33,4 +33,5 @@ Deserialize one generated TL object of an expected class.
 
 **Raises:**
 
-- <code>[TLCodecError](#miniproto.tl.codec.TLCodecError)</code> – If class metadata or a boxed constructor is invalid.
+- <code>[TLCodecError](#miniproto.tl.codec.TLCodecError)</code> – If class metadata is invalid.
+- <code>[ValueError](#ValueError)</code> – If a boxed constructor or field encoding is invalid, including ``TLCodecError`` from the generic path.

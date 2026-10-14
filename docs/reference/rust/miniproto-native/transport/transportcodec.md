@@ -7,7 +7,7 @@ language: "rust"
 kind: "struct"
 qualified_name: "miniproto_native::transport::TransportCodec"
 source_path: "rust/miniproto/src/transport.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L139"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L133"
 aliases: ["miniproto._native.TransportCodec"]
 python_visible: true
 ---
@@ -15,7 +15,7 @@ python_visible: true
 ## Provenance
 
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/transport.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L139)
+- Source: [`rust/miniproto/src/transport.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L133)
 - Python exposure: `miniproto._native.TransportCodec` (confirmed from adjacent PyO3 attributes)
 
 ## cargo-docs-md rendering
@@ -28,7 +28,7 @@ struct TransportCodec {
 }
 ```
 
-*Defined in `rust/miniproto/src/transport.rs:139-142`*
+*Defined in `rust/miniproto/src/transport.rs:133-136`*
 
 Python-visible incremental TCP framing codec, exported as `miniproto._native.TransportCodec`.
 
@@ -46,9 +46,7 @@ Python-visible incremental TCP framing codec, exported as `miniproto._native.Tra
 
   
 
-  `mode` must be a supported Python transport name and `max_payload_size` must be positive;
-
-  otherwise this constructor raises `ValueError`.
+  An unsupported `mode` or zero payload bound raises `ValueError`. A negative bound or one larger than `usize` raises `OverflowError` during PyO3 conversion.
 
   
 

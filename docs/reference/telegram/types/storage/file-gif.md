@@ -41,12 +41,12 @@ from miniproto.raw.types import StorageFileGif
 
 Public access: `miniproto.raw.types.StorageFileGif`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import StorageFileGif
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = StorageFileGif
 ```
 

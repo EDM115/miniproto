@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.file_id.DecodedFileId.to_input_media"
 source_path: "src/miniproto/file_id.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/file_id.py#L73"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/file_id.py#L76"
 aliases: ["miniproto.DecodedFileId.to_input_media"]
 module: "miniproto.file_id"
 ---
@@ -24,8 +24,8 @@ Build the matching Telegram input-media object.
 
 - **spoiler** (<code>[bool](#bool)</code>) – Request Telegram's spoiler presentation for the media.
 - **ttl_seconds** (<code>[int](#int) | None</code>) – Optional self-destruct timer forwarded to Telegram.
-- **video_cover** (<code>[object](#object) | None</code>) – Optional document video-cover input object.
-- **video_timestamp** (<code>[int](#int) | None</code>) – Optional document video start timestamp.
+- **video_cover** (<code>[object](#object) | None</code>) – Optional document video-cover input object, ignored for photo IDs.
+- **video_timestamp** (<code>[int](#int) | None</code>) – Optional document video start timestamp, ignored for photo IDs.
 
 **Returns:**
 

@@ -58,12 +58,12 @@ from miniproto.raw.functions import MessagesEditExportedChatInvite
 
 Public access: `miniproto.raw.functions.MessagesEditExportedChatInvite`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.functions import MessagesEditExportedChatInvite
 
-# Naming the raw request class is local only; it performs no I/O or network request.
+# Refer to the raw request class without constructing it or calling Telegram
 request_type = MessagesEditExportedChatInvite
 ```
 

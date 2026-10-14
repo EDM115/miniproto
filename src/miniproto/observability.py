@@ -48,7 +48,7 @@ class MetricEvent:
         name: Metric name.
         value: Numeric measurement.
         unit: Unit label, defaulting to ``"count"``.
-        attributes: Immutable-by-convention metric dimensions copied at record time.
+        attributes: Metric dimensions, shallow-copied by ``InMemoryMetrics.record_metric``. Constructing ``MetricEvent`` directly retains the supplied mapping.
         timestamp: Wall-clock record time in seconds since the epoch.
     """
 
@@ -89,7 +89,7 @@ class ResourceSnapshot:
 
     Attributes:
         timestamp: Wall-clock capture time in seconds since the epoch.
-        rss_bytes: Reported RSS on Windows or macOS or lifetime peak RSS on Unix; ``None`` if unavailable.
+        rss_bytes: Current working set on Windows, process lifetime peak RSS from ``getrusage`` on Unix, including macOS, or ``None`` if unavailable.
         traced_current_bytes: Current tracemalloc allocation bytes, if tracing.
         traced_peak_bytes: Peak tracemalloc allocation bytes, if tracing.
         gc_objects: Number of objects tracked by the garbage collector.
@@ -332,10 +332,10 @@ def record_metric(
 
 
 def resource_snapshot() -> ResourceSnapshot:
-    """Capture current RSS, active tracemalloc counters and GC object count.
+    """Capture the reported RSS counter, active tracemalloc counters and GC object count.
 
     Returns:
-        A point-in-time resource snapshot; RSS may be unavailable on some platforms.
+        A resource snapshot with current Windows working set or process lifetime peak Unix RSS. RSS may be unavailable on some platforms.
     """
     traced_current = None
     traced_peak = None
@@ -351,10 +351,10 @@ def resource_snapshot() -> ResourceSnapshot:
 
 
 def process_rss_bytes() -> int | None:
-    """Return this process's reported RSS/working-set byte count when available.
+    """Return current Windows working set or process lifetime peak Unix RSS in bytes.
 
     Returns:
-        Platform-reported byte count or ``None`` when the platform cannot provide it.
+        The Windows ``WorkingSetSize`` or Unix ``ru_maxrss`` counter, including macOS, normalized to bytes. Return ``None`` when the platform cannot provide it.
     """
     if sys.platform == "win32":
         return _windows_rss_bytes()
@@ -425,7 +425,7 @@ def to_jsonable(value: object) -> object:
         value: Snapshot, event, mapping, list, tuple or leaf value.
 
     Returns:
-        Dataclasses as dictionaries, mappings with string keys, sequences as lists or the leaf unchanged.
+        ``ResourceSnapshot``, ``MemoryDelta`` and ``MetricEvent`` as dictionaries, mappings with string keys, lists/tuples as lists or other values unchanged. Unsupported leaves can still prevent JSON encoding.
     """
     if isinstance(value, ResourceSnapshot | MemoryDelta | MetricEvent):
         return asdict(value)

@@ -41,12 +41,12 @@ from miniproto.raw.types import HelpPassportConfigNotModified
 
 Public access: `miniproto.raw.types.HelpPassportConfigNotModified`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import HelpPassportConfigNotModified
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = HelpPassportConfigNotModified
 ```
 

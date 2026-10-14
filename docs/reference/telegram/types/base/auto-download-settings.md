@@ -62,12 +62,12 @@ from miniproto.raw.types import AutoDownloadSettings
 
 Public access: `miniproto.raw.types.AutoDownloadSettings`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import AutoDownloadSettings
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = AutoDownloadSettings
 ```
 

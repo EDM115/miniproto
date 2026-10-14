@@ -1,6 +1,6 @@
 ---
 title: "miniproto.observability.resource_snapshot"
-description: "Capture current RSS, active tracemalloc counters and GC object count."
+description: "Capture the reported RSS counter, active tracemalloc counters and GC object count."
 generated: true
 editUrl: false
 language: "python"
@@ -18,8 +18,8 @@ module: "miniproto.observability"
 resource_snapshot() -> ResourceSnapshot
 ```
 
-Capture current RSS, active tracemalloc counters and GC object count.
+Capture the reported RSS counter, active tracemalloc counters and GC object count.
 
 **Returns:**
 
-- <code>[ResourceSnapshot](#miniproto.observability.ResourceSnapshot)</code> – A point-in-time resource snapshot; RSS may be unavailable on some platforms.
+- <code>[ResourceSnapshot](#miniproto.observability.ResourceSnapshot)</code> – A resource snapshot with current Windows working set or process lifetime peak Unix RSS. RSS may be unavailable on some platforms.

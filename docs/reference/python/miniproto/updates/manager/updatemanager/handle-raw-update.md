@@ -1,6 +1,6 @@
 ---
 title: "miniproto.updates.manager.UpdateManager.handle_raw_update"
-description: "Process one raw update synchronously, persist resulting state, then emit its public events."
+description: "Process one raw update inline, persist its state, then emit its public events."
 generated: true
 editUrl: false
 language: "python"
@@ -18,9 +18,9 @@ module: "miniproto.updates.manager"
 handle_raw_update(raw_update: object) -> None
 ```
 
-Process one raw update synchronously, persist resulting state, then emit its public events.
+Process one raw update inline, persist its state, then emit its public events.
 
-Gap recovery and cursor mutation are serialized under the manager's state lock. Recovered events are date-ordered within a difference response; callers should not infer global ordering guarantees across independent input calls.
+Gap recovery and cursor mutation use the manager's state lock. Recovered events are date-ordered within a difference response. Independent input calls have no global delivery-order guarantee.
 
 **Parameters:**
 

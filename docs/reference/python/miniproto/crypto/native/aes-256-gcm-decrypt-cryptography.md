@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.crypto.native.aes_256_gcm_decrypt_cryptography"
 source_path: "src/miniproto/crypto/native.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/native.py#L1070"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/native.py#L1040"
 aliases: ["miniproto.crypto.aes_256_gcm_decrypt_cryptography"]
 module: "miniproto.crypto.native"
 ---
@@ -35,4 +35,4 @@ Authenticate and decrypt through the explicit ``cryptography`` AES-GCM path.
 
 - <code>[ValueError](#ValueError)</code> – If inputs are rejected or GCM authentication fails.
 
-This explicitly bypasses Rust; discard all output state after an error.
+Uses ``cryptography`` directly and normalizes authentication failures to ``ValueError``.

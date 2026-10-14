@@ -42,12 +42,12 @@ from miniproto.raw.types import ReportResultChooseOption
 
 Public access: `miniproto.raw.types.ReportResultChooseOption`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import ReportResultChooseOption
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = ReportResultChooseOption
 ```
 

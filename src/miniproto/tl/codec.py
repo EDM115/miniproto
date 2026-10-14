@@ -316,7 +316,7 @@ def decode_vector(data: bytes | memoryview, offset: int, item_type: str) -> tupl
         Decoded immutable item tuple and first unread offset.
 
     Raises:
-        TLCodecError: If the constructor or count is invalid.
+        ValueError: If the constructor, count or element bytes are invalid, including ``TLCodecError`` from the generic path.
     """
     clean_item_type = _clean_type(item_type)
     if clean_item_type in {"int", "#"}:
@@ -377,7 +377,8 @@ def deserialize_object[TLObjectT](
         Object instance and first unread offset.
 
     Raises:
-        TLCodecError: If class metadata or a boxed constructor is invalid.
+        TLCodecError: If class metadata is invalid.
+        ValueError: If a boxed constructor or field encoding is invalid, including ``TLCodecError`` from the generic path.
     """
     if not _looks_like_tl_class(cls):
         raise TLCodecError(f"expected TL object class, got {cls!r}")
@@ -405,7 +406,7 @@ def decode_object(data: bytes | memoryview, offset: int = 0, expected_type: str 
         Decoded value and first unread offset.
 
     Raises:
-        TLCodecError: If the constructor is unknown or a bare type lacks a concrete class.
+        TLCodecError: If the constructor is unknown.
     """
     if expected_type is not None and _clean_type(expected_type) in _PRIMITIVES:
         return decode_value(expected_type, data, offset)
@@ -439,7 +440,7 @@ def encode_value(type_name: str, value: Any) -> bytes:
         TL wire bytes for the value.
 
     Raises:
-        TLCodecError: If the value cannot be represented by the type expression.
+        TLCodecError: If an object type has no supported serializer. Primitive and vector encoders propagate their own conversion and range errors.
     """
     clean = _clean_type(type_name)
     vector_item_type = _vector_item_type(clean)

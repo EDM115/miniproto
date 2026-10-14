@@ -1,6 +1,6 @@
 ---
 title: "Telegram raw API"
-description: "Layer 230 Telegram raw API: 854 functions, 1709 type constructors, and 818 pinned RPC errors from tdlib."
+description: "Layer 230 Telegram raw API: 854 functions and 1709 type constructors from tdlib, with 818 separately pinned RPC errors."
 generated: true
 editUrl: false
 language: "telegram"

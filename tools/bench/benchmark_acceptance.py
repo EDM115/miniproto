@@ -1,9 +1,6 @@
 """Deterministic runtime acceptance benchmarks and host-independent invariants.
 
-The workload uses local fakes and controlled in-process components to catch
-protocol, resource-accounting, cancellation and fairness regressions. It is
-not a substitute for credentialed live acceptance: it cannot prove Telegram
-network behavior, account permissions, datacenter routing or production load.
+Local fakes and in-process components check protocol, resource-accounting, cancellation and fairness regressions. Telegram network behavior, account permissions, datacenter routing and production load remain outside these checks.
 """
 
 from __future__ import annotations

@@ -71,12 +71,12 @@ from miniproto.raw.types import MessageFwdHeader
 
 Public access: `miniproto.raw.types.MessageFwdHeader`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import MessageFwdHeader
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = MessageFwdHeader
 ```
 

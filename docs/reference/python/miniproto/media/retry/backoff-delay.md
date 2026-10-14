@@ -21,11 +21,11 @@ Calculate a jittered exponential delay for a transient non-flood retry.
 
 **Parameters:**
 
-- **attempt** (<code>[int](#int)</code>) – Zero-based failed attempt; ``0`` produces approximately ``base`` seconds.
-- **base** (<code>[float](#float)</code>) – Initial delay in seconds; defaults to :data:`DEFAULT_BACKOFF_BASE`.
-- **cap** (<code>[float](#float)</code>) – Maximum unjittered delay in seconds; defaults to :data:`DEFAULT_BACKOFF_CAP`.
-- **jitter** (<code>[float](#float)</code>) – Symmetric random fraction applied to the capped delay; defaults to :data:`DEFAULT_BACKOFF_JITTER`.
+- **attempt** (<code>[int](#int)</code>) – Zero-based exponent, ``0`` produces approximately ``base`` seconds, negative values use ``0``.
+- **base** (<code>[float](#float)</code>) – Initial delay in seconds, defaults to :data:`DEFAULT_BACKOFF_BASE`.
+- **cap** (<code>[float](#float)</code>) – Maximum unjittered delay in seconds, defaults to :data:`DEFAULT_BACKOFF_CAP`.
+- **jitter** (<code>[float](#float)</code>) – Symmetric random fraction applied after capping, defaults to :data:`DEFAULT_BACKOFF_JITTER`.
 
 **Returns:**
 
-- <code>[float](#float)</code> – A non-negative sleep duration in seconds. Randomization prevents synchronized retries.
+- <code>[float](#float)</code> – A non-negative sleep duration in seconds. Jitter can raise the result above ``cap``.

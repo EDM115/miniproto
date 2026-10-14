@@ -9,7 +9,7 @@
 ## `v0.1.0` - First Alpha release
 
 > [!IMPORTANT]  
-> This is the first public Alpha of `miniproto` : it covers async authorization, encrypted sessions, the Layer 230 raw API, updates, peer and message helpers, media transfers and asyncio transports. APIs and operational defaults can still change before stability. We do NOT guarantee any stability or backwards compatibility. Do not use for production deployments.
+> This first public Alpha covers async authorization, encrypted sessions, the Layer 230 raw API, updates, peer and message helpers, media transfers and asyncio transports. The API and operational defaults may change before stability, without a compatibility guarantee. Do not use in production.
 
 ### Breaking changes
 
@@ -73,7 +73,9 @@
 🐛 fix : enforce Telegram upload-part divisors, strictly bound local file IDs, assemble multi-session paths atomically, refresh file references during cached hash verification and recreate closed auxiliary in-memory sessions  
 🐛 fix : bracket IPv6 HTTP CONNECT authorities, clean up failed post-connect transports, preserve server RPC codes in generated fallback errors and classify only pacing-specific wait errors as flood waits
 🐛 fix : default omitted PTS counts to zero, preserve QTS's implicit count of one, advance PTS/QTS cursors with count-aware checks and include channel identity in update duplicate keys  
-🐛 fix : suppress accepted authenticated retransmissions while continuing fresh container siblings, answer message-state requests from bounded receive history, enforce configured gzip output/depth bounds before RPC results commit, keep malformed inbound framing fatal while recovering ordinary I/O failures and encode signed media-only DC IDs  
+🐛 fix : suppress accepted authenticated retransmissions while continuing fresh container siblings and answer message-state requests from bounded receive history  
+🐛 fix : enforce configured gzip output/depth bounds before RPC results commit and keep malformed inbound framing fatal while recovering ordinary I/O failures  
+🐛 fix : encode signed media-only DC IDs  
 🐛 fix : join owned part-task cancellation on public iterator close, reject short destination writes and redact recognized metric attributes before synchronous sink delivery  
 
 ### Documentation

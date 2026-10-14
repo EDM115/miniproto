@@ -1,6 +1,6 @@
 ---
 title: "miniproto.session.models.UpdateState"
-description: "Monotonic Telegram update cursors and their latest server timestamp."
+description: "Non-negative Telegram update cursors and their associated server timestamp."
 generated: true
 editUrl: false
 language: "python"
@@ -18,7 +18,7 @@ module: "miniproto.session.models"
 UpdateState(pts: int = 0, qts: int = 0, seq: int = 0, date: datetime = _utc_now()) -> None
 ```
 
-Monotonic Telegram update cursors and their latest server timestamp.
+Non-negative Telegram update cursors and their associated server timestamp.
 
 All counters default to zero and ``date`` defaults to current UTC time.
 

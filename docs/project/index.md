@@ -7,7 +7,7 @@ generated: false
 
 ## Working on an Alpha SDK
 
-`miniproto` is in active Alpha development. Its public protocol surface, schema layer, storage behavior, native capability routing and operational defaults can change before a stable release. Treat planned work and deterministic tests as evidence of local implementation, not as a substitute for completed release or live Telegram acceptance.
+`miniproto` is in active Alpha development. Its public protocol surface, schema layer, storage behavior, native capability routing and operational defaults can change before a stable release. Use plans and deterministic tests to track local behavior; check release gates and live Telegram evidence separately.
 
 ## Project operations
 
@@ -17,7 +17,7 @@ generated: false
 - [Migration](./migration.md) covers the current Alpha changes most likely to affect storage, session strings, custom backends and generated raw imports.
 - [Deployment](./deployment.md) covers lifecycle ownership, durable-session keys, secret handling and the difference between deterministic and credentialed gates.
 - [Security and reporting](./security.md) links to the canonical security policy and states what not to disclose publicly.
-- [Brand assets](./brand.md) records the provisional Packet Loom identity, generated derivatives and the intentionally swappable poll boundary.
+- [Brand assets](./brand.md) describes the Packet Loom production mark and the source-to-derivative workflow.
 
 ## Codebase map
 

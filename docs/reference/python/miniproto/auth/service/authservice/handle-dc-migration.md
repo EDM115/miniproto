@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.auth.service.AuthService.handle_dc_migration"
 source_path: "src/miniproto/auth/service.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/auth/service.py#L225"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/auth/service.py#L226"
 aliases: ["miniproto.AuthService.handle_dc_migration","miniproto.auth.AuthService.handle_dc_migration"]
 module: "miniproto.auth.service"
 ---

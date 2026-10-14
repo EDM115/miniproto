@@ -42,12 +42,12 @@ from miniproto.raw.types import AccountWebAuthorizations
 
 Public access: `miniproto.raw.types.AccountWebAuthorizations`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import AccountWebAuthorizations
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = AccountWebAuthorizations
 ```
 

@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.media.scheduler.MediaTransfer.acquire"
 source_path: "src/miniproto/media/scheduler.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/scheduler.py#L607"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/scheduler.py#L605"
 module: "miniproto.media.scheduler"
 ---
 
@@ -27,4 +27,4 @@ Acquire a charged byte reservation, optionally overriding request priority.
 **Raises:**
 
 - <code>[RuntimeError](#RuntimeError)</code> – If this transfer has been closed.
-- <code>[ValueError](#ValueError)</code> – If the request cannot fit its scheduler's byte limit.
+- <code>[ValueError](#ValueError)</code> – If ``requested_bytes`` is non-positive or its rounded charge exceeds the scheduler's byte limit.

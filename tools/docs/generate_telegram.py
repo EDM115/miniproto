@@ -1419,7 +1419,7 @@ def _python_binding_sections(declaration: TelegramDeclaration, *, binding: Teleg
 
 
 def _safe_usage_sections(declaration: TelegramDeclaration, *, binding: TelegramPythonBinding) -> tuple[str, ...]:
-    """Render a minimal local-only binding shape without implying a network operation.
+    """Render a class-reference example that sends no request.
 
     Args:
         declaration: Canonical function or type declaration being documented.
@@ -1432,12 +1432,12 @@ def _safe_usage_sections(declaration: TelegramDeclaration, *, binding: TelegramP
     noun = "request" if declaration.kind == "function" else "constructor"
     return (
         "",
-        "## Safe usage shape",
+        "## Class reference",
         "",
         "```python",
         binding.python_import,
         "",
-        f"# Naming the raw {noun} class is local only; it performs no I/O or network request.",
+        f"# Refer to the raw {noun} class without constructing it or calling Telegram",
         f"{variable} = {binding.python_name}",
         "```",
     )
@@ -2207,8 +2207,8 @@ def _index_pages(
             title="Telegram raw API",
             qualified_name="telegram",
             description=(
-                f"Layer {layer} Telegram raw API: {len(functions)} functions, {len(types)} type constructors, "
-                f"and {len(errors)} pinned RPC errors from {canonical_source}."
+                f"Layer {layer} Telegram raw API: {len(functions)} functions and {len(types)} type constructors from {canonical_source}, "
+                f"with {len(errors)} separately pinned RPC errors."
             ),
             body=(
                 f"## Layer {layer} selected surface\n\n"

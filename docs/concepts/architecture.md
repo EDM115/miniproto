@@ -33,6 +33,6 @@ Media work has a related but separate path. A `Client` creates scheduler registr
 
 Applications embedded in another async runtime retain their event-loop ownership. `miniproto.event_loop.run()` is for scripts that own the top-level coroutine; the deprecated global-policy installer is not the normal integration path.
 
-## What this diagram does not promise
+## What this diagram shows
 
-The diagram describes local control flow, not a guarantee that Telegram has accepted a request, that an update will be delivered exactly once to application code or that a live network path is available. See [transport reliability](./transport-reliability.md) and [session and update state](./session-update-state.md) for those contracts.
+This diagram shows local control flow. Telegram can still reject a request, the network can fail, and update delivery does not guarantee exactly-once application effects. See [transport reliability](./transport-reliability.md) and [session and update state](./session-update-state.md) for those details.

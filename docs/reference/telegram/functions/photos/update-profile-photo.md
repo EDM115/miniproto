@@ -51,12 +51,12 @@ from miniproto.raw.functions import PhotosUpdateProfilePhoto
 
 Public access: `miniproto.raw.functions.PhotosUpdateProfilePhoto`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.functions import PhotosUpdateProfilePhoto
 
-# Naming the raw request class is local only; it performs no I/O or network request.
+# Refer to the raw request class without constructing it or calling Telegram
 request_type = PhotosUpdateProfilePhoto
 ```
 

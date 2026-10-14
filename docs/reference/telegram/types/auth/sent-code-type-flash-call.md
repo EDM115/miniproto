@@ -41,12 +41,12 @@ from miniproto.raw.types import AuthSentCodeTypeFlashCall
 
 Public access: `miniproto.raw.types.AuthSentCodeTypeFlashCall`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import AuthSentCodeTypeFlashCall
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = AuthSentCodeTypeFlashCall
 ```
 

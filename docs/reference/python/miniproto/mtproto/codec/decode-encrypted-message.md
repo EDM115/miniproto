@@ -32,4 +32,4 @@ Authenticate, decrypt and parse one MTProto encrypted envelope.
 
 **Raises:**
 
-- <code>[ValueError](#ValueError)</code> – If the native codec rejects framing, key or integrity data.
+- <code>[ValueError](#ValueError)</code> – If the selected backend rejects framing, key or integrity data.

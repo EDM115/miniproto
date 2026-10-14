@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.invoke.should_retry_rpc_error"
 source_path: "src/miniproto/invoke.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L331"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L325"
 module: "miniproto.invoke"
 ---
 

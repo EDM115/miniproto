@@ -42,12 +42,12 @@ from miniproto.raw.functions import AccountToggleUsername
 
 Public access: `miniproto.raw.functions.AccountToggleUsername`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.functions import AccountToggleUsername
 
-# Naming the raw request class is local only; it performs no I/O or network request.
+# Refer to the raw request class without constructing it or calling Telegram
 request_type = AccountToggleUsername
 ```
 

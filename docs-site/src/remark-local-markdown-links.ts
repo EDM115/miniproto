@@ -22,9 +22,9 @@ type RemarkLocalMarkdownLinksOptions = {
 };
 
 /**
- * Rewrite repository-relative Markdown links to the public route declared by the target page.
+ * Rewrite repository-relative Markdown links to the target page's public route
  *
- * The canonical files deliberately retain useful `.md` links for GitHub and source-checkout readers. Starlight's external content loader does not rewrite those links automatically, so this build-only adapter resolves target frontmatter and emits an absolute route under the configured Astro base. The trailing slash makes every link independent of host redirect behavior.
+ * Source files keep `.md` links for GitHub and checkout readers. During the build, this adapter reads target frontmatter and writes a site route under the configured Astro base with a trailing slash, so links reach their destination without a slash redirect.
  */
 export default function remarkLocalMarkdownLinks({
   docsRoot,
@@ -100,7 +100,7 @@ function localMarkdownTarget(url: string): LocalTarget | undefined {
     : undefined;
 }
 
-/** Return an existing relative public route plus any query/fragment suffix. */
+/** Recognize a local route ending in a slash and retain its query/fragment suffix */
 function localRouteTarget(url: string): LocalTarget | undefined {
   if (/^(?:[a-z]+:|\/\/|#)/iu.test(url)) {
     return undefined;

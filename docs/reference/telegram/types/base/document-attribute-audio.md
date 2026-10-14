@@ -55,12 +55,12 @@ from miniproto.raw.types import DocumentAttributeAudio
 
 Public access: `miniproto.raw.types.DocumentAttributeAudio`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import DocumentAttributeAudio
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = DocumentAttributeAudio
 ```
 

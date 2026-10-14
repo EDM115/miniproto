@@ -22,7 +22,7 @@ Complete versioned session state with frozen, shallow collection snapshots.
 
 **Attributes:**
 
-- [**version**](#miniproto.session.models.SessionRecord.version) (<code>[int](#int)</code>) – Storage schema version; only the current version is accepted.
+- [**version**](#miniproto.session.models.SessionRecord.version) (<code>[int](#int)</code>) – Session-record schema version, only the current version is accepted.
 - [**dc_id**](#miniproto.session.models.SessionRecord.dc_id) (<code>[int](#int) | None</code>) – Optional active data-centre identifier.
 - [**auth_key**](#miniproto.session.models.SessionRecord.auth_key) (<code>[AuthKey](#miniproto.session.models.AuthKey) | None</code>) – Optional active authorization key.
 - [**dc_options**](#miniproto.session.models.SessionRecord.dc_options) (<code>[tuple](#tuple)[[DCOption](#miniproto.session.models.DCOption), ...]</code>) – Immutable configured endpoint sequence.
@@ -31,8 +31,7 @@ Complete versioned session state with frozen, shallow collection snapshots.
 - [**peers**](#miniproto.session.models.SessionRecord.peers) (<code>[tuple](#tuple)[[PeerCacheEntry](#miniproto.session.models.PeerCacheEntry), ...]</code>) – Immutable cached peer sequence.
 - [**metadata**](#miniproto.session.models.SessionRecord.metadata) (<code>[Mapping](#collections.abc.Mapping)[[str](#str), [Any](#typing.Any)]</code>) – Shallow-copied extension mapping, hidden from ``repr``; nested values remain mutable.
 
-Default update state is empty, while every other optional domain remains
-absent or empty until the client obtains it.
+Update counters default to zero and the update date defaults to current UTC time. Other optional domains start absent or empty.
 
 **Raises:**
 

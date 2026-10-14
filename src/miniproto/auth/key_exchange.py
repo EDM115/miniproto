@@ -163,7 +163,7 @@ class PQInnerDataDC:
         nonce: Client nonce echoed by Telegram.
         server_nonce: Server nonce returned in ``resPQ``.
         new_nonce: Fresh random nonce that binds this key exchange.
-        dc_id: Target Telegram DC ID, encoded for test mode when applicable.
+        dc_id: Wire DC ID, with the test offset applied before negating media-only, non-CDN IDs.
     """
 
     pq: bytes
@@ -252,7 +252,7 @@ class ServerDHParamsOk:
 
 @dataclass(frozen=True, slots=True)
 class ServerDHParamsFail:
-    """``server_DH_params_fail`` response proving Telegram rejected the request.
+    """Decoded ``server_DH_params_fail`` response reporting a rejected request.
 
     Args:
         nonce: Client nonce echoed by Telegram.
@@ -290,7 +290,7 @@ class ServerDHParamsFail:
 
 @dataclass(frozen=True, slots=True)
 class ServerDHInnerData:
-    """Validated plaintext DH group and server public value from Telegram.
+    """Decoded plaintext DH parameters, validated separately by the key exchange.
 
     Args:
         nonce: Client nonce that must match the active exchange.
@@ -350,7 +350,7 @@ class ClientDHInnerData:
     Args:
         nonce: Client nonce for the active exchange.
         server_nonce: Server nonce for the active exchange.
-        retry_id: Telegram retry identifier; zero for the first attempt.
+        retry_id: Zero on the first attempt, then the previous attempt's ``auth_key_aux_hash``.
         g_b: Fixed-width big-endian client DH public value.
     """
 
@@ -514,9 +514,7 @@ class AuthKeyExchange:
     async def create_auth_key(self) -> AuthKeyExchangeResult:
         """Execute one complete Telegram authorization-key exchange.
 
-        The method validates nonces, trusted RSA fingerprint selection, encrypted
-        server DH data, the safe DH group, public values and Telegram's final
-        ``new_nonce_hash1`` confirmation before returning secret key material.
+        Validate nonces, the trusted RSA fingerprint, encrypted server DH data, the DH group and public values before accepting ``new_nonce_hash1``. A verified ``dh_gen_retry`` starts another DH attempt with a fresh private exponent, up to six attempts in total.
 
         Returns:
             The new MTProto authorization key, its key ID, server salt, time offset and DC ID.
@@ -716,7 +714,7 @@ def select_rsa_key(fingerprints: tuple[int, ...], keys: tuple[RSAKey, ...]) -> R
     """Select the first server-offered fingerprint present in trusted ``keys``.
 
     Args:
-        fingerprints: Server-advertised RSA fingerprints in Telegram preference order.
+        fingerprints: RSA fingerprints in the order advertised by the server.
         keys: Trusted Telegram RSA public keys available to this client.
 
     Raises:
@@ -736,7 +734,7 @@ def factorize_pq(pq: int) -> tuple[int, int]:
         pq: Positive composite challenge decoded from Telegram's ``resPQ`` response.
 
     Raises:
-        ValueError: If the native factorizer returns invalid factors.
+        ValueError: If the selected factorizer rejects ``pq`` or returns invalid factors.
     """
     p, q = pq_factorize(pq)
     if p <= 1 or q <= 1 or p * q != pq:
@@ -820,7 +818,7 @@ def encrypt_client_dh_inner_data(inner: ClientDHInnerData, *, new_nonce: int, se
     """SHA-1-prefix, pad and AES-IGE encrypt client DH data for Telegram.
 
     Args:
-        inner: Serialized client DH values to protect.
+        inner: Client DH values to serialize and protect.
         new_nonce: Fresh client nonce used to derive the temporary cipher key.
         server_nonce: Server nonce used to derive the temporary cipher key.
     """

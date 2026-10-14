@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.tl.codec.decode_object"
 source_path: "src/miniproto/tl/codec.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/tl/codec.py#L396"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/tl/codec.py#L397"
 aliases: ["miniproto.tl.decode_object"]
 module: "miniproto.tl.codec"
 ---
@@ -32,4 +32,4 @@ Decode a primitive or generated TL object selected by its constructor.
 
 **Raises:**
 
-- <code>[TLCodecError](#miniproto.tl.codec.TLCodecError)</code> – If the constructor is unknown or a bare type lacks a concrete class.
+- <code>[TLCodecError](#miniproto.tl.codec.TLCodecError)</code> – If the constructor is unknown.

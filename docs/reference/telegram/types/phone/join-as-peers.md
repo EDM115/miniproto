@@ -43,12 +43,12 @@ from miniproto.raw.types import PhoneJoinAsPeers
 
 Public access: `miniproto.raw.types.PhoneJoinAsPeers`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import PhoneJoinAsPeers
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = PhoneJoinAsPeers
 ```
 

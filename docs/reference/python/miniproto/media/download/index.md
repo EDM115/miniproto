@@ -1,6 +1,6 @@
 ---
 title: "miniproto.media.download"
-description: "Concurrent Telegram media downloading with retry, integrity, cache and destination handling."
+description: "Download ordered Telegram media ranges with retries, hash checks and range caching."
 generated: true
 editUrl: false
 language: "python"
@@ -13,11 +13,7 @@ module: "miniproto.media.download"
 
 ## `miniproto.media.download`
 
-Concurrent Telegram media downloading with retry, integrity, cache and destination handling.
-
-The public coroutines support bounded streaming and file materialization while
-preserving ordered ranges, cancellable cleanup, optional CDN/plain-file
-verification and safe reuse of cached byte ranges.
+Download ordered Telegram media ranges with retries, hash checks and range caching.
 
 ## Public objects
 
@@ -30,8 +26,8 @@ verification and safe reuse of cached byte ranges.
 - [`DEFAULT_DOWNLOAD_IN_FLIGHT_BYTES`](./default-download-in-flight-bytes/) — Public attribute `miniproto.media.download.DEFAULT_DOWNLOAD_IN_FLIGHT_BYTES`.
 - [`DEFAULT_RANGE_CACHE_BYTES`](./default-range-cache-bytes/) — Public attribute `miniproto.media.download.DEFAULT_RANGE_CACHE_BYTES`.
 - [`MediaDownloadResult`](./mediadownloadresult/) — Completed materialized-download metadata and optional in-memory payload.
-- [`DownloadRangeCache`](./downloadrangecache/) — Async LRU cache that deduplicates exact media-range requests and bounded prefetches.
-- [`iter_download`](./iter-download/) — Stream an exact media range as ordered, bounded byte chunks.
+- [`DownloadRangeCache`](./downloadrangecache/) — Async LRU cache that shares exact media-range fetches and limits background prefetch tasks.
+- [`iter_download`](./iter-download/) — Stream a media range in order through a bounded window of part requests.
 - [`download_file`](./download-file/) — Download media into memory, a path or a caller-owned binary stream.
 - [`iter_download_media`](./iter-download-media/) — Resolve a supported media object and stream it through :func:`iter_download`.
 - [`download_media`](./download-media/) — Resolve media and materialize it through :func:`download_file`.

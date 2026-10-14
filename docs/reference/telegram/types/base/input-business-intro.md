@@ -50,12 +50,12 @@ from miniproto.raw.types import InputBusinessIntro
 
 Public access: `miniproto.raw.types.InputBusinessIntro`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import InputBusinessIntro
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = InputBusinessIntro
 ```
 

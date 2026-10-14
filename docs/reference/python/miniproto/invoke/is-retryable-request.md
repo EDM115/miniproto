@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.invoke.is_retryable_request"
 source_path: "src/miniproto/invoke.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L295"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L291"
 module: "miniproto.invoke"
 ---
 
@@ -19,8 +19,7 @@ is_retryable_request(raw_request: object, override: bool | None = None) -> bool
 
 Determine whether retrying this request is protocol-safe.
 
-``override`` takes precedence. Otherwise the innermost wrapped request is safe
-only for known read prefixes or Telegram writes de-duplicated by ``random_id``.
+``override`` takes precedence. Otherwise classify the innermost request by known read prefixes or the selected writes deduplicated by ``random_id``. Exclude ``messages.getBotCallbackAnswer`` despite its read-like name because it triggers a bot callback.
 
 **Parameters:**
 

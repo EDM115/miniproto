@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.errors.NotFound"
 source_path: "src/miniproto/errors.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L237"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L239"
 aliases: ["miniproto.NotFound"]
 module: "miniproto.errors"
 ---

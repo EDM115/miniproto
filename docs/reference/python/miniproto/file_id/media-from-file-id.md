@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.file_id.media_from_file_id"
 source_path: "src/miniproto/file_id.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/file_id.py#L206"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/file_id.py#L213"
 aliases: ["miniproto.media_from_file_id"]
 module: "miniproto.file_id"
 ---
@@ -27,3 +27,7 @@ Decode a local file ID into a reusable ``Media`` value.
 **Returns:**
 
 - <code>[Media](#miniproto.types.Media)</code> – Media retaining the ID's input location and metadata.
+
+**Raises:**
+
+- <code>[ValueError](#ValueError)</code> – If ``decode_file_id`` rejects the identifier.

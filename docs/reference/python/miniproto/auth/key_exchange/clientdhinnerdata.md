@@ -24,5 +24,5 @@ Client DH public value encrypted into ``set_client_DH_params``.
 
 - **nonce** (<code>[int](#int)</code>) – Client nonce for the active exchange.
 - **server_nonce** (<code>[int](#int)</code>) – Server nonce for the active exchange.
-- **retry_id** (<code>[int](#int)</code>) – Telegram retry identifier; zero for the first attempt.
+- **retry_id** (<code>[int](#int)</code>) – Zero on the first attempt, then the previous attempt's ``auth_key_aux_hash``.
 - **g_b** (<code>[bytes](#bytes)</code>) – Fixed-width big-endian client DH public value.

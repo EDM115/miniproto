@@ -1,6 +1,6 @@
 ---
 title: "miniproto.observability.process_rss_bytes"
-description: "Return this process's reported RSS/working-set byte count when available."
+description: "Return current Windows working set or process lifetime peak Unix RSS in bytes."
 generated: true
 editUrl: false
 language: "python"
@@ -18,8 +18,8 @@ module: "miniproto.observability"
 process_rss_bytes() -> int | None
 ```
 
-Return this process's reported RSS/working-set byte count when available.
+Return current Windows working set or process lifetime peak Unix RSS in bytes.
 
 **Returns:**
 
-- <code>[int](#int) | None</code> – Platform-reported byte count or ``None`` when the platform cannot provide it.
+- <code>[int](#int) | None</code> – The Windows ``WorkingSetSize`` or Unix ``ru_maxrss`` counter, including macOS, normalized to bytes. Return ``None`` when the platform cannot provide it.

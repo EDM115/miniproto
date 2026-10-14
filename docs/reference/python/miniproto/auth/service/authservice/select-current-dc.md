@@ -1,6 +1,6 @@
 ---
 title: "miniproto.auth.service.AuthService.select_current_dc"
-description: "Return the preferred non-media endpoint for the persisted current DC."
+description: "Select an endpoint for the persisted DC, preferring non-media candidates."
 generated: true
 editUrl: false
 language: "python"
@@ -18,8 +18,9 @@ module: "miniproto.auth.service"
 select_current_dc() -> DCOption
 ```
 
-Return the preferred non-media endpoint for the persisted current DC.
+Select an endpoint for the persisted DC, preferring non-media candidates.
 
 **Raises:**
 
-- <code>[InvalidDatacenter](#miniproto.errors.InvalidDatacenter)</code> – If the session has no saved endpoint for its current DC.
+- <code>[InvalidDatacenter](#miniproto.errors.InvalidDatacenter)</code> – If the session has no saved DC options.
+- <code>[ValueError](#ValueError)</code> – If the saved options contain no endpoint for the current DC.

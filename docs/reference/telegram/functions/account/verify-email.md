@@ -42,12 +42,12 @@ from miniproto.raw.functions import AccountVerifyEmail
 
 Public access: `miniproto.raw.functions.AccountVerifyEmail`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.functions import AccountVerifyEmail
 
-# Naming the raw request class is local only; it performs no I/O or network request.
+# Refer to the raw request class without constructing it or calling Telegram
 request_type = AccountVerifyEmail
 ```
 

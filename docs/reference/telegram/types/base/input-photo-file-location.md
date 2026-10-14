@@ -44,12 +44,12 @@ from miniproto.raw.types import InputPhotoFileLocation
 
 Public access: `miniproto.raw.types.InputPhotoFileLocation`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import InputPhotoFileLocation
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = InputPhotoFileLocation
 ```
 

@@ -32,4 +32,4 @@ Decode a boxed TL vector.
 
 **Raises:**
 
-- <code>[TLCodecError](#miniproto.tl.codec.TLCodecError)</code> – If the constructor or count is invalid.
+- <code>[ValueError](#ValueError)</code> – If the constructor, count or element bytes are invalid, including ``TLCodecError`` from the generic path.

@@ -7,9 +7,9 @@ generated: false
 
 # Troubleshooting
 
-Start from the narrowest failure boundary and retain only redacted context: failure type, operation, configured timeout or queue policy and whether the code ran against a fake/local or credentialed environment. Do not attach session files, strings, auth keys, passphrases, API hashes, bot tokens or proxy URLs with credentials to an issue.
+Start with the failed operation. Keep only redacted context such as the error type, operation, configured timeout or queue policy, and whether the run used a fake/local or credentialed environment. Do not attach session files, strings, auth keys, passphrases, API hashes, bot tokens or proxy URLs with credentials to an issue.
 
-| Symptom | Likely boundary | Recovery |
+| Symptom | Likely cause | Recovery |
 | --- | --- | --- |
 | Client construction rejects session storage | A durable default storage needs a session-encryption key at construction time. | Configure the documented key source before constructing the client or use `InMemorySessionStorage` only for intentionally throwaway state. See [session storage and credential handling](../session-security.md). |
 | Session import raises `ConnectionError` | The destination client is connected. | Disconnect it and import into a disconnected client. Do not replace live state in place. |

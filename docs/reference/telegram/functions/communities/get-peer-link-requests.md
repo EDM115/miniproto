@@ -43,12 +43,12 @@ from miniproto.raw.functions import CommunitiesGetPeerLinkRequests
 
 Public access: `miniproto.raw.functions.CommunitiesGetPeerLinkRequests`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.functions import CommunitiesGetPeerLinkRequests
 
-# Naming the raw request class is local only; it performs no I/O or network request.
+# Refer to the raw request class without constructing it or calling Telegram
 request_type = CommunitiesGetPeerLinkRequests
 ```
 

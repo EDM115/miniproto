@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.types.User"
 source_path: "src/miniproto/types.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/types.py#L32"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/types.py#L35"
 aliases: ["miniproto.User"]
 module: "miniproto.types"
 ---

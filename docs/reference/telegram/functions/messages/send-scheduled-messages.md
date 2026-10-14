@@ -42,12 +42,12 @@ from miniproto.raw.functions import MessagesSendScheduledMessages
 
 Public access: `miniproto.raw.functions.MessagesSendScheduledMessages`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.functions import MessagesSendScheduledMessages
 
-# Naming the raw request class is local only; it performs no I/O or network request.
+# Refer to the raw request class without constructing it or calling Telegram
 request_type = MessagesSendScheduledMessages
 ```
 

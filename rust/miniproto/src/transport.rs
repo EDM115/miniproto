@@ -1,13 +1,7 @@
 //! Stateful native codecs for Telegram TCP abridged, intermediate and padded-intermediate frames.
 //!
-//! `TransportCodec` is exported to Python as `miniproto._native.TransportCodec` and mirrors the
-//! Python fallback's framing contract.  It accepts arbitrary receive fragmentation, emits payload,
-//! quick-ACK and transport-error events and returns Python exceptions for malformed or oversized
-//! data rather than panicking. `FramePump` itself is Python-independent, but the PyO3 methods in
-//! this module currently do not detach regular parsing or encoding work from the GIL; the GIL is
-//! also required while their results are converted to Python objects.
-//! Incompatible Python inputs retain PyO3's `TypeError`, `OverflowError` or source conversion
-//! exception; framing validation that runs after conversion intentionally returns `ValueError`.
+//! `miniproto._native.TransportCodec` accepts fragmented input and emits payload, quick-ACK and transport-error events. Its framing validation raises `ValueError`, which the Python adapter converts to `ProtocolValidationError` on receive and `TransportError` on encode. PyO3 conversion errors propagate unchanged.
+//! `FramePump` uses no Python objects. Its Python wrappers remain attached during parsing, encoding and result conversion, holding the GIL on GIL-enabled builds. Quick-ACK hashing can detach for large packets.
 
 use pyo3::IntoPyObjectExt;
 use pyo3::exceptions::PyValueError;
@@ -146,8 +140,7 @@ impl TransportCodec {
     #[new]
     /// Creates `TransportCodec(mode, max_payload_size, server_side=False)`.
     ///
-    /// `mode` must be a supported Python transport name and `max_payload_size` must be positive;
-    /// otherwise this constructor raises `ValueError`.
+    /// An unsupported `mode` or zero payload bound raises `ValueError`. A negative bound or one larger than `usize` raises `OverflowError` during PyO3 conversion.
     ///
     /// # Arguments
     ///
@@ -224,7 +217,7 @@ impl TransportCodec {
     }
 }
 
-/// GIL-free incremental parser/encoder retaining incomplete receive data between calls.
+/// Parser/encoder retaining incomplete input without accessing Python objects
 struct FramePump {
     /// Framing variant used for every operation.
     mode: TransportMode,
@@ -511,8 +504,7 @@ impl FramePump {
 
     /// Converts a complete raw transport payload to an application, ACK or error event.
     ///
-    /// Removes and validates padded-intermediate suffix bytes when `padded`; returns `ValueError`
-    /// for invalid encapsulated packet shape or a payload above the configured maximum.
+    /// Removes padded-intermediate suffix bytes after checking the packet shape and padding length. Invalid shape or excess payload length returns `ValueError`. Random padding byte values are unrestricted.
     ///
     /// # Arguments
     ///
@@ -611,7 +603,7 @@ impl FramePump {
         to_fixed(self.read_slice(offset, N)?)
     }
 
-    /// Discards consumed data while retaining only bounded buffer capacity for future chunks.
+    /// Discards consumed bytes and releases oversized capacity when the buffer is fully drained
     fn compact(&mut self) {
         if self.offset == 0 {
             return;
@@ -844,7 +836,7 @@ mod tests {
     }
 
     #[test]
-    /// Locks down the published SHA-256 quick-ACK token vector.
+    /// Checks a fixed SHA-256 quick-ACK derivation vector
     fn quick_ack_token_matches_published_sha256_vector() {
         let auth_key: Vec<u8> = (0_u8..=255).collect();
         let mut packet = vec![0x11; 8];

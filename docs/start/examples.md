@@ -5,7 +5,7 @@ slug: /start/examples/
 generated: false
 ---
 
-The following program is a complete bot identity check. It has no command-line credential arguments: provide `MINIPROTO_API_ID`, `MINIPROTO_API_HASH` and `MINIPROTO_BOT_TOKEN` through a protected environment or secret manager before running it. It makes a live Telegram connection, so it is not an offline verification command.
+This complete bot identity check takes credentials from `MINIPROTO_API_ID`, `MINIPROTO_API_HASH` and `MINIPROTO_BOT_TOKEN`. Set them in a protected environment or secret manager. The program connects to Telegram, so it cannot verify the package offline.
 
 ```python
 import os
@@ -30,6 +30,6 @@ async def main() -> None:
 event_loop.run(main())
 ```
 
-For a first low-level request, substitute the body of `main()` with the [raw-call example](./raw-api.md). For a controlled send, use the [high-level-operation example](./high-level-operation.md) and a chat where the bot has permission to post. For a durable account, replace in-memory storage only after following [Phone, Bot and 2FA Authorization](./authentication.md) and [Session Security](../session-security.md).
+To make a raw request, use the [raw-call example](./raw-api.md) inside `main()`. To send a message, use the [high-level-operation example](./high-level-operation.md) and choose a chat where the bot can post. For a durable account, follow [Phone, Bot and 2FA Authorization](./authentication.md) and [Session Security](../session-security.md) before replacing in-memory storage.
 
-These examples establish an expected shape for applications; they do not guarantee a particular Telegram response, rate, peer permission, account state or live test outcome.
+These examples show how to structure application calls. Telegram controls responses, rate limits, peer permissions and account state, so an example cannot guarantee a live test outcome.

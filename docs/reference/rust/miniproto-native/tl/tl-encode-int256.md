@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::tl::tl_encode_int256"
 source_path: "rust/miniproto/src/tl.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L599"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L591"
 aliases: ["miniproto._native.tl_encode_int256"]
 python_visible: true
 ---
@@ -15,7 +15,7 @@ python_visible: true
 ## Provenance
 
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L599)
+- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L591)
 - Python exposure: `miniproto._native.tl_encode_int256` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -36,7 +36,7 @@ fn tl_encode_int256(value: &_) -> _
 fn tl_encode_int256(value: &Bound<'_, PyAny>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:599-601`*
+*Defined in `rust/miniproto/src/tl.rs:591-593`*
 
 Encodes Python `tl_encode_int256(value)` to 32 little-endian bytes via `int.to_bytes`.
 

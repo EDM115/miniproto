@@ -80,12 +80,18 @@ class SessionStorage(Protocol):
         """Atomically apply a synchronous transform to an isolated current snapshot.
 
         Args:
-            transform: Synchronous callback receiving detached stored data and returning replacement data or ``None``.
+            transform: Synchronous callback receiving detached stored data and returning replacement data. Returning ``None`` clears the session.
+
+        Returns:
+            A detached snapshot of the committed replacement, or ``None`` after clearing.
         """
         ...
 
     def domain_revisions(self) -> Mapping[str, int]:
-        """Return copy-safe monotonically increasing revisions per logical domain."""
+        """Return detached, instance-local change counters per logical domain.
+
+        Counters increase after logical changes through this instance. They are neither persisted nor a signal of writes through other storage instances.
+        """
         ...
 
     async def clear(self) -> None:
@@ -167,7 +173,14 @@ class InMemorySessionStorage:
         Awaitable transforms are rejected so locks are never held across an await.
 
         Args:
-            transform: Synchronous callback receiving a detached current snapshot.
+            transform: Synchronous callback receiving a detached current snapshot and returning replacement state, or ``None`` to clear it.
+
+        Returns:
+            A detached committed snapshot or ``None`` after clearing.
+
+        Raises:
+            TypeError: If the transform returns an awaitable or unsupported payload.
+            SessionStorageError: If storage is closed.
         """
         started = time.perf_counter()
         with self._lock:
@@ -214,10 +227,9 @@ class InMemorySessionStorage:
 class EncryptedSQLiteSessionStorage:
     """Thread-safe SQLite persistence with per-domain authenticated encryption.
 
-    Encryption and MAC keys derive from supplied key material. Reads and writes
-    run off the event loop, while SQLite ``BEGIN IMMEDIATE`` serializes mutations.
-    Legacy single-record payloads migrate to independently encrypted domains on
-    the next replacement or mutation.
+    Encryption and MAC keys derive from supplied key material. Reads and writes run on worker threads. SQLite ``BEGIN IMMEDIATE`` serializes mutations. Legacy single-record payloads migrate to separate encrypted domains on the next replacement or mutation.
+
+    Cancelling a direct async call can leave its worker running and a write may still commit. The client storage wrapper waits for backend completion and reconciles its cache before propagating cancellation.
     """
 
     def __init__(self, path: str | os.PathLike[str], key: bytes | str | None = None) -> None:
@@ -313,11 +325,17 @@ class EncryptedSQLiteSessionStorage:
     ) -> Mapping[str, Any] | None:
         """Atomically transform detached state under SQLite's write transaction.
 
-        The transform must be synchronous; it executes while the backend lock and
-        ``BEGIN IMMEDIATE`` transaction ensure no lost update.
+        The synchronous transform runs on a worker thread while the backend lock and ``BEGIN IMMEDIATE`` transaction prevent competing writes from losing updates.
 
         Args:
-            transform: Synchronous callback receiving a detached current snapshot.
+            transform: Synchronous callback receiving a detached current snapshot and returning replacement state, or ``None`` to clear it.
+
+        Returns:
+            A detached committed snapshot or ``None`` after clearing.
+
+        Raises:
+            TypeError: If the transform returns an awaitable or unsupported payload.
+            SessionStorageError: If storage is closed or a SQLite operation fails.
         """
         started = time.perf_counter()
         try:
@@ -348,9 +366,9 @@ class EncryptedSQLiteSessionStorage:
         _emit_storage_event("session.clear", started, outcome="success", backend="sqlite")
 
     async def close(self) -> None:
-        """Close load, save, mutate and clear after queued worker work reaches the lock.
+        """Mark storage closed under the backend lock, after any active locked operation.
 
-        ``sibling`` and ``domain_revisions`` remain usable after closure.
+        Workers that acquire the lock after closure fail, even if queued earlier. ``sibling`` and ``domain_revisions`` remain usable.
         """
         await asyncio.to_thread(self._close_sync)
 
@@ -627,7 +645,9 @@ def deserialize_session_data(payload: bytes) -> dict[str, Any]:
         payload: Versioned canonical JSON bytes.
 
     Raises:
-        SessionEnvelopeError: If encoding, version or top-level shape is invalid.
+        SessionEnvelopeError: If JSON encoding or storage version is invalid, or the decoded payload is not a mapping.
+        AttributeError: If the decoded outer JSON value is not an object.
+        ValueError: If a stored datetime marker contains an invalid ISO timestamp.
     """
     try:
         document = json.loads(payload.decode())

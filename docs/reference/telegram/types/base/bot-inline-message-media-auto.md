@@ -53,12 +53,12 @@ from miniproto.raw.types import BotInlineMessageMediaAuto
 
 Public access: `miniproto.raw.types.BotInlineMessageMediaAuto`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import BotInlineMessageMediaAuto
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = BotInlineMessageMediaAuto
 ```
 

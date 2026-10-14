@@ -50,12 +50,12 @@ from miniproto.raw.functions import PaymentsGetStarsSubscriptions
 
 Public access: `miniproto.raw.functions.PaymentsGetStarsSubscriptions`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.functions import PaymentsGetStarsSubscriptions
 
-# Naming the raw request class is local only; it performs no I/O or network request.
+# Refer to the raw request class without constructing it or calling Telegram
 request_type = PaymentsGetStarsSubscriptions
 ```
 

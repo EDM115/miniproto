@@ -7,7 +7,7 @@ generated: false
 
 # Updates and recovery
 
-`Client.connect()` starts the update manager when updates are enabled. The manager restores its persisted cursor before it accepts new raw updates and `async with Client(...)` connects and disconnects around the consumer. Keep application side effects idempotent: the persisted recovery state is written before an update becomes visible to `iter_updates()` or to registered handlers, so a crash can leave recovery state ahead of the last side effect your application observed. This is not an application-level exactly-once delivery contract.
+`Client.connect()` starts the update manager when updates are enabled. The manager restores its persisted cursor before it accepts new raw updates; `async with Client(...)` connects before the body and disconnects after it. The manager commits cursor state before it exposes an update to `iter_updates()` or a handler. A crash after that commit but before handler delivery can leave the cursor ahead of application work, and miniproto may not deliver that update again. Idempotency helps when an update repeats, but it cannot recover missed work. Applications that cannot accept missed effects need a separate reconciliation strategy. Miniproto does not promise exactly-once or at-least-once delivery to application code.
 
 ```python
 from miniproto import Client, ClientConfig, Update
@@ -20,7 +20,7 @@ async def consume(config: ClientConfig) -> None:
 
 
 async def process_update(update: Update) -> None:
-    # Persist an application idempotency key before a non-idempotent side effect.
+    # Use application state to deduplicate repeats and reconcile missed work.
     ...
 ```
 
@@ -40,7 +40,7 @@ Measure handler latency and queue pressure before increasing the bound. Handlers
 
 ## Gaps and recovery
 
-When the manager detects a gap, it uses Telegram update-state and difference requests through its configured invoker to restore cursor state. Events returned by one difference response are processed in that response's date order. That local ordering does not establish a global total order across independent input calls, network timing or your own background workers.
+The manager detects gaps in global PTS, QTS or update-container sequence state and uses `updates.getDifference` to restore global cursor state. It uses `updates.getChannelDifference` for a channel PTS gap when it has that channel's cached access hash. Both recovery loops stop after ten non-final rounds. Events in a difference response are processed by date; this does not order independent network inputs or application workers.
 
 The raw drainer is a cancellable background task. During `stop()`, cancellation can interrupt raw processing; if the task had already failed, shutdown re-raises its exception. Plan a supervised task boundary around the client and log the failure context without logging session credentials. The [production-operation guide](./production-operation.md) covers the wider shutdown order and [observability guide](./observability.md) covers the structured logging hooks.
 

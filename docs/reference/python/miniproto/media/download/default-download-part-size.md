@@ -7,7 +7,7 @@ language: "python"
 kind: "attribute"
 qualified_name: "miniproto.media.download.DEFAULT_DOWNLOAD_PART_SIZE"
 source_path: "src/miniproto/media/download.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L74"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L67"
 aliases: ["miniproto.media.DEFAULT_DOWNLOAD_PART_SIZE"]
 module: "miniproto.media.download"
 ---

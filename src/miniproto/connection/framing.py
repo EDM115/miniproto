@@ -156,8 +156,7 @@ class PythonFrameCodec:
             from the accumulated input, in wire order.
 
         Raises:
-            TransportError: If a complete header or frame is malformed or
-                exceeds the configured size bound.
+            ProtocolValidationError: If an inbound header or frame is malformed or exceeds the configured size bound.
         """
         if data:
             self._buffer.extend(data)
@@ -176,7 +175,7 @@ class PythonFrameCodec:
         """Encode an abridged frame, enforcing its four-byte payload alignment.
 
         Args:
-            payload: Already-bounded payload whose length must divide by four.
+            payload: Already-bounded payload whose length must be divisible by four.
             quick_ack: Whether to set abridged's quick-ACK request indication.
         """
         if len(payload) % 4:
@@ -508,7 +507,7 @@ def native_transport_available() -> bool:
 def create_frame_codec(
     mode: TransportMode | str, *, max_payload_size: int, server_side: bool = False
 ) -> TransportFrameCodec:
-    """Create the fastest available codec for one MTProto TCP framing mode.
+    """Select the native TCP framing codec when available, otherwise the Python codec.
 
     Args:
         mode: Requested TCP transport mode.
@@ -520,8 +519,8 @@ def create_frame_codec(
         behavior-equivalent pure-Python incremental codec.
 
     Raises:
-        ValueError: If the fallback codec receives an unsupported mode or an
-            invalid payload bound.
+        ValueError: If the selected codec rejects the mode or payload bound.
+        OverflowError: If a native payload bound cannot fit the platform's unsigned size type.
         RuntimeError: If the native extension is found but cannot initialize.
     """
     if native_transport_available():

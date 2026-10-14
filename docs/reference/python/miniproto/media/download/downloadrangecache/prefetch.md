@@ -1,13 +1,13 @@
 ---
 title: "miniproto.media.download.DownloadRangeCache.prefetch"
-description: "Schedule a bounded best-effort cached fetch without awaiting its outcome."
+description: "Schedule a best-effort cached fetch, skipping it when 32 background tasks are active."
 generated: true
 editUrl: false
 language: "python"
 kind: "function"
 qualified_name: "miniproto.media.download.DownloadRangeCache.prefetch"
 source_path: "src/miniproto/media/download.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L311"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L297"
 aliases: ["miniproto.media.DownloadRangeCache.prefetch"]
 module: "miniproto.media.download"
 ---
@@ -18,7 +18,7 @@ module: "miniproto.media.download"
 prefetch(key: str, offset: int, limit: int, fetch: Callable[[], Awaitable[bytes]]) -> None
 ```
 
-Schedule a bounded best-effort cached fetch without awaiting its outcome.
+Schedule a best-effort cached fetch, skipping it when 32 background tasks are active.
 
 **Parameters:**
 

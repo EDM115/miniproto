@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::tl::tl_encode_int_vector"
 source_path: "rust/miniproto/src/tl.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L698"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L690"
 aliases: ["miniproto._native.tl_encode_int_vector"]
 python_visible: true
 ---
@@ -15,7 +15,7 @@ python_visible: true
 ## Provenance
 
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L698)
+- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L690)
 - Python exposure: `miniproto._native.tl_encode_int_vector` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -37,7 +37,7 @@ fn tl_encode_int_vector(py: _, values: _) -> _
 fn tl_encode_int_vector(py: Python<'_>, values: Vec<i32>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:698-701`*
+*Defined in `rust/miniproto/src/tl.rs:690-693`*
 
 Encodes Python `tl_encode_int_vector(values)` as a generic TL vector of 32-bit integers.
 

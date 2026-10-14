@@ -7,7 +7,7 @@ language: "python"
 kind: "attribute"
 qualified_name: "miniproto.media.upload.DEFAULT_UPLOAD_PART_TIMEOUT"
 source_path: "src/miniproto/media/upload.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/upload.py#L37"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/upload.py#L35"
 module: "miniproto.media.upload"
 ---
 

@@ -41,12 +41,12 @@ from miniproto.raw.types import InputUserSelf
 
 Public access: `miniproto.raw.types.InputUserSelf`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import InputUserSelf
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = InputUserSelf
 ```
 

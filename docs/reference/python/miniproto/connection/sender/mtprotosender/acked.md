@@ -1,13 +1,13 @@
 ---
 title: "miniproto.connection.sender.MTProtoSender.acked"
-description: "Return whether Telegram has sent a ``msgs_ack`` containing ``msg_id``."
+description: "Return whether retained ``msgs_ack`` history contains ``msg_id``."
 generated: true
 editUrl: false
 language: "python"
 kind: "function"
 qualified_name: "miniproto.connection.sender.MTProtoSender.acked"
 source_path: "src/miniproto/connection/sender.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/sender.py#L577"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/sender.py#L574"
 aliases: ["miniproto.connection.MTProtoSender.acked"]
 module: "miniproto.connection.sender"
 ---
@@ -18,7 +18,7 @@ module: "miniproto.connection.sender"
 acked(msg_id: int) -> bool
 ```
 
-Return whether Telegram has sent a ``msgs_ack`` containing ``msg_id``.
+Return whether retained ``msgs_ack`` history contains ``msg_id``.
 
 **Parameters:**
 

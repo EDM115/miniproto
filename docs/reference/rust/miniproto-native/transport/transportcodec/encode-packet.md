@@ -7,7 +7,7 @@ language: "rust"
 kind: "method"
 qualified_name: "miniproto_native::transport::TransportCodec::encode_packet"
 source_path: "rust/miniproto/src/transport.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L175"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L168"
 aliases: ["miniproto._native.TransportCodec.encode_packet"]
 python_visible: true
 ---
@@ -15,7 +15,7 @@ python_visible: true
 ## Provenance
 
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/transport.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L175)
+- Source: [`rust/miniproto/src/transport.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L168)
 - Python exposure: `miniproto._native.TransportCodec.encode_packet` (confirmed from adjacent PyO3 attributes)
 
 ## Signature

@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.auth.key_exchange.select_rsa_key"
 source_path: "src/miniproto/auth/key_exchange.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/auth/key_exchange.py#L715"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/auth/key_exchange.py#L713"
 aliases: ["miniproto.auth.select_rsa_key"]
 module: "miniproto.auth.key_exchange"
 ---
@@ -22,7 +22,7 @@ Select the first server-offered fingerprint present in trusted ``keys``.
 
 **Parameters:**
 
-- **fingerprints** (<code>[tuple](#tuple)[[int](#int), ...]</code>) – Server-advertised RSA fingerprints in Telegram preference order.
+- **fingerprints** (<code>[tuple](#tuple)[[int](#int), ...]</code>) – RSA fingerprints in the order advertised by the server.
 - **keys** (<code>[tuple](#tuple)[[RSAKey](#miniproto.auth.key_exchange.RSAKey), ...]</code>) – Trusted Telegram RSA public keys available to this client.
 
 **Raises:**

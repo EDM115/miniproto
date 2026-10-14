@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.peers.input_peer_from_peer"
 source_path: "src/miniproto/peers.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/peers.py#L578"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/peers.py#L579"
 module: "miniproto.peers"
 ---
 
@@ -19,7 +19,7 @@ input_peer_from_peer(peer: Peer) -> object
 
 Convert a resolved peer to its MTProto ``InputPeer`` representation.
 
-Chats need no hash; users and channels must carry a cached access hash.
+Self and basic chats need no hash. Users and channels must carry an access hash.
 
 **Raises:**
 

@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.auth.key_exchange.factorize_pq"
 source_path: "src/miniproto/auth/key_exchange.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/auth/key_exchange.py#L732"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/auth/key_exchange.py#L730"
 aliases: ["miniproto.auth.factorize_pq"]
 module: "miniproto.auth.key_exchange"
 ---
@@ -26,4 +26,4 @@ Factor Telegram's small composite ``pq`` and return its factors in ascending ord
 
 **Raises:**
 
-- <code>[ValueError](#ValueError)</code> – If the native factorizer returns invalid factors.
+- <code>[ValueError](#ValueError)</code> – If the selected factorizer rejects ``pq`` or returns invalid factors.

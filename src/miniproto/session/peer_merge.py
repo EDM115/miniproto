@@ -1,4 +1,4 @@
-"""Merge durable peer cache entries without discarding richer known metadata."""
+"""Merge durable peer entries according to full-entity and partial-entity metadata rules."""
 
 from __future__ import annotations
 
@@ -29,11 +29,13 @@ class PeerEntryMapMerge:
 
 
 def merge_peer_entry(current: PeerCacheEntry, incoming: PeerCacheEntry) -> PeerCacheEntry:
-    """Prefer fresh fields while retaining existing hashes and populated metadata.
+    """Apply incoming peer metadata while preserving a missing access hash.
+
+    A full entry marked ``_miniproto_complete`` replaces raw metadata and may clear username or phone values. Partial entries retain existing values where incoming aliases are empty.
 
     Args:
         current: Existing canonical peer cache entry.
-        incoming: New entry whose populated fields take precedence.
+        incoming: New entry whose completeness marker determines whether missing aliases clear existing values.
     """
     incoming_raw = dict(incoming.raw or {})
     complete = incoming_raw.get("_miniproto_complete") is True

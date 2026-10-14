@@ -31,4 +31,4 @@ authorization key is established.
 - **nonce** (<code>[int](#int)</code>) – Client nonce echoed by Telegram.
 - **server_nonce** (<code>[int](#int)</code>) – Server nonce returned in ``resPQ``.
 - **new_nonce** (<code>[int](#int)</code>) – Fresh random nonce that binds this key exchange.
-- **dc_id** (<code>[int](#int)</code>) – Target Telegram DC ID, encoded for test mode when applicable.
+- **dc_id** (<code>[int](#int)</code>) – Wire DC ID, with the test offset applied before negating media-only, non-CDN IDs.

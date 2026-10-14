@@ -41,12 +41,12 @@ from miniproto.raw.functions import FoldersEditPeerFolders
 
 Public access: `miniproto.raw.functions.FoldersEditPeerFolders`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.functions import FoldersEditPeerFolders
 
-# Naming the raw request class is local only; it performs no I/O or network request.
+# Refer to the raw request class without constructing it or calling Telegram
 request_type = FoldersEditPeerFolders
 ```
 

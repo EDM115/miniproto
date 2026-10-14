@@ -1,6 +1,6 @@
 ---
 title: "miniproto.media.scheduler.MediaSchedulerSnapshot"
-description: "Immutable byte and operation measurements for one DC/direction scheduler."
+description: "Snapshot of byte usage and transfer counts for one DC/direction scheduler."
 generated: true
 editUrl: false
 language: "python"
@@ -17,7 +17,7 @@ module: "miniproto.media.scheduler"
 MediaSchedulerSnapshot(max_bytes: int, active_bytes: int, queued_bytes: int, active_transfers: int, queued_transfers: int, grants: int, grants_by_transfer: dict[str, int]) -> None
 ```
 
-Immutable byte and operation measurements for one DC/direction scheduler.
+Snapshot of byte usage and transfer counts for one DC/direction scheduler.
 
 **Attributes:**
 
@@ -27,4 +27,4 @@ Immutable byte and operation measurements for one DC/direction scheduler.
 - [**active_transfers**](#miniproto.media.scheduler.MediaSchedulerSnapshot.active_transfers) (<code>[int](#int)</code>) – Transfers with at least one live permit.
 - [**queued_transfers**](#miniproto.media.scheduler.MediaSchedulerSnapshot.queued_transfers) (<code>[int](#int)</code>) – Transfers with at least one queued acquire.
 - [**grants**](#miniproto.media.scheduler.MediaSchedulerSnapshot.grants) (<code>[int](#int)</code>) – Total permits granted by this scheduler since creation.
-- [**grants_by_transfer**](#miniproto.media.scheduler.MediaSchedulerSnapshot.grants_by_transfer) (<code>[dict](#dict)[[str](#str), [int](#int)]</code>) – Copy of total grants keyed by transfer identifier.
+- [**grants_by_transfer**](#miniproto.media.scheduler.MediaSchedulerSnapshot.grants_by_transfer) (<code>[dict](#dict)[[str](#str), [int](#int)]</code>) – Mutable copy of total grants keyed by transfer identifier, independent of scheduler state.

@@ -61,12 +61,12 @@ from miniproto.raw.types import InputSecureValue
 
 Public access: `miniproto.raw.types.InputSecureValue`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import InputSecureValue
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = InputSecureValue
 ```
 

@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.errors.InvalidCode"
 source_path: "src/miniproto/errors.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L328"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L330"
 aliases: ["miniproto.InvalidCode"]
 module: "miniproto.errors"
 ---

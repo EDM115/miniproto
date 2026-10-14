@@ -7,7 +7,7 @@ language: "python"
 kind: "type"
 qualified_name: "miniproto.media.upload.RawInvoker"
 source_path: "src/miniproto/media/upload.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/upload.py#L60"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/upload.py#L55"
 module: "miniproto.media.upload"
 ---
 

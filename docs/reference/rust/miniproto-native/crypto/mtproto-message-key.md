@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::crypto::mtproto_message_key"
 source_path: "rust/miniproto/src/crypto.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L147"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L142"
 aliases: ["miniproto._native.mtproto_message_key"]
 python_visible: true
 ---
@@ -15,7 +15,7 @@ python_visible: true
 ## Provenance
 
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L147)
+- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L142)
 - Python exposure: `miniproto._native.mtproto_message_key` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -28,7 +28,7 @@ fn mtproto_message_key(py: _, auth_key: _, plaintext_with_padding: _, client_to_
 
 - `py`: The acquired GIL token used to detach a large hash operation.
 - `auth_key`: The 256-byte MTProto authorization key.
-- `plaintext_with_padding`: Block-aligned inner plaintext that contributes to the message key.
+- `plaintext_with_padding`: Inner plaintext including padding, with no alignment or padding validation here
 - `client_to_server`: Selects the directional MTProto key offset.
 
 ## cargo-docs-md rendering
@@ -39,7 +39,7 @@ fn mtproto_message_key(py: _, auth_key: _, plaintext_with_padding: _, client_to_
 fn mtproto_message_key(py: Python<'_>, auth_key: Vec<u8>, plaintext_with_padding: Vec<u8>, client_to_server: bool) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:147-162`*
+*Defined in `rust/miniproto/src/crypto.rs:142-157`*
 
 Computes Python `mtproto_message_key` for padded plaintext and one MTProto direction.
 
@@ -50,5 +50,5 @@ large inputs.
 
 - `py`: The acquired GIL token used to detach a large hash operation.
 - `auth_key`: The 256-byte MTProto authorization key.
-- `plaintext_with_padding`: Block-aligned inner plaintext that contributes to the message key.
+- `plaintext_with_padding`: Inner plaintext including padding, with no alignment or padding validation here
 - `client_to_server`: Selects the directional MTProto key offset.

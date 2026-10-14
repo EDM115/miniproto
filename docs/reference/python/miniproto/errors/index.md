@@ -1,6 +1,6 @@
 ---
 title: "miniproto.errors"
-description: "Redaction-safe public exceptions and Telegram RPC error classification."
+description: "Public exceptions with diagnostic redaction and Telegram RPC error classification."
 generated: true
 editUrl: false
 language: "python"
@@ -13,14 +13,14 @@ module: "miniproto.errors"
 
 ## `miniproto.errors`
 
-Redaction-safe public exceptions and Telegram RPC error classification.
+Public exceptions with diagnostic redaction and Telegram RPC error classification.
 
 ## Public objects
 
-- [`MiniprotoError`](./miniprotoerror/) — Base exception for all library-defined failures.
+- [`MiniprotoError`](./miniprotoerror/) — Base exception for client, protocol-validation, RPC and session-storage failures.
 - [`ProtocolValidationError`](./protocolvalidationerror/) — An authenticated MTProto message violated the inbound protocol contract.
 - [`AmbiguousRpcResult`](./ambiguousrpcresult/) — The transport failed after an RPC may already have reached Telegram.
-- [`RpcError`](./rpcerror/) — Raw or classified Telegram RPC failure with redaction-safe diagnostics.
+- [`RpcError`](./rpcerror/) — Raw or classified Telegram RPC failure with redacted supported diagnostic fields.
 - [`InvokeError`](./invokeerror/) — Base exception for raw invocation failures before Telegram returns a typed RPC error.
 - [`ClientDisconnected`](./clientdisconnected/) — Raised when invocation cannot continue because the client disconnected.
 - [`RequestTimeout`](./requesttimeout/) — Raised when the client-side request deadline expires.
@@ -30,7 +30,7 @@ Redaction-safe public exceptions and Telegram RPC error classification.
 - [`Forbidden`](./forbidden/) — Classified Telegram permission failure with status code 403.
 - [`NotFound`](./notfound/) — Classified Telegram missing-resource failure with status code 404.
 - [`RpcTimeout`](./rpctimeout/) — Classified Telegram-side or transport RPC timeout, commonly code -503.
-- [`InternalServerError`](./internalservererror/) — Classified retryable server failure, normally a 5xx RPC code.
+- [`InternalServerError`](./internalservererror/) — Classified server failure eligible for retry-safe request retries, normally a 5xx RPC code.
 - [`FloodWait`](./floodwait/) — Telegram pacing failure that exposes the required wait duration in seconds.
 - [`AuthError`](./autherror/) — Base exception for authentication and authorization flow failures.
 - [`InvalidCode`](./invalidcode/) — Authentication flow failure for a missing, expired or invalid phone code.
@@ -39,7 +39,7 @@ Redaction-safe public exceptions and Telegram RPC error classification.
 - [`SignUpRequired`](./signuprequired/) — Authentication flow requires creating a Telegram account first.
 - [`AuthKeyNotFound`](./authkeynotfound/) — Authentication key is invalid, unregistered or no longer available.
 - [`AuthKeyRegenerationRequired`](./authkeyregenerationrequired/) — Authentication key is duplicated or unsynchronized and must be replaced.
-- [`InvalidDatacenter`](./invaliddatacenter/) — Telegram rejects the current data centre, commonly before a migration hint.
+- [`InvalidDatacenter`](./invaliddatacenter/) — The requested datacenter is unavailable or Telegram rejects it.
 - [`DatacenterMigration`](./datacentermigration/) — Telegram directs the request to ``dc_id`` for a named migration kind.
 - [`TransportFlood`](./transportflood/) — Raised for transport-level 429 responses, not ordinary RPC flood waits.
 - [`PendingRpcLimitExceeded`](./pendingrpclimitexceeded/) — Raised when a sender has too many in-flight RPCs and cannot accept more.

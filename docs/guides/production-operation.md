@@ -7,7 +7,7 @@ generated: false
 
 # Production operation
 
-Make one application component responsible for each `Client` instance. The client owns its connection, update machinery, media pools and schedulers, auxiliary download clients and session storage. The narrowest reliable lifecycle is an async context manager:
+Assign one application component to manage each `Client` instance. The client owns its connection, update machinery, media pools and schedulers, auxiliary download clients and session storage. Use an async context manager to connect and disconnect it:
 
 ```python
 from miniproto import Client, ClientConfig
@@ -20,7 +20,7 @@ async def serve(config: ClientConfig) -> None:
 
 `connect()` is serialized with `disconnect()` and is repeat-safe while the client remains usable. If update startup fails, connection startup rolls back its state and closes the sender it created. `disconnect()` stops updates and receive dispatch, flushes salt state, releases transport and media resources, closes schedulers and auxiliary download clients, then closes session storage. It continues cleanup after an individual cleanup failure and re-raises the first failure it captured.
 
-Closing storage is a terminal lifecycle boundary: do not attempt to reconnect and reuse the same client after `disconnect()`. Construct a new client for a new lifecycle. This matters during service restarts, test fixtures and supervisor retries.
+`disconnect()` closes session storage, so that client cannot reconnect. Construct a new client after shutdown, including during supervisor retries.
 
 ## Shutdown sequence
 

@@ -1,23 +1,21 @@
 ## Description
-<!-- Describe why you created this PR -->
+<!-- Explain the problem and intended result -->
 
 ## Changes
-<!-- Describe in a list what has changed -->
+<!-- List the notable changes -->
 - 
 
 ## Related issues
-<!-- If there are any issues related to this PR, please link them here. If not, leave empty -->
+<!-- Link related issues, or remove this section if none apply -->
 
 ## Impact
-<!-- What effects will this PR have (UI, UX, backward compatibility, performance, security, ...) ? -->
+<!-- Note user-visible, compatibility, performance and security effects -->
 
-## Extra information
-<!-- Write down any information that may be relevant for the reviewer, leave empty otherwise -->
+## Reviewer notes
+<!-- Include migration steps or reviewer context, or remove this section if none -->
 
 ## Checklist
-- [ ] The name of the PR is clear
-- [ ] The PR uses the right labels
-- [ ] The workflow tests have passed
-- [ ] My code is guaranteed to not break existing behavior
-- [ ] The code is properly formatted
-- [ ] The commits are somewhat clear
+- [ ] The title describes the change
+- [ ] Relevant tests and checks pass, or the PR explains why they were not run
+- [ ] Public API and compatibility effects are documented where needed
+- [ ] The code is formatted

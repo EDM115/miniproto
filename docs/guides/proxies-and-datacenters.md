@@ -20,7 +20,7 @@ config = ClientConfig(
 
 The URL is parsed while connection setup opens the proxy. A missing scheme or host, an unsupported scheme and a failed negotiation raise `TransportError`. Use a fully formed URL such as `socks5://host:1080` or `http://host:8080`. The `proxy` field is excluded from the transport configuration representation, but a proxy URL with credentials is still a credential: do not expose it in diagnostics, environment dumps or benchmark output. [Observability](./observability.md) describes the limits of automatic redaction.
 
-`http://` and `https://` currently select the same HTTP CONNECT negotiation and the transport opens the proxy socket without TLS settings. Do not treat an `https://` scheme in this configuration as evidence that the client-to-proxy hop has been authenticated or encrypted. Select and secure the proxy route according to the threat model for the deployment.
+`http://` and `https://` both open a plain TCP connection to the proxy and send the same HTTP CONNECT request. The `https://` scheme does not add TLS or authenticate the client-to-proxy hop. Use a route that protects that hop when the deployment requires it.
 
 ## Primary DC and media DCs have separate state
 

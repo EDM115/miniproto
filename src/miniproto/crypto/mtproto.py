@@ -1,13 +1,8 @@
 """High-level helpers for MTProto payload and media encryption.
 
-The functions here shape data for the backend-neutral primitives in
-``miniproto.crypto.native``.  They implement MTProto's direction-dependent key
-derivation and padding rules; they do not add transport framing or replay
-protection.
+These helpers apply MTProto's direction-dependent key derivation and padding rules through ``miniproto.crypto.native``. Callers handle transport framing and replay protection.
 
-When their selected Rust primitive has a work estimate above 4 KiB it may detach
-from the GIL; fallback paths offer no GIL-release guarantee. These synchronous
-wrappers do not turn CPU-bound cryptography into asynchronous work.
+Rust wrappers using ``detach_if_large`` release the GIL above a 4 KiB work estimate. Fallback paths offer no equivalent guarantee, and all helpers here are synchronous.
 """
 
 from __future__ import annotations
@@ -55,8 +50,7 @@ def auth_key_id(auth_key: bytes) -> bytes:
     Raises:
         ValueError: If ``auth_key`` is not exactly 256 bytes.
 
-    The selected backend preserves this result; this wrapper intentionally has
-    no distinct cryptographic state or GIL behavior.
+    Uses the C-backed Python SHA-1 path selected by :func:`mtproto_auth_key_id`.
     """
     return mtproto_auth_key_id(auth_key)
 
@@ -97,8 +91,7 @@ def derive_aes_key_iv(auth_key: bytes, msg_key: bytes, *, client_to_server: bool
     Raises:
         ValueError: If the authorization key or message key has an invalid length.
 
-    Native and fallback implementations are output-compatible.  This only
-    derives material; it never transmits or clears the supplied key bytes.
+    Native and fallback implementations return the same key and IV for supported inputs.
     """
     return mtproto_derive_aes_key_iv(auth_key, msg_key, client_to_server=client_to_server)
 
@@ -122,10 +115,7 @@ def encrypt_payload(
         ValueError: If key length, padding length (12 through 1024 bytes) or final
             AES block alignment is invalid.
 
-    The default only chooses a compliant padding length; callers who supply
-    ``padding`` are responsible for its unpredictability.  Encryption backend
-    selection follows :mod:`miniproto.crypto.native` and does not change output
-    format.
+    Callers supplying ``padding`` must make it unpredictable. Backend selection follows :mod:`miniproto.crypto.native` and preserves the output format.
     """
     if padding is None:
         padding = os.urandom(_padding_length(len(plaintext)))
@@ -212,8 +202,7 @@ def media_cbc_decrypt(ciphertext: BytesLike, key: bytes, iv: bytes) -> bytes:
     Raises:
         ValueError: If key/IV lengths or block alignment are invalid.
 
-    CBC decryption here supplies confidentiality transformation only; it does not
-    authenticate the input.  Validate integrity at the protocol layer.
+    CBC does not authenticate the ciphertext. Validate integrity at the protocol layer.
     """
     return aes_256_cbc_decrypt(ciphertext, key, iv)
 

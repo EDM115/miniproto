@@ -1,10 +1,10 @@
 # miniproto documentation site
 
-This static Astro/Starlight shell loads the repository’s canonical Markdown directly from `../docs`, it does not copy, move or symlink handwritten files. `docs/THOUGHTS.md` is intentionally excluded from content loading and search.
+This static Astro/Starlight site loads canonical Markdown from `../docs`. It leaves handwritten files in place and excludes `docs/THOUGHTS.md` from content loading and search.
 
 ## Frontend-only iteration
 
-Use the current Node.js 26 with PNPM 11. From this directory, invoke pnpm directly :
+Use the current Node.js 26 with PNPM 11. From this directory, invoke pnpm directly:
 
 ```zsh
 pnpm install --frozen-lockfile
@@ -21,7 +21,7 @@ pnpm brand:check
 
 ## Alpine container
 
-Build and validate the root-hosted static artifact, then package it in the unprivileged NGINX runtime from the repository root :
+Build and validate the root-hosted static artifact, then package it in the unprivileged NGINX runtime from the repository root:
 
 ```zsh
 MINIPROTO_DOCS_SITE=https://miniproto.edm115.dev MINIPROTO_DOCS_BASE=/ pnpm --dir docs-site build
@@ -29,7 +29,7 @@ docker build --file docs-site/Dockerfile --tag miniproto-docs .
 docker run --rm --publish 6743:6743 miniproto-docs
 ```
 
-Builders with at least 2 GiB available can instead compile and package from canonical source in one Docker invocation :
+To build the site and package it in one Docker invocation, use the `source-runtime` target. It uses `node:26-alpine` and the pnpm version declared by `package.json` (`pnpm@11.28.5`). The Dockerfile caps Node's old-space heap at 1536 MiB with `NODE_OPTIONS=--max-old-space-size=1536`; the builder needs additional memory for Node's other allocations and build overhead. Build the static artifact first and use the default target when that headroom is unavailable.
 
 ```zsh
 docker build --file docs-site/Dockerfile --target source-runtime --build-arg MINIPROTO_DOCS_SITE=https://miniproto.edm115.dev --tag miniproto-docs .
@@ -37,7 +37,7 @@ docker build --file docs-site/Dockerfile --target source-runtime --build-arg MIN
 
 ## Complete repository pipeline
 
-From the repository root, install the Python documentation group and run the single orchestrator :
+From the repository root, install the Python documentation group and run the single orchestrator:
 
 ```zsh
 rustup toolchain install nightly

@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.errors.Forbidden"
 source_path: "src/miniproto/errors.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L221"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L223"
 aliases: ["miniproto.Forbidden"]
 module: "miniproto.errors"
 ---

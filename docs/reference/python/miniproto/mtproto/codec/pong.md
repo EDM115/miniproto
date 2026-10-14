@@ -1,6 +1,6 @@
 ---
 title: "miniproto.mtproto.codec.Pong"
-description: "MTProto ``pong`` response correlating a server message and ping ID."
+description: "MTProto ``pong`` response identifying the original ping request."
 generated: true
 editUrl: false
 language: "python"
@@ -18,9 +18,9 @@ module: "miniproto.mtproto.codec"
 Pong(msg_id: int, ping_id: int) -> None
 ```
 
-MTProto ``pong`` response correlating a server message and ping ID.
+MTProto ``pong`` response identifying the original ping request.
 
 **Attributes:**
 
-- [**msg_id**](#miniproto.mtproto.codec.Pong.msg_id) (<code>[int](#int)</code>) – Server message ID carrying the response.
+- [**msg_id**](#miniproto.mtproto.codec.Pong.msg_id) (<code>[int](#int)</code>) – Message ID of the ping request being answered.
 - [**ping_id**](#miniproto.mtproto.codec.Pong.ping_id) (<code>[int](#int)</code>) – Caller-selected ID from the corresponding ping.

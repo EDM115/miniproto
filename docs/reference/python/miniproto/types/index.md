@@ -1,6 +1,6 @@
 ---
 title: "miniproto.types"
-description: "Small immutable public value types produced by high-level client helpers."
+description: "Frozen public value types produced by client helpers and update conversion."
 generated: true
 editUrl: false
 language: "python"
@@ -13,7 +13,9 @@ module: "miniproto.types"
 
 ## `miniproto.types`
 
-Small immutable public value types produced by high-level client helpers.
+Frozen public value types produced by client helpers and update conversion.
+
+Freezing prevents attribute reassignment. Raw payloads and metadata may remain mutable.
 
 ## Public objects
 

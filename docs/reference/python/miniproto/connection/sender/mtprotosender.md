@@ -49,8 +49,7 @@ acknowledgements; clamped to at least 0.05 s and defaults to 10.
 - **incoming_queue_size** (<code>[int](#int)</code>) – Bounded unsolicited-message queue capacity;
 clamped to at least 1 and defaults to 256. Oldest items are
 dropped when it is full.
-- **on_salt_change** (<code>[Callable](#collections.abc.Callable)[[[int](#int)], None] | None</code>) – Optional synchronous callback invoked after the
-sender accepts a server salt update; callback errors are logged.
+- **on_salt_change** (<code>[Callable](#collections.abc.Callable)[[[int](#int)], None] | None</code>) – Optional synchronous callback invoked after an accepted salt update. Callback exceptions increment ``sender.salt_callback_errors``.
 - **reconnect_cooldown** (<code>[float](#float)</code>) – Minimum paced delay after a young connection
 dies; clamped to zero or greater and defaults to one second.
 

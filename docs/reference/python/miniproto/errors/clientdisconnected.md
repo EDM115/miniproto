@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.errors.ClientDisconnected"
 source_path: "src/miniproto/errors.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L123"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L125"
 aliases: ["miniproto.ClientDisconnected"]
 module: "miniproto.errors"
 ---

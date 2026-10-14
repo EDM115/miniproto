@@ -7,7 +7,7 @@ language: "python"
 kind: "attribute"
 qualified_name: "miniproto.media.cdn.CDN_HASH_BLOCK_SIZE"
 source_path: "src/miniproto/media/cdn.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/cdn.py#L19"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/cdn.py#L16"
 module: "miniproto.media.cdn"
 ---
 

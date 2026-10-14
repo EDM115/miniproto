@@ -28,11 +28,11 @@ Public MTProto message framing, service-body and state APIs.
 - [`MsgsStateInfo`](./codec/msgsstateinfo/) — MTProto ``msgs_state_info`` body answering a state request.
 - [`MsgsStateReq`](./codec/msgsstatereq/) — MTProto ``msgs_state_req`` body requesting message states.
 - [`NewSessionCreated`](./codec/newsessioncreated/) — MTProto notification that establishes a new server session and salt.
-- [`Pong`](./codec/pong/) — MTProto ``pong`` response correlating a server message and ping ID.
+- [`Pong`](./codec/pong/) — MTProto ``pong`` response identifying the original ping request.
 - [`RpcErrorBody`](./codec/rpcerrorbody/) — Decoded MTProto ``rpc_error`` result body.
 - [`RpcResult`](./codec/rpcresult/) — MTProto ``rpc_result`` body containing raw or decoded result data.
 - [`decode_encrypted_message`](./codec/decode-encrypted-message/) — Authenticate, decrypt and parse one MTProto encrypted envelope.
-- [`decode_message_body`](./codec/decode-message-body/) — Decode recognized MTProto service bodies, preserving unknown data as a view.
+- [`decode_message_body`](./codec/decode-message-body/) — Decode recognized MTProto service bodies, returning unknown input unchanged.
 - [`decode_unencrypted_message`](./codec/decode-unencrypted-message/) — Validate and decode an unencrypted MTProto envelope.
 - [`encode_encrypted_message`](./codec/encode-encrypted-message/) — Encrypt and frame one MTProto message using the configured authorization key.
 - [`encode_message_body`](./codec/encode-message-body/) — Encode raw, generated or built-in MTProto service message bodies.

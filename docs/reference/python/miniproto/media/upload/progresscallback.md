@@ -7,7 +7,7 @@ language: "python"
 kind: "type"
 qualified_name: "miniproto.media.upload.ProgressCallback"
 source_path: "src/miniproto/media/upload.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/upload.py#L43"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/upload.py#L40"
 aliases: ["miniproto.media.ProgressCallback"]
 module: "miniproto.media.upload"
 ---

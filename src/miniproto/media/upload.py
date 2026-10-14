@@ -1,4 +1,4 @@
-"""Upload media in bounded concurrent parts with cancellation-safe cleanup."""
+"""Upload sources as concurrent Telegram file parts with bounded read-ahead."""
 
 from __future__ import annotations
 
@@ -27,16 +27,13 @@ from miniproto.raw import functions, types
 DEFAULT_CHUNK_SIZE = 512 * 1024
 BIG_FILE_THRESHOLD = 10 * 1024 * 1024
 DEFAULT_UPLOAD_FLOOD_SLEEP_THRESHOLD = 30
-# Floods within the threshold are server pacing and retry without consuming
-# the transient-failure budget; this cap only bounds pathological storms.
+# Eligible flood waits use a separate retry budget so server pacing does not exhaust transient retries
 MAX_FLOOD_RETRIES_PER_PART = 16
 _MIN_FLOOD_SLEEP_S = 1.0
 _FLOOD_SLEEP_JITTER_S = 0.3
-# Stale parts occupying a lane for the global 30 s hurt upload tails; 45 s is
-# the live-bench default that sustained 15-16 MiB/s uploads on DC4.
+# The 45 s per-part default gives slow tail requests more time than the client's 30 s RPC default
 DEFAULT_UPLOAD_PART_TIMEOUT = 45.0
-# mtcute reads 24 parts ahead, MTKruto 16: one window of read-ahead keeps the
-# network from ever waiting on disk without unbounded buffering.
+# Read ahead by one concurrency window to reduce disk stalls during part sends
 DEFAULT_UPLOAD_CONCURRENCY = 8
 _LOGGER = get_logger("media.upload")
 
@@ -47,11 +44,9 @@ type FileSource = (
 
 
 class MediaUploadError(RuntimeError):
-    """Raised only for unsatisfiable part-count configuration or ``BoolFalse`` replies.
+    """Raised for an unsatisfiable part cap or exhausted non-true save results.
 
-    Transport, RPC, cancellation, source and other invocation failures propagate
-    their original exceptions; this error marks a maximum-part-size constraint or
-    Telegram returning false after the configured false-result retry budget.
+    Transport, RPC, cancellation and source failures propagate their original exceptions. This error marks a part cap that cannot fit 512 KiB parts, or a save result other than ``True`` or ``BoolTrue`` after retries are exhausted.
     """
 
     pass
@@ -62,15 +57,15 @@ type RawInvoker = Callable[..., Awaitable[object]]
 
 @dataclass(frozen=True, slots=True)
 class MediaUploadResult:
-    """Completed upload metadata and the MTProto input-file reference to reuse.
+    """Upload metadata and the MTProto input-file reference to reuse.
 
     Attributes:
-        file_id: Generated ID or ``int(file_id)`` supplied by the caller; zero is accepted when supplied.
+        file_id: Generated ID or ``int(file_id)`` supplied by the caller, including zero.
         name: File name sent to Telegram.
-        size: Exact uploaded source size in bytes.
-        parts: Total successfully saved part count.
-        part_size: Final KiB-aligned part size in bytes.
-        big: Whether the source exceeded the big-file threshold.
+        size: Source size measured before part transfer, in bytes.
+        parts: Part count in the returned input-file reference.
+        part_size: Final part size in bytes, a KiB-aligned divisor of 512 KiB.
+        big: Whether the measured source size exceeds 10 MiB.
         input_file: Matching Telegram small or big input-file reference.
         md5_checksum: Small-file MD5 of uploaded bytes, otherwise ``None``.
     """
@@ -121,31 +116,28 @@ async def upload_file(
 
     Args:
         invoke: Raw request callable used to save each part.
-        source: Path, bytes, readable stream or synchronous/asynchronous byte iterable. Paths are opened by this function; caller-owned readers are not closed.
+        source: Path, bytes, readable stream or synchronous/asynchronous byte iterable. This function opens paths and leaves caller-owned readers open.
         file_name: Optional override for the Telegram file name.
-        part_size: KiB-aligned part size in bytes, at most 512 KiB.
-        concurrency: Maximum in-flight save requests and bounded read-ahead queue slots.
+        part_size: KiB-aligned divisor of 512 KiB, in bytes, defaults to 512 KiB. The function increases it when needed to meet ``max_file_parts``.
+        concurrency: Maximum active save tasks, defaults to eight. The read-ahead queue holds up to ``max(2, concurrency)`` more parts.
         progress: Optional callback receiving ``(completed_bytes, total_bytes)`` after accepted parts, serialized in completion order rather than part-index order.
-        file_id: Optional ID converted with ``int`` and used verbatim, including zero; absent IDs are generated non-zero.
-        max_retries: Transient non-flood retry attempts per part.
-        max_buffer_size: Required to cover the configured concurrency window when set.
-        request_timeout: Per-part timeout; defaults to the upload-tail-safe timeout.
-        flood_sleep_threshold: Largest server flood wait in seconds treated as retryable pacing; each part has a separate cap of 16 accepted flood retries.
-        max_file_parts: Maximum accepted part count; size is increased when possible.
+        file_id: Optional ID converted with ``int`` and used verbatim, including zero. Absent IDs are generated non-zero.
+        max_retries: Shared retry budget per part for transient non-flood failures and non-true save results, defaults to two.
+        max_buffer_size: Optional validation threshold for the initial ``part_size * concurrency``. It does not cap queued payloads or account for later part-size growth.
+        request_timeout: Per-part timeout in seconds, ``None`` selects 45 seconds.
+        flood_sleep_threshold: Largest retryable server flood wait in seconds, defaults to 30, ``None`` disables flood retries. Each part allows up to 16 eligible flood retries outside ``max_retries``.
+        max_file_parts: Maximum part count, defaults to 4000, ``None`` disables the cap. Parts grow to the next supported size up to 512 KiB when needed.
 
     Returns:
         The completed file metadata and a matching ``InputFile`` or ``InputFileBig``.
 
     Raises:
         ValueError: If options are invalid or the normalized source is empty.
-        TypeError: If a streamed source yields a non-byte chunk.
+        TypeError: If a streamed source yields an unsupported chunk type.
         MediaUploadError: If part-count constraints cannot be met or Telegram rejects a part.
-        asyncio.CancelledError: After cancelling producer and in-flight part tasks and cleaning up.
+        asyncio.CancelledError: The upload is cancelled, active producer and part tasks are cancelled and joined once part-transfer execution has started.
 
-    The checksum covers exactly the bytes read for small files. Seekable callers
-    are rewound to their initial offset before uploading and left at their final
-    read position; one-shot streams and iterables are consumed into an owned
-    temporary spool that is closed on success, failure or cancellation.
+    The small-file checksum covers the bytes read. Seekable readers start at their initial offset and remain at their final read position. One-shot streams and iterables are consumed into an owned temporary spool before any part is sent. Part-transfer cleanup closes the spool on success, failure or cancellation.
     """
     _validate_upload_options(
         part_size, concurrency, max_retries, max_buffer_size, flood_sleep_threshold, max_file_parts
@@ -170,13 +162,11 @@ async def upload_file(
     completed = 0
     progress_lock = asyncio.Lock()
     pending: set[asyncio.Task[None]] = set()
-    # One window of parts is read ahead of the sends (mtcute: 24, MTKruto: 16)
-    # on a worker thread, so the event loop never blocks on disk and the
-    # network never waits for a read. Memory stays bounded by ~2 windows.
+    # Queue one read-ahead window alongside active sends, synchronous file reads use a worker thread
     read_queue: asyncio.Queue[tuple[int, bytes] | None] = asyncio.Queue(maxsize=max(2, concurrency))
 
     async def produce_parts(reader: BinaryIO) -> None:
-        """Read ordered parts into the bounded queue and always signal completion.
+        """Read ordered parts into the bounded queue and signal completion when the consumer can receive it.
 
         Args:
             reader: Normalized binary reader positioned at the upload start.
@@ -190,11 +180,8 @@ async def upload_file(
                     md5.update(payload)
                 await read_queue.put((part_index, payload))
         finally:
-            # Always unblock the consumer, even when a read fails; the awaited
-            # producer task re-raises the original error afterwards. If the
-            # producer itself is cancelled while the bounded queue is full,
-            # the consumer is already unwinding and cannot make room: do not
-            # deadlock cancellation waiting to enqueue an unused sentinel.
+            # Signal read failure to the consumer, which awaits the producer to recover the original exception
+            # A cancelled producer must not wait for space when the consumer is already unwinding
             current_task = asyncio.current_task()
             if current_task is not None and current_task.cancelling():
                 with suppress(asyncio.QueueFull):
@@ -337,7 +324,7 @@ def _validate_upload_options(
         part_size: Requested KiB-aligned part size in bytes.
         concurrency: Number of in-flight request slots.
         max_retries: Non-flood retry count per part.
-        max_buffer_size: Optional required lower bound for the concurrent window.
+        max_buffer_size: Optional validation threshold for the initial concurrent payload window, without counting read-ahead or later part-size growth.
         flood_sleep_threshold: Optional non-negative retryable flood-wait maximum.
         max_file_parts: Optional positive Telegram part-count limit.
     """
@@ -363,7 +350,7 @@ def _validate_upload_options(
 
 
 def _part_size_for_part_limit(size: int, part_size: int, max_file_parts: int | None) -> int:
-    """Increase the KiB-aligned part size just enough to satisfy a part cap.
+    """Select the smallest supported part size that satisfies the part cap.
 
     Args:
         size: Exact source size in bytes.
@@ -451,7 +438,7 @@ async def _materialize_unknown_source(source: object, *, file_name: str | None, 
         file_name: Optional file-name override.
         chunk_size: Requested read size in bytes for reader sources.
     """
-    temporary = tempfile.TemporaryFile("w+b")  # noqa: SIM115 - cleanup is returned with the prepared source.
+    temporary = tempfile.TemporaryFile("w+b")  # noqa: SIM115 - cleanup is returned with the prepared source
     size = 0
     try:
         if _has_read(source):
@@ -491,9 +478,7 @@ async def _materialize_unknown_source(source: object, *, file_name: str | None, 
 async def _read_chunk_threaded(reader: BinaryIO, size: int) -> bytes:
     """Read one part without blocking the event loop.
 
-    Async readers are awaited directly; synchronous file objects (the common
-    case) do their blocking ``read()`` on a worker thread. In-memory readers
-    skip the thread hop -- their reads cannot block.
+    Coroutine ``read`` methods are awaited, ``BytesIO`` reads run on the event loop, other synchronous reads run on a worker thread.
 
     Args:
         reader: Normalized binary reader to consume.
@@ -521,8 +506,7 @@ async def _save_part(
 ) -> None:
     """Save one part, retrying transient transport errors and short flood waits.
 
-    Flood pacing has its own bounded retry counter and does not consume the
-    transient-failure budget, preserving late-upload integrity under throttling.
+    Eligible flood waits use a separate 16-retry budget. Transient failures and non-true results share ``max_retries``.
 
     Args:
         invoke: Raw request callable used to save the encoded part.
@@ -552,9 +536,7 @@ async def _save_part(
             if not _is_transient_upload_error(exc, flood_sleep_threshold=flood_sleep_threshold):
                 raise
             if isinstance(exc, FloodWait):
-                # Server pacing, not a failure: floods never consume the
-                # transient retry budget (one flood used to abort a 2000 MiB
-                # upload at 99%); a generous separate cap bounds storms.
+                # Eligible flood waits consume their separate pacing budget
                 flood_retries += 1
                 if flood_retries > MAX_FLOOD_RETRIES_PER_PART:
                     record_metric("media.upload.flood_retry_budget_exhausted", 1)
@@ -602,9 +584,7 @@ async def _sleep_before_retry(exc: Exception | None, attempt: int, *, big: bool)
         big: Whether retry telemetry is for a big-file upload.
     """
     if isinstance(exc, FloodWait):
-        # FLOOD_WAIT_0 retried instantly just re-triggers the flood. Positive
-        # waits already carry server pacing, so only add tight jitter to
-        # desynchronize lockstep wakers without over-sleeping at scale.
+        # Use a one-second floor for zero waits and add at most 300 ms jitter to spread retry wakeups
         base = _MIN_FLOOD_SLEEP_S if exc.seconds <= 0 else float(exc.seconds)
         delay = base + random.uniform(0.0, _FLOOD_SLEEP_JITTER_S)  # noqa: S311
     else:
@@ -699,7 +679,7 @@ def _has_read(source: object) -> bool:
 
 
 def _is_seekable_reader(source: object) -> bool:
-    """Return whether a readable source can be safely rewound for upload.
+    """Check reader seek/tell capabilities and its optional ``seekable()`` result.
 
     Args:
         source: Candidate reader whose read/seek/tell capabilities are inspected.
@@ -749,8 +729,7 @@ def _is_transient_upload_error(
         flood_sleep_threshold: Optional largest retryable flood wait in seconds.
     """
     if isinstance(exc, FloodWait):
-        # Flood waits (including FLOOD_PREMIUM_WAIT throughput throttles) are retried by
-        # sleeping inside the media layer, capped by the caller's threshold.
+        # The media layer sleeps for eligible flood waits, including FLOOD_PREMIUM_WAIT
         return flood_sleep_threshold is not None and exc.seconds <= flood_sleep_threshold
     if isinstance(
         exc, ClientDisconnected | RequestTimeout | RpcTimeout | InternalServerError | TimeoutError | ConnectionError

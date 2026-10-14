@@ -42,12 +42,12 @@ from miniproto.raw.types import MessageRange
 
 Public access: `miniproto.raw.types.MessageRange`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import MessageRange
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = MessageRange
 ```
 

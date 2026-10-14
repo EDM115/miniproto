@@ -7,14 +7,14 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::crypto::register"
 source_path: "rust/miniproto/src/crypto.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L68"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L63"
 python_visible: false
 ---
 
 ## Provenance
 
 - Rust visibility: `public`
-- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L68)
+- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L63)
 - Python exposure: Not evidenced by static PyO3 attributes.
 
 ## Signature
@@ -35,7 +35,7 @@ fn register(m: &_) -> _
 fn register(m: &Bound<'_, pyo3::types::PyModule>) -> PyResult<()>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:68-88`*
+*Defined in `rust/miniproto/src/crypto.rs:63-83`*
 
 Registers this module's fallback-compatible Python callables on `miniproto._native`.
 

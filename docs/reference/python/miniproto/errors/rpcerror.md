@@ -1,6 +1,6 @@
 ---
 title: "miniproto.errors.RpcError"
-description: "Raw or classified Telegram RPC failure with redaction-safe diagnostics."
+description: "Raw or classified Telegram RPC failure with redacted supported diagnostic fields."
 generated: true
 editUrl: false
 language: "python"
@@ -20,7 +20,9 @@ RpcError(message: str, code: int | None = None, request: object | None = None, c
 
 Bases: <code>[MiniprotoError](#miniproto.errors.MiniprotoError)</code>
 
-Raw or classified Telegram RPC failure with redaction-safe diagnostics.
+Raw or classified Telegram RPC failure with redacted supported diagnostic fields.
+
+Rendering redacts recognized assignments and secret keys in supported values. The stored ``message``, ``request`` and ``context`` attributes retain their original contents.
 
 **Attributes:**
 

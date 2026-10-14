@@ -26,7 +26,7 @@ MTProto encrypted framing and core service-message body codecs.
 - [`MessageContainerItem`](./messagecontaineritem/) — One message entry inside an MTProto message container.
 - [`MessageContainer`](./messagecontainer/) — MTProto ``msg_container`` body containing ordered message entries.
 - [`GzipPacked`](./gzippacked/) — MTProto ``gzip_packed`` service body holding compressed message bytes.
-- [`Pong`](./pong/) — MTProto ``pong`` response correlating a server message and ping ID.
+- [`Pong`](./pong/) — MTProto ``pong`` response identifying the original ping request.
 - [`BadMsgNotification`](./badmsgnotification/) — MTProto notice that a message ID, sequence number or other field was invalid.
 - [`BadServerSalt`](./badserversalt/) — MTProto bad-message notice that additionally carries a replacement server salt.
 - [`NewSessionCreated`](./newsessioncreated/) — MTProto notification that establishes a new server session and salt.
@@ -36,7 +36,7 @@ MTProto encrypted framing and core service-message body codecs.
 - [`encode_encrypted_message`](./encode-encrypted-message/) — Encrypt and frame one MTProto message using the configured authorization key.
 - [`decode_encrypted_message`](./decode-encrypted-message/) — Authenticate, decrypt and parse one MTProto encrypted envelope.
 - [`encode_message_body`](./encode-message-body/) — Encode raw, generated or built-in MTProto service message bodies.
-- [`decode_message_body`](./decode-message-body/) — Decode recognized MTProto service bodies, preserving unknown data as a view.
+- [`decode_message_body`](./decode-message-body/) — Decode recognized MTProto service bodies, returning unknown input unchanged.
 - [`encode_ping`](./encode-ping/) — Encode an MTProto ``ping`` service body.
 - [`encode_ping_delay_disconnect`](./encode-ping-delay-disconnect/) — Encode an MTProto ``ping_delay_disconnect`` service body.
 - [`gzip_pack`](./gzip-pack/) — Compress an encodable MTProto body into a ``gzip_packed`` service object.

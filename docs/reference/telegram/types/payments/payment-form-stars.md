@@ -54,12 +54,12 @@ from miniproto.raw.types import PaymentsPaymentFormStars
 
 Public access: `miniproto.raw.types.PaymentsPaymentFormStars`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import PaymentsPaymentFormStars
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = PaymentsPaymentFormStars
 ```
 

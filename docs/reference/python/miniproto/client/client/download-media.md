@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.client.Client.download_media"
 source_path: "src/miniproto/client.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L1040"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L1071"
 aliases: ["miniproto.Client.download_media"]
 module: "miniproto.client"
 ---
@@ -20,13 +20,24 @@ download_media(media: object, destination: Destination = None, **kwargs: Any) ->
 
 Download media to memory, a path or a writable destination.
 
-The default scheduler uses two media lanes and bounded in-flight bytes. Multi-session downloading is only used for complete, known-size bot downloads with sibling session storage; unsupported cases fall back to one session and emit telemetry.
+Downloads default to two media lanes and bounded in-flight bytes. Multi-session mode requires a complete, known-size bot download and sibling session storage. Unsupported cases fall back to one session and emit telemetry.
 
 **Parameters:**
 
 - **media** (<code>[object](#object)</code>) – Normalized media, raw media or compatible miniproto file ID to download.
-- **destination** (<code>[Destination](#miniproto.media.Destination)</code>) – Memory, path or writable destination accepted by the media download layer; defaults to in-memory output.
-- ****kwargs** (<code>[Any](#typing.Any)</code>) – Supported range, resume, buffering, retry, verification, media-lane and scheduling options accepted by ``_download_media_options``.
+- **destination** (<code>[Destination](#miniproto.media.Destination)</code>) – ``None`` for an in-memory result, a path or a caller-owned writable binary stream.
+- ****kwargs** (<code>[Any](#typing.Any)</code>) – Range, resume, buffering, per-part retry and verification options from the media layer, plus ``media_lanes`` (default 2) and ``multi_session`` (default false). ``media_lanes=0`` uses the main sender.
+
+**Returns:**
+
+- <code>[MediaDownloadResult](#miniproto.media.MediaDownloadResult)</code> – Download metadata, with ``data`` containing bytes when ``destination`` is omitted.
+
+<details class="lifecycle" open markdown="1">
+<summary>Lifecycle</summary>
+
+Range caches own shared producers and read-ahead work, which may outlive this call. Keep their client available or await the supplied cache's ``clear`` method before disconnecting it.
+
+</details>
 
 **Raises:**
 

@@ -53,12 +53,12 @@ from miniproto.raw.functions import WalletTonConnectClaimRequest
 
 Public access: `miniproto.raw.functions.WalletTonConnectClaimRequest`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.functions import WalletTonConnectClaimRequest
 
-# Naming the raw request class is local only; it performs no I/O or network request.
+# Refer to the raw request class without constructing it or calling Telegram
 request_type = WalletTonConnectClaimRequest
 ```
 

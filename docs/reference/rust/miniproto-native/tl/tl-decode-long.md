@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::tl::tl_decode_long"
 source_path: "rust/miniproto/src/tl.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L559"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L551"
 aliases: ["miniproto._native.tl_decode_long"]
 python_visible: true
 ---
@@ -15,7 +15,7 @@ python_visible: true
 ## Provenance
 
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L559)
+- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L551)
 - Python exposure: `miniproto._native.tl_decode_long` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -37,7 +37,7 @@ fn tl_decode_long(data: &[u8], offset: usize) -> _
 fn tl_decode_long(data: &[u8], offset: usize) -> PyResult<(i64, usize)>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:559-562`*
+*Defined in `rust/miniproto/src/tl.rs:551-554`*
 
 Decodes Python `tl_decode_long(data, offset)` and returns `(value, next_offset)` or `ValueError`.
 

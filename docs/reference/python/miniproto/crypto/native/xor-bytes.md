@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.crypto.native.xor_bytes"
 source_path: "src/miniproto/crypto/native.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/native.py#L771"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/native.py#L747"
 aliases: ["miniproto.crypto.xor_bytes"]
 module: "miniproto.crypto.native"
 ---
@@ -33,5 +33,4 @@ Return the byte-wise XOR of equal-length inputs.
 
 - <code>[ValueError](#ValueError)</code> – If the input lengths differ.
 
-The public wrapper uses the fallback big-integer implementation because it
-wins the benchmarked handshake-sized cases; it offers no secret-zeroization.
+Uses the fallback's Python big-integer XOR implementation.

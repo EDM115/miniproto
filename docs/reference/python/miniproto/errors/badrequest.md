@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.errors.BadRequest"
 source_path: "src/miniproto/errors.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L183"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L185"
 aliases: ["miniproto.BadRequest"]
 module: "miniproto.errors"
 ---

@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.errors.InvokeError"
 source_path: "src/miniproto/errors.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L119"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L121"
 aliases: ["miniproto.InvokeError"]
 module: "miniproto.errors"
 ---

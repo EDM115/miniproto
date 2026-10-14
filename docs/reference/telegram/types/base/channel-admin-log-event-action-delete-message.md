@@ -41,12 +41,12 @@ from miniproto.raw.types import ChannelAdminLogEventActionDeleteMessage
 
 Public access: `miniproto.raw.types.ChannelAdminLogEventActionDeleteMessage`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import ChannelAdminLogEventActionDeleteMessage
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = ChannelAdminLogEventActionDeleteMessage
 ```
 

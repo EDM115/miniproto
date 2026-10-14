@@ -1,6 +1,6 @@
 ---
 title: "miniproto.session.strings.SessionString"
-description: "A bearer-secret string whose representation is always redacted."
+description: "Session contents with a redacted ``repr``."
 generated: true
 editUrl: false
 language: "python"
@@ -16,4 +16,6 @@ module: "miniproto.session.strings"
 
 Bases: <code>[str](#str)</code>
 
-A bearer-secret string whose representation is always redacted.
+Session contents with a redacted ``repr``.
+
+Printing, formatting or converting the value with ``str`` exposes its contents, including bearer credentials in unprotected formats.

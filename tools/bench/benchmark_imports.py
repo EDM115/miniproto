@@ -1,8 +1,6 @@
 """Fresh-interpreter import benchmarks with optional ``tracemalloc`` memory snapshots.
 
-Each sample runs a fixed statement in a child Python process, so reported wall
-time is measured in seconds across a subprocess boundary rather than in the
-benchmark runner's already-warmed interpreter.
+Each sample launches a fresh Python process and times a fixed import or access statement inside it. Reported seconds exclude process startup, optional ``tracemalloc`` setup and JSON output.
 """
 
 from __future__ import annotations
@@ -105,7 +103,7 @@ def _child_code(statement: str, *, tracemalloc_enabled: bool) -> str:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run configured fresh-process import benchmarks and print deterministic JSON.
+    """Run configured fresh-process import benchmarks and print JSON measurements.
 
     Args:
         argv: Optional CLI arguments; ``--runs`` defaults to ten child processes.

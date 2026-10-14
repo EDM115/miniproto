@@ -7,7 +7,7 @@ language: "python"
 kind: "attribute"
 qualified_name: "miniproto.types.PeerKind"
 source_path: "src/miniproto/types.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/types.py#L9"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/types.py#L12"
 module: "miniproto.types"
 ---
 

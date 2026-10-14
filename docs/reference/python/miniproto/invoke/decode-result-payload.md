@@ -1,13 +1,13 @@
 ---
 title: "miniproto.invoke.decode_result_payload"
-description: "Decode bytes or gzip-packed RPC results while leaving decoded values unchanged."
+description: "Decode RPC result bytes through at most 16 gzip wrappers, preserving decoded values."
 generated: true
 editUrl: false
 language: "python"
 kind: "function"
 qualified_name: "miniproto.invoke.decode_result_payload"
 source_path: "src/miniproto/invoke.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L240"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L236"
 module: "miniproto.invoke"
 ---
 
@@ -17,7 +17,7 @@ module: "miniproto.invoke"
 decode_result_payload(raw_result: object, expected_type: str | None = None, *, max_output_size: int = DEFAULT_GZIP_MAX_OUTPUT_SIZE) -> object
 ```
 
-Decode bytes or gzip-packed RPC results while leaving decoded values unchanged.
+Decode RPC result bytes through at most 16 gzip wrappers, preserving decoded values.
 
 **Parameters:**
 

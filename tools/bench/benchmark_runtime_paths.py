@@ -1,6 +1,6 @@
 """Run deterministic, in-process benchmarks for representative miniproto runtime paths.
 
-This script deliberately uses synthetic payloads, in-memory storage, fake invokers and a loopback-only sender state. It exercises no live Telegram session, network transport, credential or filesystem transfer path. Timings use ``perf_counter`` and report the best and median of ten complete runs; they are comparative local measurements, not service-level performance claims.
+Synthetic payloads, in-memory storage, fake invokers and a never-connected sender isolate local runtime costs. Standard cases report the best and median ``perf_counter`` time over ten complete runs. Peer-cache sub-benchmarks also report lookup time in nanoseconds and apply local speed, memory and load-count gates. These measurements cover neither live Telegram sessions nor network or filesystem transfers.
 """
 
 from __future__ import annotations

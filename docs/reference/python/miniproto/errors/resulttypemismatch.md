@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.errors.ResultTypeMismatch"
 source_path: "src/miniproto/errors.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L163"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L165"
 aliases: ["miniproto.ResultTypeMismatch"]
 module: "miniproto.errors"
 ---

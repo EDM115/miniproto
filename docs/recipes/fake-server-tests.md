@@ -12,6 +12,6 @@ uv run pytest tests/test_auth.py tests/test_invoke.py tests/test_media_download.
 uv run pytest tests/test_fake_server_acceptance.py
 ```
 
-`tests/test_auth.py` covers generated authorization requests, callback handling, 2FA, bot authorization and classified errors. `tests/test_fake_server_acceptance.py` covers local handshake/reconnect, correlated RPCs, updates, upload/download transport, scheduler behavior, cancellation, integrity failures and DC-specific media handling through fake endpoints.
+`tests/test_auth.py` covers generated authorization requests, callbacks, 2FA, bot authorization and classified errors. `tests/test_fake_server_acceptance.py` covers handshake and reconnect, RPC correlation, updates, upload and download transport, schedulers, cancellation, integrity failures and media DC handling through fake endpoints.
 
-Keep fake credentials and fake auth keys inside test fixtures. Do not turn those placeholders into shell environment defaults and do not describe this suite as a live Telegram result. The broader command and release-gate split is documented in [Development Commands](../development.md).
+Keep fake credentials and auth keys inside test fixtures. Do not set them as shell environment defaults or describe this suite as a live Telegram result. See [Development Commands](../development.md) for the full command and release-gate list.

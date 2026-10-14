@@ -26,11 +26,11 @@ uv sync --extra dev,docs
 uv run python -c "from miniproto import Client, ClientConfig; print('miniproto import OK')"
 ```
 
-`uv sync --extra dev,docs` prepares the development checkout and its deterministic test/tool dependencies. It does not authorize a Telegram account, create a default session or make a network call. The import check only proves that the local package can be imported; it is not a native-wheel or live Telegram acceptance claim.
+`uv sync --extra dev,docs` installs development, test and documentation dependencies. It does not authorize a Telegram account or create a session. The import check confirms that Python can import the local package. It does not validate a native wheel or test against live Telegram.
 
 ## Telegram application credentials
 
-`ClientConfig` requires a positive Telegram application ID and non-empty API hash. Create and protect those values through Telegram's official [API development tools](https://my.telegram.org/apps); do not put either value in source control, command-line arguments or logs.
+`ClientConfig` requires a positive Telegram application ID and a non-empty API hash. Get both from Telegram's official [API development tools](https://my.telegram.org/apps). Keep them out of source control, command-line arguments and logs.
 
 Use environment variables or a deployment secret manager for credentials. A minimal PowerShell setup for an interactive local shell is:
 
@@ -44,7 +44,7 @@ The names above are an application convention for the examples, not configuratio
 
 ## Pick session storage deliberately
 
-`Client(ClientConfig(...))` uses encrypted SQLite storage at `miniproto.session.sqlite` unless `session_storage=` is supplied. The default durable backend requires a constructor key or `MINIPROTO_SESSION_KEY` before connecting. For a disposable experiment, pass `InMemorySessionStorage()` explicitly; it loses authorization state when the process ends.
+`Client(ClientConfig(...))` uses encrypted SQLite storage at `miniproto.session.sqlite` unless you supply `session_storage=`. Set a constructor key or `MINIPROTO_SESSION_KEY` before creating a client with the default backend. For a disposable experiment, pass `InMemorySessionStorage()` explicitly. It loses authorization state when the process ends.
 
 ```python
 from miniproto import Client, ClientConfig, InMemorySessionStorage

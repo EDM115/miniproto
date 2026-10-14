@@ -20,9 +20,7 @@ create_auth_key() -> AuthKeyExchangeResult
 
 Execute one complete Telegram authorization-key exchange.
 
-The method validates nonces, trusted RSA fingerprint selection, encrypted
-server DH data, the safe DH group, public values and Telegram's final
-``new_nonce_hash1`` confirmation before returning secret key material.
+Validate nonces, the trusted RSA fingerprint, encrypted server DH data, the DH group and public values before accepting ``new_nonce_hash1``. A verified ``dh_gen_retry`` starts another DH attempt with a fresh private exponent, up to six attempts in total.
 
 **Returns:**
 

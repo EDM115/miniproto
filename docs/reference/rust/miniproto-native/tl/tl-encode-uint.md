@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::tl::tl_encode_uint"
 source_path: "rust/miniproto/src/tl.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L526"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L518"
 aliases: ["miniproto._native.tl_encode_uint"]
 python_visible: true
 ---
@@ -15,7 +15,7 @@ python_visible: true
 ## Provenance
 
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L526)
+- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L518)
 - Python exposure: `miniproto._native.tl_encode_uint` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -36,7 +36,7 @@ fn tl_encode_uint(value: u32) -> _
 fn tl_encode_uint(value: u32) -> Vec<u8>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:526-528`*
+*Defined in `rust/miniproto/src/tl.rs:518-520`*
 
 Encodes Python `tl_encode_uint(value)` as a four-byte little-endian unsigned integer.
 

@@ -5,7 +5,7 @@ slug: /recipes/
 generated: false
 ---
 
-These recipes are small adaptations of the public SDK surface, not a second API reference. They assume application credentials are protected and a client is managed with `async with` or equivalent explicit cleanup.
+These recipes adapt the public SDK API for common tasks. They assume application credentials are protected and a client is managed with `async with` or equivalent explicit cleanup.
 
 - [Authorize without logging secrets](./authentication.md)
 - [Invoke a raw Telegram function](./raw-invocation.md)

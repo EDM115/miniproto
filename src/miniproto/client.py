@@ -275,9 +275,9 @@ async def _cleanup_auxiliary_download_client(auxiliary: Client, *, auxiliary_ind
 
 
 class Client:
-    """Async client facade for MTProto operations.
+    """Async MTProto client for authorization, raw RPCs, messages, updates and media.
 
-    This implementation wires lifecycle, auth, raw invocation, updates, peer/message helpers and protocol-core media transfer primitives while keeping framework-level behavior out of the SDK.
+    ``connect`` starts local update handling. RPCs create network senders on demand. ``disconnect`` closes the supplied or default session storage, so use a new client and an open storage instance for a later connection.
     """
 
     def __init__(self, config: ClientConfig, *, _updates_enabled: bool = True) -> None:
@@ -287,8 +287,11 @@ class Client:
             config: Immutable client configuration and session-storage policy.
             _updates_enabled: Internal switch used by auxiliary download clients to avoid starting update handling.
 
+        Raises:
+            ValueError: If default SQLite storage is selected and ``MINIPROTO_SESSION_KEY`` is absent or contains fewer than 16 encoded bytes.
+
         Security:
-            If ``config.session_storage`` is omitted, the client creates encrypted SQLite storage at ``config.session_path``. The client neither logs nor exposes configured bearer secrets.
+            If ``config.session_storage`` is omitted, the client prepares encrypted SQLite storage at ``config.session_path``. Protect configuration values, exported session strings and the storage key as credentials.
         """
         self.config = config
         self._session_storage_backend = (
@@ -314,7 +317,7 @@ class Client:
             download_small_limit=config.media_download_small_queue_limit or DEFAULT_DOWNLOAD_SMALL_LIMIT,
             download_large_limit=config.media_download_large_queue_limit or DEFAULT_DOWNLOAD_LARGE_LIMIT,
         )
-        # Exported-authorization auth keys per media DC (P1-5): key bytes + salt.
+        # Cache each foreign media DC's auth key and server salt
         self._dc_auth_cache: dict[int, tuple[bytes, int]] = {}
         self._dc_auth_lock = asyncio.Lock()
         self._cdn_senders: dict[int, RawSender] = {}
@@ -350,7 +353,7 @@ class Client:
 
     @property
     def is_connected(self) -> bool:
-        """Whether ``connect`` completed and ``disconnect`` has not started."""
+        """Return the local lifecycle flag, without checking sender or network connectivity."""
         return self._connected
 
     async def export_session_string(
@@ -363,10 +366,17 @@ class Client:
 
         Args:
             format: Portable session-string dialect, defaulting to miniproto's native format.
-            passphrase: Optional passphrase used by formats that support protected export.
+            passphrase: Optional protection for native miniproto output. Telethon and Pyrogram output reject passphrases.
+
+        Returns:
+            A ``SessionString`` whose ``repr`` is redacted. Printing or converting it to ordinary text still exposes its contents.
+
+        Raises:
+            ValueError: If no session payload is stored.
+            miniproto.errors.SessionEnvelopeError: If the selected format lacks required state or rejects the supplied options.
 
         Security:
-            The returned value is a bearer credential or a protected representation of one; callers must avoid logging or exposing it.
+            The returned value contains bearer credentials, optionally protected by a native-format passphrase. Avoid logging or exposing it.
         """
 
         payload = await self._storage.load()
@@ -392,8 +402,16 @@ class Client:
             value: Serialized session string containing authorization state.
             format: Expected input dialect or ``"auto"`` for detection.
             passphrase: Optional passphrase required to decode a protected string.
-            replace: Whether a nonempty target storage may be overwritten, defaulting to ``False``.
+            replace: Whether any existing stored payload may be overwritten, defaulting to ``False``.
             allow_mismatch: Whether to bypass Pyrogram API, test-mode and account-kind compatibility checks.
+
+        Returns:
+            The imported and stored record, without contacting Telegram to verify its authorization.
+
+        Raises:
+            ConnectionError: If the local client lifecycle is connected.
+            ValueError: If storage already contains a payload and ``replace`` is false, or Pyrogram compatibility checks fail.
+            miniproto.errors.SessionEnvelopeError: If session-string decoding or authentication fails.
 
         Security:
             ``value`` and ``passphrase`` are sensitive credentials. Import is rejected while connected to avoid replacing active state.
@@ -406,7 +424,7 @@ class Client:
             _validate_imported_session_config(record, self.config)
 
         def store(current: Mapping[str, Any] | None) -> SessionRecord:
-            """Reject accidental replacement of a nonempty stored session.
+            """Reject replacement of any stored payload unless explicitly requested.
 
             Args:
                 current: Existing storage payload supplied atomically by the storage backend.
@@ -421,7 +439,7 @@ class Client:
     async def connect(self) -> None:
         """Mark the client connected and start update handling when enabled.
 
-        The method is serialized with ``disconnect`` and is safe to call repeatedly. If update startup fails, it rolls back the connection state and closes any sender it created.
+        Repeated calls retain the running update manager. The method serializes with ``disconnect`` and rolls back local connection state if startup fails. Network senders remain lazy unless an imported session requires update-state bootstrap.
 
         Raises:
             Exception: Propagates storage, sender or update-manager startup failures.
@@ -448,7 +466,7 @@ class Client:
     async def disconnect(self) -> None:
         """Stop updates, senders, schedulers, auxiliary clients and session storage.
 
-        Cleanup continues after individual failures so resources are released; after cleanup it re-raises the first captured error. Calling it makes the client unusable because session storage is closed.
+        Cleanup attempts continue after individual failures, then the first captured error is re-raised. Successful storage closure prevents reusing this client. Update iterators receive no end marker. Cancel a waiting consumer yourself.
 
         Raises:
             Exception: The first failure encountered while stopping client resources.
@@ -526,7 +544,10 @@ class Client:
         await self._storage.mutate(clear_bootstrap_marker)
 
     async def is_authorized(self) -> bool:
-        """Return whether the selected session has an auth key or cached user identity."""
+        """Return whether local session storage contains an auth key or cached user identity.
+
+        This check makes no Telegram request. An MTProto auth key can exist before account sign-in. Stored state also cannot confirm that Telegram still accepts the authorization.
+        """
         state = await self._storage.load()
         if state is None:
             return False
@@ -600,7 +621,7 @@ class Client:
         """Return the authorized user, optionally bypassing the peer cache.
 
         Args:
-            refresh: Fetch current user data from Telegram instead of relying on cached data.
+            refresh: Attempt a Telegram fetch before reading cached identity. If the response contains no concrete user, the peer cache can still return its stored identity.
 
         Raises:
             Unauthorized: If no authorized session is available.
@@ -620,10 +641,13 @@ class Client:
         return user
 
     async def resolve_peer(self, peer: Peer | str | int) -> Peer:
-        """Resolve a peer object, numeric ID or username to a normalized ``Peer``.
+        """Resolve a peer object, numeric ID, username, self alias or cached phone number.
 
         Args:
-            peer: Existing normalized peer, numeric identifier or username to resolve through the peer cache.
+            peer: Existing peer, signed numeric ID, username or t.me URL, self alias such as ``"me"``, or phone reference beginning with ``+``. Phone lookup requires cached data. Missing numeric IDs trigger a lookup of up to 100 unpinned dialogs.
+
+        Returns:
+            A ``Peer`` identifying the conversation. Numeric and username lookup can return a peer without an access hash. Input-peer conversion rejects users/channels without one.
 
         Raises:
             Exception: Propagates resolution failures such as missing access data or invalid usernames.
@@ -680,6 +704,7 @@ class Client:
 
         Raises:
             TypeError: If ``kwargs`` contains unsupported send options.
+            ValueError: If ``parse_mode`` is unsupported and explicit ``entities`` were not supplied.
             Exception: Propagates peer resolution and RPC failures.
         """
         started = time.perf_counter()
@@ -754,6 +779,9 @@ class Client:
             request_timeout: Optional per-request timeout overriding configuration.
             flood_sleep_threshold: Optional automatic flood-wait ceiling.
             retry: Whether to force or suppress retry eligibility.
+
+        Returns:
+            Concrete messages in Telegram's response order, omitting ``MessageEmpty`` entries. A not-modified response produces an empty tuple.
 
         Raises:
             ValueError: If ``limit`` is negative.
@@ -835,6 +863,9 @@ class Client:
             request_timeout: Optional per-request timeout overriding client configuration.
             flood_sleep_threshold: Optional maximum flood-wait seconds to sleep automatically.
             retry: Whether to force or suppress retry eligibility.
+
+        Returns:
+            The first concrete message in the response, or an ID-``0`` fallback with submitted text and current UTC time if Telegram returns no message object.
         """
         started = time.perf_counter()
         resolved_peer = await self._peer_cache.resolve_peer(peer)
@@ -929,12 +960,12 @@ class Client:
     async def send_file(self, peer: Peer | str | int, file: FileSource, **kwargs: Any) -> Message:
         """Upload or reuse media, send it to ``peer`` and return the resulting message.
 
-        ``file`` may be a supported local, in-memory or streaming source or a reusable file ID. The default upload uses ``DEFAULT_CHUNK_SIZE``, ``DEFAULT_UPLOAD_CONCURRENCY`` and two media lanes; configured media defaults fill omitted ``concurrency`` and ``max_buffer_size`` values. Unknown-size streams may be disk-spooled by the media layer before upload.
+        ``file`` accepts local, in-memory or streaming sources and reusable file IDs. Uploads default to ``DEFAULT_CHUNK_SIZE``, ``DEFAULT_UPLOAD_CONCURRENCY`` and two media lanes. Configured media defaults fill omitted ``concurrency`` and ``max_buffer_size`` values. Unknown-size streams may be spooled to disk before upload.
 
         Args:
             peer: Destination peer object, numeric ID or username.
             file: Uploadable source or an existing miniproto file ID to reuse without uploading bytes.
-            **kwargs: Supported upload, media-send, retry, quick-ack and scheduling options accepted by ``_send_file_options``.
+            **kwargs: Upload sizing, buffering and progress options, caption/formatting, raw media flags and send controls. ``media_lanes`` defaults to 2, ``0`` uses the main sender. ``upload_limit_parts`` accepts a numeric part cap or ``"app_config"``. The upload ``file_id`` option is a numeric upload identifier.
 
         Raises:
             TypeError: If unsupported keyword options are provided.
@@ -1042,12 +1073,18 @@ class Client:
     ) -> MediaDownloadResult:
         """Download media to memory, a path or a writable destination.
 
-        The default scheduler uses two media lanes and bounded in-flight bytes. Multi-session downloading is only used for complete, known-size bot downloads with sibling session storage; unsupported cases fall back to one session and emit telemetry.
+        Downloads default to two media lanes and bounded in-flight bytes. Multi-session mode requires a complete, known-size bot download and sibling session storage. Unsupported cases fall back to one session and emit telemetry.
 
         Args:
             media: Normalized media, raw media or compatible miniproto file ID to download.
-            destination: Memory, path or writable destination accepted by the media download layer; defaults to in-memory output.
-            **kwargs: Supported range, resume, buffering, retry, verification, media-lane and scheduling options accepted by ``_download_media_options``.
+            destination: ``None`` for an in-memory result, a path or a caller-owned writable binary stream.
+            **kwargs: Range, resume, buffering, per-part retry and verification options from the media layer, plus ``media_lanes`` (default 2) and ``multi_session`` (default false). ``media_lanes=0`` uses the main sender.
+
+        Returns:
+            Download metadata, with ``data`` containing bytes when ``destination`` is omitted.
+
+        Lifecycle:
+            Range caches own shared producers and read-ahead work, which may outlive this call. Keep their client available or await the supplied cache's ``clear`` method before disconnecting it.
 
         Raises:
             TypeError: If unsupported keyword options are provided.
@@ -1095,10 +1132,17 @@ class Client:
 
         Args:
             media: Normalized media, raw media or compatible miniproto file ID to stream.
-            **kwargs: Download options accepted by ``_download_media_options`` except ``multi_session`` and ``resume``, which this streaming API rejects.
+            **kwargs: Range, buffering, per-part retry, caching, verification and media-lane options. ``multi_session`` and ``resume`` must remain false. Use ``offset`` for an explicit starting position.
 
         Yields:
             Ordered downloaded byte chunks as the media layer makes them available.
+
+        Raises:
+            ValueError: If ``multi_session`` or ``resume`` is enabled.
+            TypeError: If an unsupported keyword option is supplied.
+
+        Lifecycle:
+            Await ``aclose`` when stopping early so the iterator cleans up its owned requests. Shared cache producers and read-ahead work retain the cache owner's lifetime.
         """
 
         self._apply_media_config_defaults(kwargs)
@@ -1480,13 +1524,15 @@ class Client:
     ) -> object:
         """Invoke a low-level Telegram request through the main sender.
 
+        Default replay permits known read requests and selected writes deduplicated by ``random_id``. ``messages.getBotCallbackAnswer`` is excluded because it triggers a bot callback.
+
         Args:
             raw_request: Generated TL request object to send.
-            request_timeout: Optional per-request timeout; defaults to ``ClientConfig.request_timeout``.
-            flood_sleep_threshold: Optional maximum flood wait to sleep; defaults to configuration.
-            retry: Whether to force or suppress retry eligibility for this request.
+            request_timeout: Timeout for each sender request attempt, defaulting to ``ClientConfig.request_timeout``. Repeated attempts and flood-wait sleeps can exceed this duration in total.
+            flood_sleep_threshold: Maximum flood-wait seconds to sleep. ``None`` inherits configuration, whose default disables sleeping, ``0`` surfaces positive waits.
+            retry: ``None`` uses the request's retry-safety classification, ``True`` permits replay, ``False`` suppresses ambiguous transport replay and transient-error retries. Server-rejected flood waits and datacenter migrations can still retry.
             quick_ack: Request a quick acknowledgement from transports that support it.
-            quick_ack_callback: Optional callback invoked at most once with that acknowledgement.
+            quick_ack_callback: Optional callback invoked at most once with that acknowledgement. Supplying it also requests quick acknowledgement delivery. A receipt confirms transport acceptance, not RPC completion.
 
         Returns:
             The decoded raw Telegram response.
@@ -1495,10 +1541,12 @@ class Client:
             ConnectionError: If the client is not connected.
             FloodWait: If a remembered or server flood wait is not slept.
             RpcError: For Telegram RPC failures, including classified variants.
-            TimeoutError: When retryable transport failures exhaust the configured retry budget.
+            miniproto.errors.RequestTimeout: If a connected sender's request times out and eligible retries are exhausted.
+            miniproto.errors.ClientDisconnected: If a transport failure leaves the client or sender disconnected after retries.
+            miniproto.errors.AmbiguousRpcResult: If a transport failure leaves a non-replayable request's execution uncertain.
 
         Lifecycle:
-            Lazy sender construction and reconnection are serialized. A datacenter migration may update the main session and retry eligible requests; media lanes deliberately do not migrate it.
+            Lazy sender construction is serialized. Datacenter migration can update the main session and retry even when ``retry=False``. Dedicated media lanes route file migrations without changing the main session. RPC-result decompression uses ``config.transport.max_payload_size`` as its output bound.
         """
         return await self._invoke_via_sender(
             raw_request,
@@ -1761,10 +1809,15 @@ class Client:
                 raise typed from exc
 
     async def iter_updates(self) -> AsyncIterator[Update]:
-        """Yield normalized updates from the running update manager in arrival order.
+        """Yield updates accepted by the update manager's public FIFO queue.
+
+        Multiple iterators compete for items from the same queue. Raw processing persists cursor and duplicate state before delivery. Gap-recovered events may precede the live update that triggered recovery.
 
         Yields:
-            Normalized ``Update`` instances until the underlying update stream ends or is cancelled.
+            Public ``Update`` instances, subject to configured overflow and duplicate suppression.
+
+        Lifecycle:
+            ``disconnect`` does not end or wake this iterator. Cancel a waiting consumer yourself.
         """
         async for update in self._update_manager.iter_updates():
             yield update
@@ -1793,9 +1846,11 @@ class Client:
     ) -> UpdateHandler[UpdateT] | Callable[[UpdateHandler[UpdateT]], UpdateHandler[UpdateT]]:
         """Register an update handler directly or return a decorator for that handler type.
 
+        Handlers match with ``isinstance`` and run sequentially after public-queue admission. ``drop_newest`` overflow skips their delivery. A handler failure during background raw processing stops its task and surfaces when the manager stops.
+
         Args:
             update_type: Normalized update subclass accepted by the handler.
-            handler: Optional handler; when omitted, the returned callable decorates one.
+            handler: Optional handler. When omitted, the returned callable decorates one.
 
         Returns:
             The registered handler or a decorator that registers it.
@@ -2222,10 +2277,9 @@ class Client:
         return await self._build_foreign_media_sender(dc_id)
 
     async def _build_foreign_media_sender(self, dc_id: int) -> RawSender:
-        """Cross-DC media sender: per-DC auth key + imported authorization.
+        """Build a foreign-DC media sender with its own auth key and imported authorization.
 
-        The main session's DC and auth key are never touched (FastTelethon's
-        ExportAuthorizationRequest flow / MTKruto's per-DC connection pools).
+        Store foreign-DC auth material alongside the main session without replacing its active DC or key.
 
         Args:
             dc_id: Foreign media datacenter requiring its own key and imported authorization.
@@ -2255,7 +2309,7 @@ class Client:
     async def _ensure_media_dc_auth(self, dc_id: int) -> tuple[bytes, int]:
         """Return persisted or newly exchanged auth material for a foreign media datacenter.
 
-        The key and salt remain in encrypted session metadata and are never used to replace the main session's authorization key.
+        Persist the key and salt in the selected storage backend's per-DC metadata. Media lanes reuse them without replacing the active key. Main-session migration may activate them separately.
 
         Args:
             dc_id: Foreign media datacenter whose auth key and salt are loaded or exchanged.
@@ -2400,7 +2454,7 @@ class _MediaInvokeContext:
         self._closed = False
 
     async def __aenter__(self) -> _MediaInvokeContext:
-        """Resolve and prewarm lanes, then register the normal foreground transfer."""
+        """Resolve and prewarm lanes, then register a transfer unless registration is deferred."""
         self._target_dc = self._dc_id if self._dc_id is not None else await self._client._current_dc_id()
         if self._lane_count > 0:
             self._pool = await self._client._get_media_pool(
@@ -2615,7 +2669,7 @@ class _MediaSenderPool:
             )
 
     async def prewarm(self) -> None:
-        """Open all lane senders in parallel so the first requests skip connect+init."""
+        """Open lane senders in parallel, deferring any remaining initialization to their first RPC."""
         results = await asyncio.gather(*(lane.ensure_sender() for lane in tuple(self._lanes)), return_exceptions=True)
         for result in results:
             if isinstance(result, BaseException):
@@ -3012,9 +3066,7 @@ _SEND_FILE_OPTION_DEFAULTS: dict[str, object] = {
 _DOWNLOAD_MEDIA_OPTION_DEFAULTS: dict[str, object] = {
     "offset": 0,
     "limit": None,
-    # 2 lanes x ~3 pipelined 512 KiB..1 MiB requests within an 8 MiB rolling
-    # window (library default): the bandwidth x RTT product needed for
-    # ~16 MiB/s (mtcute ships 2x3; MTKruto 2x2x1 MiB).
+    # Six concurrent parts across two default lanes overlap latency within the media layer's byte window
     "part_size": DEFAULT_DOWNLOAD_PART_SIZE,
     "resume": False,
     "progress": None,

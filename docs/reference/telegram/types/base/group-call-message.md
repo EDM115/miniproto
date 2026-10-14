@@ -54,12 +54,12 @@ from miniproto.raw.types import GroupCallMessage
 
 Public access: `miniproto.raw.types.GroupCallMessage`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import GroupCallMessage
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = GroupCallMessage
 ```
 

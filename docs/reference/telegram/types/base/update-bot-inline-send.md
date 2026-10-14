@@ -53,12 +53,12 @@ from miniproto.raw.types import UpdateBotInlineSend
 
 Public access: `miniproto.raw.types.UpdateBotInlineSend`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import UpdateBotInlineSend
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = UpdateBotInlineSend
 ```
 

@@ -50,12 +50,12 @@ from miniproto.raw.types import UpdateMonoForumNoPaidException
 
 Public access: `miniproto.raw.types.UpdateMonoForumNoPaidException`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import UpdateMonoForumNoPaidException
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = UpdateMonoForumNoPaidException
 ```
 

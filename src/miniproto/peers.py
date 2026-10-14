@@ -102,13 +102,10 @@ class PeerCache:
         """Return the authenticated user, reading cache unless ``refresh`` is true.
 
         Args:
-            refresh: When true, try ``users.getUsers(inputUserSelf)`` first. If
-                its result lacks a self user, return a cached identity when one
-                exists; otherwise raise ``Unauthorized``.
+            refresh: When true, try ``users.getUsers(inputUserSelf)`` first. If the result contains no concrete user, return a cached identity when one exists, otherwise raise ``Unauthorized``.
 
         Raises:
-            Unauthorized: If Telegram does not return a concrete self user and
-                no cached identity is available.
+            Unauthorized: If Telegram returns no concrete user and no cached identity is available.
         """
         if not refresh:
             async with self._index_lock:
@@ -131,15 +128,19 @@ class PeerCache:
     async def resolve_peer(self, peer: Peer | str | int) -> Peer:
         """Resolve a peer object, numeric ID, phone number, self alias or username.
 
-        Numeric IDs use cached peers first, then seed from dialogs. Usernames may
-        call Telegram after the 24-hour local username cache expires.
+        Numeric IDs use cached peers first, then seed from up to 100 unpinned dialogs. Usernames call Telegram when no fresh entry exists in the 24-hour cache. Phone references beginning with ``+`` use cached data only.
+
+        Positive IDs shared by several kinds prefer self, user, chat, then channel. Negative chat IDs use ``-id``, channel IDs use ``-(1_000_000_000_000 + id)``.
 
         Raises:
-            NotFound: If the reference is empty, unknown or lacks an access hash.
+            NotFound: If the reference is empty or unknown, or an explicit user/channel ``Peer`` requires an uncached access hash.
             RpcError: If remote username resolution returns an unexpected result.
 
         Args:
             peer: Existing peer, signed/numeric ID, self alias, phone or username.
+
+        Returns:
+            The resolved peer. Numeric, phone and username paths can return an entry without an access hash. ``resolve_input_peer`` checks it before constructing an input peer.
         """
         if isinstance(peer, Peer):
             return await self._resolve_public_peer(peer)
@@ -578,7 +579,7 @@ def _entry_usernames(entry: PeerCacheEntry) -> tuple[str, ...]:
 def input_peer_from_peer(peer: Peer) -> object:
     """Convert a resolved peer to its MTProto ``InputPeer`` representation.
 
-    Chats need no hash; users and channels must carry a cached access hash.
+    Self and basic chats need no hash. Users and channels must carry an access hash.
 
     Raises:
         NotFound: If the peer kind is unsupported or its required hash is absent.

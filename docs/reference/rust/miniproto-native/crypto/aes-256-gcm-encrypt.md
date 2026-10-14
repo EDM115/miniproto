@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::crypto::aes_256_gcm_encrypt"
 source_path: "rust/miniproto/src/crypto.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L391"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L384"
 aliases: ["miniproto._native.aes_256_gcm_encrypt"]
 python_visible: true
 ---
@@ -15,7 +15,7 @@ python_visible: true
 ## Provenance
 
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L391)
+- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L384)
 - Python exposure: `miniproto._native.aes_256_gcm_encrypt` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -40,7 +40,7 @@ fn aes_256_gcm_encrypt(py: _, plaintext: _, key: _, nonce: _, associated_data: _
 fn aes_256_gcm_encrypt(py: Python<'_>, plaintext: Vec<u8>, key: Vec<u8>, nonce: Vec<u8>, associated_data: Vec<u8>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:391-402`*
+*Defined in `rust/miniproto/src/crypto.rs:384-395`*
 
 Authenticated-encrypts Python `aes_256_gcm_encrypt` plaintext and associated data.
 

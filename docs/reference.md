@@ -5,7 +5,7 @@ slug: /reference/
 generated: false
 ---
 
-The reference is generated from three independently verified source surfaces and committed so changes remain reviewable. Use the language and kind filters in search to move between public Python APIs, native Rust internals exposed through the extension boundary and the pinned Telegram layer.
+The committed reference covers the maintained Python API, native Rust crate and pinned Telegram layer. Use the language and kind filters to search those three sets of pages.
 
 ## Reference families
 
@@ -17,4 +17,4 @@ The reference is generated from three independently verified source surfaces and
 
 Every generated page identifies its language, reference kind, qualified name and source provenance in frontmatter and searchable metadata. Python and Rust parameter descriptions come from maintained docstrings or doc comments. Telegram parameter and result descriptions come from the pinned schema and project-owned relationship manifest; they do not invent behavioral guarantees absent from Telegram's definitions.
 
-The checked-in [reference manifest](https://github.com/EDM115/miniproto/blob/master/docs/reference/manifest.json) records page counts, routes, source paths and content hashes. Run `miniproto-docs --check` to prove the committed reference still matches the source and pinned toolchain.
+The checked-in [reference manifest](https://github.com/EDM115/miniproto/blob/master/docs/reference/manifest.json) records page counts, routes, source paths and content hashes. Run `miniproto-docs --check` to compare generated pages with their current sources and pinned schema inputs.

@@ -44,12 +44,12 @@ from miniproto.raw.functions import MessagesSendWebViewData
 
 Public access: `miniproto.raw.functions.MessagesSendWebViewData`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.functions import MessagesSendWebViewData
 
-# Naming the raw request class is local only; it performs no I/O or network request.
+# Refer to the raw request class without constructing it or calling Telegram
 request_type = MessagesSendWebViewData
 ```
 

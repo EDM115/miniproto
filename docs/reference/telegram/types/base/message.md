@@ -141,12 +141,12 @@ from miniproto.raw.types import Message
 
 Public access: `miniproto.raw.types.Message`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import Message
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = Message
 ```
 

@@ -43,12 +43,12 @@ from miniproto.raw.types import GroupCallStreamChannel
 
 Public access: `miniproto.raw.types.GroupCallStreamChannel`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import GroupCallStreamChannel
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = GroupCallStreamChannel
 ```
 

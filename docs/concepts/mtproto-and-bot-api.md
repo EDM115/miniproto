@@ -9,7 +9,7 @@ generated: false
 
 Telegram's Bot API is a service-oriented HTTP interface for bots. MTProto is Telegram's lower-level client protocol: it includes authorization, data centres, encrypted envelopes, raw TL constructors and methods, updates and media-transfer details. `miniproto` implements the latter boundary.
 
-That boundary lets one SDK support user authorization and bot authorization, generated raw methods and protocol-level concerns such as session state and DC migration. It does not make `miniproto` a drop-in Bot API client, hide Telegram's account rules or provide the routing, command, middleware, plugin and conversation abstractions normally expected from an application framework. Those belong to the separate future `mpgram` layer.
+`miniproto` supports user and bot authorization, generated raw methods, session state and DC migration. It speaks MTProto, so applications that need the Bot API's HTTP interface or framework features such as routing, commands, middleware, plugins and conversations need a separate client or the planned `mpgram` layer.
 
 ## What an MTProto client must own
 

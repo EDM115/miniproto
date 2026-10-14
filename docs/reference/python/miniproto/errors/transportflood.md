@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.errors.TransportFlood"
 source_path: "src/miniproto/errors.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L494"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L496"
 aliases: ["miniproto.TransportFlood"]
 module: "miniproto.errors"
 ---

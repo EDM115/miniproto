@@ -1,13 +1,13 @@
 ---
 title: "miniproto.errors.InvalidDatacenter"
-description: "Telegram rejects the current data centre, commonly before a migration hint."
+description: "The requested datacenter is unavailable or Telegram rejects it."
 generated: true
 editUrl: false
 language: "python"
 kind: "class"
 qualified_name: "miniproto.errors.InvalidDatacenter"
 source_path: "src/miniproto/errors.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L448"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L450"
 aliases: ["miniproto.InvalidDatacenter"]
 module: "miniproto.errors"
 ---
@@ -20,7 +20,7 @@ InvalidDatacenter(message: str = 'invalid datacenter', *, request: object | None
 
 Bases: <code>[AuthError](#miniproto.errors.AuthError)</code>
 
-Telegram rejects the current data centre, commonly before a migration hint.
+The requested datacenter is unavailable or Telegram rejects it.
 
 Create an invalid-datacenter failure with status code 303.
 

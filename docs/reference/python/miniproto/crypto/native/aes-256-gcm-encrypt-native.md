@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.crypto.native.aes_256_gcm_encrypt_native"
 source_path: "src/miniproto/crypto/native.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/native.py#L976"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/native.py#L947"
 aliases: ["miniproto.crypto.aes_256_gcm_encrypt_native"]
 module: "miniproto.crypto.native"
 ---
@@ -24,7 +24,7 @@ Encrypt with the explicit compiled Rust AES-256-GCM capability.
 
 - **plaintext** (<code>[bytes](#bytes)</code>) – Bytes to protect.
 - **key** (<code>[bytes](#bytes)</code>) – Exactly 32 bytes of AES-256 key material.
-- **nonce** (<code>[bytes](#bytes)</code>) – Exactly 12 unique bytes for this key.
+- **nonce** (<code>[bytes](#bytes)</code>) – A 12-byte nonce whose complete value is unique for this key.
 - **associated_data** (<code>[bytes](#bytes)</code>) – Authenticated but unencrypted bytes.
 
 **Returns:**

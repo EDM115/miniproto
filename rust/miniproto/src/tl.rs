@@ -1,15 +1,7 @@
 //! Native primitive and generated fast-path codecs for Telegram's Type Language (TL).
 //!
-//! The primitive Python-visible `tl_*` functions mirror the pure-Python fallback API. In contrast,
-//! `tl_fast_encode` and `tl_fast_decode` are native-only optional accelerators: Python callers
-//! receive `None` when a selected generated fast path is unavailable and use their fallback path.
-//! They return `ValueError` or `MemoryError` for malformed wire input or failed allocation, release
-//! the GIL only for large primitive-vector work and do not expose unsafe Rust operations.
-//! Incompatible Python-to-Rust values instead fail during PyO3 conversion with its original
-//! `TypeError`, `OverflowError` or source exception before these algorithms run.
-//! `generated_tl.rs` is trusted, build-time-generated metadata consumed—not hand-maintained—by
-//! this module. Descriptor indices and bit positions are code-generation invariants rather than
-//! values validated on every hot-path call.
+//! Primitive `tl_*` exports share the Python fallback's calling conventions. Optional `tl_fast_encode` and `tl_fast_decode` exports return `None` when the constructor has no matching fast path. Malformed wire data raises `ValueError`, checked allocation failures raise `MemoryError`, and PyO3 conversion errors propagate unchanged. Large primitive-vector operations detach from Python.
+//! `generated_tl.rs` supplies trusted metadata. Some descriptor indices and bit positions rely on generator invariants instead of per-call validation.
 
 use pyo3::IntoPyObjectExt;
 use pyo3::exceptions::{PyMemoryError, PyValueError};
@@ -441,9 +433,9 @@ fn decode_message_container(
     Ok(PyTuple::new(py, messages)?.into_any().unbind())
 }
 
-/// Encodes and appends a bounded TL bytes value, reserving its output atomically.
+/// Encodes a bounded TL bytes value, then reserves space before appending it
 ///
-/// Returns `ValueError` above TL's 24-bit limit or `MemoryError` on allocation failure.
+/// Returns `ValueError` above TL's 24-bit limit or `MemoryError` if the destination reservation fails. The temporary encoding uses an ordinary Rust allocation.
 ///
 /// # Arguments
 ///
@@ -465,7 +457,7 @@ fn append_tl_bytes(output: &mut Vec<u8>, value: &[u8]) -> PyResult<()> {
 
 /// Borrows one padded TL bytes payload and returns it with its next aligned offset.
 ///
-/// Returns `ValueError` if the length prefix, payload, padding or offset is malformed.
+/// Returns `ValueError` for an unavailable prefix, truncated payload or padding, or offset overflow. Padding byte values are not checked.
 ///
 /// # Arguments
 ///
@@ -641,7 +633,7 @@ fn tl_decode_double(data: &[u8], offset: usize) -> PyResult<(f64, usize)> {
 ///
 /// # Arguments
 ///
-/// - `value`: Bytes to prefix and pad according to TL rules.
+/// - `value`: Must contain at most `2**24 - 1` bytes. This function does not check the limit.
 #[pyfunction]
 fn tl_encode_bytes(value: &[u8]) -> Vec<u8> {
     encode_tl_bytes(value)
@@ -664,7 +656,7 @@ fn tl_decode_bytes(data: &[u8], offset: usize) -> PyResult<(Vec<u8>, usize)> {
 ///
 /// # Arguments
 ///
-/// - `value`: UTF-8 Rust string to encode as TL bytes.
+/// - `value`: Its UTF-8 encoding must contain at most `2**24 - 1` bytes. This function does not check the limit.
 #[pyfunction]
 fn tl_encode_string(value: &str) -> Vec<u8> {
     encode_tl_bytes(value.as_bytes())

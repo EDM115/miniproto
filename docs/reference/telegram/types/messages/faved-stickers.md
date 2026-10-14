@@ -43,12 +43,12 @@ from miniproto.raw.types import MessagesFavedStickers
 
 Public access: `miniproto.raw.types.MessagesFavedStickers`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import MessagesFavedStickers
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = MessagesFavedStickers
 ```
 

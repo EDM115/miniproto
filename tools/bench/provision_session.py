@@ -89,7 +89,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         "--root",
         type=Path,
         default=Path(".tmp"),
-        help="directory under which encrypted session databases are created or updated; defaults to .tmp",
+        help="Directory for new encrypted session databases. Existing files are skipped. Defaults to .tmp.",
     )
     return parser.parse_args(argv)
 

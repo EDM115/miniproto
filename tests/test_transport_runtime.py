@@ -1477,8 +1477,7 @@ def test_sender_flushes_acks_automatically_before_64_unacked_accumulate() -> Non
                     break
                 await asyncio.sleep(0.05)
             assert total_acked() >= total_requests
-            # Telegram drops sessions after 64 unacked content messages; the automatic
-            # flush must keep the outstanding window far below that.
+            # Automatic flushing must keep the outstanding ACK backlog below this test's 64-message bound
             assert max_unacked < 64
             assert state.pending_ack_count == 0
             await sender.disconnect()

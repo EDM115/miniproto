@@ -53,12 +53,12 @@ from miniproto.raw.functions import MessagesSendBotRequestedPeer
 
 Public access: `miniproto.raw.functions.MessagesSendBotRequestedPeer`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.functions import MessagesSendBotRequestedPeer
 
-# Naming the raw request class is local only; it performs no I/O or network request.
+# Refer to the raw request class without constructing it or calling Telegram
 request_type = MessagesSendBotRequestedPeer
 ```
 

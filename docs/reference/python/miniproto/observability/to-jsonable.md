@@ -26,4 +26,4 @@ Recursively convert supported observability values into JSON-compatible shapes.
 
 **Returns:**
 
-- <code>[object](#object)</code> – Dataclasses as dictionaries, mappings with string keys, sequences as lists or the leaf unchanged.
+- <code>[object](#object)</code> – ``ResourceSnapshot``, ``MemoryDelta`` and ``MetricEvent`` as dictionaries, mappings with string keys, lists/tuples as lists or other values unchanged. Unsupported leaves can still prevent JSON encoding.

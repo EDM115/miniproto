@@ -53,7 +53,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     """Profile selected lazy generated-codec paths and print JSON microbenchmark evidence.
 
     Args:
-        argv: Optional CLI arguments; none are currently accepted.
+        argv: Optional CLI arguments, only standard argparse help is accepted.
 
     Returns:
         Zero after emitting best, median and raw milliseconds samples.

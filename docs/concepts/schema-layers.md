@@ -7,9 +7,9 @@ generated: false
 
 ## Layer 230 is a pinned compatibility snapshot
 
-The current generated raw API is pinned to Telegram Layer 230. A layer is not merely a display number: constructors, method signatures, flags, result types and IDs must agree as one coherent snapshot. Generated code and reference pages therefore derive from checked-in schema inputs rather than a runtime download.
+The current generated raw API is pinned to Telegram Layer 230. Each layer identifies a coherent snapshot: constructors, method signatures, flags, result types and IDs must agree. Generated code and reference pages derive from checked-in schema inputs rather than a runtime download.
 
-## Source roles are intentionally different
+## Each source has one job
 
 TDLib's pinned `telegram_api.tl` is the canonical structural source. It decides declarations, constructor IDs, parameter types, flags and result types. Telegram Desktop supplies the layer only after an exact comparison of shared declarations and a validated end-of-file layer marker. Core Telegram JSON and schema inputs enrich available prose, while the pinned core RPC-error database supplies error mappings; neither is allowed to overwrite TDLib structure.
 

@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.media.download.MediaDownloadError"
 source_path: "src/miniproto/media/download.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L37"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L32"
 aliases: ["miniproto.media.MediaDownloadError"]
 module: "miniproto.media.download"
 ---

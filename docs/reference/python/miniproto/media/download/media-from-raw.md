@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.media.download.media_from_raw"
 source_path: "src/miniproto/media/download.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L1766"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L1730"
 aliases: ["miniproto.media.media_from_raw"]
 module: "miniproto.media.download"
 ---
@@ -22,7 +22,7 @@ Normalize supported raw Telegram media shapes into a :class:`Media` record.
 
 **Parameters:**
 
-- **raw** (<code>[object](#object)</code>) – Media, message/update, document, photo or input file location.
+- **raw** (<code>[object](#object)</code>) – ``Media``, ``Message``, ``UpdateShortSentMessage``, document/photo media, document, photo or input file location.
 
 **Returns:**
 

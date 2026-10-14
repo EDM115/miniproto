@@ -1,12 +1,6 @@
 """Measure native, ``cryptography`` and selected protected-session backends.
 
-Each sample is wall-clock milliseconds per operation, obtained by timing a
-fixed number of iterations and dividing by that count.  Every available backend
-must produce the same output before timing; order rotates for each run to reduce
-position bias and smoke/full modes select distinct warmup and iteration counts.
-The report's winner and median ratio describe only this host, build, payload,
-and provider state.  Missing capabilities are recorded, not emulated and no
-failure threshold or observed winner establishes a cross-platform speed claim.
+Samples report wall-clock milliseconds per operation by dividing batch time by its iteration count. Available backends must produce the same output before timing, and their order rotates per run to reduce position bias. Smoke and full modes select different warmup and iteration counts. Reports record missing capabilities, while winners and median ratios describe only the current host, build, payload and provider state.
 """
 
 from __future__ import annotations

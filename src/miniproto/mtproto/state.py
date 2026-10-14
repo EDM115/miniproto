@@ -67,7 +67,7 @@ class MTProtoState:
         """Allocate a strictly increasing client MTProto message ID.
 
         Returns:
-            Timestamp-derived, client-parity message ID advancing in steps of four.
+            Timestamp-derived message ID divisible by four, at least four greater than the previous ID.
         """
         candidate = int((time.time() + self.time_offset) * 2**32) & ~3
         if candidate <= self._last_msg_id:
@@ -170,7 +170,7 @@ class MTProtoState:
             self._time_trusted = True
 
     def record_incoming(self, msg_id: int, *, content_related: bool = True) -> bool:
-        """Record a server message unless it is already known.
+        """Record a server message unless it is already known, without envelope validation.
 
         Args:
             msg_id: Server message ID.
@@ -205,7 +205,7 @@ class MTProtoState:
             msg_ids: IDs in the order required by a ``msgs_state_info`` reply.
 
         Returns:
-            One status byte per ID: unknown below the window (1), missing within it (2), above it (3), or received (4) with acknowledged (8) and no-ack-required (16) flags when known.
+            One status byte per ID: unknown below the window (1), missing within it (2), above it (3), or received (4) with acknowledged (8) and no-ack-required (16) flags when known. An empty receive window returns 1 for every queried ID.
         """
         if not self._seen_msg_ids:
             return b"\x01" * len(msg_ids)

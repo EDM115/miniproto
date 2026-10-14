@@ -7,19 +7,17 @@ generated: false
 
 miniproto separates unprivileged artifact construction from privileged publication. One manual build run creates the complete release candidate and one separately dispatched publish run verifies that exact run ID before any registry or GitHub release is changed.
 
-The `0.1.x` crates.io package is the source and provenance record for the bundled PyO3 accelerator. It is versioned and released with the Python package, but it is not yet a supported standalone Rust library API. The direct Rust-consumer boundary is deliberately deferred until the crate exposes an `rlib`, documents its Rust-facing stability policy and passes external-consumer tests.
+The `0.1.x` Cargo package records source provenance for the bundled PyO3 accelerator and stays version-aligned with Python. It does not yet provide a supported standalone Rust library API. Direct Rust use is deferred until the crate exposes an `rlib`, documents a Rust-facing stability policy and passes external-consumer tests.
 
-## `0.1.0` handoff and historical evidence
+## Version metadata and historical evidence
 
-- [x] Python, Rust, lockfile, documentation-site, changelog, license and Alpha metadata agree on exactly `0.1.0`.
-- [x] Historical hosted [CI](https://github.com/EDM115/miniproto/actions/runs/32228452630), [documentation](https://github.com/EDM115/miniproto/actions/runs/32228472756) and [24 wheel lanes](https://github.com/EDM115/miniproto/actions/runs/32228463727) passed on 2026-08-19 at commit `c81533922ba63c89337f3959b881109c3b7e5dec`. Those runs establish that commit's results, subsequent source and dependency changes require fresh validation.
-- [x] The complete build-once candidate workflow, release manifest/checksum verifier, per-distribution attestations, protected OIDC publisher, draft-first immutable GitHub release sequence and failure recovery are implemented and contract-tested locally.
-- [ ] The maintainer must review and commit/push the final source tree, configure the protected `release` environment, both Trusted Publishers and GitHub release immutability.
-- [ ] The complete 22-stage offline gate must pass for the final source tree, retaining its reports, wheel/sdist inspections and dependency-resolving clean-install evidence.
-- [ ] The complete **Build release artifacts** workflow must pass from that exact final SHA and produce one verified set of 24 wheels, one sdist, one crate, `SHA256SUMS` and `release-manifest.json` with valid attestations.
-- [ ] The maintainer must approve the protected **Publish release** run, verify both registries and allow it to publish the populated GitHub draft last.
+`pyproject.toml` and `rust/miniproto/Cargo.toml` declare version `0.1.0`. The [changelog](https://github.com/EDM115/miniproto/blob/master/CHANGELOG.md) describes that Alpha's API and compatibility boundary.
 
-Historical [2026-08-19 run notes](https://github.com/EDM115/miniproto/blob/8ed6b99eb0909f87a90f604026d956c0ad16adaa/PROGRESS.md) survive in Git and cite local reports under `.tmp/wave6-20260819-final2/` and `.tmp/wave7-20260819-final/`. Their raw reports are absent from the current checkout, and the notes concern an earlier source and dependency set, so they cannot verify its current local release status. Only the single final-SHA hosted build run supplies an authoritative release candidate.
+Historical hosted [CI](https://github.com/EDM115/miniproto/actions/runs/32228452630), [documentation](https://github.com/EDM115/miniproto/actions/runs/32228472756) and [24 wheel lanes](https://github.com/EDM115/miniproto/actions/runs/32228463727) passed on 2026-08-19 at commit `c81533922ba63c89337f3959b881109c3b7e5dec`. Those results apply to that commit; later source or dependency changes need fresh validation.
+
+Historical [2026-08-19 run notes](https://github.com/EDM115/miniproto/blob/8ed6b99eb0909f87a90f604026d956c0ad16adaa/PROGRESS.md) cite local reports under `.tmp/wave6-20260819-final2/` and `.tmp/wave7-20260819-final/`. The reports are absent from this checkout, and the notes cover an earlier source and dependency set. For each release candidate, use a successful build run tied to that candidate's exact source commit.
+
+The steps below describe a reusable release procedure. They do not report the current status of any GitHub release or registry entry; verify those remote surfaces directly before announcing publication.
 
 ## Release topology
 
@@ -44,12 +42,12 @@ There is no transaction spanning all three services. The chosen order keeps the 
 
 ## One-time repository and registry setup
 
-Complete these settings before dispatching the first real release:
+Configure these settings once before the first publication:
 
 1. Create a protected GitHub Actions environment named `release`. Require manual approval and restrict deployment as appropriate for the maintainers. If the only release approver is also the person dispatching the workflow, do not enable self-review prevention unless another trusted maintainer can approve it.
 2. In the PyPI `miniproto` project, add a GitHub Actions Trusted Publisher with owner `EDM115`, repository `miniproto`, workflow `publish-release.yml` and environment `release`.
 3. In the crates.io `miniproto` package settings, add a Trusted Publisher with repository owner `EDM115`, repository `miniproto`, workflow `publish-release.yml` and environment `release`.
-4. Enable immutable releases in the GitHub repository settings before publishing `v0.1.0`. Immutability applies only to releases published after the setting is enabled.
+4. Enable immutable releases in the GitHub repository settings before publishing the first release. Immutability applies only to releases published after the setting is enabled.
 
 The publish workflow contains no long-lived registry secret. Each registry job receives only `id-token: write` plus the minimum read permission it requires; PyPI and crates.io exchange the GitHub OIDC identity for short-lived publication credentials. Build jobs never receive registry publication authority.
 
@@ -282,7 +280,7 @@ Never use `--allow-dirty` or `--no-verify` for a release. A crates.io version ca
 
 ## Post-publication verification
 
-After the protected workflow reports success, verify all three public surfaces without rebuilding or mutating the release:
+After the protected workflow reports success, verify all three public surfaces without rebuilding or mutating the release. Set `$version` to the candidate; the example uses `0.1.0`.
 
 ```pwsh
 $repository = "EDM115/miniproto"
@@ -302,7 +300,9 @@ uv pip install --python $python "miniproto==$version"
 cargo info "miniproto@$version"
 ```
 
-On Linux or macOS, use `$postRelease/bin/python` for the clean PyPI import. Download the public GitHub assets into a new directory, verify `SHA256SUMS` and `release-manifest.json` with `miniproto-release-artifacts verify` and run `gh attestation verify` with `.github/workflows/build-wheels.yml` as the signer. Confirm that PyPI lists exactly the expected 24 wheels plus sdist, crates.io serves the same `.crate` bytes already checked by the publisher, the GitHub release is not a draft, the tag targets the verified build SHA and all 28 assets are present. If any public surface disagrees, stop announcing the release; package versions and immutable release assets cannot be overwritten.
+On Linux or macOS, use `$postRelease/bin/python` for the clean PyPI import. Download the public GitHub assets into a new directory, verify `SHA256SUMS` and `release-manifest.json` with `miniproto-release-artifacts verify`, then run `gh attestation verify` with `.github/workflows/build-wheels.yml` as the signer.
+
+Confirm that PyPI lists exactly 24 wheels and one sdist. Confirm that crates.io serves the `.crate` bytes already checked by the publisher. Confirm that the GitHub release is public, its tag targets the verified build SHA and it contains all 28 assets. If any surface disagrees, stop announcing the release; package versions and immutable release assets cannot be overwritten.
 
 ## Continuous versus authoritative artifacts
 

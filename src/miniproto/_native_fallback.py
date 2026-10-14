@@ -1,9 +1,6 @@
-"""Pure-Python compatibility implementation for :mod:`miniproto._native`.
+"""Python fallback for :mod:`miniproto._native`, using stdlib and ``cryptography`` primitives.
 
-This internal module preserves the extension's callable surface when native
-import fails or a public wrapper intentionally selects the C-backed Python
-path.  It is not a separate public backend contract: callers should use
-``miniproto.crypto`` and rely on its validation and parity guarantees.
+Public wrappers use this module when native import fails or when they select a C-backed Python path. Callers should use ``miniproto.crypto``, whose wrappers define supported inputs and backend selection.
 """
 
 from __future__ import annotations
@@ -155,11 +152,11 @@ def mtproto_encode_message(
 
     Args:
         auth_key: Required 256-byte MTProto authorization key.
-        server_salt: Unsigned 64-bit server salt to encode.
-        session_id: Unsigned 64-bit session identifier to encode.
+        server_salt: Server salt whose low 64 bits are encoded.
+        session_id: Session identifier whose low 64 bits are encoded.
         msg_id: Signed 64-bit MTProto message identifier.
         seq_no: Signed 32-bit MTProto sequence number.
-        body: TL payload bytes to serialize.
+        body: Four-byte-aligned TL payload bytes, as required by the decoder.
         client_to_server: Whether to derive for client-to-server traffic.
         padding: Explicit MTProto padding or ``None`` to generate it.
     """
@@ -529,7 +526,7 @@ def tl_encode_bytes(value: bytes) -> bytes:
     """Encode a TL byte string with a length prefix and zero padding.
 
     Args:
-        value: Payload bytes to frame and four-byte align.
+        value: Payload bytes to frame and four-byte align, limited by the caller to ``2**24 - 1`` bytes.
     """
     length = len(value)
     if length <= 253:
@@ -816,10 +813,10 @@ def _is_prime(value: int) -> bool:
 
 
 def _factor(value: int) -> int:
-    """Find one non-trivial factor with the fallback Pollard-rho loop.
+    """Return a factor using trial division and Pollard-rho, or the input when prime.
 
     Args:
-        value: Odd composite integer to factor.
+        value: Integer of at least four to factor.
     """
     if value % 2 == 0:
         return 2

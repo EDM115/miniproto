@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.errors.RpcTimeout"
 source_path: "src/miniproto/errors.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L253"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L255"
 aliases: ["miniproto.RpcTimeout"]
 module: "miniproto.errors"
 ---

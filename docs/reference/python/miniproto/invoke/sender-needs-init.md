@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.invoke.sender_needs_init"
 source_path: "src/miniproto/invoke.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L189"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L185"
 module: "miniproto.invoke"
 ---
 

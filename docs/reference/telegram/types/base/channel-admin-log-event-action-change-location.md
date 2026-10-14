@@ -42,12 +42,12 @@ from miniproto.raw.types import ChannelAdminLogEventActionChangeLocation
 
 Public access: `miniproto.raw.types.ChannelAdminLogEventActionChangeLocation`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import ChannelAdminLogEventActionChangeLocation
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = ChannelAdminLogEventActionChangeLocation
 ```
 

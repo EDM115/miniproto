@@ -67,7 +67,10 @@ _SESSION_RECORD_FIELDS = frozenset(
 
 
 class SessionString(str):
-    """A bearer-secret string whose representation is always redacted."""
+    """Session contents with a redacted ``repr``.
+
+    Printing, formatting or converting the value with ``str`` exposes its contents, including bearer credentials in unprotected formats.
+    """
 
     __slots__ = ()
     __miniproto_secret__ = True
@@ -95,16 +98,13 @@ def export_session_string(
         test_mode: Required for Pyrogram when absent from record metadata.
 
     Returns:
-        A redacted-on-representation bearer session string.
+        A bearer session string whose ``repr`` redacts its contents.
 
     Raises:
         SessionEnvelopeError: If data, authentication material, limits or format options are invalid.
-        TypeError: If the input is neither a record nor mapping.
+        TypeError: If the input is neither a record nor mapping, or native export encounters an unsupported nested value.
 
-    Protected native strings authenticate and encrypt their payload. Plain native,
-    Telethon and Pyrogram outputs remain validated bearer encodings. Generic
-    asynchronous storage is exported through ``Client.export_session_string``; this
-    layer deliberately only accepts already loaded state.
+    A native passphrase protects the payload with scrypt and AES-256-GCM. Plain native, Telethon and Pyrogram outputs expose the contained bearer credentials. Use ``Client.export_session_string`` to export async storage. This function accepts already loaded state.
     """
 
     record = _coerce_record(record_or_mapping)
@@ -135,6 +135,7 @@ def import_session_string(
     Raises:
         SessionEnvelopeError: If the string, envelope, protected-native authentication or format is invalid.
         TypeError: If ``value`` is not a string.
+        ValueError: If a native payload's datetime marker contains an invalid ISO timestamp.
     """
 
     raw = _ordinary_string(value)

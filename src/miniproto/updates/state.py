@@ -58,7 +58,7 @@ class EntityReference:
         phone: Optional phone number observed in a user entity.
         title: Optional display title or user full name.
         complete: Whether the source was a full entity allowed to clear absent aliases.
-        updated_at: Observation timestamp; aware input retains its timezone and naive input assumes UTC.
+        updated_at: Observation timestamp, passed through until ``to_peer_cache_entry`` applies session-model timezone handling.
     """
 
     id: int
@@ -111,7 +111,7 @@ class UpdateCursor:
         pts: Global persistent timestamp.
         qts: Secret-chat persistent timestamp.
         seq: Global sequence number.
-        date: Global-state timestamp; aware input retains its timezone and naive input assumes UTC.
+        date: Global-state timestamp. ``with_state`` coerces replacements, direct construction retains the supplied value.
         channel_cursors: Independent channel PTS states.
         entities: Peer references observed while processing updates.
         duplicate_keys: Recent raw-update identity keys.
@@ -341,7 +341,9 @@ def metadata_with_duplicate_keys(
 
 
 def _channel_cursors_from_metadata(metadata: Mapping[str, Any]) -> tuple[ChannelUpdateCursor, ...]:
-    """Deserialize well-formed channel cursors from update metadata, skipping invalid entries.
+    """Deserialize channel cursors, skipping non-mappings and non-integer IDs or PTS values.
+
+    Invalid date representations still propagate from ``coerce_update_datetime``.
 
     Args:
         metadata: Nested update metadata containing optional serialized channel cursors.

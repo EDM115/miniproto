@@ -1733,8 +1733,7 @@ def test_download_file_flood_wait_does_not_reduce_concurrency(tmp_path) -> None:
             set_metrics_sink(None)
         assert target.read_bytes() == payload
         assert result.bytes_downloaded == len(payload)
-        # FLOOD_WAIT is per-request pacing: the flooded request just sleeps and
-        # retries while the concurrency limit stays untouched.
+        # An ordinary FLOOD_WAIT sleeps and retries this request while keeping the concurrency limit unchanged
         throttle_events = [event for event in metrics.events if event.name == "media.download.adaptive_throttle"]
         assert all(event.value >= 4 for event in throttle_events)
 
@@ -1761,9 +1760,7 @@ def test_download_file_floods_do_not_consume_the_transient_retry_budget(tmp_path
                 return upload_file_part(payload[request.offset : request.offset + request.limit])
 
         invoker = RepeatFloodInvoker()
-        # 4 consecutive floods on one part with max_retries=1: floods are server
-        # pacing and must not abort the transfer (they used to burn the retry
-        # budget and kill 2000 MiB downloads mid-flight).
+        # Four ordinary flood waits on one part must not exhaust a non-flood retry budget of max_retries=1
         await download_file(
             invoker,
             document_location(),
@@ -1791,12 +1788,12 @@ def test_adaptive_download_throttle_reduces_only_on_disconnects() -> None:
             return clock_value[0]
 
         throttle = media_download._AdaptiveDownloadThrottle(4, clock=clock)
-        # No slow start: the delay-gate stagger handles burst protection.
+        # The active window starts fully open, the delay gate staggers initial launches
         assert throttle.limit == 4
-        # Floods never reduce the window (they only pause growth).
+        # Ordinary flood waits leave the window unchanged and pause growth
         await throttle.on_retry(FloodWait(1), 1)
         assert throttle.limit == 4
-        # Disconnect-ish errors reduce by one with a cooldown.
+        # Connection failures reduce the window by one and delay regrowth until cooldown ends
         await throttle.on_retry(ClientDisconnected("sender disconnected"), 1)
         assert throttle.limit == 3
         for _ in range(20):
@@ -1894,12 +1891,7 @@ def test_download_file_flood_sleeps_hold_their_slot_without_backfill(tmp_path) -
         )
         assert target.read_bytes() == payload
         assert result.bytes_downloaded == len(payload)
-        # Both initial requests flooded together. Their slots stay HELD during
-        # the sleeps -- backfilling them with new offsets would sustain the
-        # request rate the server just objected to (observed live as a
-        # FLOOD_WAIT_2 -> FLOOD_WAIT_15 escalation). The next request after the
-        # floods must therefore be one of the retries, never a new offset (with
-        # backfill it would have been offset 2048, issued ~1 s before any retry).
+        # Keep both flooded requests' slots reserved during their sleeps so a new range cannot start before they retry
         assert [request.offset for request in invoker.requests[:2]] == [0, 1024]
         assert invoker.requests[2].offset in {0, 1024}
         assert len(invoker.requests) == 8

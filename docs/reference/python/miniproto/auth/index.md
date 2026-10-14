@@ -33,8 +33,8 @@ Telegram authorization, data-center selection, key exchange and SRP helpers.
 - [`ReqDHParams`](./key_exchange/reqdhparams/) — Serialized ``req_DH_params`` request containing RSA-encrypted inner data.
 - [`ReqPQMulti`](./key_exchange/reqpqmulti/) — Serialized ``req_pq_multi`` request carrying a client nonce.
 - [`ResPQ`](./key_exchange/respq/) — Decoded ``resPQ`` response received at the start of key exchange.
-- [`ServerDHInnerData`](./key_exchange/serverdhinnerdata/) — Validated plaintext DH group and server public value from Telegram.
-- [`ServerDHParamsFail`](./key_exchange/serverdhparamsfail/) — ``server_DH_params_fail`` response proving Telegram rejected the request.
+- [`ServerDHInnerData`](./key_exchange/serverdhinnerdata/) — Decoded plaintext DH parameters, validated separately by the key exchange.
+- [`ServerDHParamsFail`](./key_exchange/serverdhparamsfail/) — Decoded ``server_DH_params_fail`` response reporting a rejected request.
 - [`ServerDHParamsOk`](./key_exchange/serverdhparamsok/) — Successful ``server_DH_params_ok`` wrapper for encrypted DH parameters.
 - [`SetClientDHParams`](./key_exchange/setclientdhparams/) — Serialized ``set_client_DH_params`` request carrying AES-IGE ciphertext.
 - [`compute_auth_key`](./key_exchange/compute-auth-key/) — Compute the 256-byte MTProto key from validated DH peer and private values.

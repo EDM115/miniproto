@@ -7,14 +7,14 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::tl::register"
 source_path: "rust/miniproto/src/tl.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L102"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L94"
 python_visible: false
 ---
 
 ## Provenance
 
 - Rust visibility: `public`
-- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L102)
+- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L94)
 - Python exposure: Not evidenced by static PyO3 attributes.
 
 ## Signature
@@ -35,7 +35,7 @@ fn register(m: &_) -> _
 fn register(m: &Bound<'_, pyo3::types::PyModule>) -> PyResult<()>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:102-126`*
+*Defined in `rust/miniproto/src/tl.rs:94-118`*
 
 Registers the fallback-compatible `tl_*` Python functions on `miniproto._native`.
 

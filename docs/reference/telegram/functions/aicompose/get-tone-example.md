@@ -42,12 +42,12 @@ from miniproto.raw.functions import AicomposeGetToneExample
 
 Public access: `miniproto.raw.functions.AicomposeGetToneExample`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.functions import AicomposeGetToneExample
 
-# Naming the raw request class is local only; it performs no I/O or network request.
+# Refer to the raw request class without constructing it or calling Telegram
 request_type = AicomposeGetToneExample
 ```
 

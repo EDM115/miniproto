@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.crypto.mtproto.decrypt_payload"
 source_path: "src/miniproto/crypto/mtproto.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/mtproto.py#L138"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/mtproto.py#L128"
 aliases: ["miniproto.crypto.decrypt_payload"]
 module: "miniproto.crypto.mtproto"
 ---

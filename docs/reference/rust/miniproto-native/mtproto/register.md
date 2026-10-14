@@ -7,14 +7,14 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::mtproto::register"
 source_path: "rust/miniproto/src/mtproto.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/mtproto.rs#L77"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/mtproto.rs#L74"
 python_visible: false
 ---
 
 ## Provenance
 
 - Rust visibility: `public`
-- Source: [`rust/miniproto/src/mtproto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/mtproto.rs#L77)
+- Source: [`rust/miniproto/src/mtproto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/mtproto.rs#L74)
 - Python exposure: Not evidenced by static PyO3 attributes.
 
 ## Signature
@@ -35,7 +35,7 @@ fn register(m: &_) -> _
 fn register(m: &Bound<'_, pyo3::types::PyModule>) -> PyResult<()>
 ```
 
-*Defined in `rust/miniproto/src/mtproto.rs:77-81`*
+*Defined in `rust/miniproto/src/mtproto.rs:74-78`*
 
 Adds the Python-visible MTProto envelope functions to `miniproto._native`.
 

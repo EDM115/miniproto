@@ -50,12 +50,12 @@ from miniproto.raw.functions import EphemeralDeleteMessage
 
 Public access: `miniproto.raw.functions.EphemeralDeleteMessage`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.functions import EphemeralDeleteMessage
 
-# Naming the raw request class is local only; it performs no I/O or network request.
+# Refer to the raw request class without constructing it or calling Telegram
 request_type = EphemeralDeleteMessage
 ```
 

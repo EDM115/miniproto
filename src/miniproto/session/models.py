@@ -146,7 +146,7 @@ class UserIdentity:
 
 @dataclass(slots=True, frozen=True)
 class UpdateState:
-    """Monotonic Telegram update cursors and their latest server timestamp.
+    """Non-negative Telegram update cursors and their associated server timestamp.
 
     All counters default to zero and ``date`` defaults to current UTC time.
 
@@ -215,7 +215,7 @@ class SessionRecord:
     """Complete versioned session state with frozen, shallow collection snapshots.
 
     Attributes:
-        version: Storage schema version; only the current version is accepted.
+        version: Session-record schema version, only the current version is accepted.
         dc_id: Optional active data-centre identifier.
         auth_key: Optional active authorization key.
         dc_options: Immutable configured endpoint sequence.
@@ -224,8 +224,7 @@ class SessionRecord:
         peers: Immutable cached peer sequence.
         metadata: Shallow-copied extension mapping, hidden from ``repr``; nested values remain mutable.
 
-    Default update state is empty, while every other optional domain remains
-    absent or empty until the client obtains it.
+    Update counters default to zero and the update date defaults to current UTC time. Other optional domains start absent or empty.
 
     Raises:
         ValueError: If the version is unsupported or configured DC is invalid.

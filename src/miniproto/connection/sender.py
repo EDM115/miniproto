@@ -201,8 +201,7 @@ class MTProtoSender:
             incoming_queue_size: Bounded unsolicited-message queue capacity;
                 clamped to at least 1 and defaults to 256. Oldest items are
                 dropped when it is full.
-            on_salt_change: Optional synchronous callback invoked after the
-                sender accepts a server salt update; callback errors are logged.
+            on_salt_change: Optional synchronous callback invoked after an accepted salt update. Callback exceptions increment ``sender.salt_callback_errors``.
             reconnect_cooldown: Minimum paced delay after a young connection
                 dies; clamped to zero or greater and defaults to one second.
 
@@ -218,9 +217,7 @@ class MTProtoSender:
         self._connector = connector
         self._reconnect_attempts = reconnect_attempts
         self._ping_disconnect_delay = ping_disconnect_delay
-        # The transport enforces a read deadline; an idle connection must be pinged
-        # well before that deadline or recv() times out and forces a reconnect
-        # (observed live as reconnect churn while flood sleeps starve a lane).
+        # Ping before the transport read deadline so idle and flood-wait periods do not trigger avoidable reconnects
         self._ping_interval = max(0.05, min(ping_interval, transport_config.read_timeout / 2))
         self._ack_flush_threshold = max(1, ack_flush_threshold)
         self._ack_max_delay = max(0.05, ack_max_delay)
@@ -360,8 +357,7 @@ class MTProtoSender:
             retry_safe: Permit automatic resend with a fresh message ID after a
                 transport loss; defaults to ``False`` to avoid duplicating
                 unknown-side-effect RPCs.
-            request_timeout: Optional caller wait bound in seconds. ``None``
-                waits until a result, lifecycle failure or cancellation.
+            request_timeout: Result-wait limit in seconds, starting after the initial send completes. ``None`` waits until a result, lifecycle failure or cancellation.
             quick_ack: Request a transport quick ACK for the encrypted attempt;
                 defaults to ``False`` and never completes this RPC by itself.
             quick_ack_callback: Optional synchronous callback receiving the first
@@ -378,8 +374,8 @@ class MTProtoSender:
                 and quick-ACK registrations are removed.
             AmbiguousRpcResult: If an unsafe request loses transport after it may
                 have reached Telegram.
-            TransportError: If connection/recovery exhausts or protocol handling
-                fails.
+            TransportError: If transport recovery exhausts or Telegram rejects a message with an unrecoverable service error.
+            ProtocolValidationError: If inbound framing, envelope or service-body validation fails.
             asyncio.CancelledError: If the caller cancels; its pending state is
                 removed without cancelling other requests.
 
@@ -543,8 +539,9 @@ class MTProtoSender:
             Telegram's matching :class:`Pong`.
 
         Raises:
-            TransportError: If the request fails, times out or returns a body
-                other than ``Pong``.
+            TransportError: If transport handling fails or the result is not ``Pong``.
+            TimeoutError: If the ping result does not arrive before ``read_timeout``.
+            ProtocolValidationError: If inbound protocol validation fails.
 
         Notes:
             The keepalive task invokes this on its fixed cadence to prevent idle
@@ -575,7 +572,7 @@ class MTProtoSender:
         return await self._incoming.get()
 
     def acked(self, msg_id: int) -> bool:
-        """Return whether Telegram has sent a ``msgs_ack`` containing ``msg_id``.
+        """Return whether retained ``msgs_ack`` history contains ``msg_id``.
 
         Args:
             msg_id: Outgoing MTProto message ID to look up in received ACKs.
@@ -700,8 +697,7 @@ class MTProtoSender:
             pending: Request whose current message ID, sequence number and body
                 are encoded into this attempt.
         """
-        # Pending acks ride inside a msg_container with the outgoing request:
-        # one transport frame, no standalone ack round trip.
+        # Bundle pending ACKs with the request in one msg_container to avoid a separate transport write
         ack_ids = self.state.pop_pending_acks(limit=DEFAULT_ACK_FLUSH_LIMIT)
         ack_item: MessageContainerItem | None = None
         if ack_ids:
@@ -774,9 +770,7 @@ class MTProtoSender:
         """
         while not self._closing:
             if self._receive_task is not asyncio.current_task():
-                # connect() opened a fresh connection (with its own receive loop)
-                # while this loop was mid-recovery; the replacement owns the
-                # transport now and two loops reading one stream would race.
+                # connect() installed a new receive loop during recovery, so this loop must leave the replacement stream to its owner
                 return
             transport: Transport | None = None
             try:
@@ -804,10 +798,7 @@ class MTProtoSender:
             except TransportError:
                 if self._closing:
                     return
-                # Telegram media DCs routinely close connections after serving
-                # responses when throttling; treat it as routine: reconnect (paced)
-                # and transparently re-send retry-safe in-flight requests. Unsafe
-                # requests surface an ambiguous result instead of being replayed.
+                # Recover transport loss with paced reconnects and resend retry-safe requests, while unsafe requests report an ambiguous result
                 record_metric("sender.receive_transport_errors", 1)
                 try:
                     await self._reconnect(failed_transport=transport)
@@ -1105,10 +1096,7 @@ class MTProtoSender:
 
     async def _keepalive_loop(self) -> None:
         """Periodically flush old ACKs and ping while this connection owns the task."""
-        # ping_delay_disconnect arms a server-side disconnect timer that is only reset
-        # by ANOTHER message of the same type -- ordinary RPC traffic does not disarm
-        # it. Pings therefore flow on a fixed cadence regardless of how busy the
-        # connection is (MTKruto: 56 s, mtcute/Telethon: 60 s cadence).
+        # Only another ping_delay_disconnect resets Telegram's disconnect timer, so keepalive pings continue during ordinary RPC traffic
         last_ping = time.monotonic()
         while not self._closing:
             await asyncio.sleep(self._keepalive_tick)
@@ -1168,7 +1156,7 @@ class MTProtoSender:
                 self._fail_pending_request(pending, _ambiguous_rpc_result(pending))
                 continue
             if pending.attempts > self._reconnect_attempts:
-                # "connection" keeps this classified as transient by the media layer.
+                # "connection" keeps this classified as transient by the media layer
                 self._fail_pending_request(pending, TransportError("connection retry limit exceeded"))
                 continue
             try:
@@ -1428,16 +1416,11 @@ class MTProtoSender:
                 and current is not failed_transport
                 and current.is_connected
             ):
-                # Another task already replaced the failed transport; closing the
-                # replacement here would ping-pong reconnects between the send path
-                # and the receive loop (observed live as a TransportClosed storm).
+                # Keep the healthy replacement opened by another task so send and receive recovery do not repeatedly close each other's connections
                 record_metric("sender.reconnect_skipped", 1)
                 return
             if self._reconnect_cooldown > 0 and time.monotonic() - self._last_connect_time < RECONNECT_FLAP_WINDOW:
-                # The previous connection died young: Telegram media DCs shed
-                # connections when throttling and instant zero-backoff reconnects
-                # keep the account in that regime. Pace like MTKruto (3 s if the
-                # last connect was <10 s ago) and TDLib (connect flood control).
+                # Pace failures within the flap window to avoid repeated immediate reconnects after short-lived connections
                 record_metric("sender.reconnect_cooldowns", 1)
                 await asyncio.sleep(self._reconnect_cooldown)
                 if self._closing:
@@ -1504,7 +1487,7 @@ def _emit_sender_event(event: str, started: float, *, outcome: str, **fields: ob
 
 
 async def _unpack_gzip(body: GzipPacked, *, max_output_size: int) -> bytes:
-    """Unpack a gzip body inline or in a worker thread above the size threshold.
+    """Unpack gzip inline, or in a worker thread when compressed input is at least 64 KiB.
 
     Args:
         body: Decoded gzip wrapper whose packed bytes determine thread offload.
@@ -1517,7 +1500,7 @@ async def _unpack_gzip(body: GzipPacked, *, max_output_size: int) -> bytes:
 
 
 def _unpack_gzip_bounded(packed_data: bytes, *, max_output_size: int) -> bytes:
-    """Decompress gzip members without allocating beyond their combined output bound.
+    """Decompress gzip members and reject combined output above the configured limit.
 
     Args:
         packed_data: Complete gzip stream bytes.
@@ -1573,7 +1556,7 @@ def _expected_pong_ping_id(body: bytes | object) -> int | None:
 
 
 def _message_body_bytes(body: bytes | bytearray | memoryview | object) -> bytes | memoryview:
-    """Return wire bytes for a body while avoiding a copy for immutable buffers.
+    """Return existing body buffers as bytes or views, serializing objects as needed.
 
     Args:
         body: Existing byte buffer or serializable TL object to normalize.

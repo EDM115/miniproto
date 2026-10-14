@@ -25,13 +25,13 @@ Choose the best endpoint for a data center.
 - **options** (<code>[Iterable](#collections.abc.Iterable)[[DCOption](#miniproto.session.models.DCOption)]</code>) – Candidate connection options.
 - **dc_id** (<code>[int](#int)</code>) – Required Telegram data-center identifier.
 - **prefer_ipv6** (<code>[bool](#bool)</code>) – Prefer an IPv6 candidate when one is available.
-- **allow_media_only** (<code>[bool](#bool)</code>) – Permit endpoints reserved for media traffic.
+- **allow_media_only** (<code>[bool](#bool)</code>) – Include media-only endpoints without preferring non-media candidates. When false, media-only endpoints remain a fallback if no non-media candidate exists.
 - **require_cdn** (<code>[bool](#bool)</code>) – Restrict candidates to endpoints explicitly marked as CDN servers.
 
 **Returns:**
 
-- <code>[DCOption](#miniproto.session.models.DCOption)</code> – A non-media endpoint when possible, otherwise the best available candidate.
+- <code>[DCOption](#miniproto.session.models.DCOption)</code> – The first candidate matching the IPv4/IPv6 preference after CDN and media filtering.
 
 **Raises:**
 
-- <code>[ValueError](#ValueError)</code> – If ``options`` has no endpoint for ``dc_id``.
+- <code>[ValueError](#ValueError)</code> – If no endpoint matches ``dc_id`` and the optional CDN requirement.

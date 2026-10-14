@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::mtproto::mtproto_decode_message"
 source_path: "rust/miniproto/src/mtproto.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/mtproto.rs#L154"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/mtproto.rs#L146"
 aliases: ["miniproto._native.mtproto_decode_message"]
 python_visible: true
 ---
@@ -15,7 +15,7 @@ python_visible: true
 ## Provenance
 
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/mtproto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/mtproto.rs#L154)
+- Source: [`rust/miniproto/src/mtproto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/mtproto.rs#L146)
 - Python exposure: `miniproto._native.mtproto_decode_message` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -39,7 +39,7 @@ fn mtproto_decode_message(py: _, auth_key: _, packet: _, client_to_server: bool)
 fn mtproto_decode_message(py: Python<'_>, auth_key: Vec<u8>, packet: Vec<u8>, client_to_server: bool) -> PyResult<(Vec<u8>, u64, u64, i64, i32, Vec<u8>, Vec<u8>)>
 ```
 
-*Defined in `rust/miniproto/src/mtproto.rs:154-173`*
+*Defined in `rust/miniproto/src/mtproto.rs:146-165`*
 
 Decodes Python `mtproto_decode_message` packet bytes into its seven-element envelope tuple.
 

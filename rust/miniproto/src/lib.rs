@@ -1,9 +1,6 @@
 //! Bundled PyO3 acceleration module for [`miniproto`](https://pypi.org/project/miniproto/).
 //!
-//! Python imports this crate as `miniproto._native`.  It registers native implementations for
-//! cryptographic primitives, encrypted MTProto envelopes, selected TL codecs and TCP transport
-//! framing.  These routines are an optional acceleration layer: the Python package owns the
-//! public fallback policy and must remain correct when this extension cannot be imported.
+//! Python imports this crate as `miniproto._native` for cryptography, encrypted MTProto envelopes, selected TL codecs and TCP framing. Python wrappers select these functions or their fallbacks per operation.
 
 use pyo3::prelude::*;
 use pyo3::types::PyModule;
@@ -23,9 +20,7 @@ mod transport;
 
 /// Initializes Python module `miniproto._native`.
 ///
-/// PyO3 declares this module usable without the GIL (`gil_used = false`), but individual exports
-/// still acquire or release it as required by their Python-object interactions.  Returns a Python
-/// exception if any submodule registration fails.
+/// `gil_used = false` declares support for free-threaded Python. Python-object access still requires an attached thread, which holds the GIL on GIL-enabled builds. Selected exports detach for native work. Registration errors propagate as Python exceptions.
 ///
 /// # Arguments
 ///

@@ -1,10 +1,6 @@
 """Deterministically render, reconcile and validate generated miniproto API artifacts.
 
-The pinned normalized TL schema is the structural source of truth. This generator owns the
-raw Python facades and shards, stubs, registry, RPC-error metadata and reviewed Rust/TL
-fast-path metadata. Handwritten documentation is outside generator ownership. ``--check``
-compares each owned rendering with the working tree without mutating it; normal generation
-reconciles stale files and owned shards.
+The pinned normalized TL schema supplies the structure for raw Python facades, shards, stubs, registry, RPC-error metadata and reviewed Rust/TL fast-path metadata. ``--check`` compares generated content with the working tree without writing files. Normal generation replaces stale outputs and removes obsolete owned shards. The generator leaves handwritten documentation alone.
 """
 
 from __future__ import annotations

@@ -42,12 +42,12 @@ from miniproto.raw.types import HelpAppConfig
 
 Public access: `miniproto.raw.types.HelpAppConfig`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import HelpAppConfig
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = HelpAppConfig
 ```
 

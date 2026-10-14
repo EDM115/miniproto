@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.types.Message"
 source_path: "src/miniproto/types.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/types.py#L102"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/types.py#L105"
 aliases: ["miniproto.Message"]
 module: "miniproto.types"
 ---
@@ -26,6 +26,6 @@ Normalized Telegram message returned by high-level messaging helpers.
 - [**peer**](#miniproto.types.Message.peer) (<code>[Peer](#miniproto.types.Peer)</code>) – Conversation containing the message.
 - [**text**](#miniproto.types.Message.text) (<code>[str](#str)</code>) – Parsed message text.
 - [**date**](#miniproto.types.Message.date) (<code>[datetime](#datetime.datetime)</code>) – Telegram timestamp.
-- [**media**](#miniproto.types.Message.media) (<code>[Media](#miniproto.types.Media) | None</code>) – Optional normalized attachment.
-- [**entities**](#miniproto.types.Message.entities) (<code>[tuple](#tuple)[[object](#object), ...]</code>) – Parsed text entities.
+- [**media**](#miniproto.types.Message.media) (<code>[Media](#miniproto.types.Media) | None</code>) – Optional normalized attachment from messaging helpers. Pushed ``NewMessage`` updates retain the raw TL media object instead.
+- [**entities**](#miniproto.types.Message.entities) (<code>[tuple](#tuple)[[object](#object), ...]</code>) – Formatting entities from messaging helpers. Pushed-update conversion leaves this tuple empty.
 - [**raw**](#miniproto.types.Message.raw) (<code>[object](#object) | None</code>) – Optional underlying TL message.

@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.errors.SignUpRequired"
 source_path: "src/miniproto/errors.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L388"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L390"
 aliases: ["miniproto.SignUpRequired"]
 module: "miniproto.errors"
 ---

@@ -22,7 +22,7 @@ Read local test-DC overrides from environment-style mappings.
 
 **Parameters:**
 
-- **environ** (<code>[Mapping](#collections.abc.Mapping)[[str](#str), [str](#str)] | None</code>) – Mapping to read instead of :data:`os.environ`; defaults to the process environment.
+- **environ** (<code>[Mapping](#collections.abc.Mapping)[[str](#str), [str](#str)] | None</code>) – Mapping to read instead of :data:`os.environ`, defaulting to the process environment.
 
 **Returns:**
 

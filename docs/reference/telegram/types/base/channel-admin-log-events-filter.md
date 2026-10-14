@@ -86,12 +86,12 @@ from miniproto.raw.types import ChannelAdminLogEventsFilter
 
 Public access: `miniproto.raw.types.ChannelAdminLogEventsFilter`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import ChannelAdminLogEventsFilter
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = ChannelAdminLogEventsFilter
 ```
 

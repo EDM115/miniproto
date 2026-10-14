@@ -1,6 +1,6 @@
 ---
 title: "miniproto.errors.MiniprotoError"
-description: "Base exception for all library-defined failures."
+description: "Base exception for client, protocol-validation, RPC and session-storage failures."
 generated: true
 editUrl: false
 language: "python"
@@ -15,4 +15,4 @@ module: "miniproto.errors"
 
 Bases: <code>[Exception](#Exception)</code>
 
-Base exception for all library-defined failures.
+Base exception for client, protocol-validation, RPC and session-storage failures.

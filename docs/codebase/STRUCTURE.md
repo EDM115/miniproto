@@ -20,9 +20,9 @@ generated: false
 | `docs/`              | Canonical authored Markdown, internal `THOUGHTS.md` and committed generated reference pages            | `docs/reference-surface.toml`, `docs-site/src/content.config.ts` |
 | `docs-site/`         | Astro/Starlight presentation, Pagefind, assets, browser acceptance and ignored static output           | `docs-site/package.json`, `docs-site/astro.config.ts`            |
 | `.github/workflows/` | CI, docs, schema-upstream, live-benchmark, dispatch-only release construction and protected OIDC publication | `.github/workflows/`                                             |
-| `plans/`             | Historical and active implementation plans; not proof of runtime behavior by themselves                 | `plans/README.md`, `PROGRESS.md`                                 |
+| `plans/`             | Dated implementation plans; not proof of runtime behavior by themselves                                  | `plans/2026-08-19-rust-library-consumption-plan.md`               |
 
-Root `PLAN.md`, `PROGRESS.md`, `README.md`, `CHANGELOG.md`, `SECURITY.md` and `CONTRIBUTING.md` describe implementation intent, verified progress, public usage, release capabilities, security and contribution. Documentation-product direction and branding live under `docs/project/`, especially `docs/project/index.md` and `docs/project/brand.md`. Code and current test/config evidence take precedence when an older plan statement disagrees with implementation.
+The root `README.md`, `CHANGELOG.md`, `SECURITY.md` and `CONTRIBUTING.md` describe public usage, release capabilities, security and contribution. Dated plans live under `plans/`; read them as historical intent unless current source and tests confirm the behavior. Documentation direction and branding live under `docs/project/`, especially `docs/project/index.md` and `docs/project/brand.md`.
 
 ## Entry points
 

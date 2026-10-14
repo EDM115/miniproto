@@ -5,7 +5,7 @@ slug: /recipes/deployment/
 generated: false
 ---
 
-Provision API credentials, a unique session path and `MINIPROTO_SESSION_KEY` through the deployment platform's secret manager. The default storage backend is encrypted SQLite, but it cannot protect a process that deliberately logs or exports its own credentials.
+Set a unique `session_path` for each account or deployment. Store API credentials and `MINIPROTO_SESSION_KEY` in the deployment platform's secret manager. The default backend encrypts sessions in SQLite. It cannot protect a process that logs or exports its own credentials.
 
 ```python
 import os
@@ -27,6 +27,6 @@ async def main() -> None:
 event_loop.run(main())
 ```
 
-The context manager disconnects the sender, update machinery, media pools, scheduler, auxiliary download clients and selected storage. After `disconnect()`, client storage is closed and that client instance is not reusable; construct a new client for a new lifecycle.
+The context manager disconnects the sender, update manager, media pools, scheduler, auxiliary download clients and selected storage. `disconnect()` closes the storage, so that client instance cannot be reused. Construct a new client to start another lifecycle.
 
-Use one protected session per account/deployment and keep the file private to the service identity. Do not log raw mappings, session strings, API hashes, bot tokens, phone numbers, proxies with credentials or the encryption key. For rotation, portable-session formats, storage transactions and cross-library conversion limits, follow [Session Security](../session-security.md).
+Use one protected session per account or deployment. Keep the file private to the service identity. Do not log raw mappings, session strings, API hashes, bot tokens, phone numbers, credentialed proxies or the encryption key. See [Session Security](../session-security.md) for rotation, portable formats, storage transactions and conversion limits.

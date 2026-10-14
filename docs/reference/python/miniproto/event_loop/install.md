@@ -27,14 +27,11 @@ Install the backend's deprecated global policy on Python before 3.16.
 
 **Raises:**
 
-- <code>[DeprecationWarning](#DeprecationWarning)</code> – Always warns because policy installation is a
-deprecated asyncio integration path.
+- <code>[DeprecationWarning](#DeprecationWarning)</code> – If the warning filter treats the emitted deprecation warning as an error.
 
 <details class="notes" open markdown="1">
 <summary>Notes</summary>
 
-This process-global operation is not safe to race with other tasks that
-create loops. Prefer :func:`run` or ``asyncio.Runner`` with
-:func:`new_event_loop` for scoped lifecycle control.
+This call emits a ``DeprecationWarning``. The process-global policy change must not race with loop creation. Prefer :func:`run` or ``asyncio.Runner`` with :func:`new_event_loop` for a scoped lifecycle.
 
 </details>

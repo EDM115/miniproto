@@ -43,12 +43,12 @@ from miniproto.raw.types import UpdateNewStoryReaction
 
 Public access: `miniproto.raw.types.UpdateNewStoryReaction`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import UpdateNewStoryReaction
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = UpdateNewStoryReaction
 ```
 

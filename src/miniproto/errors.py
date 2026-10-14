@@ -1,4 +1,4 @@
-"""Redaction-safe public exceptions and Telegram RPC error classification."""
+"""Public exceptions with diagnostic redaction and Telegram RPC error classification."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from miniproto.security.redaction import redact_text, safe_repr
 
 
 class MiniprotoError(Exception):
-    """Base exception for all library-defined failures."""
+    """Base exception for client, protocol-validation, RPC and session-storage failures."""
 
 
 class ProtocolValidationError(MiniprotoError, ValueError):
@@ -50,7 +50,7 @@ class AmbiguousRpcResult(MiniprotoError):
         request: object | None = None,
         context: Mapping[str, Any] | None = None,
     ) -> None:
-        """Capture a possibly executed request without exposing secret text.
+        """Capture a possibly executed request and redact supported diagnostic values.
 
         Args:
             message: Human-readable ambiguity explanation, redacted for exception output.
@@ -78,7 +78,9 @@ class AmbiguousRpcResult(MiniprotoError):
 
 @dataclass(slots=True, repr=False)
 class RpcError(MiniprotoError):
-    """Raw or classified Telegram RPC failure with redaction-safe diagnostics.
+    """Raw or classified Telegram RPC failure with redacted supported diagnostic fields.
+
+    Rendering redacts recognized assignments and secret keys in supported values. The stored ``message``, ``request`` and ``context`` attributes retain their original contents.
 
     Attributes:
         message: Telegram's symbolic or descriptive error text.
@@ -102,7 +104,7 @@ class RpcError(MiniprotoError):
         return str(getattr(type(self), "RPC_ERROR_NAME", self.message))
 
     def __str__(self) -> str:
-        """Render code and safe request/context diagnostics without leaking secrets."""
+        """Render the code, message and request/context through the redaction helpers."""
         message = redact_text(self.message)
         rendered = message if self.code is None else f"[{self.code}] {message}"
         if self.request is not None:
@@ -273,7 +275,7 @@ class RpcTimeout(RpcError):
 
 
 class InternalServerError(RpcError):
-    """Classified retryable server failure, normally a 5xx RPC code."""
+    """Classified server failure eligible for retry-safe request retries, normally a 5xx RPC code."""
 
     def __init__(
         self,
@@ -446,7 +448,7 @@ class AuthKeyRegenerationRequired(AuthError):
 
 
 class InvalidDatacenter(AuthError):
-    """Telegram rejects the current data centre, commonly before a migration hint."""
+    """The requested datacenter is unavailable or Telegram rejects it."""
 
     def __init__(
         self,
@@ -531,16 +533,13 @@ _GENERATED_ERROR_CLASS_NAMES: set[str] = set()
 def classify_rpc_error(error: RpcError) -> RpcError:
     """Return the most specific public error matching a raw Telegram RPC error.
 
-    Migration and flood suffixes preserve their extracted DC or wait duration;
-    generated schema classes take precedence, followed by known exact errors and
-    numeric status classes. Unknown errors are returned unchanged.
+    Migration and supported pacing suffixes supply the target DC or wait duration. Generated schema classes take precedence over known exact errors and numeric status classes. Unknown errors retain their original instance.
 
     Args:
         error: Raw or already classified RPC error to inspect.
 
     Returns:
-        The same instance when no classification applies, otherwise a specific
-        error that preserves message, code, request and context.
+        The same instance when no classification applies, otherwise a specific error retaining message, request and context. The selected error class may replace the numeric code with its standard code.
     """
     raw_message = str(error.message).strip()
     upper_message = raw_message.upper()

@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.errors.DatacenterMigration"
 source_path: "src/miniproto/errors.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L468"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L470"
 aliases: ["miniproto.DatacenterMigration"]
 module: "miniproto.errors"
 ---

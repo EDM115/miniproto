@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.messages.message_from_send_result"
 source_path: "src/miniproto/messages.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/messages.py#L73"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/messages.py#L72"
 module: "miniproto.messages"
 ---
 
@@ -28,4 +28,4 @@ Normalize a send response, retaining supplied values when Telegram omits a messa
 
 **Returns:**
 
-- <code>[Message](#miniproto.types.Message)</code> – The sent message, with a zero ID and current UTC time only for incomplete responses.
+- <code>[Message](#miniproto.types.Message)</code> – The first concrete message in the response, an ``UpdateShortSentMessage`` converted with submitted text, or an ID-``0`` fallback with current UTC time when neither form is present.

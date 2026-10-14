@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.crypto.mtproto.derive_aes_key_iv"
 source_path: "src/miniproto/crypto/mtproto.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/mtproto.py#L85"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/mtproto.py#L79"
 aliases: ["miniproto.crypto.derive_aes_key_iv"]
 module: "miniproto.crypto.mtproto"
 ---
@@ -35,5 +35,4 @@ for server-to-client traffic.
 
 - <code>[ValueError](#ValueError)</code> – If the authorization key or message key has an invalid length.
 
-Native and fallback implementations are output-compatible.  This only
-derives material; it never transmits or clears the supplied key bytes.
+Native and fallback implementations return the same key and IV for supported inputs.

@@ -1,6 +1,6 @@
 """Run an explicitly guarded live Telegram benchmark splitting one file across independent sessions.
 
-This is not a fake benchmark: it can authenticate accounts, read encrypted SQLite sessions, issue live media requests, write/replace selected part and output files and optionally compare a local source digest. It refuses to run unless both live-benchmark guard environment variables are set. Results distinguish transfer-only throughput from total throughput including local assembly and optional digest work.
+The benchmark can authenticate accounts, read encrypted SQLite sessions, issue live media requests and replace selected part and output files. Optional verification compares the assembled output with a local source digest. Running the CLI requires ``MINIPROTO_LIVE_BENCH=1`` and ``MINIPROTO_MULTI_SESSION_DOWNLOAD_BENCH=1``. Results separate transfer throughput from total throughput including assembly and optional digest work.
 """
 
 from __future__ import annotations

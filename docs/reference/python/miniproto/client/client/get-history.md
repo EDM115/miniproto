@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.client.Client.get_history"
 source_path: "src/miniproto/client.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L728"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L753"
 aliases: ["miniproto.Client.get_history"]
 module: "miniproto.client"
 ---
@@ -33,6 +33,10 @@ Fetch normalized message history for a peer using Telegram pagination fields.
 - **request_timeout** (<code>[float](#float) | None</code>) – Optional per-request timeout overriding configuration.
 - **flood_sleep_threshold** (<code>[int](#int) | None</code>) – Optional automatic flood-wait ceiling.
 - **retry** (<code>[bool](#bool) | None</code>) – Whether to force or suppress retry eligibility.
+
+**Returns:**
+
+- <code>[tuple](#tuple)[[Message](#miniproto.types.Message), ...]</code> – Concrete messages in Telegram's response order, omitting ``MessageEmpty`` entries. A not-modified response produces an empty tuple.
 
 **Raises:**
 

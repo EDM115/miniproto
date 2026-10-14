@@ -1,6 +1,6 @@
 ---
 title: "miniproto.file_id"
-description: "Stable, local ``mpf1_`` file identifiers for reusable Telegram media references."
+description: "Local ``mpf1_`` identifiers that serialize Telegram media references."
 generated: true
 editUrl: false
 language: "python"
@@ -13,7 +13,9 @@ module: "miniproto.file_id"
 
 ## `miniproto.file_id`
 
-Stable, local ``mpf1_`` file identifiers for reusable Telegram media references.
+Local ``mpf1_`` identifiers that serialize Telegram media references.
+
+The base64 JSON payload contains access hashes and file references without encryption. Reuse still depends on Telegram accepting those references and the current account's access.
 
 ## Public objects
 

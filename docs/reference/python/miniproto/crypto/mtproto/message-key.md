@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.crypto.mtproto.message_key"
 source_path: "src/miniproto/crypto/mtproto.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/mtproto.py#L64"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/mtproto.py#L58"
 aliases: ["miniproto.crypto.message_key"]
 module: "miniproto.crypto.mtproto"
 ---

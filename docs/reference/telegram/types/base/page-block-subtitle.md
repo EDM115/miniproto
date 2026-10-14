@@ -41,12 +41,12 @@ from miniproto.raw.types import PageBlockSubtitle
 
 Public access: `miniproto.raw.types.PageBlockSubtitle`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import PageBlockSubtitle
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = PageBlockSubtitle
 ```
 

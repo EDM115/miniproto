@@ -18,5 +18,5 @@ Bootstrap and persist the MTProto authorization key for a session.
 ## Public objects
 
 - [`UnencryptedAuthKeyTransport`](./unencryptedauthkeytransport/) — Exchange unencrypted MTProto authorization packets over one transport.
-- [`ensure_auth_key`](./ensure-auth-key/) — Ensure that ``storage`` contains a usable MTProto key and DC options.
+- [`ensure_auth_key`](./ensure-auth-key/) — Preserve an existing MTProto key or create and store one with DC options.
 - [`telegram_rsa_public_keys`](./telegram-rsa-public-keys/) — Return Telegram's trusted RSA public keys for the selected environment.

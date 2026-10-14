@@ -50,12 +50,12 @@ from miniproto.raw.functions import PhoneDeleteGroupCallParticipantMessages
 
 Public access: `miniproto.raw.functions.PhoneDeleteGroupCallParticipantMessages`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.functions import PhoneDeleteGroupCallParticipantMessages
 
-# Naming the raw request class is local only; it performs no I/O or network request.
+# Refer to the raw request class without constructing it or calling Telegram
 request_type = PhoneDeleteGroupCallParticipantMessages
 ```
 

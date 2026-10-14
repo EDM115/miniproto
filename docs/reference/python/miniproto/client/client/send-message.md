@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.client.Client.send_message"
 source_path: "src/miniproto/client.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L648"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L672"
 aliases: ["miniproto.Client.send_message"]
 module: "miniproto.client"
 ---
@@ -41,4 +41,5 @@ Send text to a resolved peer and return the resulting normalized message.
 **Raises:**
 
 - <code>[TypeError](#TypeError)</code> – If ``kwargs`` contains unsupported send options.
+- <code>[ValueError](#ValueError)</code> – If ``parse_mode`` is unsupported and explicit ``entities`` were not supplied.
 - <code>[Exception](#Exception)</code> – Propagates peer resolution and RPC failures.

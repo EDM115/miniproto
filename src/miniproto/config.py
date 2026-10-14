@@ -18,13 +18,13 @@ class TransportConfig:
     """Connection transport settings with validated timeouts and payload limits.
 
     Attributes:
-        mode: TCP framing mode; defaults to ``"tcp_abridged"``.
+        mode: TCP framing mode, defaulting to ``"tcp_abridged"``.
         connect_timeout: Maximum seconds allowed to establish a connection.
         read_timeout: Maximum seconds allowed for a transport read.
         write_timeout: Maximum seconds allowed for a transport write.
         reconnect_backoff_initial: Initial reconnect delay in seconds.
         reconnect_backoff_max: Maximum reconnect delay in seconds.
-        max_payload_size: Largest accepted transport payload in bytes.
+        max_payload_size: Transport payload limit in bytes, also used to bound decompression of RPC results and pushed updates.
         proxy: Optional proxy URL, omitted from representations to avoid exposing credentials.
     """
 
@@ -61,7 +61,7 @@ class TransportConfig:
 class DeviceInfo:
     """Application and device identity sent when initializing a Telegram session.
 
-    Defaults identify this library without probing the host system; callers may supply platform-specific values when Telegram-facing metadata must be customized.
+    Defaults identify this library without probing the host system. Supply platform-specific values to customize the metadata sent to Telegram.
 
     Attributes:
         device_model: Human-readable device model sent in Telegram initialization, defaulting to ``"miniproto"``.
@@ -84,21 +84,21 @@ class ClientConfig:
 
     Args:
         api_id: Positive Telegram application identifier.
-        api_hash: Telegram application secret; excluded from representations.
-        session_storage: Optional session backend. When omitted, the client uses encrypted SQLite storage at ``session_path``.
+        api_hash: Telegram application secret, excluded from representations.
+        session_storage: Optional session backend. When omitted, client construction requires ``MINIPROTO_SESSION_KEY`` and uses encrypted SQLite storage at ``session_path``.
         session_path: Path for the default encrypted SQLite session, defaulting to ``"miniproto.session.sqlite"``.
         transport: TCP transport configuration.
         device: Telegram-facing device metadata.
-        update_queue_size: Bounded number of pending updates, defaulting to 1000.
-        update_queue_overflow: Overflow action: ``"raise"``, ``"drop_oldest"`` or ``"drop_newest"``.
+        update_queue_size: Capacity of each independent raw and public update queue, defaulting to 1000.
+        update_queue_overflow: Action when either queue fills: ``"raise"``, ``"drop_oldest"`` or ``"drop_newest"``.
         update_duplicate_window: Number of recent updates retained for duplicate suppression.
         dc_id: Initial Telegram datacenter identifier, defaulting to 2.
         test_mode: Select Telegram's test environment when true.
         request_timeout: Default per-request timeout in seconds.
-        max_request_retries: Maximum automatic retries for eligible RPCs.
+        max_request_retries: Retry budget shared by transient failures and automatic flood-wait sleeps. Datacenter migration has a separate limit of at least one retry.
         max_reconnect_attempts: Optional cap for transport reconnections.
         max_pending_rpcs: Maximum concurrently pending RPCs.
-        flood_sleep_threshold: Maximum flood-wait duration to sleep automatically; ``None`` uses the default retry policy.
+        flood_sleep_threshold: Maximum flood-wait duration in seconds to sleep automatically. ``None`` disables sleeping, ``0`` surfaces positive waits without sleeping.
         method_flood_cache_size: Number of method flood-wait entries to remember.
         media_concurrency: Optional default concurrent media requests.
         media_max_buffer_size: Optional media buffering cap in bytes.
@@ -106,7 +106,7 @@ class ClientConfig:
         media_upload_max_in_flight_bytes_per_dc: Per-DC upload scheduler byte budget.
         media_download_small_queue_limit: Optional small-download queue limit.
         media_download_large_queue_limit: Optional large-download queue limit.
-        media_idle_close: Seconds before unused media lanes close; ``None`` keeps them open for the client lifetime.
+        media_idle_close: Seconds before unused media lanes close, ``None`` keeps them open for the client lifetime.
         bot_token: Optional bot token, excluded from representations.
 
     Raises:
@@ -139,9 +139,7 @@ class ClientConfig:
     media_upload_max_in_flight_bytes_per_dc: int = 8 * 1024 * 1024
     media_download_small_queue_limit: int | None = None
     media_download_large_queue_limit: int | None = None
-    # Media lanes idle-close after this many seconds without requests (mtcute
-    # closes at 60 s); keepalive pings keep them warm until then. None keeps
-    # lanes open for the client's whole lifetime.
+    # Close idle lane senders after this delay, None keeps them open until client disconnect
     media_idle_close: float | None = 120.0
     bot_token: str | None = field(default=None, repr=False)
 

@@ -22,4 +22,4 @@ Allocate a strictly increasing client MTProto message ID.
 
 **Returns:**
 
-- <code>[int](#int)</code> – Timestamp-derived, client-parity message ID advancing in steps of four.
+- <code>[int](#int)</code> – Timestamp-derived message ID divisible by four, at least four greater than the previous ID.

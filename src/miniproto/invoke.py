@@ -141,7 +141,7 @@ class QuickAckRawSender(RawSender, Protocol):
             retry_safe: Whether transport/request retries may repeat this request.
             request_timeout: Per-request timeout in seconds; ``None`` uses sender defaults.
             quick_ack: Enable quick-ack receipt handling for this call.
-            quick_ack_callback: Optional callback receiving each quick-ack receipt.
+            quick_ack_callback: Optional callback receiving the first non-stale quick-ack receipt.
         """
 
 
@@ -153,11 +153,7 @@ def wrap_raw_request(
 ) -> object:
     """Wrap a raw request for transmission.
 
-    ``invokeWithLayer(initConnection(...))`` is only added when ``needs_init`` is true,
-    i.e. for the first request after a sender (re)connects. Media-lane senders
-    additionally wrap that first request in ``invokeWithoutUpdates`` so dedicated file
-    sessions never receive update traffic. Serialization happens exactly once, inside
-    the sender, when the message body is encoded.
+    Add ``invokeWithLayer(initConnection(...))`` when ``needs_init`` is true and the request has no recognized invocation envelope. Media senders can add ``invokeWithoutUpdates`` to disable updates on their dedicated connection. The sender serializes the resulting object for each send attempt.
 
     Args:
         raw_request: Constructor-backed Telegram request or an existing invocation envelope.
@@ -203,7 +199,7 @@ def mark_sender_initialized(sender: object) -> None:
     Args:
         sender: Sender or compatible object to mark when it accepts dynamic attributes.
     """
-    # Test doubles with __slots__ lack the attribute and keep the always-wrap behavior.
+    # Test doubles without a writable connection_initialized attribute keep the always-wrap behavior
     with suppress(AttributeError):
         cast(Any, sender).connection_initialized = True
 
@@ -240,7 +236,7 @@ def decode_rpc_response(
 def decode_result_payload(
     raw_result: object, expected_type: str | None = None, *, max_output_size: int = DEFAULT_GZIP_MAX_OUTPUT_SIZE
 ) -> object:
-    """Decode bytes or gzip-packed RPC results while leaving decoded values unchanged.
+    """Decode RPC result bytes through at most 16 gzip wrappers, preserving decoded values.
 
     Args:
         raw_result: Encoded or already decoded sender result.
@@ -295,8 +291,7 @@ def result_type_for_request(raw_request: object) -> str | None:
 def is_retryable_request(raw_request: object, override: bool | None = None) -> bool:
     """Determine whether retrying this request is protocol-safe.
 
-    ``override`` takes precedence. Otherwise the innermost wrapped request is safe
-    only for known read prefixes or Telegram writes de-duplicated by ``random_id``.
+    ``override`` takes precedence. Otherwise classify the innermost request by known read prefixes or the selected writes deduplicated by ``random_id``. Exclude ``messages.getBotCallbackAnswer`` despite its read-like name because it triggers a bot callback.
 
     Args:
         raw_request: Request, possibly wrapped in invocation envelopes.
@@ -323,8 +318,7 @@ def _is_retryable_request_type(request_type: type[object]) -> bool:
         return False
     if qualname.startswith(_SAFE_RETRY_PREFIXES):
         return True
-    # Telegram de-duplicates these writes by random_id, so retrying after a
-    # timeout/transport failure is safe in the same way as reference clients.
+    # Telegram deduplicates these writes by random_id, allowing a retry with the same request after a timeout or transport failure
     return qualname in {"messages.sendmessage", "messages.sendmedia"}
 
 
@@ -506,7 +500,7 @@ async def build_sender_from_session(
     allow_media_only: bool = False,
     require_cdn: bool = False,
 ) -> RawSender:
-    """Build a sender for the session DC or -- with overrides -- a media DC.
+    """Build a sender for the session DC or an explicitly selected media DC.
 
     ``dc_id_override``/``auth_key_override`` support cross-DC media transfers:
     the caller supplies a per-DC auth key (created via key exchange with the
@@ -521,7 +515,7 @@ async def build_sender_from_session(
         on_salt_change: Callback receiving a newer server salt discovered by the sender.
         dc_id_override: Target DC for a cross-DC sender.
         auth_key_override: Key for the target DC; never persists over the main session key.
-        allow_media_only: Permit a media-only DC endpoint for a dedicated media sender.
+        allow_media_only: Include media-only endpoints without preferring non-media candidates. When false, media-only endpoints remain a fallback.
         require_cdn: Require an endpoint explicitly marked as a CDN server.
 
     Returns:
@@ -529,7 +523,8 @@ async def build_sender_from_session(
 
     Raises:
         AuthKeyNotFound: If the persisted session has no key and no override is supplied.
-        InvalidDatacenter: If no usable option is stored for the selected DC.
+        InvalidDatacenter: If the session has no saved DC options.
+        ValueError: If the saved options do not match the target DC and optional CDN requirement.
     """
     payload = await storage.load()
     record = load_session_record(payload, config.dc_id)
@@ -558,10 +553,7 @@ async def build_sender_from_session(
         if auth_key_override is None
         else 0
     )
-    # Session IDs are cheap server-side state. Reusing a persisted session_id with
-    # fresh seq/msg counters after process restart can trigger bad_msg_notification
-    # 32/33 storms, so every sender build starts a fresh MTProto session while
-    # preserving the persisted salt/auth key.
+    # Use a fresh session ID with fresh sequence counters to avoid bad_msg_notification 32/33 after restart, while preserving the selected salt and auth key
     session_id = secrets.randbits(64)
     reconnect_attempts = (
         config.max_reconnect_attempts if config.max_reconnect_attempts is not None else config.max_request_retries + 1
@@ -717,7 +709,7 @@ def _innermost_request(raw_request: object) -> object:
 
 
 def _is_init_connection_envelope(raw_request: object) -> bool:
-    """Return whether a request already provides an init-connection envelope.
+    """Return whether the outer request is an envelope exempt from automatic initialization wrapping.
 
     Args:
         raw_request: Request or outer invocation envelope to inspect.

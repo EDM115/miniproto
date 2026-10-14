@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.crypto.mtproto.media_cbc_encrypt"
 source_path: "src/miniproto/crypto/mtproto.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/mtproto.py#L181"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/mtproto.py#L171"
 aliases: ["miniproto.crypto.media_cbc_encrypt"]
 module: "miniproto.crypto.mtproto"
 ---

@@ -54,12 +54,12 @@ from miniproto.raw.types import InputChatUploadedPhoto
 
 Public access: `miniproto.raw.types.InputChatUploadedPhoto`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import InputChatUploadedPhoto
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = InputChatUploadedPhoto
 ```
 

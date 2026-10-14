@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.crypto.native.mtproto_encode_message"
 source_path: "src/miniproto/crypto/native.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/native.py#L694"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/native.py#L672"
 aliases: ["miniproto.crypto.mtproto_encode_message"]
 module: "miniproto.crypto.native"
 ---
@@ -23,12 +23,11 @@ Build, pad and encrypt a complete MTProto encrypted message.
 **Parameters:**
 
 - **auth_key** (<code>[bytes](#bytes)</code>) – Exactly 256 bytes of authorization-key material.
-- **server_salt** (<code>[int](#int)</code>) – Unsigned 64-bit salt; bits outside that width are masked.
-- **session_id** (<code>[int](#int)</code>) – Unsigned 64-bit session identifier; bits outside that width
-are masked.
+- **server_salt** (<code>[int](#int)</code>) – Unsigned 64-bit salt.
+- **session_id** (<code>[int](#int)</code>) – Unsigned 64-bit session identifier.
 - **msg_id** (<code>[int](#int)</code>) – Signed 64-bit MTProto message identifier.
 - **seq_no** (<code>[int](#int)</code>) – Signed 32-bit message sequence number.
-- **body** (<code>[BytesLike](#miniproto.crypto.native.BytesLike)</code>) – TL body bytes no larger than the signed 32-bit protocol limit.
+- **body** (<code>[BytesLike](#miniproto.crypto.native.BytesLike)</code>) – Four-byte-aligned TL body bytes no larger than the signed 32-bit protocol limit.
 - **client_to_server** (<code>[bool](#bool)</code>) – Uses the client-to-server direction by default.
 - **padding** (<code>[bytes](#bytes) | None</code>) – Optional compliant padding; when omitted the backend generates
 random padding.
@@ -40,7 +39,6 @@ random padding.
 **Raises:**
 
 - <code>[ValueError](#ValueError)</code> – If key, body, padding or encrypted-layout constraints fail.
-- <code>[OverflowError](#OverflowError)</code> – If signed ``msg_id`` or ``seq_no`` cannot be encoded.
+- <code>[OverflowError](#OverflowError)</code> – If ``msg_id`` or ``seq_no`` cannot be encoded, or native argument conversion rejects an out-of-range salt or session ID.
 
-The default random-padding source belongs to the selected backend.  The
-function returns protocol bytes only; it does not send them.
+The selected backend supplies the random padding when omitted.

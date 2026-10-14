@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.crypto.native.aes_256_gcm_decrypt_native"
 source_path: "src/miniproto/crypto/native.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/native.py#L999"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/native.py#L970"
 aliases: ["miniproto.crypto.aes_256_gcm_decrypt_native"]
 module: "miniproto.crypto.native"
 ---
@@ -36,5 +36,4 @@ Authenticate and decrypt with explicit compiled Rust AES-256-GCM.
 - <code>[RuntimeError](#RuntimeError)</code> – If native session AES-GCM is unavailable.
 - <code>[ValueError](#ValueError)</code> – If inputs are invalid or authentication fails.
 
-This no-fallback variant is suitable only when native capability is an
-explicit requirement; do not consume plaintext when it raises.
+Requires native capability and propagates its errors without retrying through the fallback.

@@ -7,7 +7,7 @@ language: "python"
 kind: "type"
 qualified_name: "miniproto.media.upload.FileSource"
 source_path: "src/miniproto/media/upload.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/upload.py#L44"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/upload.py#L41"
 aliases: ["miniproto.media.FileSource"]
 module: "miniproto.media.upload"
 ---

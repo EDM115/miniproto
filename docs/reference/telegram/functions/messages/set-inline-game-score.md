@@ -53,12 +53,12 @@ from miniproto.raw.functions import MessagesSetInlineGameScore
 
 Public access: `miniproto.raw.functions.MessagesSetInlineGameScore`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.functions import MessagesSetInlineGameScore
 
-# Naming the raw request class is local only; it performs no I/O or network request.
+# Refer to the raw request class without constructing it or calling Telegram
 request_type = MessagesSetInlineGameScore
 ```
 

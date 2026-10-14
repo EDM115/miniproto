@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.media.scheduler.MediaTransfer"
 source_path: "src/miniproto/media/scheduler.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/scheduler.py#L563"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/scheduler.py#L561"
 module: "miniproto.media.scheduler"
 ---
 
@@ -27,5 +27,5 @@ Register this transfer using its direction, priority and size class.
 - **transfer_id** (<code>[str](#str)</code>) – Unique registry-generated transfer name.
 - **dc_id** (<code>[int](#int)</code>) – Initial data-centre binding.
 - **direction** (<code>[MediaDirection](#miniproto.media.scheduler.MediaDirection)</code>) – Upload or download scheduler direction.
-- **total_size** (<code>[int](#int) | None</code>) – Known total bytes or ``None`` to classify as large.
+- **total_size** (<code>[int](#int) | None</code>) – Known total bytes. Sizes of at least 20 MiB and ``None`` classify as large.
 - **priority** (<code>[MediaPriority](#miniproto.media.scheduler.MediaPriority)</code>) – Default foreground or background request priority.

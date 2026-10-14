@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::tl::tl_decode_int"
 source_path: "rust/miniproto/src/tl.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L515"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L507"
 aliases: ["miniproto._native.tl_decode_int"]
 python_visible: true
 ---
@@ -15,7 +15,7 @@ python_visible: true
 ## Provenance
 
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L515)
+- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L507)
 - Python exposure: `miniproto._native.tl_decode_int` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -37,7 +37,7 @@ fn tl_decode_int(data: &[u8], offset: usize) -> _
 fn tl_decode_int(data: &[u8], offset: usize) -> PyResult<(i32, usize)>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:515-518`*
+*Defined in `rust/miniproto/src/tl.rs:507-510`*
 
 Decodes Python `tl_decode_int(data, offset)` and returns `(value, next_offset)` or `ValueError`.
 

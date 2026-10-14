@@ -49,12 +49,12 @@ from miniproto.raw.functions import WalletTonConnectCloseSession
 
 Public access: `miniproto.raw.functions.WalletTonConnectCloseSession`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.functions import WalletTonConnectCloseSession
 
-# Naming the raw request class is local only; it performs no I/O or network request.
+# Refer to the raw request class without constructing it or calling Telegram
 request_type = WalletTonConnectCloseSession
 ```
 

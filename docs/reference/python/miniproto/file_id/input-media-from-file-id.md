@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.file_id.input_media_from_file_id"
 source_path: "src/miniproto/file_id.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/file_id.py#L218"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/file_id.py#L228"
 aliases: ["miniproto.input_media_from_file_id"]
 module: "miniproto.file_id"
 ---
@@ -23,11 +23,15 @@ Decode a file ID into Telegram input media.
 **Parameters:**
 
 - **file_id** (<code>[str](#str)</code>) – Local identifier produced by :func:`encode_file_id`.
-- **spoiler** (<code>[bool](#bool)</code>) – Request spoiler presentation; defaults to ``False``.
+- **spoiler** (<code>[bool](#bool)</code>) – Request spoiler presentation, defaulting to ``False``.
 - **ttl_seconds** (<code>[int](#int) | None</code>) – Optional self-destruct timer.
-- **video_cover** (<code>[object](#object) | None</code>) – Optional cover input for document media.
-- **video_timestamp** (<code>[int](#int) | None</code>) – Optional start timestamp for document media.
+- **video_cover** (<code>[object](#object) | None</code>) – Optional cover input for document media, ignored for photo IDs.
+- **video_timestamp** (<code>[int](#int) | None</code>) – Optional start timestamp for document media, ignored for photo IDs.
 
 **Returns:**
 
 - <code>[object](#object)</code> – Matching generated input-media object.
+
+**Raises:**
+
+- <code>[ValueError](#ValueError)</code> – If ``decode_file_id`` rejects the identifier.

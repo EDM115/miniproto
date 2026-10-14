@@ -47,7 +47,7 @@ $env:MINIPROTO_SESSION_KEY = "use-a-long-random-secret-value"
 
 Each changed domain is serialized into a deterministic versioned JSON document, receives a fresh nonce, is encrypted and is stored in an HMAC-authenticated envelope. The current envelope authenticates the logical domain name together with the nonce and ciphertext, so a valid row cannot be replayed under another session domain. Loads verify each HMAC with a constant-time comparison before decrypting or decoding payload data. Existing version-1 envelopes remain readable and are rewritten as domain-bound version-2 envelopes on the next logical write. Wrong keys, malformed envelopes, unsupported envelope versions, corrupted payloads and domain substitution raise `SessionEnvelopeError`. SQLite mutation compares canonical plaintext before encryption, so unchanged domain ciphertext remains untouched despite randomized nonces.
 
-On POSIX systems the backend creates the main SQLite file with owner-only `0600` permissions and reapplies that mode before opening an existing file. Filesystem permissions are an additional local boundary, not a substitute for encryption, key protection, secure backups or platform-specific access controls.
+On POSIX systems the backend creates the main SQLite file with owner-only `0600` permissions and reapplies that mode before opening an existing file. Keep the encryption key and backups protected, and restrict access to the service account on every platform.
 
 ## Atomic Mutations
 
@@ -84,7 +84,7 @@ All session strings are bearer credentials. Anyone who obtains one with its pass
 
 ### Telethon v1 compatibility
 
-The `telethon` format implements Telethon 1.44's version-`1` IPv4 and IPv6 layouts from the [authoritative Codeberg source](https://codeberg.org/Lonami/Telethon/src/tag/v1.44.0/telethon/sessions/string.py) without importing Telethon at runtime. Import and export preserve only active DC ID, server IP, port and the 256-byte auth key. Telethon strings do not contain API ID/hash, account identity, update cursors, peers, salts, media-DC authorizations or miniproto metadata. Configure the original API credentials yourself. Imported records are marked for one `updates.getState` bootstrap when the client next connects. Telethon v2 removed this format and is not a compatibility target.
+The `telethon` format implements Telethon 1.44's version-`1` IPv4 and IPv6 layouts from the [tagged source](https://codeberg.org/Lonami/Telethon/src/tag/v1.44.0/telethon/sessions/string.py) without importing Telethon at runtime. Import and export preserve only active DC ID, server IP, port and the 256-byte auth key. Telethon strings do not contain API ID/hash, account identity, update cursors, peers, salts, media-DC authorizations or miniproto metadata. Configure the original API credentials yourself. Imported records are marked for one `updates.getState` bootstrap when the client next connects. Telethon v2 removed this format and is not a compatibility target.
 
 ### Pyrogram compatibility
 

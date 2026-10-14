@@ -1,4 +1,7 @@
-"""Stable, local ``mpf1_`` file identifiers for reusable Telegram media references."""
+"""Local ``mpf1_`` identifiers that serialize Telegram media references.
+
+The base64 JSON payload contains access hashes and file references without encryption. Reuse still depends on Telegram accepting those references and the current account's access.
+"""
 
 from __future__ import annotations
 
@@ -83,8 +86,8 @@ class DecodedFileId:
         Args:
             spoiler: Request Telegram's spoiler presentation for the media.
             ttl_seconds: Optional self-destruct timer forwarded to Telegram.
-            video_cover: Optional document video-cover input object.
-            video_timestamp: Optional document video start timestamp.
+            video_cover: Optional document video-cover input object, ignored for photo IDs.
+            video_timestamp: Optional document video start timestamp, ignored for photo IDs.
 
         Returns:
             ``InputMediaPhoto`` for photo IDs or ``InputMediaDocument`` for document IDs.
@@ -107,6 +110,8 @@ class DecodedFileId:
 def is_file_id(value: object) -> TypeGuard[str]:
     """Return whether a value has the miniproto file-id prefix.
 
+    This checks the prefix only. Use ``decode_file_id`` to validate the payload.
+
     Args:
         value: Arbitrary candidate value.
 
@@ -119,6 +124,8 @@ def is_file_id(value: object) -> TypeGuard[str]:
 def encode_file_id(media: Media | object) -> str:
     """Encode supported Telegram media or input locations into a local file ID.
 
+    Fields are serialized as supplied. Decoding applies integer-range and size limits, so invalid source fields can produce an ID that ``decode_file_id`` rejects. Encoding makes no Telegram request and does not renew file references.
+
     Args:
         media: A ``Media`` value, supported generated media object or input file location.
 
@@ -126,8 +133,8 @@ def encode_file_id(media: Media | object) -> str:
         Canonical URL-safe ``mpf1_`` identifier containing the reusable location fields.
 
     Raises:
-        TypeError: If the media cannot supply a supported reusable location.
-        ValueError: If an extracted field cannot be encoded.
+        TypeError: If the location shape is unsupported or an extracted field is not JSON-serializable.
+        ValueError: If JSON serialization rejects an extracted value.
     """
     decoded = _decoded_from_media(media)
     payload: dict[str, object] = {
@@ -157,7 +164,7 @@ def try_encode_file_id(media: Media | object | None) -> str | None:
         media: Candidate media or ``None``.
 
     Returns:
-        The encoded local ID or ``None`` for absent or unsupported media.
+        The encoded local ID or ``None`` for absent media or a ``TypeError``/``ValueError`` during encoding. A returned ID still needs valid source fields to pass decoding.
     """
     if media is None:
         return None
@@ -177,7 +184,7 @@ def decode_file_id(file_id: str) -> DecodedFileId:
         Parsed reusable media fields.
 
     Raises:
-        ValueError: If the prefix, payload encoding or required fields are invalid.
+        ValueError: If the prefix, payload encoding, integer ranges or required fields are invalid, the ID exceeds 64 KiB of text, or its decoded file reference exceeds 16 KiB.
     """
     if not is_file_id(file_id):
         raise ValueError("not a miniproto file id")
@@ -211,6 +218,9 @@ def media_from_file_id(file_id: str) -> Media:
 
     Returns:
         Media retaining the ID's input location and metadata.
+
+    Raises:
+        ValueError: If ``decode_file_id`` rejects the identifier.
     """
     return decode_file_id(file_id).to_media()
 
@@ -227,13 +237,16 @@ def input_media_from_file_id(
 
     Args:
         file_id: Local identifier produced by :func:`encode_file_id`.
-        spoiler: Request spoiler presentation; defaults to ``False``.
+        spoiler: Request spoiler presentation, defaulting to ``False``.
         ttl_seconds: Optional self-destruct timer.
-        video_cover: Optional cover input for document media.
-        video_timestamp: Optional start timestamp for document media.
+        video_cover: Optional cover input for document media, ignored for photo IDs.
+        video_timestamp: Optional start timestamp for document media, ignored for photo IDs.
 
     Returns:
         Matching generated input-media object.
+
+    Raises:
+        ValueError: If ``decode_file_id`` rejects the identifier.
     """
     return decode_file_id(file_id).to_input_media(
         spoiler=spoiler, ttl_seconds=ttl_seconds, video_cover=video_cover, video_timestamp=video_timestamp
@@ -352,7 +365,7 @@ def _decode_kind(value: object) -> FileIdKind:
 
 
 def _required_int(payload: dict[str, Any], key: str, *, minimum: int, maximum: int) -> int:
-    """Read a required integer-like JSON payload field.
+    """Read a required bounded JSON integer, rejecting booleans and other types.
 
     Args:
         payload: Decoded file-ID JSON object.

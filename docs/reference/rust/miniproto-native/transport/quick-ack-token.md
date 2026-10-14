@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::transport::quick_ack_token"
 source_path: "rust/miniproto/src/transport.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L58"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L52"
 aliases: ["miniproto._native.quick_ack_token"]
 python_visible: true
 ---
@@ -15,7 +15,7 @@ python_visible: true
 ## Provenance
 
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/transport.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L58)
+- Source: [`rust/miniproto/src/transport.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/transport.rs#L52)
 - Python exposure: `miniproto._native.quick_ack_token` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -38,7 +38,7 @@ fn quick_ack_token(py: _, auth_key: _, encrypted_packet: _) -> _
 fn quick_ack_token(py: Python<'_>, auth_key: Vec<u8>, encrypted_packet: Vec<u8>) -> PyResult<u32>
 ```
 
-*Defined in `rust/miniproto/src/transport.rs:58-63`*
+*Defined in `rust/miniproto/src/transport.rs:52-57`*
 
 Computes the flagged quick-ACK token for Python `quick_ack_token`.
 

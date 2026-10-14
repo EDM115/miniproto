@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::tl::tl_encode_int"
 source_path: "rust/miniproto/src/tl.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L504"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L496"
 aliases: ["miniproto._native.tl_encode_int"]
 python_visible: true
 ---
@@ -15,7 +15,7 @@ python_visible: true
 ## Provenance
 
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L504)
+- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L496)
 - Python exposure: `miniproto._native.tl_encode_int` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -36,7 +36,7 @@ fn tl_encode_int(value: i32) -> _
 fn tl_encode_int(value: i32) -> Vec<u8>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:504-506`*
+*Defined in `rust/miniproto/src/tl.rs:496-498`*
 
 Encodes Python `tl_encode_int(value)` as a four-byte little-endian signed integer.
 

@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::tl::tl_fast_encode"
 source_path: "rust/miniproto/src/tl.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L143"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L135"
 aliases: ["miniproto._native.tl_fast_encode"]
 python_visible: true
 ---
@@ -15,7 +15,7 @@ python_visible: true
 ## Provenance
 
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L143)
+- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L135)
 - Python exposure: `miniproto._native.tl_fast_encode` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -38,7 +38,7 @@ fn tl_fast_encode(constructor_id: u32, values: &_, boxed: bool) -> _
 fn tl_fast_encode(constructor_id: u32, values: &Bound<'_, pyo3::types::PyTuple>, boxed: bool) -> PyResult<Option<Vec<u8>>>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:143-191`*
+*Defined in `rust/miniproto/src/tl.rs:135-183`*
 
 Attempts Python `tl_fast_encode` for a generated constructor.
 

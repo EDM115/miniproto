@@ -44,12 +44,12 @@ from miniproto.raw.types import ContactsImportedContacts
 
 Public access: `miniproto.raw.types.ContactsImportedContacts`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import ContactsImportedContacts
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = ContactsImportedContacts
 ```
 

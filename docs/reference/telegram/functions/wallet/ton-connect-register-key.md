@@ -42,12 +42,12 @@ from miniproto.raw.functions import WalletTonConnectRegisterKey
 
 Public access: `miniproto.raw.functions.WalletTonConnectRegisterKey`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.functions import WalletTonConnectRegisterKey
 
-# Naming the raw request class is local only; it performs no I/O or network request.
+# Refer to the raw request class without constructing it or calling Telegram
 request_type = WalletTonConnectRegisterKey
 ```
 

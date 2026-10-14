@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.crypto.mtproto.auth_key_id"
 source_path: "src/miniproto/crypto/mtproto.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/mtproto.py#L46"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/mtproto.py#L41"
 aliases: ["miniproto.crypto.auth_key_id"]
 module: "miniproto.crypto.mtproto"
 ---
@@ -32,5 +32,4 @@ Return the MTProto auth-key identifier.
 
 - <code>[ValueError](#ValueError)</code> – If ``auth_key`` is not exactly 256 bytes.
 
-The selected backend preserves this result; this wrapper intentionally has
-no distinct cryptographic state or GIL behavior.
+Uses the C-backed Python SHA-1 path selected by :func:`mtproto_auth_key_id`.

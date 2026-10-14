@@ -59,10 +59,10 @@ class UpdateManager:
         invoke: Async raw-RPC invoker used for ``updates.getState`` and difference recovery.
 
     Lifecycle:
-        ``start`` restores state and launches a raw-update drainer. ``stop`` cancels that drainer but does not close or sentinel the public queue; consumers of ``iter_updates`` remain blocked until cancellation or a future event.
+        ``start`` restores state and launches a raw-update drainer. ``stop`` cancels that drainer and leaves the public queue open. A waiting ``iter_updates`` consumer stays blocked until cancellation or a future event.
 
     Persistence:
-        Raw update processing holds a state lock, applies cursor/entity/duplicate changes and persists them before emitted public events are queued and handlers are called. Persisted state is therefore ahead of or equal to, observable delivery; it does not provide application-level exactly-once handling.
+        Raw processing serializes cursor, entity and duplicate changes under a state lock, then persists them before queueing public events or calling handlers. Delivery can fail after persistence, so cursor state cannot prove that an application handled an update.
     """
 
     def __init__(self, config: ClientConfig, storage: SessionStorage, invoke: UpdateInvoker) -> None:
@@ -146,9 +146,9 @@ class UpdateManager:
             return
 
     async def handle_raw_update(self, raw_update: object) -> None:
-        """Process one raw update synchronously, persist resulting state, then emit its public events.
+        """Process one raw update inline, persist its state, then emit its public events.
 
-        Gap recovery and cursor mutation are serialized under the manager's state lock. Recovered events are date-ordered within a difference response; callers should not infer global ordering guarantees across independent input calls.
+        Gap recovery and cursor mutation use the manager's state lock. Recovered events are date-ordered within a difference response. Independent input calls have no global delivery-order guarantee.
 
         Args:
             raw_update: Decoded Telegram update or update-container object to process.

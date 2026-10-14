@@ -44,12 +44,12 @@ from miniproto.raw.types import InputEncryptedFileUploaded
 
 Public access: `miniproto.raw.types.InputEncryptedFileUploaded`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import InputEncryptedFileUploaded
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = InputEncryptedFileUploaded
 ```
 

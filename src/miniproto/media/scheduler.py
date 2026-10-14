@@ -25,7 +25,7 @@ _BACKGROUND_GRANT_INTERVAL = 8
 
 @dataclass(frozen=True, slots=True)
 class MediaSchedulerSnapshot:
-    """Immutable byte and operation measurements for one DC/direction scheduler.
+    """Snapshot of byte usage and transfer counts for one DC/direction scheduler.
 
     Attributes:
         max_bytes: Per-data-centre and direction byte ceiling in bytes.
@@ -34,7 +34,7 @@ class MediaSchedulerSnapshot:
         active_transfers: Transfers with at least one live permit.
         queued_transfers: Transfers with at least one queued acquire.
         grants: Total permits granted by this scheduler since creation.
-        grants_by_transfer: Copy of total grants keyed by transfer identifier.
+        grants_by_transfer: Mutable copy of total grants keyed by transfer identifier, independent of scheduler state.
     """
 
     max_bytes: int
@@ -93,10 +93,7 @@ class _TransferState:
 class MediaPermit:
     """A charged scheduler reservation that must eventually be released.
 
-    Use as an async context manager or call :meth:`release`. The first release
-    returns capacity; repeated releases are harmless and return capacity at most
-    once. Holding a permit keeps its charged bytes and transfer operation slot
-    active, even after transfer closure, until it is released.
+    Use as an async context manager or call :meth:`release`. The first release returns capacity, repeated releases do nothing. A live permit keeps its byte charge and transfer slot active after transfer closure until its owner releases it.
     """
 
     __slots__ = ("_charged_bytes", "_released", "_scheduler", "_state")
@@ -125,7 +122,7 @@ class MediaPermit:
         return self._released
 
     def release(self) -> None:
-        """Return the allocation to the scheduler; subsequent calls do nothing."""
+        """Return the allocation to the scheduler, subsequent calls do nothing."""
         if self._released:
             return
         self._released = True
@@ -338,7 +335,7 @@ class _MediaScheduler:
         self._dispatch()
 
     def snapshot(self) -> MediaSchedulerSnapshot:
-        """Return a copy-safe snapshot of capacity, queues and grant counts."""
+        """Return a snapshot of capacity, queues and copied grant counts."""
         queued_transfers = sum(bool(state.pending) for state in self._states)
         active_transfers = sum(state.active_permits > 0 for state in self._states)
         return MediaSchedulerSnapshot(
@@ -382,7 +379,10 @@ class _MediaScheduler:
             self._record_queue_state()
 
     def _priority_order(self) -> tuple[MediaPriority, ...]:
-        """Prefer foreground work while forcing every eighth eligible grant background."""
+        """Prefer eligible background work after eight foreground grants.
+
+        Only each transfer's FIFO head participates. Foreground work can still run when no background head fits the byte and transfer limits.
+        """
         has_foreground = any(state.pending and state.pending[0].priority == "foreground" for state in self._states)
         has_background = any(state.pending and state.pending[0].priority == "background" for state in self._states)
         if has_background and self._foreground_grants_since_background >= _BACKGROUND_GRANT_INTERVAL:
@@ -408,9 +408,7 @@ class _MediaScheduler:
                 start_index = (self._states.index(last_granted) + 1) % count
             except ValueError:
                 start_index = self._cursor % count
-        # A 1 MiB request needs sixteen 64 KiB deficit turns. Grow deficits in
-        # bounded passes only while capacity is otherwise idle; when active
-        # bytes are the blocker, wait for release rather than spinning.
+        # A 1 MiB request needs sixteen 64 KiB deficit turns, so accumulate credit in bounded passes before waiting for another capacity change
         max_passes = max(1, self.max_bytes // MEDIA_SCHEDULER_UNIT)
         for _ in range(max_passes):
             saw_candidate = False
@@ -580,7 +578,7 @@ class MediaTransfer:
             transfer_id: Unique registry-generated transfer name.
             dc_id: Initial data-centre binding.
             direction: Upload or download scheduler direction.
-            total_size: Known total bytes or ``None`` to classify as large.
+            total_size: Known total bytes. Sizes of at least 20 MiB and ``None`` classify as large.
             priority: Default foreground or background request priority.
         """
         self._registry = registry
@@ -613,14 +611,14 @@ class MediaTransfer:
 
         Raises:
             RuntimeError: If this transfer has been closed.
-            ValueError: If the request cannot fit its scheduler's byte limit.
+            ValueError: If ``requested_bytes`` is non-positive or its rounded charge exceeds the scheduler's byte limit.
         """
         if self._closed:
             raise RuntimeError("media transfer is closed")
         return await self._scheduler.acquire(self._state, requested_bytes, priority)
 
     async def rebind(self, dc_id: int) -> None:
-        """Move future queued work to ``dc_id`` while live permits drain in place.
+        """Move queued and future requests to ``dc_id`` while live permits drain in place.
 
         Args:
             dc_id: Destination data-centre identifier.
@@ -648,7 +646,7 @@ class MediaTransfer:
         )
 
     async def close(self) -> None:
-        """Close the transfer and cancel all still-pending acquires."""
+        """Cancel queued acquires and reject new ones, leaving live permits charged until release."""
         if self._closed:
             return
         self._closed = True
@@ -706,7 +704,7 @@ class MediaSchedulerRegistry:
             dc_id: Positive Telegram data-centre identifier.
             direction: Whether requests upload or download.
             total_size: Known size or ``None`` to conservatively classify it as large.
-            priority: ``foreground`` by default; background still receives periodic grants.
+            priority: ``foreground`` by default, eligible background requests get preference after eight foreground grants.
 
         Raises:
             ValueError: If the DC, direction, size or priority is invalid.
@@ -783,7 +781,7 @@ class MediaSchedulerRegistry:
 
 
 def _charged_bytes(requested_bytes: int) -> int:
-    """Round a positive request up to one 64 KiB scheduler allocation unit.
+    """Round a positive request up to a multiple of the 64 KiB scheduler unit.
 
     Args:
         requested_bytes: Positive unrounded payload size in bytes.

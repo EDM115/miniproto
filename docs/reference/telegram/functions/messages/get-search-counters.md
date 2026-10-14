@@ -52,12 +52,12 @@ from miniproto.raw.functions import MessagesGetSearchCounters
 
 Public access: `miniproto.raw.functions.MessagesGetSearchCounters`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.functions import MessagesGetSearchCounters
 
-# Naming the raw request class is local only; it performs no I/O or network request.
+# Refer to the raw request class without constructing it or calling Telegram
 request_type = MessagesGetSearchCounters
 ```
 

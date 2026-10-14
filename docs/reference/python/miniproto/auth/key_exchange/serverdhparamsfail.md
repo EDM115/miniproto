@@ -1,6 +1,6 @@
 ---
 title: "miniproto.auth.key_exchange.ServerDHParamsFail"
-description: "``server_DH_params_fail`` response proving Telegram rejected the request."
+description: "Decoded ``server_DH_params_fail`` response reporting a rejected request."
 generated: true
 editUrl: false
 language: "python"
@@ -18,7 +18,7 @@ module: "miniproto.auth.key_exchange"
 ServerDHParamsFail(nonce: int, server_nonce: int, new_nonce_hash: int) -> None
 ```
 
-``server_DH_params_fail`` response proving Telegram rejected the request.
+Decoded ``server_DH_params_fail`` response reporting a rejected request.
 
 **Parameters:**
 

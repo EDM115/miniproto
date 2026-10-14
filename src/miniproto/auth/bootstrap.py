@@ -81,7 +81,7 @@ class UnencryptedAuthKeyTransport:
         return bytes(decode_unencrypted_message(packet).body)
 
     async def close(self) -> None:
-        """Close the opened transport, if any and make the instance reusable."""
+        """Close any open transport and allow a later call to reconnect."""
         transport = self._transport
         self._transport = None
         if transport is not None:
@@ -97,11 +97,9 @@ class UnencryptedAuthKeyTransport:
 
 
 async def ensure_auth_key(config: ClientConfig, storage: SessionStorage) -> None:
-    """Ensure that ``storage`` contains a usable MTProto key and DC options.
+    """Preserve an existing MTProto key or create and store one with DC options.
 
-    Existing keys are preserved. When no key is present, this performs Telegram's
-    unencrypted authorization-key exchange, then atomically stores its key, salt,
-    server-time offset and resolved data-center options.
+    An existing key is retained without contacting Telegram to check its validity. When no key is present, perform the unencrypted authorization-key exchange, then atomically store its key, salt, server-time offset and selected data-center options.
 
     Args:
         config: Client configuration, including target DC and test-mode selection.

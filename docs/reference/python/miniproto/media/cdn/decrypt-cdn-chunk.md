@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.media.cdn.decrypt_cdn_chunk"
 source_path: "src/miniproto/media/cdn.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/cdn.py#L238"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/cdn.py#L226"
 aliases: ["miniproto.media.decrypt_cdn_chunk"]
 module: "miniproto.media.cdn"
 ---
@@ -22,10 +22,10 @@ Decrypt a CDN ciphertext range with the counter aligned to its file offset.
 
 **Parameters:**
 
-- **data** (<code>[bytes](#bytes)</code>) – Ciphertext bytes for a contiguous CDN response; immutable buffers are not zeroized.
-- **key** (<code>[bytes](#bytes)</code>) – Exactly 32 bytes of AES key material; immutable buffers are not zeroized.
-- **iv** (<code>[bytes](#bytes)</code>) – Exactly 16 bytes forming the initial CTR counter; immutable buffers are not zeroized.
-- **offset** (<code>[int](#int)</code>) – Non-negative file offset of ``data``; defaults to ``0``.
+- **data** (<code>[bytes](#bytes)</code>) – Ciphertext bytes for a contiguous CDN response, immutable buffers are not zeroized.
+- **key** (<code>[bytes](#bytes)</code>) – Exactly 32 bytes of AES key material, immutable buffers are not zeroized.
+- **iv** (<code>[bytes](#bytes)</code>) – Exactly 16 bytes, the first 12 form the counter prefix and the final four are replaced with ``offset // 16``. Immutable buffers are not zeroized.
+- **offset** (<code>[int](#int)</code>) – Non-negative file byte offset of ``data``, defaults to ``0``, its block index must fit in 32 bits.
 
 **Returns:**
 

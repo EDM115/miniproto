@@ -23,21 +23,21 @@ Immutable client configuration for authentication, session storage, RPCs, update
 **Parameters:**
 
 - **api_id** (<code>[int](#int)</code>) – Positive Telegram application identifier.
-- **api_hash** (<code>[str](#str)</code>) – Telegram application secret; excluded from representations.
-- **session_storage** (<code>[SessionStorage](#miniproto.session.storage.SessionStorage) | None</code>) – Optional session backend. When omitted, the client uses encrypted SQLite storage at ``session_path``.
+- **api_hash** (<code>[str](#str)</code>) – Telegram application secret, excluded from representations.
+- **session_storage** (<code>[SessionStorage](#miniproto.session.storage.SessionStorage) | None</code>) – Optional session backend. When omitted, client construction requires ``MINIPROTO_SESSION_KEY`` and uses encrypted SQLite storage at ``session_path``.
 - **session_path** (<code>[str](#str) | [PathLike](#os.PathLike)[[str](#str)]</code>) – Path for the default encrypted SQLite session, defaulting to ``"miniproto.session.sqlite"``.
 - **transport** (<code>[TransportConfig](#miniproto.config.TransportConfig)</code>) – TCP transport configuration.
 - **device** (<code>[DeviceInfo](#miniproto.config.DeviceInfo)</code>) – Telegram-facing device metadata.
-- **update_queue_size** (<code>[int](#int)</code>) – Bounded number of pending updates, defaulting to 1000.
-- **update_queue_overflow** (<code>[UpdateQueueOverflowPolicy](#miniproto.config.UpdateQueueOverflowPolicy)</code>) – Overflow action: ``"raise"``, ``"drop_oldest"`` or ``"drop_newest"``.
+- **update_queue_size** (<code>[int](#int)</code>) – Capacity of each independent raw and public update queue, defaulting to 1000.
+- **update_queue_overflow** (<code>[UpdateQueueOverflowPolicy](#miniproto.config.UpdateQueueOverflowPolicy)</code>) – Action when either queue fills: ``"raise"``, ``"drop_oldest"`` or ``"drop_newest"``.
 - **update_duplicate_window** (<code>[int](#int)</code>) – Number of recent updates retained for duplicate suppression.
 - **dc_id** (<code>[int](#int)</code>) – Initial Telegram datacenter identifier, defaulting to 2.
 - **test_mode** (<code>[bool](#bool)</code>) – Select Telegram's test environment when true.
 - **request_timeout** (<code>[float](#float)</code>) – Default per-request timeout in seconds.
-- **max_request_retries** (<code>[int](#int)</code>) – Maximum automatic retries for eligible RPCs.
+- **max_request_retries** (<code>[int](#int)</code>) – Retry budget shared by transient failures and automatic flood-wait sleeps. Datacenter migration has a separate limit of at least one retry.
 - **max_reconnect_attempts** (<code>[int](#int) | None</code>) – Optional cap for transport reconnections.
 - **max_pending_rpcs** (<code>[int](#int)</code>) – Maximum concurrently pending RPCs.
-- **flood_sleep_threshold** (<code>[int](#int) | None</code>) – Maximum flood-wait duration to sleep automatically; ``None`` uses the default retry policy.
+- **flood_sleep_threshold** (<code>[int](#int) | None</code>) – Maximum flood-wait duration in seconds to sleep automatically. ``None`` disables sleeping, ``0`` surfaces positive waits without sleeping.
 - **method_flood_cache_size** (<code>[int](#int)</code>) – Number of method flood-wait entries to remember.
 - **media_concurrency** (<code>[int](#int) | None</code>) – Optional default concurrent media requests.
 - **media_max_buffer_size** (<code>[int](#int) | None</code>) – Optional media buffering cap in bytes.
@@ -45,7 +45,7 @@ Immutable client configuration for authentication, session storage, RPCs, update
 - **media_upload_max_in_flight_bytes_per_dc** (<code>[int](#int)</code>) – Per-DC upload scheduler byte budget.
 - **media_download_small_queue_limit** (<code>[int](#int) | None</code>) – Optional small-download queue limit.
 - **media_download_large_queue_limit** (<code>[int](#int) | None</code>) – Optional large-download queue limit.
-- **media_idle_close** (<code>[float](#float) | None</code>) – Seconds before unused media lanes close; ``None`` keeps them open for the client lifetime.
+- **media_idle_close** (<code>[float](#float) | None</code>) – Seconds before unused media lanes close, ``None`` keeps them open for the client lifetime.
 - **bot_token** (<code>[str](#str) | None</code>) – Optional bot token, excluded from representations.
 
 **Raises:**

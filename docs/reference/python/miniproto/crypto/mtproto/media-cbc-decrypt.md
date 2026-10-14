@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.crypto.mtproto.media_cbc_decrypt"
 source_path: "src/miniproto/crypto/mtproto.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/mtproto.py#L201"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/mtproto.py#L191"
 aliases: ["miniproto.crypto.media_cbc_decrypt"]
 module: "miniproto.crypto.mtproto"
 ---
@@ -34,5 +34,4 @@ Decrypt block-aligned AES-256-CBC media data without unpadding it.
 
 - <code>[ValueError](#ValueError)</code> – If key/IV lengths or block alignment are invalid.
 
-CBC decryption here supplies confidentiality transformation only; it does not
-authenticate the input.  Validate integrity at the protocol layer.
+CBC does not authenticate the ciphertext. Validate integrity at the protocol layer.

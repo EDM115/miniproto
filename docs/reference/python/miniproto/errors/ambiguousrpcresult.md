@@ -22,7 +22,7 @@ Bases: <code>[MiniprotoError](#miniproto.errors.MiniprotoError)</code>
 
 The transport failed after an RPC may already have reached Telegram.
 
-Capture a possibly executed request without exposing secret text.
+Capture a possibly executed request and redact supported diagnostic values.
 
 **Parameters:**
 

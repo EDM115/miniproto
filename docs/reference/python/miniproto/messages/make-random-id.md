@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.messages.make_random_id"
 source_path: "src/miniproto/messages.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/messages.py#L68"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/messages.py#L67"
 module: "miniproto.messages"
 ---
 

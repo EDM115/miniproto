@@ -1,7 +1,6 @@
 """Normalize nightly rustdoc JSON and cargo-docs-md output into Rust reference pages.
 
-The module only reads JSON, rendered Markdown and Rust source files.  It never imports
-``miniproto`` or loads the native extension, so reference generation cannot run package code.
+Reference normalization reads JSON, renderer Markdown and Rust source without importing ``miniproto`` or loading the native extension. Separate helpers run nightly rustdoc and cargo-docs-md to prepare those inputs.
 """
 
 from __future__ import annotations
@@ -319,7 +318,7 @@ def generate_rust_pages(
         excluded_paths: Generator-owned source paths that must never become reference pages.
 
     Returns:
-        Deterministically path-sorted generated pages using the converter's Markdown unchanged.
+        Pages sorted by path, retaining converter prose with POSIX source paths and links to unpublished child modules reduced to labels.
 
     Raises:
         RustDocumentationError: Selected data has missing docs, arguments, renderer bodies or provenance.
@@ -548,7 +547,7 @@ def _python_bindings(
     qualified_names: Mapping[str, str],
     source_root: Path,
 ) -> dict[str, str]:
-    """Statically find direct PyO3 exports and inherited methods of PyO3 classes.
+    """Statically find direct PyO3 exports and methods associated with PyO3 classes.
 
     Args:
         index: Rustdoc items keyed by identifier.
@@ -588,7 +587,7 @@ def _python_bindings(
 def _python_method_binding(
     item: Mapping[str, Any], *, source_root: Path, parent_binding: str, fallback_name: str
 ) -> str:
-    """Return the Python identity of one method inherited from a bound PyO3 class.
+    """Return the Python identity of one method associated with a bound PyO3 class.
 
     Args:
         item: Rustdoc method item whose adjacent source attributes are inspected.

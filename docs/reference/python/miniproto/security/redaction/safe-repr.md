@@ -26,4 +26,4 @@ Return a representation after recursively redacting supported secret shapes.
 
 **Returns:**
 
-- <code>[str](#str)</code> – The safe representation of the redacted value.
+- <code>[str](#str)</code> – The representation after redacting supported shapes. Other objects retain their own ``repr``, unrecognized text and field names may still contain secrets.

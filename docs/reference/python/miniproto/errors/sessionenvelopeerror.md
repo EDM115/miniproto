@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.errors.SessionEnvelopeError"
 source_path: "src/miniproto/errors.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L506"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L508"
 aliases: ["miniproto.SessionEnvelopeError"]
 module: "miniproto.errors"
 ---

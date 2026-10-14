@@ -1,13 +1,13 @@
 ---
 title: "miniproto.errors.InternalServerError"
-description: "Classified retryable server failure, normally a 5xx RPC code."
+description: "Classified server failure eligible for retry-safe request retries, normally a 5xx RPC code."
 generated: true
 editUrl: false
 language: "python"
 kind: "class"
 qualified_name: "miniproto.errors.InternalServerError"
 source_path: "src/miniproto/errors.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L275"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L277"
 aliases: ["miniproto.InternalServerError"]
 module: "miniproto.errors"
 ---
@@ -20,7 +20,7 @@ InternalServerError(message: str = 'internal server error', *, code: int | None 
 
 Bases: <code>[RpcError](#miniproto.errors.RpcError)</code>
 
-Classified retryable server failure, normally a 5xx RPC code.
+Classified server failure eligible for retry-safe request retries, normally a 5xx RPC code.
 
 Create a server error while preserving an explicit server code.
 

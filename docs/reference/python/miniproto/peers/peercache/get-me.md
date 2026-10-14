@@ -21,11 +21,8 @@ Return the authenticated user, reading cache unless ``refresh`` is true.
 
 **Parameters:**
 
-- **refresh** (<code>[bool](#bool)</code>) – When true, try ``users.getUsers(inputUserSelf)`` first. If
-its result lacks a self user, return a cached identity when one
-exists; otherwise raise ``Unauthorized``.
+- **refresh** (<code>[bool](#bool)</code>) – When true, try ``users.getUsers(inputUserSelf)`` first. If the result contains no concrete user, return a cached identity when one exists, otherwise raise ``Unauthorized``.
 
 **Raises:**
 
-- <code>[Unauthorized](#miniproto.errors.Unauthorized)</code> – If Telegram does not return a concrete self user and
-no cached identity is available.
+- <code>[Unauthorized](#miniproto.errors.Unauthorized)</code> – If Telegram returns no concrete user and no cached identity is available.

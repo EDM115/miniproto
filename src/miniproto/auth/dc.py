@@ -42,7 +42,7 @@ def dc_options_from_env(environ: Mapping[str, str] | None = None) -> tuple[DCOpt
     """Read local test-DC overrides from environment-style mappings.
 
     Args:
-        environ: Mapping to read instead of :data:`os.environ`; defaults to the process environment.
+        environ: Mapping to read instead of :data:`os.environ`, defaulting to the process environment.
 
     Returns:
         Static options for populated ``MINIPROTO_TEST_DC1`` through ``MINIPROTO_TEST_DC5`` entries.
@@ -62,13 +62,13 @@ def dc_options_from_env(environ: Mapping[str, str] | None = None) -> tuple[DCOpt
 
 
 def default_dc_options(*, test_mode: bool) -> tuple[DCOption, ...]:
-    """Return test overrides/defaults or the built-in production DC endpoints.
+    """Return local test overrides or built-in DC endpoints.
 
     Args:
         test_mode: Whether the client will connect to Telegram's test environment.
 
     Returns:
-        Ordered static connection options suitable for the selected environment.
+        Production endpoints, or test overrides from ``MINIPROTO_TEST_DC1`` through ``MINIPROTO_TEST_DC5``. Test mode without overrides uses local ``test-dc-N.telegram.local`` placeholders, which require local DNS or a custom connector.
     """
     if test_mode:
         env_options = dc_options_from_env()
@@ -117,14 +117,14 @@ def select_dc_option(
         options: Candidate connection options.
         dc_id: Required Telegram data-center identifier.
         prefer_ipv6: Prefer an IPv6 candidate when one is available.
-        allow_media_only: Permit endpoints reserved for media traffic.
+        allow_media_only: Include media-only endpoints without preferring non-media candidates. When false, media-only endpoints remain a fallback if no non-media candidate exists.
         require_cdn: Restrict candidates to endpoints explicitly marked as CDN servers.
 
     Returns:
-        A non-media endpoint when possible, otherwise the best available candidate.
+        The first candidate matching the IPv4/IPv6 preference after CDN and media filtering.
 
     Raises:
-        ValueError: If ``options`` has no endpoint for ``dc_id``.
+        ValueError: If no endpoint matches ``dc_id`` and the optional CDN requirement.
     """
     candidates = [option for option in options if option.id == dc_id]
     if require_cdn:

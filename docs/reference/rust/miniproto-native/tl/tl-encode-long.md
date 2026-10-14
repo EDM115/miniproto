@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::tl::tl_encode_long"
 source_path: "rust/miniproto/src/tl.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L548"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L540"
 aliases: ["miniproto._native.tl_encode_long"]
 python_visible: true
 ---
@@ -15,7 +15,7 @@ python_visible: true
 ## Provenance
 
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L548)
+- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L540)
 - Python exposure: `miniproto._native.tl_encode_long` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -36,7 +36,7 @@ fn tl_encode_long(value: i64) -> _
 fn tl_encode_long(value: i64) -> Vec<u8>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:548-550`*
+*Defined in `rust/miniproto/src/tl.rs:540-542`*
 
 Encodes Python `tl_encode_long(value)` as an eight-byte little-endian signed integer.
 

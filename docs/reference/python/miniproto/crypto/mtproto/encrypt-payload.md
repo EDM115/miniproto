@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.crypto.mtproto.encrypt_payload"
 source_path: "src/miniproto/crypto/mtproto.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/mtproto.py#L106"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/crypto/mtproto.py#L99"
 aliases: ["miniproto.crypto.encrypt_payload"]
 module: "miniproto.crypto.mtproto"
 ---
@@ -37,7 +37,4 @@ obtains the minimum compliant length from ``os.urandom``.
 - <code>[ValueError](#ValueError)</code> – If key length, padding length (12 through 1024 bytes) or final
 AES block alignment is invalid.
 
-The default only chooses a compliant padding length; callers who supply
-``padding`` are responsible for its unpredictability.  Encryption backend
-selection follows :mod:`miniproto.crypto.native` and does not change output
-format.
+Callers supplying ``padding`` must make it unpredictable. Backend selection follows :mod:`miniproto.crypto.native` and preserves the output format.

@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.connection.sender.MTProtoSender.request"
 source_path: "src/miniproto/connection/sender.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/sender.py#L344"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/sender.py#L341"
 aliases: ["miniproto.connection.MTProtoSender.request"]
 module: "miniproto.connection.sender"
 ---
@@ -28,8 +28,7 @@ defaults to ``True``.
 - **retry_safe** (<code>[bool](#bool)</code>) – Permit automatic resend with a fresh message ID after a
 transport loss; defaults to ``False`` to avoid duplicating
 unknown-side-effect RPCs.
-- **request_timeout** (<code>[float](#float) | None</code>) – Optional caller wait bound in seconds. ``None``
-waits until a result, lifecycle failure or cancellation.
+- **request_timeout** (<code>[float](#float) | None</code>) – Result-wait limit in seconds, starting after the initial send completes. ``None`` waits until a result, lifecycle failure or cancellation.
 - **quick_ack** (<code>[bool](#bool)</code>) – Request a transport quick ACK for the encrypted attempt;
 defaults to ``False`` and never completes this RPC by itself.
 - **quick_ack_callback** (<code>[Callable](#collections.abc.Callable)[[[QuickAckReceipt](#miniproto.connection.sender.QuickAckReceipt)], None] | None</code>) – Optional synchronous callback receiving the first
@@ -48,8 +47,8 @@ ACK. Callback failures are isolated and recorded.
 and quick-ACK registrations are removed.
 - <code>[AmbiguousRpcResult](#miniproto.errors.AmbiguousRpcResult)</code> – If an unsafe request loses transport after it may
 have reached Telegram.
-- <code>[TransportError](#miniproto.connection.transport.TransportError)</code> – If connection/recovery exhausts or protocol handling
-fails.
+- <code>[TransportError](#miniproto.connection.transport.TransportError)</code> – If transport recovery exhausts or Telegram rejects a message with an unrecoverable service error.
+- <code>[ProtocolValidationError](#miniproto.errors.ProtocolValidationError)</code> – If inbound framing, envelope or service-body validation fails.
 - <code>[CancelledError](#asyncio.CancelledError)</code> – If the caller cancels; its pending state is
 removed without cancelling other requests.
 

@@ -14,7 +14,7 @@ Run the narrow checks for your change first, then the full release acceptance se
 
 ## Pull Requests
 
-Open every pull request as a draft. Pull-request Actions intentionally begin only after a PR explicitly transitions from Draft → Ready for review. Once the PR is ready, each subsequent push will rerun the relevant workflows. Return an unready change to draft instead of using failing automation as a readiness marker.
+Open pull requests as drafts. The CI and documentation workflows start when the author marks a pull request ready for review, then run again on later pushes. Return an unready change to draft while you work on it.
 
 ## Command Reference
 

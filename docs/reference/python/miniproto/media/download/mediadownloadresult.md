@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.media.download.MediaDownloadResult"
 source_path: "src/miniproto/media/download.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L100"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L89"
 aliases: ["miniproto.MediaDownloadResult","miniproto.media.MediaDownloadResult"]
 module: "miniproto.media.download"
 ---
@@ -24,6 +24,6 @@ Completed materialized-download metadata and optional in-memory payload.
 
 - [**bytes_downloaded**](#miniproto.media.download.MediaDownloadResult.bytes_downloaded) (<code>[int](#int)</code>) – Bytes committed for this operation, including resumed bytes.
 - [**offset**](#miniproto.media.download.MediaDownloadResult.offset) (<code>[int](#int)</code>) – Requested starting byte offset.
-- [**destination**](#miniproto.media.download.MediaDownloadResult.destination) (<code>[Path](#pathlib.Path) | [BinaryIO](#typing.BinaryIO) | None</code>) – Resolved path or caller-owned stream, if one was used.
+- [**destination**](#miniproto.media.download.MediaDownloadResult.destination) (<code>[Path](#pathlib.Path) | [BinaryIO](#typing.BinaryIO) | None</code>) – Output path, caller-owned stream or the internal ``BytesIO`` for an in-memory download.
 - [**data**](#miniproto.media.download.MediaDownloadResult.data) (<code>[bytes](#bytes) | None</code>) – Downloaded bytes only when the destination was omitted.
 - [**raw_location**](#miniproto.media.download.MediaDownloadResult.raw_location) (<code>[object](#object) | None</code>) – Effective raw location, potentially refreshed after a stale reference.

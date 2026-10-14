@@ -29,4 +29,4 @@ Persistent, normalized peer data learned while processing updates.
 - [**phone**](#miniproto.updates.state.EntityReference.phone) (<code>[str](#str) | None</code>) – Optional phone number observed in a user entity.
 - [**title**](#miniproto.updates.state.EntityReference.title) (<code>[str](#str) | None</code>) – Optional display title or user full name.
 - [**complete**](#miniproto.updates.state.EntityReference.complete) (<code>[bool](#bool)</code>) – Whether the source was a full entity allowed to clear absent aliases.
-- [**updated_at**](#miniproto.updates.state.EntityReference.updated_at) (<code>[datetime](#datetime.datetime)</code>) – Observation timestamp; aware input retains its timezone and naive input assumes UTC.
+- [**updated_at**](#miniproto.updates.state.EntityReference.updated_at) (<code>[datetime](#datetime.datetime)</code>) – Observation timestamp, passed through until ``to_peer_cache_entry`` applies session-model timezone handling.

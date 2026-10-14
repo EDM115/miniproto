@@ -28,8 +28,8 @@ async def main() -> None:
 event_loop.run(main())
 ```
 
-`async with Client(...)` connects before entering the block and disconnects its sender, schedulers, update handling and storage when leaving it. `sign_in_bot()` is safe to call after that initial connection because `connect()` is serialized and repeatable. The token remains a bearer credential in process memory while the client needs it, so do not print it or include it in an exception message.
+`async with Client(...)` calls `connect()` before entering the block and `disconnect()` on exit. Shutdown stops the sender, schedulers, update handling and storage. `connect()` is serialized and repeatable, so `sign_in_bot()` can call it again safely. The token remains in process memory while the client needs it. Never print it or include it in an exception message.
 
-The sample calls `get_me()` after authorization because it returns the cached or refreshed normalized user identity and raises `Unauthorized` when the session has no authorization. It is a useful first network check, not proof that message sending, media transfers or live limits have been accepted for every account or data center.
+After authorization, `get_me()` returns the cached or refreshed normalized user identity. It raises `Unauthorized` when the session is not authorized. Use it as a first network check. It does not prove that message sending, media transfers or live limits will work for every account or data center.
 
 For a durable account session, use the [authorization guide](./authentication.md) with a protected `MINIPROTO_SESSION_KEY`. For the next protocol-level step, continue with [First raw call](./raw-api.md).

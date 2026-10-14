@@ -5,11 +5,11 @@ slug: /concepts/
 generated: false
 ---
 
-`miniproto` is an async-first MTProto SDK, not a Telegram application framework or a replacement for Telegram's own rules and services. These pages explain the boundaries that matter when choosing APIs, operating a client or reviewing a change.
+`miniproto` is an async-first MTProto SDK. These pages describe its protocol, client lifecycle, update and session state, media scheduling and security rules. It does not replace Telegram's services or provide an application framework.
 
 ## Core model
 
-- [MTProto and the Bot API](./mtproto-and-bot-api.md) explains which Telegram surface miniproto speaks and what that does not authorize.
+- [MTProto and the Bot API](./mtproto-and-bot-api.md) explains which Telegram protocol miniproto implements and what it permits.
 - [Architecture and data flow](./architecture.md) follows an application request through client coordination, storage, sender, transport, framing and Telegram.
 - [High-level helpers and the raw API](./high-level-and-raw.md) separates the small convenience layer from generated TL requests.
 - [Schema sources and layers](./schema-layers.md) records the Layer 230 canonical-source policy.
@@ -28,4 +28,4 @@ generated: false
 
 ## Alpha contract
 
-This is pre-release documentation for an Alpha SDK. Public behavior, defaults, storage formats, generated schema surfaces and compatibility policies can change before a stable release. Unit and fake-server evidence is valuable, but it is distinct from credentialed live Telegram acceptance; a feature is not live-accepted merely because it has deterministic coverage.
+Miniproto is pre-release Alpha software. Public APIs, defaults, storage formats, generated schemas and compatibility rules can change before a stable release. Local tests do not establish live Telegram behavior.

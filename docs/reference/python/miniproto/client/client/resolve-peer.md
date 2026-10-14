@@ -1,13 +1,13 @@
 ---
 title: "miniproto.client.Client.resolve_peer"
-description: "Resolve a peer object, numeric ID or username to a normalized ``Peer``."
+description: "Resolve a peer object, numeric ID, username, self alias or cached phone number."
 generated: true
 editUrl: false
 language: "python"
 kind: "function"
 qualified_name: "miniproto.client.Client.resolve_peer"
 source_path: "src/miniproto/client.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L622"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L643"
 aliases: ["miniproto.Client.resolve_peer"]
 module: "miniproto.client"
 ---
@@ -18,11 +18,15 @@ module: "miniproto.client"
 resolve_peer(peer: Peer | str | int) -> Peer
 ```
 
-Resolve a peer object, numeric ID or username to a normalized ``Peer``.
+Resolve a peer object, numeric ID, username, self alias or cached phone number.
 
 **Parameters:**
 
-- **peer** (<code>[Peer](#miniproto.types.Peer) | [str](#str) | [int](#int)</code>) – Existing normalized peer, numeric identifier or username to resolve through the peer cache.
+- **peer** (<code>[Peer](#miniproto.types.Peer) | [str](#str) | [int](#int)</code>) – Existing peer, signed numeric ID, username or t.me URL, self alias such as ``"me"``, or phone reference beginning with ``+``. Phone lookup requires cached data. Missing numeric IDs trigger a lookup of up to 100 unpinned dialogs.
+
+**Returns:**
+
+- <code>[Peer](#miniproto.types.Peer)</code> – A ``Peer`` identifying the conversation. Numeric and username lookup can return a peer without an access hash. Input-peer conversion rejects users/channels without one.
 
 **Raises:**
 

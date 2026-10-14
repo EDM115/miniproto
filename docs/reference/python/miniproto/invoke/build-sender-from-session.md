@@ -1,13 +1,13 @@
 ---
 title: "miniproto.invoke.build_sender_from_session"
-description: "Build a sender for the session DC or -- with overrides -- a media DC."
+description: "Build a sender for the session DC or an explicitly selected media DC."
 generated: true
 editUrl: false
 language: "python"
 kind: "function"
 qualified_name: "miniproto.invoke.build_sender_from_session"
 source_path: "src/miniproto/invoke.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L496"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L490"
 module: "miniproto.invoke"
 ---
 
@@ -17,7 +17,7 @@ module: "miniproto.invoke"
 build_sender_from_session(config: ClientConfig, storage: SessionStorage, factory: SenderFactory | None = None, *, fresh_session_id: bool = False, server_salt_override: int | None = None, on_salt_change: Callable[[int], None] | None = None, dc_id_override: int | None = None, auth_key_override: bytes | None = None, allow_media_only: bool = False, require_cdn: bool = False) -> RawSender
 ```
 
-Build a sender for the session DC or -- with overrides -- a media DC.
+Build a sender for the session DC or an explicitly selected media DC.
 
 ``dc_id_override``/``auth_key_override`` support cross-DC media transfers:
 the caller supplies a per-DC auth key (created via key exchange with the
@@ -33,7 +33,7 @@ target DC) without ever touching the main session's DC or key.
 - **on_salt_change** (<code>[Callable](#collections.abc.Callable)[[[int](#int)], None] | None</code>) – Callback receiving a newer server salt discovered by the sender.
 - **dc_id_override** (<code>[int](#int) | None</code>) – Target DC for a cross-DC sender.
 - **auth_key_override** (<code>[bytes](#bytes) | None</code>) – Key for the target DC; never persists over the main session key.
-- **allow_media_only** (<code>[bool](#bool)</code>) – Permit a media-only DC endpoint for a dedicated media sender.
+- **allow_media_only** (<code>[bool](#bool)</code>) – Include media-only endpoints without preferring non-media candidates. When false, media-only endpoints remain a fallback.
 - **require_cdn** (<code>[bool](#bool)</code>) – Require an endpoint explicitly marked as a CDN server.
 
 **Returns:**
@@ -43,4 +43,5 @@ target DC) without ever touching the main session's DC or key.
 **Raises:**
 
 - <code>[AuthKeyNotFound](#miniproto.errors.AuthKeyNotFound)</code> – If the persisted session has no key and no override is supplied.
-- <code>[InvalidDatacenter](#miniproto.errors.InvalidDatacenter)</code> – If no usable option is stored for the selected DC.
+- <code>[InvalidDatacenter](#miniproto.errors.InvalidDatacenter)</code> – If the session has no saved DC options.
+- <code>[ValueError](#ValueError)</code> – If the saved options do not match the target DC and optional CDN requirement.

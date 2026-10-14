@@ -9,7 +9,7 @@ Authorization is a live Telegram operation. The examples deliberately obtain sec
 
 ## Phone account with optional 2FA
 
-`Client.sign_in_phone()` sends a code request, calls `code_callback` and calls `password_callback` only if Telegram requests two-factor authentication. Both callbacks can return a string directly or return an awaitable string.
+`Client.sign_in_phone()` sends a code request. It calls `code_callback` when Telegram returns a code challenge and calls `password_callback` only when Telegram requires two-factor authentication. Each callback can return a string or an awaitable string.
 
 ```python
 import getpass
@@ -37,7 +37,7 @@ async def main() -> None:
 event_loop.run(main())
 ```
 
-Without a password callback, an account that needs 2FA raises `PasswordRequired`. A phone number that needs registration raises `SignUpRequired`; this SDK does not silently create the account. Invalid Telegram codes are classified as `InvalidCode`. Do not log a callback return value, phone number, API hash or resulting session mapping.
+An account that needs 2FA raises `PasswordRequired` if you omit the password callback. A phone number that needs registration raises `SignUpRequired`. miniproto does not create the account. Telegram classifies invalid codes as `InvalidCode`. Do not log callback results, phone numbers, API hashes or session mappings.
 
 ## Bot account
 
@@ -59,8 +59,8 @@ async def main() -> None:
 event_loop.run(main())
 ```
 
-The client persists the authorized bot identity in its selected storage, then synchronizes update state when updates are enabled. Do not infer that bot authorization grants user-account capabilities, access to every peer or permission to send in a particular chat; Telegram still applies the bot's own permissions and server-side limits.
+After bot authorization, the client saves the bot identity in its selected storage and syncs update state when updates are enabled. Bot authorization does not grant user-account capabilities or access to every peer. Telegram still controls the bot's permissions and server-side limits.
 
 ## Reuse an authorized session
 
-Use the same durable session path and key for the same account only. `Client.is_authorized()` checks whether stored state has an auth key or user identity; it does not prove that a subsequent network operation will be permitted. Importing a portable session requires a disconnected client and requires explicit replacement when storage already has a value. The format, lossy third-party conversions, encryption and rotation guidance are all in [Session Security](../session-security.md).
+Use the same durable session path and key only for the same account. `Client.is_authorized()` checks stored state for an auth key or user identity. It does not prove that Telegram will permit the next network operation. Import a portable session while the client is disconnected. If storage already has a value, pass `replace=True` to replace it. [Session Security](../session-security.md) covers formats, lossy third-party conversions, encryption and rotation.

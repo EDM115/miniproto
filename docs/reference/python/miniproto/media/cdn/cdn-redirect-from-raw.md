@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.media.cdn.cdn_redirect_from_raw"
 source_path: "src/miniproto/media/cdn.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/cdn.py#L217"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/cdn.py#L205"
 module: "miniproto.media.cdn"
 ---
 

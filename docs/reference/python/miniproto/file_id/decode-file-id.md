@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.file_id.decode_file_id"
 source_path: "src/miniproto/file_id.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/file_id.py#L170"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/file_id.py#L177"
 aliases: ["miniproto.decode_file_id"]
 module: "miniproto.file_id"
 ---
@@ -30,4 +30,4 @@ Decode an ``mpf1_`` file ID without contacting Telegram.
 
 **Raises:**
 
-- <code>[ValueError](#ValueError)</code> – If the prefix, payload encoding or required fields are invalid.
+- <code>[ValueError](#ValueError)</code> – If the prefix, payload encoding, integer ranges or required fields are invalid, the ID exceeds 64 KiB of text, or its decoded file reference exceeds 16 KiB.

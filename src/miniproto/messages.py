@@ -32,9 +32,8 @@ def parse_message_text(text: str, parse_mode: str | None = None) -> ParsedMessag
     """Render the supported lightweight Markdown delimiters into MTProto entities.
 
     Args:
-        text: Source message text, with backslashes escaping the next character.
-        parse_mode: ``markdown``/``markdown-lite``/``md`` enables parsing;
-            ``None``, ``plain``, ``text`` and ``none`` preserve text verbatim.
+        text: Source message text. In Markdown mode, a backslash outside a delimited span escapes the next character.
+        parse_mode: ``markdown``, ``markdown-lite`` or ``md`` parses ``**bold**``, ``__italic__``, inline backticks and triple-backtick blocks without nesting or language tags. ``None``, an empty spelling, ``plain``, ``text`` and ``none`` preserve text verbatim.
 
     Returns:
         Rendered text and entities whose offsets and lengths use UTF-16 code units.
@@ -80,7 +79,7 @@ def message_from_send_result(result: object, *, peer: Peer, text: str, entities:
         entities: Submitted entities used if Telegram did not return entities.
 
     Returns:
-        The sent message, with a zero ID and current UTC time only for incomplete responses.
+        The first concrete message in the response, an ``UpdateShortSentMessage`` converted with submitted text, or an ID-``0`` fallback with current UTC time when neither form is present.
     """
     parsed_entities = tuple(entities)
     if isinstance(result, types.UpdateShortSentMessage):
@@ -237,7 +236,7 @@ def _find_message_result(result: object) -> types.Message | None:
 
 
 def _message_from_raw(raw: types.Message, *, fallback_peer: Peer, fallback_entities: tuple[object, ...]) -> Message:
-    """Build a message model while preserving raw media, date and entity defaults.
+    """Build a message model with normalized media and fallback peer/entity data.
 
     Args:
         raw: Concrete Telegram message object.

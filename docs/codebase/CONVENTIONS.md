@@ -22,7 +22,7 @@ generated: false
 ## Formatting and linting
 
 - Ruff is the Python formatter/import sorter/linter. `pyproject.toml` selects error, Pyflakes, isort, pyupgrade, bugbear, asyncio, comprehension, simplify, Ruff, naming, Bandit-security and warning families with narrow generated-file exemptions.
-- The configured Ruff target is Python 3.13 and the formatter normalizes LF endings plus docstring code. Developers let the formatter decide wrapping rather than manually reflowing code or Markdown prose.
+- The configured Ruff target is Python 3.13 and its formatter normalizes LF endings and docstring code. Ruff formats Python source; Oxfmt formats supported files under `docs-site/`, and Astro checks templates and Markdown content. Authored Markdown prose has no fixed line width.
 - ty checks Python types against 3.13 semantics and excludes task-owned `.tmp` plus the virtual environment.
 - Rust uses `cargo fmt` and Clippy across workspace/all targets/all features with warnings denied.
 - Astro uses the strict TypeScript preset and `astro check`; Playwright tests the built static site.

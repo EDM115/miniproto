@@ -49,12 +49,12 @@ from miniproto.raw.types import MessageActionSetMessagesTTL
 
 Public access: `miniproto.raw.types.MessageActionSetMessagesTTL`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import MessageActionSetMessagesTTL
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = MessageActionSetMessagesTTL
 ```
 

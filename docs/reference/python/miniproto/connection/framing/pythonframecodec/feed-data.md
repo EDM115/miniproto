@@ -33,5 +33,4 @@ may pass ordinary socket-read fragments without preserving boundaries.
 
 **Raises:**
 
-- <code>[TransportError](#miniproto.connection.transport.TransportError)</code> – If a complete header or frame is malformed or
-exceeds the configured size bound.
+- <code>[ProtocolValidationError](#miniproto.errors.ProtocolValidationError)</code> – If an inbound header or frame is malformed or exceeds the configured size bound.

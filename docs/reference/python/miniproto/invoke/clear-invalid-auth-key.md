@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.invoke.clear_invalid_auth_key"
 source_path: "src/miniproto/invoke.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L579"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L571"
 module: "miniproto.invoke"
 ---
 

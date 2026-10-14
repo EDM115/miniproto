@@ -28,6 +28,6 @@ holder or protect their contained authorization key.
 - [`MAX_SESSION_STRING_CHARS`](./max-session-string-chars/) — Public attribute `miniproto.session.strings.MAX_SESSION_STRING_CHARS`.
 - [`MAX_DC_OPTIONS`](./max-dc-options/) — Public attribute `miniproto.session.strings.MAX_DC_OPTIONS`.
 - [`MAX_PEERS`](./max-peers/) — Public attribute `miniproto.session.strings.MAX_PEERS`.
-- [`SessionString`](./sessionstring/) — A bearer-secret string whose representation is always redacted.
+- [`SessionString`](./sessionstring/) — Session contents with a redacted ``repr``.
 - [`export_session_string`](./export-session-string/) — Export a typed or decoded session record in a portable bearer format.
 - [`import_session_string`](./import-session-string/) — Import a native, Telethon v1 or Pyrogram string into a validated record.

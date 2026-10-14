@@ -1,9 +1,6 @@
 //! Native encoding and decoding of encrypted MTProto 2.0 message envelopes.
 //!
-//! The Python-visible functions in this module use the same argument and result layout as the
-//! Python fallback. PyO3 preserves `TypeError`, `OverflowError` and source conversion exceptions
-//! before a function body runs; protocol validation after conversion returns `ValueError`. The
-//! functions release the GIL for large byte workloads rather than exposing Rust panics.
+//! These exports use the Python fallback's argument and result layout. PyO3 conversion errors propagate unchanged, and protocol validation returns `ValueError`. Large workloads detach from Python, releasing the GIL on GIL-enabled builds.
 
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -82,12 +79,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
 /// Encodes one encrypted MTProto envelope as Python `mtproto_encode_message`.
 ///
-/// The salt, session/message identifiers, sequence number, body length, `body` and padding form
-/// the inner envelope; `auth_key` encrypts it but is not itself serialized in that envelope.
-/// `client_to_server` chooses MTProto's directional key offset; optional `padding` replaces random
-/// padding. Returns auth-key-id/message-key/ciphertext concatenated in wire
-/// order or `ValueError` for invalid key, body or padding.  For large byte inputs it releases
-/// the GIL while performing the native work.
+/// Serializes the salt, session ID, message ID, sequence number, body length, body and padding, then encrypts them with `auth_key`. Returns the auth-key ID, message key and ciphertext in wire order. `client_to_server` selects the key schedule, and explicit `padding` replaces generated randomness. Invalid key, body or padding values raise `ValueError`, while integer conversion errors propagate from PyO3. Large workloads detach from Python.
 ///
 /// # Arguments
 ///
@@ -218,8 +210,7 @@ pub(crate) fn mtproto_encode_message_raw(input: EnvelopeEncodeInput<'_>) -> PyRe
 
 /// Verifies, decrypts and parses an encrypted MTProto packet for Rust callers.
 ///
-/// Returns the envelope fields and trailing padding or a Python `ValueError` when any header,
-/// cryptographic check, length or padding constraint fails.  It does not interact with the GIL.
+/// Returns envelope fields and padding after checking the key identifiers, message key, body length and padding bounds. Failures return `ValueError`. Callers validate session IDs, message IDs and sequence semantics separately.
 ///
 /// # Arguments
 ///

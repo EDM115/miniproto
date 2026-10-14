@@ -41,12 +41,12 @@ from miniproto.raw.types import UpdateQuickReplies
 
 Public access: `miniproto.raw.types.UpdateQuickReplies`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import UpdateQuickReplies
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = UpdateQuickReplies
 ```
 

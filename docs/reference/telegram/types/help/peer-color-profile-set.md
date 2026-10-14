@@ -43,12 +43,12 @@ from miniproto.raw.types import HelpPeerColorProfileSet
 
 Public access: `miniproto.raw.types.HelpPeerColorProfileSet`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import HelpPeerColorProfileSet
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = HelpPeerColorProfileSet
 ```
 

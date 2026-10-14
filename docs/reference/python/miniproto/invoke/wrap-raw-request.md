@@ -19,11 +19,7 @@ wrap_raw_request(raw_request: object, config: ClientConfig, *, needs_init: bool 
 
 Wrap a raw request for transmission.
 
-``invokeWithLayer(initConnection(...))`` is only added when ``needs_init`` is true,
-i.e. for the first request after a sender (re)connects. Media-lane senders
-additionally wrap that first request in ``invokeWithoutUpdates`` so dedicated file
-sessions never receive update traffic. Serialization happens exactly once, inside
-the sender, when the message body is encoded.
+Add ``invokeWithLayer(initConnection(...))`` when ``needs_init`` is true and the request has no recognized invocation envelope. Media senders can add ``invokeWithoutUpdates`` to disable updates on their dedicated connection. The sender serializes the resulting object for each send attempt.
 
 **Parameters:**
 

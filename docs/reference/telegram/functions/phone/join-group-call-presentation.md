@@ -42,12 +42,12 @@ from miniproto.raw.functions import PhoneJoinGroupCallPresentation
 
 Public access: `miniproto.raw.functions.PhoneJoinGroupCallPresentation`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.functions import PhoneJoinGroupCallPresentation
 
-# Naming the raw request class is local only; it performs no I/O or network request.
+# Refer to the raw request class without constructing it or calling Telegram
 request_type = PhoneJoinGroupCallPresentation
 ```
 

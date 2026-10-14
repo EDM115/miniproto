@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.errors.Unauthorized"
 source_path: "src/miniproto/errors.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L205"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/errors.py#L207"
 aliases: ["miniproto.Unauthorized"]
 module: "miniproto.errors"
 ---

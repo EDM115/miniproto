@@ -1,17 +1,8 @@
 """Backend-neutral cryptographic and TL primitives.
 
-This module preserves one Python API across the optional bundled Rust extension
-and the internal pure-Python fallback.  Dispatch is operation-specific: several
-small scalar paths deliberately keep the benchmarked C-backed Python route,
-while larger or batched paths may use Rust.  Callers should depend on output
-parity, validation errors and :func:`native_available`, not on a backend being
-selected for every call.
+These wrappers select the optional Rust extension or Python fallback per operation. Small hash and scalar-encoding operations use the C-backed Python path, while selected crypto and vector operations use Rust when available. Supported inputs produce matching output, but invalid-input exceptions can differ between backends.
 
-For exported Rust crypto work, the extension detaches from the GIL only when
-its operation-specific input-work estimate exceeds 4 KiB; the Python and
-``cryptography`` fallback routes make no corresponding GIL promise. Public
-wrappers that deliberately use fallback therefore must not be treated as
-GIL-releasing merely because :func:`native_available` is true.
+Rust wrappers using ``detach_if_large`` release the GIL when their work estimate exceeds 4 KiB. The fallback routes make no equivalent guarantee, and :func:`native_available` does not identify the backend used by an individual call.
 """
 
 from __future__ import annotations
@@ -533,12 +524,9 @@ def native_available() -> bool:
     """Report whether a complete bundled Rust backend was selected.
 
     Returns:
-        ``True`` only when the compiled extension imported and exposed the
-        required baseline symbols; ``False`` means public operations use the
-        fallback or a mixed dispatch path.
+        ``True`` when the selected extension reports native support and exposes the required baseline symbols. Individual operations may still use the fallback.
 
-    The result is import-time state, not a benchmark, a capability guarantee for
-    optional session crypto or a security property.
+    This reports import-time selection. Optional session-crypto symbols are checked separately.
     """
     return bool(_native_impl.native_available())
 
@@ -552,14 +540,9 @@ def sha1_digest(data: bytes) -> bytes:
     Returns:
         The 20-byte digest.
 
-    This public hot path deliberately uses the C-backed stdlib fallback even
-    when Rust is loaded because that is benchmarked faster for its small inputs.
-    SHA-1 is exposed for MTProto protocol derivations, not as a general-purpose
-    modern integrity recommendation.
+    Uses the C-backed stdlib fallback even when Rust is loaded. SHA-1 is required by MTProto's protocol derivations.
     """
-    # The public wrapper intentionally uses the Python fallback for the hash-only
-    # helpers because ``tools/bench/benchmark_native_fallback_crypto.py`` measures
-    # the C-backed stdlib path faster than crossing into Rust for these sizes.
+    # Keep hash-only work in hashlib to avoid a PyO3 crossing, see tools/bench/benchmark_native_fallback_crypto.py
     return bytes(_fallback_impl.sha1_digest(data))
 
 
@@ -572,8 +555,7 @@ def sha256_digest(data: bytes) -> bytes:
     Returns:
         The 32-byte digest.
 
-    This public helper uses the Python stdlib fallback so its behavior and
-    performance do not imply Rust dispatch.
+    Uses the Python stdlib fallback even when Rust is loaded.
     """
     return bytes(_fallback_impl.sha256_digest(data))
 
@@ -590,11 +572,8 @@ def mtproto_auth_key_id(auth_key: bytes) -> bytes:
     Raises:
         ValueError: If ``auth_key`` is not 256 bytes.
 
-    This small SHA-1-derived path intentionally uses the benchmarked fallback;
-    its output matches the native implementation.
+    Uses the C-backed Python SHA-1 path even when Rust is loaded.
     """
-    # Keep Rust parity exposed, but prefer the benchmarked C-backed fallback for
-    # this tiny SHA-1 derived value on the public hot path.
     return bytes(_fallback_impl.mtproto_auth_key_id(auth_key))
 
 
@@ -634,8 +613,7 @@ def mtproto_derive_aes_key_iv(auth_key: bytes, msg_key: bytes, *, client_to_serv
     Raises:
         ValueError: If either key input has an invalid length.
 
-    The selected native or fallback implementation is output-compatible.  It
-    derives bytes only and does not erase or retain caller-owned secrets.
+    Uses the selected native or fallback implementation.
     """
     aes_key, aes_iv = _native_impl.mtproto_derive_aes_key_iv(auth_key, msg_key, client_to_server)
     return bytes(aes_key), bytes(aes_iv)
@@ -706,12 +684,11 @@ def mtproto_encode_message(
 
     Args:
         auth_key: Exactly 256 bytes of authorization-key material.
-        server_salt: Unsigned 64-bit salt; bits outside that width are masked.
-        session_id: Unsigned 64-bit session identifier; bits outside that width
-            are masked.
+        server_salt: Unsigned 64-bit salt.
+        session_id: Unsigned 64-bit session identifier.
         msg_id: Signed 64-bit MTProto message identifier.
         seq_no: Signed 32-bit message sequence number.
-        body: TL body bytes no larger than the signed 32-bit protocol limit.
+        body: Four-byte-aligned TL body bytes no larger than the signed 32-bit protocol limit.
         client_to_server: Uses the client-to-server direction by default.
         padding: Optional compliant padding; when omitted the backend generates
             random padding.
@@ -721,10 +698,9 @@ def mtproto_encode_message(
 
     Raises:
         ValueError: If key, body, padding or encrypted-layout constraints fail.
-        OverflowError: If signed ``msg_id`` or ``seq_no`` cannot be encoded.
+        OverflowError: If ``msg_id`` or ``seq_no`` cannot be encoded, or native argument conversion rejects an out-of-range salt or session ID.
 
-    The default random-padding source belongs to the selected backend.  The
-    function returns protocol bytes only; it does not send them.
+    The selected backend supplies the random padding when omitted.
     """
     return bytes(
         _native_impl.mtproto_encode_message(
@@ -781,11 +757,8 @@ def xor_bytes(left: bytes, right: bytes) -> bytes:
     Raises:
         ValueError: If the input lengths differ.
 
-    The public wrapper uses the fallback big-integer implementation because it
-    wins the benchmarked handshake-sized cases; it offers no secret-zeroization.
+    Uses the fallback's Python big-integer XOR implementation.
     """
-    # The fallback uses Python big-int XOR and is faster than crossing into Rust
-    # for the handshake-sized buffers covered by the native/fallback benchmark.
     return bytes(_fallback_impl.xor_bytes(left, right))
 
 
@@ -847,8 +820,7 @@ def aes_256_ctr_crypt(data: BytesLike, key: bytes, iv: bytes) -> bytes:
     and IV for different plaintexts; this wrapper does not enforce uniqueness.
     With ``cryptography`` installed, the benchmarked C-backed fallback is chosen.
     """
-    # ``cryptography``'s C-backed fallback wins the media CTR/CBC benchmark cases
-    # in ``tools/bench/benchmark_native_fallback_crypto.py``.
+    # Prefer cryptography for media CTR/CBC when installed, see tools/bench/benchmark_native_fallback_crypto.py
     implementation = _fallback_impl if _CRYPTOGRAPHY_AVAILABLE else _native_impl
     return bytes(implementation.aes_256_ctr_crypt(data, key, iv))
 
@@ -936,8 +908,7 @@ def aes_256_gcm_decrypt(ciphertext_and_tag: bytes, key: bytes, nonce: bytes, ass
     Raises:
         ValueError: If the key/nonce is invalid or tag authentication fails.
 
-    Selects Rust only if its optional session-crypto capability is available,
-    otherwise ``cryptography``.  Never use returned plaintext after an error.
+    Uses Rust when its optional session-crypto capability is available, otherwise ``cryptography``.
     """
     implementation = _native_session_crypto_function("aes_256_gcm_decrypt")
     if implementation is None:
@@ -979,7 +950,7 @@ def aes_256_gcm_encrypt_native(plaintext: bytes, key: bytes, nonce: bytes, assoc
     Args:
         plaintext: Bytes to protect.
         key: Exactly 32 bytes of AES-256 key material.
-        nonce: Exactly 12 unique bytes for this key.
+        nonce: A 12-byte nonce whose complete value is unique for this key.
         associated_data: Authenticated but unencrypted bytes.
 
     Returns:
@@ -1012,8 +983,7 @@ def aes_256_gcm_decrypt_native(ciphertext_and_tag: bytes, key: bytes, nonce: byt
         RuntimeError: If native session AES-GCM is unavailable.
         ValueError: If inputs are invalid or authentication fails.
 
-    This no-fallback variant is suitable only when native capability is an
-    explicit requirement; do not consume plaintext when it raises.
+    Requires native capability and propagates its errors without retrying through the fallback.
     """
     implementation = _require_native_session_crypto_function("aes_256_gcm_decrypt")
     return bytes(implementation(ciphertext_and_tag, key, nonce, associated_data))
@@ -1084,7 +1054,7 @@ def aes_256_gcm_decrypt_cryptography(
     Raises:
         ValueError: If inputs are rejected or GCM authentication fails.
 
-    This explicitly bypasses Rust; discard all output state after an error.
+    Uses ``cryptography`` directly and normalizes authentication failures to ``ValueError``.
     """
     return bytes(_fallback_impl.aes_256_gcm_decrypt(ciphertext_and_tag, key, nonce, associated_data))
 
@@ -1335,7 +1305,7 @@ def tl_encode_bytes(value: BytesLike) -> bytes:
     """Encode a TL byte string with length prefix and four-byte padding.
 
     Args:
-        value: Bytes-like payload.
+        value: Bytes-like payload of at most ``2**24 - 1`` bytes, the TL length-prefix limit.
     Returns:
         TL length header, payload and zero padding.
 
@@ -1363,7 +1333,7 @@ def tl_encode_string(value: str) -> bytes:
     """UTF-8 encode and TL-frame a string.
 
     Args:
-        value: Unicode string to encode.
+        value: Unicode string whose UTF-8 encoding is at most ``2**24 - 1`` bytes.
     Returns:
         A padded TL byte-string representation.
     """
@@ -1379,8 +1349,7 @@ def tl_decode_string(data: BytesLike, offset: int = 0) -> tuple[str, int]:
     Returns:
         The decoded string and aligned next offset.
     Raises:
-        ValueError: If TL data is truncated.
-        UnicodeDecodeError: If the payload is not valid UTF-8.
+        ValueError: If TL data is truncated or the payload is not valid UTF-8. The Python fallback uses the ``UnicodeDecodeError`` subclass for invalid UTF-8.
     """
     value, new_offset = _tl_decode_impl(data).tl_decode_string(data, offset)
     return str(value), int(new_offset)
@@ -1395,7 +1364,8 @@ def tl_encode_int_vector(values: Iterable[int]) -> bytes:
         Vector constructor, signed count and encoded elements.
     Raises:
         ValueError: If count exceeds the signed 32-bit protocol limit.
-        struct.error: If an element cannot be encoded as signed 32-bit.
+        OverflowError: If native conversion rejects an element outside the signed 32-bit range.
+        struct.error: If the fallback cannot encode an element as signed 32-bit.
 
     Vector batching uses the selected backend; do not rely on lazy iteration after
     this call because ``values`` has been consumed.
@@ -1427,7 +1397,8 @@ def tl_encode_long_vector(values: Iterable[int]) -> bytes:
         Vector constructor, signed count and encoded elements.
     Raises:
         ValueError: If count exceeds the signed 32-bit protocol limit.
-        struct.error: If an element cannot be encoded as signed 64-bit.
+        OverflowError: If native conversion rejects an element outside the signed 64-bit range.
+        struct.error: If the fallback cannot encode an element as signed 64-bit.
     """
     return bytes(_native_impl.tl_encode_long_vector(tuple(values)))
 

@@ -9,7 +9,7 @@ generated: false
 
 Treat Telegram API hashes, phone numbers, bot tokens, 2FA values, authorization keys, session keys, SQLite session files, proxy credentials and portable session strings as secrets. A portable session string is a bearer credential; a protected representation protects it at rest, not inside a compromised process that has already imported it.
 
-The public configuration and model representations omit many secret-bearing fields and project redaction helpers cover common key names. That reduces accidental disclosure in ordinary diagnostics; it does not redact direct attribute access, serialization, process memory, command-line arguments or deliberately printed values. Applications must still control logs, traces, crash reports, backups and access to the running host.
+Miniproto omits common secret fields from public model and configuration representations and redacts recognized key names. It cannot protect direct attribute access, serialization, process memory, command-line arguments or values that callers print. Protect application logs, traces, crash reports, backups and access to the host.
 
 ## Storage and migration boundaries
 

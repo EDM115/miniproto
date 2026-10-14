@@ -1,6 +1,6 @@
 ---
 title: "miniproto.mtproto.state.MTProtoState.record_incoming"
-description: "Record a server message unless it is already known."
+description: "Record a server message unless it is already known, without envelope validation."
 generated: true
 editUrl: false
 language: "python"
@@ -18,7 +18,7 @@ module: "miniproto.mtproto.state"
 record_incoming(msg_id: int, *, content_related: bool = True) -> bool
 ```
 
-Record a server message unless it is already known.
+Record a server message unless it is already known, without envelope validation.
 
 **Parameters:**
 

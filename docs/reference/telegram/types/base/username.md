@@ -55,12 +55,12 @@ from miniproto.raw.types import Username
 
 Public access: `miniproto.raw.types.Username`.
 
-## Safe usage shape
+## Class reference
 
 ```python
 from miniproto.raw.types import Username
 
-# Naming the raw constructor class is local only; it performs no I/O or network request.
+# Refer to the raw constructor class without constructing it or calling Telegram
 constructor_type = Username
 ```
 
