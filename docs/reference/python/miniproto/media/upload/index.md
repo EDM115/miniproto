@@ -24,7 +24,7 @@ Upload sources as concurrent Telegram file parts with bounded read-ahead.
 - [`DEFAULT_UPLOAD_CONCURRENCY`](./default-upload-concurrency/) — Public attribute `miniproto.media.upload.DEFAULT_UPLOAD_CONCURRENCY`.
 - [`ProgressCallback`](./progresscallback/) — Public type alias `miniproto.media.upload.ProgressCallback`.
 - [`FileSource`](./filesource/) — Public type alias `miniproto.media.upload.FileSource`.
-- [`MediaUploadError`](./mediauploaderror/) — Raised for an unsatisfiable part cap or exhausted non-true save results.
+- [`MediaUploadError`](./mediauploaderror/) — Raised for part-cap, source-length or exhausted non-true save failures.
 - [`RawInvoker`](./rawinvoker/) — Public type alias `miniproto.media.upload.RawInvoker`.
 - [`MediaUploadResult`](./mediauploadresult/) — Upload metadata and the MTProto input-file reference to reuse.
 - [`upload_file`](./upload-file/) — Upload a source as MTProto file parts and return its input-file handle.

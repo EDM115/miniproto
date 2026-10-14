@@ -29,6 +29,9 @@ After the channel-aware and zero-count duplicate-key change, one previously reco
 
 `GzipPacked.unpack()` defaults to a 16 MiB total decompressed-output limit. `decode_rpc_response()` and `decode_result_payload()` default to 16 MiB per gzip wrapper and cap nesting at 16 wrappers. `Client` passes `ClientConfig.transport.max_payload_size` to RPC result decoding and pushed-update dispatch, so that setting controls those client paths. Malformed inbound framing is fatal and fails pending RPCs, while recoverable connection and I/O failures continue through bounded reconnection and the configured request retry policy.
 
+## Media input and cancellation
+Uploads combine short reads to fill their measured parts and raise `MediaUploadError` if a reader reaches EOF before the measured size. Keep seekable sources unchanged during transfer, caller-owned readers remain open. Download failure and cancellation now wait for owned work to settle before attempting rollback and auxiliary cleanup, so cancellation can take longer when a writer or finalizer is still running. Multi-session assembly already running in a thread may finish writing the destination before cancellation returns.
+
 ## Generated raw API changes
 
 The raw surface follows the pinned Layer 230 schema policy. A schema update can add/remove generated classes or fields, change available imports and remove a constructor that was present in an earlier snapshot. Regenerate and review the raw diff rather than carrying handwritten patches in generated files. The [schema and layer concept](../concepts/schema-layers.md) describes the source policy; the [development guide](../development.md) gives the authoritative commands.

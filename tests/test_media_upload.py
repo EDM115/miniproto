@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import io
+from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import Any, cast
+from typing import Any, BinaryIO, cast
 
 import pytest
 
@@ -96,6 +98,251 @@ def inner_request(wrapped: object) -> object:
     return wrapped
 
 
+@pytest.fixture
+def upload_spools(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[BinaryIO]]:
+    original_temporary_file = media_upload.tempfile.TemporaryFile
+    spools: list[BinaryIO] = []
+
+    def retain_spool(*args: Any, **kwargs: Any) -> BinaryIO:
+        spool = cast(BinaryIO, original_temporary_file(*args, **kwargs))
+        spools.append(spool)
+        return spool
+
+    monkeypatch.setattr(media_upload.tempfile, "TemporaryFile", retain_spool)
+    try:
+        yield spools
+    finally:
+        for spool in spools:
+            spool.close()
+
+
+def test_upload_file_closes_spool_when_part_cap_cannot_be_met(upload_spools: list[BinaryIO]) -> None:
+    async def scenario() -> None:
+        invoker = FakeInvoker([])
+        with pytest.raises(MediaUploadError):
+            await upload_file(invoker, iter((b"x" * (512 * 1024 + 1),)), part_size=1024, max_file_parts=1)
+        assert invoker.requests == []
+        assert len(upload_spools) == 1
+        assert upload_spools[0].closed
+
+    run(scenario())
+
+
+@pytest.mark.parametrize("await_registration", [False, True])
+def test_upload_file_closes_spool_when_registration_fails(upload_spools: list[BinaryIO], await_registration: bool) -> None:  # fmt: skip
+    async def scenario() -> None:
+        failure = OSError("registration failed")
+
+        async def fail_registration() -> None:
+            raise failure
+
+        class RegistrationInvoker:
+            def register_transfer(self, size: int) -> object:
+                assert size == 7
+                if await_registration:
+                    return fail_registration()
+                raise failure
+
+            async def __call__(self, request: object, **kwargs: object) -> object:
+                raise AssertionError("registration failure must prevent part requests")
+
+        with pytest.raises(OSError) as error:
+            await upload_file(RegistrationInvoker(), iter((b"payload",)))
+        assert error.value is failure
+        assert len(upload_spools) == 1
+        assert upload_spools[0].closed
+
+    run(scenario())
+
+
+def test_upload_file_closes_spool_when_registration_is_cancelled(upload_spools: list[BinaryIO]) -> None:
+    async def scenario() -> None:
+        started = asyncio.Event()
+
+        class RegistrationInvoker:
+            async def register_transfer(self, size: int) -> None:
+                assert size == 7
+                started.set()
+                await asyncio.Future()
+
+            async def __call__(self, request: object, **kwargs: object) -> object:
+                raise AssertionError("registration cancellation must prevent part requests")
+
+        task = asyncio.create_task(upload_file(RegistrationInvoker(), iter((b"payload",))))
+        await asyncio.wait_for(started.wait(), timeout=1.0)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        assert len(upload_spools) == 1
+        assert upload_spools[0].closed
+
+    run(scenario())
+
+
+def test_upload_file_closes_spool_when_file_id_conversion_fails(upload_spools: list[BinaryIO]) -> None:
+    class InvalidFileId:
+        def __int__(self) -> int:
+            raise ValueError("invalid file ID")
+
+    async def scenario() -> None:
+        invoker = FakeInvoker([])
+        with pytest.raises(ValueError, match="invalid file ID"):
+            await upload_file(invoker, iter((b"payload",)), file_id=cast(Any, InvalidFileId()))
+        assert invoker.requests == []
+        assert len(upload_spools) == 1
+        assert upload_spools[0].closed
+
+    run(scenario())
+
+
+@pytest.mark.parametrize("failure_stage", ["preparation", "setup", "transfer", "cancellation"])
+def test_upload_file_preserves_original_failure_when_spool_close_fails(monkeypatch: pytest.MonkeyPatch, failure_stage: str) -> None:  # fmt: skip
+    class CloseFailingSpool(io.BytesIO):
+        def close(self) -> None:
+            super().close()
+            raise OSError("spool close failed")
+
+    async def scenario() -> None:
+        spool = CloseFailingSpool()
+        monkeypatch.setattr(media_upload.tempfile, "TemporaryFile", lambda *args, **kwargs: spool)
+        failure = asyncio.CancelledError("registration cancelled") if failure_stage == "cancellation" else RuntimeError("upload failed")  # fmt: skip
+
+        class FailingInvoker:
+            def register_transfer(self, size: int) -> None:
+                if failure_stage in {"setup", "cancellation"}:
+                    raise failure
+
+            async def __call__(self, request: object, **kwargs: object) -> object:
+                raise failure
+
+        def source() -> Iterator[bytes]:
+            yield b"payload"
+            if failure_stage == "preparation":
+                raise failure
+
+        try:
+            with pytest.raises(type(failure)) as error:
+                await upload_file(FailingInvoker(), source())
+            assert error.value is failure
+            assert spool.closed
+        finally:
+            io.BytesIO.close(spool)
+
+    run(scenario())
+
+
+def test_upload_file_does_not_report_success_when_spool_close_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    class CloseFailingSpool(io.BytesIO):
+        def close(self) -> None:
+            super().close()
+            raise OSError("spool close failed")
+
+    async def scenario() -> None:
+        spool = CloseFailingSpool()
+        events: list[dict[str, object]] = []
+        monkeypatch.setattr(media_upload.tempfile, "TemporaryFile", lambda *args, **kwargs: spool)
+        monkeypatch.setattr(media_upload, "emit_event", lambda *args, **fields: events.append(fields))
+        try:
+            with pytest.raises(OSError, match="spool close failed"):
+                await upload_file(FakeInvoker([types.BoolTrue()]), iter((b"payload",)))
+            assert spool.closed
+            assert not any(event.get("outcome") == "success" for event in events)
+        finally:
+            io.BytesIO.close(spool)
+
+    run(scenario())
+
+
+@pytest.mark.parametrize("failure_stage", ["setup", "transfer", "cancellation"])
+def test_upload_file_leaves_borrowed_reader_open_on_failure(failure_stage: str) -> None:
+    async def scenario() -> None:
+        failure = asyncio.CancelledError("upload cancelled") if failure_stage == "cancellation" else RuntimeError("upload failed")  # fmt: skip
+
+        class FailingInvoker:
+            def register_transfer(self, size: int) -> None:
+                if failure_stage == "setup":
+                    raise failure
+
+            async def __call__(self, request: object, **kwargs: object) -> object:
+                raise failure
+
+        with io.BytesIO(b"payload") as reader:
+            with pytest.raises(type(failure)) as error:
+                await upload_file(FailingInvoker(), reader)
+            assert error.value is failure
+            assert not reader.closed
+
+    run(scenario())
+
+
+@pytest.mark.parametrize("available", [0, 1024, 1025, 2048])
+@pytest.mark.parametrize("big", [False, True])
+def test_upload_file_rejects_premature_eof(monkeypatch: pytest.MonkeyPatch, available: int, big: bool) -> None:
+    class TruncatedReader(io.BytesIO):
+        def read(self, size: int | None = -1, /) -> bytes:
+            remaining = available - self.tell()
+            requested = remaining if size is None or size < 0 else min(size, remaining)
+            return super().read(max(0, requested))
+
+    async def scenario() -> None:
+        if big:
+            monkeypatch.setattr(media_upload, "BIG_FILE_THRESHOLD", 2048)
+        invoker = FakeInvoker([types.BoolTrue()] * 3)
+        with TruncatedReader(b"a" * 1024 + b"b" * 1024 + b"z") as reader:
+            with pytest.raises(MediaUploadError):
+                await asyncio.wait_for(upload_file(invoker, reader, part_size=1024, concurrency=1), timeout=1.0)
+            assert not reader.closed
+
+    run(scenario())
+
+
+@pytest.mark.parametrize("async_reader", [False, True])
+@pytest.mark.parametrize("big", [False, True])
+def test_upload_file_fills_parts_across_nonuniform_short_reads(monkeypatch: pytest.MonkeyPatch, async_reader: bool, big: bool) -> None:  # fmt: skip
+    class ShortReader(io.BytesIO):
+        def __init__(self, payload: bytes) -> None:
+            super().__init__(payload)
+            self.read_sizes = iter((3, 509, 700, 17, 900, 2, 111, 1))
+
+        def read(self, size: int | None = -1, /) -> bytes:
+            if size is None or size < 0:
+                return super().read(next(self.read_sizes, -1))
+            return super().read(min(size, next(self.read_sizes, size)))
+
+    class AsyncShortReader(ShortReader):
+        # upload_file explicitly supports awaited read methods on seekable readers
+        async def read(self, size: int | None = -1, /) -> bytes:  # ty: ignore[invalid-method-override]
+            return ShortReader.read(self, size)
+
+    async def scenario() -> None:
+        if big:
+            monkeypatch.setattr(media_upload, "BIG_FILE_THRESHOLD", 2048)
+        prefix = b"skipped-prefix"
+        payload = b"a" * 1024 + b"bc" * 512 + b"tail"
+        invoker = FakeInvoker([types.BoolTrue()] * 3)
+        progress: list[tuple[int, int | None]] = []
+        reader_type = AsyncShortReader if async_reader else ShortReader
+        with reader_type(prefix + payload) as reader:
+            reader.seek(len(prefix))
+            result = await upload_file(invoker, reader, part_size=1024, concurrency=2, file_id=11, progress=lambda current, total: progress.append((current, total)))  # fmt: skip
+            assert not reader.closed
+            assert reader.tell() == len(prefix) + len(payload)
+        assert {request.file_part: request.bytes for request in invoker.requests} == {0: b"a" * 1024, 1: b"bc" * 512, 2: b"tail"}  # fmt: skip
+        assert result.size == 2052
+        assert result.parts == result.input_file.parts == len(invoker.requests) == 3
+        assert progress[-1] == (2052, 2052)
+        if big:
+            assert isinstance(result.input_file, types.InputFileBig)
+            assert result.md5_checksum is None
+            assert all(isinstance(request, functions.UploadSaveBigFilePart) and request.file_total_parts == 3 for request in invoker.requests)  # fmt: skip
+        else:
+            assert isinstance(result.input_file, types.InputFile)
+            checksum = hashlib.md5(payload, usedforsecurity=False).hexdigest()
+            assert result.md5_checksum == result.input_file.md5_checksum == checksum
+
+    run(scenario())
+
+
 def test_upload_file_defaults_to_45s_part_timeout() -> None:
     async def scenario() -> None:
         invoker = FakeInvoker([types.BoolTrue()])
@@ -148,7 +395,7 @@ def test_upload_file_propagates_reader_errors_without_hanging() -> None:
     run(scenario())
 
 
-def test_upload_file_cancels_pending_part_tasks_when_outer_upload_is_cancelled() -> None:
+def test_upload_file_cancels_pending_part_tasks_when_outer_upload_is_cancelled(upload_spools: list[BinaryIO]) -> None:
     async def scenario() -> None:
         started = asyncio.Event()
         active = 0
@@ -165,12 +412,14 @@ def test_upload_file_cancels_pending_part_tasks_when_outer_upload_is_cancelled()
             finally:
                 cancelled += 1
 
-        task = asyncio.create_task(upload_file(invoke, b"x" * (4 * 1024), part_size=1024, concurrency=2))
+        task = asyncio.create_task(upload_file(invoke, iter((b"x" * (4 * 1024),)), part_size=1024, concurrency=2))
         await asyncio.wait_for(started.wait(), timeout=1.0)
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
             await task
         assert cancelled >= 2
+        assert len(upload_spools) == 1
+        assert upload_spools[0].closed
 
     run(scenario())
 
@@ -266,7 +515,7 @@ def test_client_reads_upload_limit_parts_from_app_config() -> None:
     run(scenario())
 
 
-def test_upload_file_spools_unknown_size_iterables_and_retries_false_parts() -> None:
+def test_upload_file_spools_unknown_size_iterables_and_retries_false_parts(upload_spools: list[BinaryIO]) -> None:
     async def scenario() -> None:
         invoker = FakeInvoker([types.BoolFalse(), types.BoolTrue()])
         source = (chunk for chunk in (b"ab", b"cd"))
@@ -275,6 +524,8 @@ def test_upload_file_spools_unknown_size_iterables_and_retries_false_parts() -> 
         assert result.size == 4
         assert [request.file_part for request in invoker.requests] == [0, 0]
         assert invoker.requests[0].bytes == b"abcd"
+        assert len(upload_spools) == 1
+        assert upload_spools[0].closed
 
     run(scenario())
 

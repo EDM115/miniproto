@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.client.Client.iter_updates"
 source_path: "src/miniproto/client.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L1811"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L1864"
 aliases: ["miniproto.Client.iter_updates"]
 module: "miniproto.client"
 ---

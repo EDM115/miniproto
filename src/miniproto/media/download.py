@@ -1330,10 +1330,19 @@ async def _iter_download_parts(
                 f"incomplete streamed download coverage for [{offset}, {end_offset}); stopped at {next_yield_offset}"
             )
         await reporter.finish(downloaded)
+    except GeneratorExit:
+        raise
+    except BaseException:
+        # Preserve the original failure while part finalizers settle through further cancellation
+        with suppress(asyncio.CancelledError):
+            await _cancel_tasks(pending)
+        raise
     finally:
-        await _cancel_tasks(pending)
-        for charge in charges.values():
-            window.release(charge)
+        try:
+            await _cancel_tasks(pending)
+        finally:
+            for charge in charges.values():
+                window.release(charge)
 
 
 async def download_file(
@@ -1402,7 +1411,7 @@ async def download_file(
 
     Destination Ownership and Rollback:
         ``None`` creates an internal ``BytesIO``. Paths create parent directories and overwrite existing non-resume contents. Resume truncates any non-1-KiB tail and retains at most the requested limit. Cleanup removes new paths, truncates existing paths to the retained prefix, clears internal buffers and restores caller ``BytesIO`` contents and position. Other caller streams remain open without rollback.
-        An exception from progress reporting or a completed write acknowledgement during error handling can interrupt cleanup. Payload/key buffers are not explicitly zeroized. The local byte window excludes the writer queue, cached payloads, prefetch and extra hash-verification requests.
+        Failure cleanup joins owned part and writer tasks before restoring the destination, including under repeated cancellation. Secondary progress, write acknowledgement or cleanup errors do not replace the original failure. Progress callbacks remain cancellable during error reporting. Filesystem restoration errors are logged. Borrowed range-cache work remains cache-owned. Payload/key buffers are not explicitly zeroized. The local byte window excludes the writer queue, cached payloads, prefetch and extra hash-verification requests.
 
     Raises:
         ValueError: An offset, limit, part/cache/window option is invalid.
@@ -1410,8 +1419,8 @@ async def download_file(
         MediaDownloadError: A response, finite range or destination write is invalid.
         MediaIntegrityError: Optional plain-file integrity verification fails.
         CdnIntegrityError: CDN hash coverage or digest verification fails.
-        OSError: A path destination cannot be created, written or restored.
-        asyncio.CancelledError: The transfer is cancelled, subject to the cleanup conditions above.
+        OSError: A path destination cannot be created, written, flushed or truncated.
+        asyncio.CancelledError: The transfer is cancelled after owned work settles and destination cleanup is attempted.
     """
     _validate_download_options(
         offset,
@@ -1521,7 +1530,11 @@ async def download_file(
                 )
                 write_acks.append((acknowledgement, len(payload)))
                 await report_committed()
-        finally:
+        except BaseException:
+            with suppress(BaseException):
+                await parts.aclose()
+            raise
+        else:
             await parts.aclose()
         stats = await writer.close()
         _record_writer_stats(stats)
@@ -1538,34 +1551,40 @@ async def download_file(
             data=destination_handle.get_data(),
             raw_location=location_state.current,
         )
-    except asyncio.CancelledError:
-        await report_committed()
-        if writer is not None:
-            await writer.abort()
-        if write_acks:
-            await asyncio.gather(*(ack for ack, _size in write_acks), return_exceptions=True)
-        await _cleanup_failed_destination(destination_handle)
-        duration_ms = (time.perf_counter() - started) * 1000
-        record_metric("media.download.errors", 1, attributes={"concurrency": concurrency, "limit": limit})
-        emit_event(
-            _LOGGER,
-            40,
-            "media.download",
-            outcome="error",
-            offset=offset,
-            limit=limit,
-            part_size=part_size,
-            concurrency=concurrency,
-            duration_ms=duration_ms,
-        )
-        raise
     except BaseException:
-        await report_committed()
-        if writer is not None:
-            await writer.abort()
-        if write_acks:
-            await asyncio.gather(*(ack for ack, _size in write_acks), return_exceptions=True)
-        await _cleanup_failed_destination(destination_handle)
+        # User callbacks remain cancellable, owned resource settlement survives repeated cancellation
+        with suppress(BaseException):
+            await report_committed()
+
+        async def cleanup() -> None:
+            """Settle owned writes and restore the destination under repeated cancellation."""
+            try:
+                if writer is not None:
+                    await writer.abort()
+            finally:
+                try:
+                    if write_acks:
+                        await asyncio.gather(*(ack for ack, _size in write_acks), return_exceptions=True)
+                finally:
+                    await _cleanup_failed_destination(destination_handle)
+
+        cleanup_task = asyncio.create_task(cleanup())
+        while not cleanup_task.done():
+            try:
+                # Wait for completion without installing a shield callback that reports later cleanup errors
+                await asyncio.wait((cleanup_task,))
+            except asyncio.CancelledError:
+                continue
+        try:
+            cleanup_task.result()
+        except BaseException as cleanup_error:
+            emit_event(
+                _LOGGER,
+                logging.ERROR,
+                "media.download.cleanup_failed",
+                outcome="error",
+                error_type=type(cleanup_error).__name__,
+            )
         duration_ms = (time.perf_counter() - started) * 1000
         record_metric("media.download.errors", 1, attributes={"concurrency": concurrency, "limit": limit})
         emit_event(
@@ -2898,17 +2917,21 @@ async def _cleanup_failed_destination(destination: _DestinationHandle) -> None:
     """
     if destination.path is not None:
         if destination.remove_on_cancel:
-            if destination.should_close and not destination.handle.closed:
-                destination.handle.close()
-            destination.path.unlink(missing_ok=True)
+            try:
+                if destination.should_close and not destination.handle.closed:
+                    destination.handle.close()
+            finally:
+                destination.path.unlink(missing_ok=True)
             return
 
         def restore_prefix() -> None:
             """Restore a resumed path to the aligned bytes present before this transfer."""
-            destination.handle.truncate(destination.existing_bytes)
-            destination.handle.flush()
-            if destination.should_close:
-                destination.handle.close()
+            try:
+                destination.handle.truncate(destination.existing_bytes)
+                destination.handle.flush()
+            finally:
+                if destination.should_close:
+                    destination.handle.close()
 
         await asyncio.to_thread(restore_prefix)
         return
@@ -2923,7 +2946,7 @@ async def _cleanup_failed_destination(destination: _DestinationHandle) -> None:
 
 
 async def _cancel_tasks(pending: set[asyncio.Task[Any]]) -> None:
-    """Cancel every pending task and await their terminal cleanup without propagating errors.
+    """Cancel pending tasks once and join their finalizers before propagating caller cancellation.
 
     Args:
         pending: Outstanding tasks to cancel and gather with exceptions suppressed.
@@ -2932,7 +2955,17 @@ async def _cancel_tasks(pending: set[asyncio.Task[Any]]) -> None:
         return
     for task in pending:
         task.cancel()
-    await asyncio.gather(*pending, return_exceptions=True)
+    settled = asyncio.gather(*pending, return_exceptions=True)
+    cancellation: asyncio.CancelledError | None = None
+    while not settled.done():
+        try:
+            await asyncio.shield(settled)
+        except asyncio.CancelledError as exc:
+            if cancellation is None:
+                cancellation = exc
+    pending.clear()
+    if cancellation is not None:
+        raise cancellation
 
 
 async def _call_progress(progress: ProgressCallback | None, current: int, total: int | None) -> None:

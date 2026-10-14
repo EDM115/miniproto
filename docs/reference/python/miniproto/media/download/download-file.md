@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.media.download.download_file"
 source_path: "src/miniproto/media/download.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L1339"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L1348"
 aliases: ["miniproto.media.download_file"]
 module: "miniproto.media.download"
 ---
@@ -58,7 +58,7 @@ Download media into memory, a path or a caller-owned binary stream.
 <summary>Destination Ownership and Rollback</summary>
 
 ``None`` creates an internal ``BytesIO``. Paths create parent directories and overwrite existing non-resume contents. Resume truncates any non-1-KiB tail and retains at most the requested limit. Cleanup removes new paths, truncates existing paths to the retained prefix, clears internal buffers and restores caller ``BytesIO`` contents and position. Other caller streams remain open without rollback.
-An exception from progress reporting or a completed write acknowledgement during error handling can interrupt cleanup. Payload/key buffers are not explicitly zeroized. The local byte window excludes the writer queue, cached payloads, prefetch and extra hash-verification requests.
+Failure cleanup joins owned part and writer tasks before restoring the destination, including under repeated cancellation. Secondary progress, write acknowledgement or cleanup errors do not replace the original failure. Progress callbacks remain cancellable during error reporting. Filesystem restoration errors are logged. Borrowed range-cache work remains cache-owned. Payload/key buffers are not explicitly zeroized. The local byte window excludes the writer queue, cached payloads, prefetch and extra hash-verification requests.
 
 </details>
 
@@ -69,5 +69,5 @@ An exception from progress reporting or a completed write acknowledgement during
 - <code>[MediaDownloadError](#miniproto.media.download.MediaDownloadError)</code> – A response, finite range or destination write is invalid.
 - <code>[MediaIntegrityError](#miniproto.media.download.MediaIntegrityError)</code> – Optional plain-file integrity verification fails.
 - <code>[CdnIntegrityError](#miniproto.media.cdn.CdnIntegrityError)</code> – CDN hash coverage or digest verification fails.
-- <code>[OSError](#OSError)</code> – A path destination cannot be created, written or restored.
-- <code>[CancelledError](#asyncio.CancelledError)</code> – The transfer is cancelled, subject to the cleanup conditions above.
+- <code>[OSError](#OSError)</code> – A path destination cannot be created, written, flushed or truncated.
+- <code>[CancelledError](#asyncio.CancelledError)</code> – The transfer is cancelled after owned work settles and destination cleanup is attempted.

@@ -674,7 +674,7 @@
       "path": "python/miniproto/client/client/invoke.md",
       "qualified_name": "miniproto.client.Client.invoke",
       "route": "/reference/python/miniproto/client/client/invoke/",
-      "sha256": "38f6461d72ae7231b2fc707ddf2094f341797c57e16b2257f9d55835bc907141",
+      "sha256": "014ffc2635672b35e8d98db34ee8f34d394c1c5f0e313a40839b97bbb8d71237",
       "source_path": "src/miniproto/client.py"
     },
     {
@@ -701,7 +701,7 @@
       "path": "python/miniproto/client/client/iter-updates.md",
       "qualified_name": "miniproto.client.Client.iter_updates",
       "route": "/reference/python/miniproto/client/client/iter-updates/",
-      "sha256": "fe450982d61c03c2bb685998c74aeb366d08ff041b10e3516432691f1758b6d5",
+      "sha256": "1bb5240b25d1a57a5bf5f43ec71669b27658b74094b695fd8c29524153d4298b",
       "source_path": "src/miniproto/client.py"
     },
     {
@@ -710,7 +710,7 @@
       "path": "python/miniproto/client/client/on.md",
       "qualified_name": "miniproto.client.Client.on",
       "route": "/reference/python/miniproto/client/client/on/",
-      "sha256": "0398405179209eedbe393190a1761b4ba0fdd378dcc45abf0eb04206faa17612",
+      "sha256": "9ca0f6b4608ece9132f76c5aa322c19c4928859d36c57c73c4f2e1c12b16f78a",
       "source_path": "src/miniproto/client.py"
     },
     {
@@ -2312,7 +2312,7 @@
       "path": "python/miniproto/media/download/download-file.md",
       "qualified_name": "miniproto.media.download.download_file",
       "route": "/reference/python/miniproto/media/download/download-file/",
-      "sha256": "b41bfd1fa47c5d51488aa3645231b7b4a28c4d4b5521904ba2f674ad4a5ff3da",
+      "sha256": "5247b4fcf0e4dd1a3a2fee708aef0bed4e864f0691df787247229f8fe3053a74",
       "source_path": "src/miniproto/media/download.py"
     },
     {
@@ -2321,7 +2321,7 @@
       "path": "python/miniproto/media/download/download-location-from-media.md",
       "qualified_name": "miniproto.media.download.download_location_from_media",
       "route": "/reference/python/miniproto/media/download/download-location-from-media/",
-      "sha256": "51915862f3053c0e46a4122e1b68a03e74740f33fba1cf5a232482368c9f2c52",
+      "sha256": "7017281606e1a73fc7b2adf8cfca46c05dee980dfff8a875b1bab287cf873c03",
       "source_path": "src/miniproto/media/download.py"
     },
     {
@@ -2330,7 +2330,7 @@
       "path": "python/miniproto/media/download/download-media.md",
       "qualified_name": "miniproto.media.download.download_media",
       "route": "/reference/python/miniproto/media/download/download-media/",
-      "sha256": "276c0538373895c47948b7ec1373d6742e5fe80774343b944be088d9ab5cbc89",
+      "sha256": "5f1f08c8f6d70c08cd3b0a419de326b1be7748d4c5baa5294a28086df0930b64",
       "source_path": "src/miniproto/media/download.py"
     },
     {
@@ -2402,7 +2402,7 @@
       "path": "python/miniproto/media/download/iter-download-media.md",
       "qualified_name": "miniproto.media.download.iter_download_media",
       "route": "/reference/python/miniproto/media/download/iter-download-media/",
-      "sha256": "2c30d472d27d3ac4b4a5687a3014dd5c6f95fc10877aaf737e3ddfd9c716bff9",
+      "sha256": "25efa8012f6520d008b7b05e573bcea2d2a16c1bcd7c4a8265c4b427debd3918",
       "source_path": "src/miniproto/media/download.py"
     },
     {
@@ -2429,7 +2429,7 @@
       "path": "python/miniproto/media/download/media-from-raw.md",
       "qualified_name": "miniproto.media.download.media_from_raw",
       "route": "/reference/python/miniproto/media/download/media-from-raw/",
-      "sha256": "fcaa0225155c03214cef19210d11fe8535a488501fc1982a835db56ccad776ae",
+      "sha256": "342582d5a0fbeaf5f5b8e38742fd7059d0d24739bdd444625fa342a78ceaf8c9",
       "source_path": "src/miniproto/media/download.py"
     },
     {
@@ -2465,7 +2465,7 @@
       "path": "python/miniproto/media/index.md",
       "qualified_name": "miniproto.media",
       "route": "/reference/python/miniproto/media/",
-      "sha256": "96dac88a650717637b65afdea8f36af71c5ef5445ca5703ef174f75f7e7485e3",
+      "sha256": "500b58b196d80bae390948c57bc6973dc8ae9a9fbbb16390986046c0cb61a44e",
       "source_path": "src/miniproto/media/__init__.py"
     },
     {
@@ -2717,7 +2717,7 @@
       "path": "python/miniproto/media/upload/index.md",
       "qualified_name": "miniproto.media.upload",
       "route": "/reference/python/miniproto/media/upload/",
-      "sha256": "5f60097985b56bee31dc9b251705b2d4afb66eedd9f45246e4176b504e110810",
+      "sha256": "e8d779b2ce78b5f76d3d4a3b349ca91723cfe3f0f02a1c2234dcc623dc2f27b7",
       "source_path": "src/miniproto/media/upload.py"
     },
     {
@@ -2726,7 +2726,7 @@
       "path": "python/miniproto/media/upload/mediauploaderror.md",
       "qualified_name": "miniproto.media.upload.MediaUploadError",
       "route": "/reference/python/miniproto/media/upload/mediauploaderror/",
-      "sha256": "e6d431109e0315485cef97e49514ca43855166ea7c1520d513648cb95909c13e",
+      "sha256": "b60cc72cac494e1a3a6dc2b48615bdc4e7edb41b490a03bb271a70e285c9af5f",
       "source_path": "src/miniproto/media/upload.py"
     },
     {
@@ -2762,7 +2762,7 @@
       "path": "python/miniproto/media/upload/upload-file.md",
       "qualified_name": "miniproto.media.upload.upload_file",
       "route": "/reference/python/miniproto/media/upload/upload-file/",
-      "sha256": "a1cda8395774e02098b0f1ed1751290d5dd500d3edce13dafb8b9d97c711b280",
+      "sha256": "3a1a2c2df5adb85345d6789b1d8a55ff1978ebb1bd9ef9885e591fd68a403a57",
       "source_path": "src/miniproto/media/upload.py"
     },
     {
@@ -42114,7 +42114,7 @@
     "src/miniproto/auth/key_exchange.py": "12459c68b48f010e65eef38a35bab8a0a7348527ef3617ed4f240ab2cf9fa987",
     "src/miniproto/auth/password.py": "70587004f5b4e2f9f90ea8522d1605fa3827bea83fafbb205ad89e3a3425dfb6",
     "src/miniproto/auth/service.py": "e128623b4d7199e404da39f24ca953f5c14a699602afc8ae2933f262ef4b7784",
-    "src/miniproto/client.py": "0996183c55391cd1279bfa15b3055c676f76db6a02d554b2dfa38d86b465f4b7",
+    "src/miniproto/client.py": "fba6d4f32db474755c0cd88c210772be794b2e063aaeeb90baa932fc96a2edcd",
     "src/miniproto/config.py": "992b0ea826524dcca1bd542130c2eb56f4f6a5b9b20bb89c51595bfa513148b7",
     "src/miniproto/connection/__init__.py": "0c50ff1009abf8e945c7b4d80dc3fce60674a2a10dfd111255c53f14ab6cb262",
     "src/miniproto/connection/framing.py": "eb26bb1a4506445f67472a570d54e4af1c5d12e5e06aaabc49d96041b21414b1",
@@ -42131,11 +42131,11 @@
     "src/miniproto/invoke.py": "effe9dc331901bf066ecc7dd95a047bf5e2bf9e3db049581e4a691f679e7b291",
     "src/miniproto/media/__init__.py": "202ebc31adaf6a9438c4aa1588ccfb76d67ca92ba1dafb4192a050ef5122c4a0",
     "src/miniproto/media/cdn.py": "3ce93acbb25b29af2e586529c2c3ce5f2154155d040c3c817e8f42bd64cff64d",
-    "src/miniproto/media/download.py": "fe0945a8bfe81fb769d855f4ef83d160bdb5eebbd6ad9b8bd96859b2b9ca6e77",
+    "src/miniproto/media/download.py": "257f64c38f2d839bd34a8188b10253da6a473fbc075452e4ab281a3ab05f4a1b",
     "src/miniproto/media/multi_session.py": "063ce91db4bb4bce769e45209afe069adb1040adb3a545d44fe12c231ecb81ab",
     "src/miniproto/media/retry.py": "6beaf0342c831a7e37336dc7dacdc2f47fead31f5cf2b5e46eb349b4d10fcd81",
     "src/miniproto/media/scheduler.py": "1769c624c7e64aa40b001a3efe1a966e78daced95b71e2fd819a9da2a8f623fc",
-    "src/miniproto/media/upload.py": "aaf53ea14ef11c706fb16a794b43270f134266658efbc8c7cdc8a4190a311ed0",
+    "src/miniproto/media/upload.py": "42884ea6db4c21e99e4f830ac745821608f32444118ca3117f8d0731c8756d06",
     "src/miniproto/messages.py": "714b69182148ed512d649ef6d36c01a9d6e6940cc6eb6ba3608205ad99e4bbf2",
     "src/miniproto/mtproto/__init__.py": "1b6451d4fb1f5e1bddc2dd889f283a7708d1b18f8f710c2176a21283187ad838",
     "src/miniproto/mtproto/codec.py": "36c61c8a6002d440b5ecd166c276f9324318c8229f1bc201ae02223f4a3af1e8",

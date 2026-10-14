@@ -44,9 +44,9 @@ type FileSource = (
 
 
 class MediaUploadError(RuntimeError):
-    """Raised for an unsatisfiable part cap or exhausted non-true save results.
+    """Raised for part-cap, source-length or exhausted non-true save failures.
 
-    Transport, RPC, cancellation and source failures propagate their original exceptions. This error marks a part cap that cannot fit 512 KiB parts, or a save result other than ``True`` or ``BoolTrue`` after retries are exhausted.
+    Transport, RPC, cancellation and source exceptions propagate unchanged. This error marks a part cap that cannot fit 512 KiB parts, a source that ends before its measured length or returns more bytes than requested, or a save result other than ``True`` or ``BoolTrue`` after retries are exhausted.
     """
 
     pass
@@ -134,10 +134,10 @@ async def upload_file(
     Raises:
         ValueError: If options are invalid or the normalized source is empty.
         TypeError: If a streamed source yields an unsupported chunk type.
-        MediaUploadError: If part-count constraints cannot be met or Telegram rejects a part.
+        MediaUploadError: If part-count constraints cannot be met, the source cannot fill its measured length or Telegram rejects a part.
         asyncio.CancelledError: The upload is cancelled, active producer and part tasks are cancelled and joined once part-transfer execution has started.
 
-    The small-file checksum covers the bytes read. Seekable readers start at their initial offset and remain at their final read position. One-shot streams and iterables are consumed into an owned temporary spool before any part is sent. Part-transfer cleanup closes the spool on success, failure or cancellation.
+    The small-file checksum covers all uploaded bytes. Short nonempty reads are combined into complete parts, with a partial final part when needed. An EOF before the measured length fails the upload. Seekable readers start at their initial offset and remain at their final read position. One-shot streams and iterables are consumed into an owned temporary spool before any part is sent. Cleanup closes the spool on success, setup or transfer failure, or cancellation, preserving an existing failure if spool closure also fails.
     """
     _validate_upload_options(
         part_size, concurrency, max_retries, max_buffer_size, flood_sleep_threshold, max_file_parts
@@ -146,168 +146,189 @@ async def upload_file(
         request_timeout = DEFAULT_UPLOAD_PART_TIMEOUT
     started = time.perf_counter()
     prepared = await _prepare_upload_source(source, file_name=file_name, chunk_size=part_size)
-    if prepared.size <= 0:
-        prepared.cleanup()
-        raise ValueError("empty file upload is not supported")
-    part_size = _part_size_for_part_limit(prepared.size, part_size, max_file_parts)
-    register_transfer = getattr(invoke, "register_transfer", None)
-    if callable(register_transfer):
-        registered = register_transfer(prepared.size)
-        if inspect.isawaitable(registered):
-            await registered
-    actual_file_id = secrets.randbits(63) or 1 if file_id is None else int(file_id)
-    total_parts = math.ceil(prepared.size / part_size)
-    is_big = prepared.size > BIG_FILE_THRESHOLD
-    md5 = None if is_big else hashlib.md5(usedforsecurity=False)
-    completed = 0
-    progress_lock = asyncio.Lock()
-    pending: set[asyncio.Task[None]] = set()
-    # Queue one read-ahead window alongside active sends, synchronous file reads use a worker thread
-    read_queue: asyncio.Queue[tuple[int, bytes] | None] = asyncio.Queue(maxsize=max(2, concurrency))
+    cleanup_pending = True
+    try:
+        if prepared.size <= 0:
+            raise ValueError("empty file upload is not supported")
+        part_size = _part_size_for_part_limit(prepared.size, part_size, max_file_parts)
+        register_transfer = getattr(invoke, "register_transfer", None)
+        if callable(register_transfer):
+            registered = register_transfer(prepared.size)
+            if inspect.isawaitable(registered):
+                await registered
+        actual_file_id = secrets.randbits(63) or 1 if file_id is None else int(file_id)
+        total_parts = math.ceil(prepared.size / part_size)
+        is_big = prepared.size > BIG_FILE_THRESHOLD
+        md5 = None if is_big else hashlib.md5(usedforsecurity=False)
+        completed = 0
+        completed_parts = 0
+        progress_lock = asyncio.Lock()
+        pending: set[asyncio.Task[None]] = set()
+        # Queue one read-ahead window alongside active sends, synchronous file reads use a worker thread
+        read_queue: asyncio.Queue[tuple[int, bytes] | None] = asyncio.Queue(maxsize=max(2, concurrency))
 
-    async def produce_parts(reader: BinaryIO) -> None:
-        """Read ordered parts into the bounded queue and signal completion when the consumer can receive it.
+        async def produce_parts(reader: BinaryIO) -> None:
+            """Read ordered parts into the bounded queue and signal completion when the consumer can receive it.
 
-        Args:
-            reader: Normalized binary reader positioned at the upload start.
-        """
-        try:
-            for part_index in range(total_parts):
-                payload = await _read_chunk_threaded(reader, part_size)
-                if not payload:
-                    break
-                if md5 is not None:
-                    md5.update(payload)
-                await read_queue.put((part_index, payload))
-        finally:
-            # Signal read failure to the consumer, which awaits the producer to recover the original exception
-            # A cancelled producer must not wait for space when the consumer is already unwinding
-            current_task = asyncio.current_task()
-            if current_task is not None and current_task.cancelling():
-                with suppress(asyncio.QueueFull):
-                    read_queue.put_nowait(None)
-            else:
-                try:
-                    await read_queue.put(None)
-                except asyncio.CancelledError:
+            Args:
+                reader: Normalized binary reader positioned at the upload start.
+            """
+            try:
+                for part_index in range(total_parts):
+                    expected_size = min(part_size, prepared.size - part_index * part_size)
+                    payload = await _read_chunk_threaded(reader, expected_size)
+                    if len(payload) < expected_size:
+                        chunks: list[bytes] = []
+                        received = 0
+                        while received < expected_size:
+                            if not payload:
+                                raise MediaUploadError(f"upload source ended before its measured size of {prepared.size} bytes")  # fmt: skip
+                            chunks.append(payload)
+                            received += len(payload)
+                            if received < expected_size:
+                                payload = await _read_chunk_threaded(reader, expected_size - received)
+                        payload = b"".join(chunks)
+                    if len(payload) != expected_size:
+                        raise MediaUploadError("upload source returned more bytes than requested")
+                    if md5 is not None:
+                        md5.update(payload)
+                    await read_queue.put((part_index, payload))
+            finally:
+                # Signal read failure to the consumer, which awaits the producer to recover the original exception
+                # A cancelled producer must not wait for space when the consumer is already unwinding
+                current_task = asyncio.current_task()
+                if current_task is not None and current_task.cancelling():
                     with suppress(asyncio.QueueFull):
                         read_queue.put_nowait(None)
-                    raise
+                else:
+                    try:
+                        await read_queue.put(None)
+                    except asyncio.CancelledError:
+                        with suppress(asyncio.QueueFull):
+                            read_queue.put_nowait(None)
+                        raise
 
-    async def upload_part(part_index: int, payload: bytes) -> None:
-        """Save one queued part and serialize byte-count progress updates.
+        async def upload_part(part_index: int, payload: bytes) -> None:
+            """Save one queued part and serialize byte-count progress updates.
 
-        Args:
-            part_index: Zero-based Telegram part index.
-            payload: Exact bytes for this part.
-        """
-        nonlocal completed
-        await _save_part(
-            invoke,
-            file_id=actual_file_id,
-            part_index=part_index,
-            total_parts=total_parts,
-            payload=payload,
-            big=is_big,
-            max_retries=max_retries,
-            request_timeout=request_timeout,
-            flood_sleep_threshold=flood_sleep_threshold,
-        )
-        async with progress_lock:
-            completed += len(payload)
-            await _call_progress(progress, min(completed, prepared.size), prepared.size)
+            Args:
+                part_index: Zero-based Telegram part index.
+                payload: Exact bytes for this part.
+            """
+            nonlocal completed, completed_parts
+            await _save_part(
+                invoke,
+                file_id=actual_file_id,
+                part_index=part_index,
+                total_parts=total_parts,
+                payload=payload,
+                big=is_big,
+                max_retries=max_retries,
+                request_timeout=request_timeout,
+                flood_sleep_threshold=flood_sleep_threshold,
+            )
+            async with progress_lock:
+                completed += len(payload)
+                completed_parts += 1
+                await _call_progress(progress, min(completed, prepared.size), prepared.size)
 
-    producer: asyncio.Task[None] | None = None
-    try:
-        with prepared.open_reader() as reader:
-            producer = asyncio.create_task(produce_parts(reader))
-            while True:
-                item = await read_queue.get()
-                if item is None:
-                    break
-                part_index, payload = item
-                task = asyncio.create_task(upload_part(part_index, payload))
-                pending.add(task)
-                if len(pending) >= concurrency:
-                    pending = await _await_some(pending)
-            await producer
-            if pending:
-                await _await_all(pending)
-    except BaseException:
+        producer: asyncio.Task[None] | None = None
+        try:
+            with prepared.open_reader() as reader:
+                producer = asyncio.create_task(produce_parts(reader))
+                while True:
+                    item = await read_queue.get()
+                    if item is None:
+                        break
+                    part_index, payload = item
+                    task = asyncio.create_task(upload_part(part_index, payload))
+                    pending.add(task)
+                    if len(pending) >= concurrency:
+                        pending = await _await_some(pending)
+                await producer
+                if pending:
+                    await _await_all(pending)
+                if completed != prepared.size or completed_parts != total_parts:
+                    raise MediaUploadError("saved upload parts do not match the measured source size")
+        except BaseException:
+            duration_ms = (time.perf_counter() - started) * 1000
+            record_metric(
+                "media.upload.errors", 1, attributes={"big": is_big, "parts": total_parts, "concurrency": concurrency}
+            )
+            emit_event(
+                _LOGGER,
+                40,
+                "media.upload",
+                outcome="error",
+                size_bytes=prepared.size,
+                parts=total_parts,
+                part_size=part_size,
+                concurrency=concurrency,
+                big=is_big,
+                duration_ms=duration_ms,
+            )
+            if producer is not None and not producer.done():
+                producer.cancel()
+                await asyncio.gather(producer, return_exceptions=True)
+            await _cancel_pending(pending)
+            raise
+
+        cleanup_pending = False
+        prepared.cleanup()
         duration_ms = (time.perf_counter() - started) * 1000
+        throughput_bytes_s = prepared.size / max(duration_ms / 1000, 1e-9)
         record_metric(
-            "media.upload.errors", 1, attributes={"big": is_big, "parts": total_parts, "concurrency": concurrency}
+            "media.upload.bytes",
+            prepared.size,
+            unit="bytes",
+            attributes={"big": is_big, "parts": total_parts, "concurrency": concurrency},
+        )
+        record_metric(
+            "media.upload.duration",
+            duration_ms,
+            unit="ms",
+            attributes={"big": is_big, "parts": total_parts, "concurrency": concurrency},
+        )
+        record_metric(
+            "media.upload.throughput",
+            throughput_bytes_s,
+            unit="bytes/s",
+            attributes={"big": is_big, "parts": total_parts, "concurrency": concurrency},
         )
         emit_event(
             _LOGGER,
-            40,
+            20,
             "media.upload",
-            outcome="error",
+            outcome="success",
             size_bytes=prepared.size,
             parts=total_parts,
             part_size=part_size,
             concurrency=concurrency,
             big=is_big,
             duration_ms=duration_ms,
+            throughput_bytes_s=throughput_bytes_s,
         )
-        if producer is not None and not producer.done():
-            producer.cancel()
-            await asyncio.gather(producer, return_exceptions=True)
-        await _cancel_pending(pending)
-        raise
+        checksum = md5.hexdigest() if md5 is not None else None
+        if is_big:
+            input_file = types.InputFileBig(id=actual_file_id, parts=total_parts, name=prepared.name)
+        else:
+            input_file = types.InputFile(
+                id=actual_file_id, parts=total_parts, name=prepared.name, md5_checksum=checksum or ""
+            )
+        return MediaUploadResult(
+            file_id=actual_file_id,
+            name=prepared.name,
+            size=prepared.size,
+            parts=total_parts,
+            part_size=part_size,
+            big=is_big,
+            input_file=input_file,
+            md5_checksum=checksum,
+        )
     finally:
-        prepared.cleanup()
-
-    duration_ms = (time.perf_counter() - started) * 1000
-    throughput_bytes_s = prepared.size / max(duration_ms / 1000, 1e-9)
-    record_metric(
-        "media.upload.bytes",
-        prepared.size,
-        unit="bytes",
-        attributes={"big": is_big, "parts": total_parts, "concurrency": concurrency},
-    )
-    record_metric(
-        "media.upload.duration",
-        duration_ms,
-        unit="ms",
-        attributes={"big": is_big, "parts": total_parts, "concurrency": concurrency},
-    )
-    record_metric(
-        "media.upload.throughput",
-        throughput_bytes_s,
-        unit="bytes/s",
-        attributes={"big": is_big, "parts": total_parts, "concurrency": concurrency},
-    )
-    emit_event(
-        _LOGGER,
-        20,
-        "media.upload",
-        outcome="success",
-        size_bytes=prepared.size,
-        parts=total_parts,
-        part_size=part_size,
-        concurrency=concurrency,
-        big=is_big,
-        duration_ms=duration_ms,
-        throughput_bytes_s=throughput_bytes_s,
-    )
-    checksum = md5.hexdigest() if md5 is not None else None
-    if is_big:
-        input_file = types.InputFileBig(id=actual_file_id, parts=total_parts, name=prepared.name)
-    else:
-        input_file = types.InputFile(
-            id=actual_file_id, parts=total_parts, name=prepared.name, md5_checksum=checksum or ""
-        )
-    return MediaUploadResult(
-        file_id=actual_file_id,
-        name=prepared.name,
-        size=prepared.size,
-        parts=total_parts,
-        part_size=part_size,
-        big=is_big,
-        input_file=input_file,
-        md5_checksum=checksum,
-    )
+        if cleanup_pending:
+            with suppress(Exception):
+                prepared.cleanup()
 
 
 def _validate_upload_options(
@@ -471,7 +492,8 @@ async def _materialize_unknown_source(source: object, *, file_name: str | None, 
             name=file_name or _source_name(source), size=size, open_reader=open_temporary, cleanup=temporary.close
         )
     except BaseException:
-        temporary.close()
+        with suppress(Exception):
+            temporary.close()
         raise
 
 

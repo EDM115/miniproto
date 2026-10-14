@@ -1,6 +1,6 @@
 ---
 title: "miniproto.media.upload.MediaUploadError"
-description: "Raised for an unsatisfiable part cap or exhausted non-true save results."
+description: "Raised for part-cap, source-length or exhausted non-true save failures."
 generated: true
 editUrl: false
 language: "python"
@@ -16,6 +16,6 @@ module: "miniproto.media.upload"
 
 Bases: <code>[RuntimeError](#RuntimeError)</code>
 
-Raised for an unsatisfiable part cap or exhausted non-true save results.
+Raised for part-cap, source-length or exhausted non-true save failures.
 
-Transport, RPC, cancellation and source failures propagate their original exceptions. This error marks a part cap that cannot fit 512 KiB parts, or a save result other than ``True`` or ``BoolTrue`` after retries are exhausted.
+Transport, RPC, cancellation and source exceptions propagate unchanged. This error marks a part cap that cannot fit 512 KiB parts, a source that ends before its measured length or returns more bytes than requested, or a save result other than ``True`` or ``BoolTrue`` after retries are exhausted.

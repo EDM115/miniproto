@@ -77,6 +77,9 @@
 🐛 fix : enforce configured gzip output/depth bounds before RPC results commit and keep malformed inbound framing fatal while recovering ordinary I/O failures  
 🐛 fix : encode signed media-only DC IDs  
 🐛 fix : join owned part-task cancellation on public iterator close, reject short destination writes and redact recognized metric attributes before synchronous sink delivery  
+🐛 fix : close owned upload spools on setup failure or cancellation, fill parts across short reads and reject premature EOF instead of reporting unsent bytes as uploaded  
+🐛 fix : settle download writers, part tasks, multi-session workers and running assembly before destination rollback or temporary-file cleanup, preserve the original failure through secondary progress errors and repeated cancellation  
+🐛 fix : select all guarded live integration tests in the release check and verify the built pytest command through offline collection  
 
 ### Documentation
 

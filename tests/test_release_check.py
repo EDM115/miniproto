@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import importlib.util
 import io
 import json
+import os
+import subprocess
+import sys
 import tarfile
 import zipfile
 from pathlib import Path
@@ -196,6 +200,66 @@ def test_quick_mode_is_bounded_and_excludes_artifact_builds(tmp_path: Path) -> N
     assert "benchmark-smoke" not in names
     assert "wheel-sdist" not in names
     assert "clean-import" not in names
+
+
+def test_live_stage_collects_every_integration_smoke(tmp_path: Path) -> None:
+    repo = Path(__file__).resolve().parents[1]
+    stages = build_stages(ReleaseConfig(mode="live", keep_going=False, artifacts_dir=tmp_path), repo=repo)
+    command = next(stage.command for stage in stages if stage.name == "live-integration")
+    assert command is not None
+    environment = build_release_environment(
+        "offline",
+        {
+            name: value
+            for name, value in os.environ.items()
+            if not name.startswith("MINIPROTO_") and name not in {"PYTEST_ADDOPTS", "PYTEST_PLUGINS"}
+        },
+    )
+    environment["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
+    expected_smokes = {
+        "tests/integration/test_auth_live.py::test_live_bot_auth_get_me",
+        "tests/integration/test_auth_live.py::test_live_phone_auth_get_me_and_reconnect",
+        "tests/integration/test_messages_live.py::test_live_saved_messages_send_and_history_read",
+        "tests/integration/test_media_live.py::test_live_saved_messages_media_upload_download",
+    }
+    selected: list[set[str]] = []
+    for pytest_command in ((sys.executable, "-m", "pytest", "tests/integration"), command):
+        collected = subprocess.run(  # noqa: S603 - fixed local pytest commands only collect guarded integration tests
+            (*pytest_command, "--collect-only", "-q"),
+            cwd=repo,
+            env=environment,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        assert collected.returncode == 0, collected.stdout + collected.stderr
+        selected.append({line.strip().replace("\\", "/") for line in collected.stdout.splitlines() if "::" in line})
+    unfiltered, live_stage = selected
+    assert expected_smokes <= unfiltered
+    assert live_stage == unfiltered
+
+
+@pytest.mark.parametrize("mode", ["offline", "quick"])
+@pytest.mark.parametrize("gate", ["MINIPROTO_INTEGRATION", "MINIPROTO_REAL_INTEGRATION"])
+def test_non_live_release_environment_preserves_integration_guards(
+    mode: str, gate: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    helper_path = Path(__file__).parent / "integration" / "live_helpers.py"
+    spec = importlib.util.spec_from_file_location("release_check_live_helpers", helper_path)
+    assert spec is not None and spec.loader is not None
+    live_helpers = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(live_helpers)
+    vars(live_helpers).update(_LOADED_DOTENV=True, _DOTENV_VALUES={})
+    environment = build_release_environment(mode, {"MINIPROTO_INTEGRATION": "1", "MINIPROTO_REAL_INTEGRATION": "1"})
+    for name, value in environment.items():
+        monkeypatch.setenv(name, value)
+    if gate == "MINIPROTO_REAL_INTEGRATION":
+        monkeypatch.setenv("MINIPROTO_INTEGRATION", "1")
+        for name in ("MINIPROTO_API_ID", "MINIPROTO_API_HASH", "MINIPROTO_SESSION_KEY"):
+            monkeypatch.setenv(name, "unused-test-value")
+    with pytest.raises(pytest.skip.Exception, match=f"{gate}=1"):
+        live_helpers.require_real_live()
 
 
 def test_windows_release_environment_prepends_uv_base_python_for_pyo3_dll_resolution() -> None:

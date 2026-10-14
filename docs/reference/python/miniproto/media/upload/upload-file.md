@@ -43,7 +43,7 @@ Upload a source as MTProto file parts and return its input-file handle.
 
 - <code>[ValueError](#ValueError)</code> – If options are invalid or the normalized source is empty.
 - <code>[TypeError](#TypeError)</code> – If a streamed source yields an unsupported chunk type.
-- <code>[MediaUploadError](#miniproto.media.upload.MediaUploadError)</code> – If part-count constraints cannot be met or Telegram rejects a part.
+- <code>[MediaUploadError](#miniproto.media.upload.MediaUploadError)</code> – If part-count constraints cannot be met, the source cannot fill its measured length or Telegram rejects a part.
 - <code>[CancelledError](#asyncio.CancelledError)</code> – The upload is cancelled, active producer and part tasks are cancelled and joined once part-transfer execution has started.
 
-The small-file checksum covers the bytes read. Seekable readers start at their initial offset and remain at their final read position. One-shot streams and iterables are consumed into an owned temporary spool before any part is sent. Part-transfer cleanup closes the spool on success, failure or cancellation.
+The small-file checksum covers all uploaded bytes. Short nonempty reads are combined into complete parts, with a partial final part when needed. An EOF before the measured length fails the upload. Seekable readers start at their initial offset and remain at their final read position. One-shot streams and iterables are consumed into an owned temporary spool before any part is sent. Cleanup closes the spool on success, setup or transfer failure, or cancellation, preserving an existing failure if spool closure also fails.

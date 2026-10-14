@@ -316,7 +316,7 @@ def build_stages(config: ReleaseConfig, *, repo: Path) -> tuple[Stage, ...]:
     if config.mode == "live":
         stages.extend(
             [
-                Stage("live-integration", (python, "-m", "pytest", "tests/integration", "-m", "integration")),
+                Stage("live-integration", (python, "-m", "pytest", "tests/integration")),
                 Stage(
                     "live-benchmark-matrix",
                     (

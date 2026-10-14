@@ -40,7 +40,7 @@ Public download, upload, CDN decryption and range-cache APIs.
 - [`BIG_FILE_THRESHOLD`](./upload/big-file-threshold/) — Public attribute `miniproto.media.upload.BIG_FILE_THRESHOLD`.
 - [`DEFAULT_CHUNK_SIZE`](./upload/default-chunk-size/) — Public attribute `miniproto.media.upload.DEFAULT_CHUNK_SIZE`.
 - [`FileSource`](./upload/filesource/) — Public type alias `miniproto.media.upload.FileSource`.
-- [`MediaUploadError`](./upload/mediauploaderror/) — Raised for an unsatisfiable part cap or exhausted non-true save results.
+- [`MediaUploadError`](./upload/mediauploaderror/) — Raised for part-cap, source-length or exhausted non-true save failures.
 - [`MediaUploadResult`](./upload/mediauploadresult/) — Upload metadata and the MTProto input-file reference to reuse.
 - [`ProgressCallback`](./upload/progresscallback/) — Public type alias `miniproto.media.upload.ProgressCallback`.
 - [`upload_file`](./upload/upload-file/) — Upload a source as MTProto file parts and return its input-file handle.

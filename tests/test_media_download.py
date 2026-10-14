@@ -418,6 +418,54 @@ def test_public_iter_download_close_preserves_borrowed_range_cache(
     run(scenario())
 
 
+def test_iter_download_close_propagates_cancellation_after_part_finalizers_settle() -> None:
+    async def scenario() -> None:
+        cleanup_started = asyncio.Event()
+        cleanup_release = asyncio.Event()
+        cleanup_completed = asyncio.Event()
+        part_tasks: list[asyncio.Task[Any]] = []
+
+        async def invoke(request: object, **kwargs: object) -> object:
+            del kwargs
+            assert isinstance(request, functions.UploadGetFile)
+            if request.offset == 0:
+                return upload_file_part(b"a" * 1024)
+            task = asyncio.current_task()
+            assert task is not None
+            part_tasks.append(task)
+            try:
+                await asyncio.Future()
+            finally:
+                cleanup_started.set()
+                await cleanup_release.wait()
+                cleanup_completed.set()
+
+        iterator = media_download.iter_download(invoke, document_location(), limit=2048, part_size=1024, concurrency=2, launch_stagger=False, adaptive_part_size=False)  # fmt: skip
+        assert await anext(iterator) == b"a" * 1024
+        closing = asyncio.create_task(iterator.aclose())
+        try:
+            await asyncio.wait_for(cleanup_started.wait(), timeout=2.0)
+            closing.cancel("cancel iterator close")
+            loop = asyncio.get_running_loop()
+            barrier = loop.create_future()
+            loop.call_soon(barrier.set_result, None)
+            await barrier
+            assert not closing.done()
+            assert not part_tasks[0].done()
+            closing.cancel("repeat cancellation")
+            cleanup_release.set()
+            with pytest.raises(asyncio.CancelledError, match="cancel iterator close"):
+                await closing
+            assert cleanup_completed.is_set()
+            assert part_tasks[0].done()
+        finally:
+            cleanup_release.set()
+            await asyncio.gather(closing, *part_tasks, return_exceptions=True)
+            await iterator.aclose()
+
+    run(scenario())
+
+
 def test_iter_download_reorders_concurrent_parts_and_matches_download_file() -> None:
     async def scenario() -> None:
         payload = b"a" * 1024 + b"b" * 1024 + b"c" * 1024
@@ -1313,6 +1361,570 @@ def test_download_file_concurrent_does_not_report_target_if_flush_fails(tmp_path
             )
         assert progress
         assert all(current < limit for current, _total in progress)
+
+    run(scenario())
+
+
+@pytest.mark.parametrize("destination_kind", ["new_path", "resume", "bytesio", "internal", "borrowed_file"])
+@pytest.mark.parametrize("secondary_failure", ["acknowledgement", "progress"])
+@pytest.mark.parametrize("cancel", [False, True])
+def test_download_file_unwind_preserves_failure_and_destination(tmp_path, monkeypatch, destination_kind, secondary_failure, cancel) -> None:  # fmt: skip
+    async def scenario() -> None:
+        target = tmp_path / "unwind.bin"
+        original = b"retained-prefix!" * 73 + b"unaligned-tail"
+        retained = original[:1024]
+        destination: Any
+        if destination_kind == "resume":
+            target.write_bytes(original)
+            destination = target
+        elif destination_kind == "new_path":
+            destination = target
+        elif destination_kind == "bytesio":
+            destination = io.BytesIO(original)
+            destination.seek(7)
+        elif destination_kind == "borrowed_file":
+            destination = target.open("w+b")
+            destination.write(original)
+            destination.seek(7)
+        else:
+            destination = None
+        opened: list[media_download._DestinationHandle] = []
+        writers: list[media_download._ConcurrentDestinationWriter] = []
+        acknowledgements: list[asyncio.Future[None]] = []
+        part_tasks: set[asyncio.Task[Any]] = set()
+        acknowledgement_done = asyncio.Event()
+        next_request_ready = asyncio.Event()
+        fail_request = asyncio.Event()
+        original_open = media_download._open_destination
+        original_submit = media_download._ConcurrentDestinationWriter.submit
+        original_write = media_download._ConcurrentDestinationWriter._write
+        primary = RuntimeError("original request failure")
+        secondary = OSError("secondary destination failure")
+        progress: list[tuple[int, int | None]] = []
+
+        def capture_destination(destination, *, resume):
+            handle = original_open(destination, resume=resume)
+            opened.append(handle)
+            return handle
+
+        async def capture_submit(writer, offset, payload, *, wait_for_completion=True):
+            acknowledgement = await original_submit(writer, offset, payload, wait_for_completion=wait_for_completion)
+            writers.append(writer)
+            acknowledgements.append(acknowledgement)
+            acknowledgement.add_done_callback(lambda _future: acknowledgement_done.set())
+            return acknowledgement
+
+        def write_then_fail(writer, offset, payload):
+            original_write(writer, offset, payload)
+            raise secondary
+
+        def fail_progress(current, total):
+            progress.append((current, total))
+            if secondary_failure == "progress":
+                raise secondary
+
+        async def invoke(request: object, **kwargs: object) -> object:
+            del kwargs
+            assert isinstance(request, functions.UploadGetFile)
+            task = asyncio.current_task()
+            assert task is not None
+            part_tasks.add(task)
+            if request.offset == (1024 if destination_kind == "resume" else 0):
+                return upload_file_part(b"n" * 1024)
+            await acknowledgement_done.wait()
+            next_request_ready.set()
+            await fail_request.wait()
+            raise primary
+
+        monkeypatch.setattr(media_download, "_open_destination", capture_destination)
+        monkeypatch.setattr(media_download._ConcurrentDestinationWriter, "submit", capture_submit)
+        if secondary_failure == "acknowledgement":
+            monkeypatch.setattr(media_download._ConcurrentDestinationWriter, "_write", write_then_fail)
+        download = asyncio.create_task(download_file(invoke, document_location(), destination, limit=3072, part_size=1024, concurrency=1, launch_stagger=False, adaptive_part_size=False, resume=destination_kind == "resume", progress=fail_progress))  # fmt: skip
+        try:
+            await asyncio.wait_for(next_request_ready.wait(), timeout=2.0)
+            if cancel:
+                download.cancel("original cancellation")
+            else:
+                fail_request.set()
+            outcome = (await asyncio.gather(download, return_exceptions=True))[0]
+            if cancel:
+                assert download.cancelled(), outcome
+                with pytest.raises(asyncio.CancelledError, match="original cancellation"):
+                    download.result()
+            else:
+                assert outcome is primary
+            assert all(task.done() for task in part_tasks)
+            assert all(writer._worker.done() for writer in writers)
+            assert all(acknowledgement.done() for acknowledgement in acknowledgements)
+            if secondary_failure == "progress":
+                assert progress == [(2048 if destination_kind == "resume" else 1024, 3072)]
+            else:
+                assert progress == []
+            if destination_kind == "new_path":
+                assert opened[0].handle.closed
+                assert not target.exists()
+            elif destination_kind == "resume":
+                assert opened[0].handle.closed
+                assert target.read_bytes() == retained
+            elif destination_kind == "bytesio":
+                assert isinstance(destination, io.BytesIO)
+                assert not destination.closed
+                assert destination.getvalue() == original
+                assert destination.tell() == 7
+            elif destination_kind == "internal":
+                assert opened[0].get_data() == b""
+            else:
+                assert destination is not None
+                assert not destination.closed
+                destination.seek(0)
+                assert destination.read() == original[:7] + b"n" * 1024 + original[1031:]
+        finally:
+            fail_request.set()
+            if not download.done():
+                download.cancel()
+            await asyncio.gather(download, return_exceptions=True)
+            for writer in writers:
+                await writer.abort()
+            for handle in opened:
+                handle.handle.close()
+
+    run(scenario())
+
+
+@pytest.mark.parametrize("cancel", [False, True])
+def test_download_file_unwind_progress_remains_cancellable(tmp_path, monkeypatch, cancel) -> None:
+    async def scenario() -> None:
+        target = tmp_path / "blocked-unwind-progress.bin"
+        acknowledgement_done = asyncio.Event()
+        next_request_ready = asyncio.Event()
+        fail_request = asyncio.Event()
+        progress_started = asyncio.Event()
+        progress_release = asyncio.Event()
+        progress_settled = asyncio.Event()
+        download_finished = asyncio.Event()
+        original_submit = media_download._ConcurrentDestinationWriter.submit
+        writers: list[media_download._ConcurrentDestinationWriter] = []
+        primary = RuntimeError("original request failure")
+
+        async def capture_submit(writer, offset, payload, *, wait_for_completion=True):
+            acknowledgement = await original_submit(writer, offset, payload, wait_for_completion=wait_for_completion)
+            writers.append(writer)
+            acknowledgement.add_done_callback(lambda _future: acknowledgement_done.set())
+            return acknowledgement
+
+        async def blocking_progress(current, total):
+            assert (current, total) == (1024, 2048)
+            progress_started.set()
+            try:
+                await progress_release.wait()
+            finally:
+                progress_settled.set()
+
+        async def invoke(request: object, **kwargs: object) -> object:
+            del kwargs
+            assert isinstance(request, functions.UploadGetFile)
+            if request.offset == 0:
+                return upload_file_part(b"a" * 1024)
+            await acknowledgement_done.wait()
+            next_request_ready.set()
+            await fail_request.wait()
+            raise primary
+
+        monkeypatch.setattr(media_download._ConcurrentDestinationWriter, "submit", capture_submit)
+        download = asyncio.create_task(download_file(invoke, document_location(), target, limit=2048, part_size=1024, concurrency=1, launch_stagger=False, adaptive_part_size=False, progress=blocking_progress))  # fmt: skip
+        download.add_done_callback(lambda _task: download_finished.set())
+        try:
+            await asyncio.wait_for(next_request_ready.wait(), timeout=2.0)
+            if cancel:
+                download.cancel("original cancellation")
+            else:
+                fail_request.set()
+            await asyncio.wait_for(progress_started.wait(), timeout=2.0)
+            download.cancel("interrupt progress callback")
+            await asyncio.wait_for(download_finished.wait(), timeout=2.0)
+            outcome = (await asyncio.gather(download, return_exceptions=True))[0]
+            if cancel:
+                assert download.cancelled(), outcome
+                with pytest.raises(asyncio.CancelledError, match="original cancellation"):
+                    download.result()
+            else:
+                assert outcome is primary
+            assert progress_settled.is_set()
+            assert writers[0]._worker.done()
+            assert writers[0]._destination.handle.closed
+            assert not target.exists()
+        finally:
+            progress_release.set()
+            fail_request.set()
+            if not download.done():
+                download.cancel()
+            await asyncio.gather(download, return_exceptions=True)
+            for writer in writers:
+                await writer.abort()
+                writer._destination.handle.close()
+
+    run(scenario())
+
+
+def test_download_file_cleanup_error_closes_owned_file_and_preserves_failure(tmp_path, monkeypatch, caplog) -> None:
+    async def scenario() -> None:
+        target = tmp_path / "rollback-error.bin"
+        target.write_bytes(b"r" * 1024)
+        original_open = media_download._open_destination
+        opened: list[Any] = []
+        primary = RuntimeError("original request failure")
+
+        class FailingRollback:
+            def __init__(self, handle):
+                self.handle = handle
+
+            def __getattr__(self, name):
+                return getattr(self.handle, name)
+
+            def truncate(self, size):
+                if size == 1024:
+                    raise OSError("rollback truncate failed")
+                return self.handle.truncate(size)
+
+        def capture_destination(destination, *, resume):
+            destination_handle = original_open(destination, resume=resume)
+            opened.append(destination_handle.handle)
+            destination_handle.handle = cast(Any, FailingRollback(destination_handle.handle))
+            return destination_handle
+
+        async def invoke(request: object, **kwargs: object) -> object:
+            del request, kwargs
+            raise primary
+
+        monkeypatch.setattr(media_download, "_open_destination", capture_destination)
+        try:
+            with pytest.raises(RuntimeError) as raised:
+                await download_file(invoke, document_location(), target, limit=3072, part_size=1024, concurrency=2, launch_stagger=False, adaptive_part_size=False, resume=True)  # fmt: skip
+            assert raised.value is primary
+            assert opened[0].closed
+            assert target.stat().st_size == 3072
+            assert any(record.getMessage() == "media.download.cleanup_failed" for record in caplog.records)
+        finally:
+            for handle in opened:
+                handle.close()
+
+    run(scenario())
+
+
+@pytest.mark.parametrize("cancel", [False, True])
+def test_download_file_cancelled_rollback_failure_has_no_unhandled_loop_error(tmp_path, monkeypatch, caplog, cancel) -> None:  # fmt: skip
+    async def scenario() -> None:
+        target = tmp_path / "cancelled-rollback-error.bin"
+        target.write_bytes(b"r" * 1024)
+        original_open = media_download._open_destination
+        opened: list[Any] = []
+        primary = RuntimeError("original request failure")
+        request_started = asyncio.Event()
+        rollback_started = asyncio.Event()
+        rollback_release = threading.Event()
+        loop = asyncio.get_running_loop()
+        previous_handler = loop.get_exception_handler()
+        loop_errors: list[dict[str, Any]] = []
+
+        class FailingRollback:
+            def __init__(self, handle):
+                self.handle = handle
+
+            def __getattr__(self, name):
+                return getattr(self.handle, name)
+
+            def truncate(self, size):
+                if size == 1024:
+                    loop.call_soon_threadsafe(rollback_started.set)
+                    assert rollback_release.wait(3.0)
+                    raise OSError("rollback failed after cancellation")
+                return self.handle.truncate(size)
+
+        def capture_destination(destination, *, resume):
+            destination_handle = original_open(destination, resume=resume)
+            opened.append(destination_handle.handle)
+            destination_handle.handle = cast(Any, FailingRollback(destination_handle.handle))
+            return destination_handle
+
+        async def invoke(request: object, **kwargs: object) -> object:
+            del request, kwargs
+            request_started.set()
+            if cancel:
+                await asyncio.Future()
+            raise primary
+
+        monkeypatch.setattr(media_download, "_open_destination", capture_destination)
+        loop.set_exception_handler(lambda _loop, context: loop_errors.append(context))
+        download = asyncio.create_task(download_file(invoke, document_location(), target, limit=3072, part_size=1024, concurrency=2, launch_stagger=False, adaptive_part_size=False, resume=True))  # fmt: skip
+        try:
+            if cancel:
+                await asyncio.wait_for(request_started.wait(), timeout=2.0)
+                download.cancel("original cancellation")
+            await asyncio.wait_for(rollback_started.wait(), timeout=2.0)
+            for message in ("second cancellation", "third cancellation"):
+                download.cancel(message)
+                barrier = loop.create_future()
+                loop.call_soon(barrier.set_result, None)
+                await barrier
+                assert not download.done()
+            rollback_release.set()
+            outcome = (await asyncio.gather(download, return_exceptions=True))[0]
+            if cancel:
+                assert download.cancelled(), outcome
+                with pytest.raises(asyncio.CancelledError, match="original cancellation"):
+                    download.result()
+            else:
+                assert outcome is primary
+            assert opened[0].closed
+            assert target.stat().st_size == 3072
+            assert any(record.getMessage() == "media.download.cleanup_failed" for record in caplog.records)
+            barrier = loop.create_future()
+            loop.call_soon(barrier.set_result, None)
+            await barrier
+            assert loop_errors == []
+        finally:
+            rollback_release.set()
+            await asyncio.gather(download, return_exceptions=True)
+            loop.set_exception_handler(previous_handler)
+            for handle in opened:
+                handle.close()
+
+    run(scenario())
+
+
+def test_download_file_close_error_still_removes_new_path_and_preserves_failure(tmp_path, monkeypatch, caplog) -> None:
+    async def scenario() -> None:
+        target = tmp_path / "close-error.bin"
+        original_open = media_download._open_destination
+        opened: list[Any] = []
+        primary = RuntimeError("original request failure")
+
+        class FailingClose:
+            def __init__(self, handle):
+                self.handle = handle
+
+            def __getattr__(self, name):
+                return getattr(self.handle, name)
+
+            def close(self):
+                self.handle.close()
+                raise OSError("buffer flush failed during close")
+
+        def capture_destination(destination, *, resume):
+            destination_handle = original_open(destination, resume=resume)
+            opened.append(destination_handle.handle)
+            destination_handle.handle = cast(Any, FailingClose(destination_handle.handle))
+            return destination_handle
+
+        async def invoke(request: object, **kwargs: object) -> object:
+            del request, kwargs
+            raise primary
+
+        monkeypatch.setattr(media_download, "_open_destination", capture_destination)
+        try:
+            with pytest.raises(RuntimeError) as raised:
+                await download_file(invoke, document_location(), target, limit=1024, part_size=1024, concurrency=1, launch_stagger=False, adaptive_part_size=False)  # fmt: skip
+            assert raised.value is primary
+            assert opened[0].closed
+            assert not target.exists()
+            assert any(record.getMessage() == "media.download.cleanup_failed" for record in caplog.records)
+        finally:
+            for handle in opened:
+                handle.close()
+
+    run(scenario())
+
+
+def test_download_file_failed_write_acknowledgement_still_removes_owned_path(tmp_path, monkeypatch) -> None:
+    async def scenario() -> None:
+        target = tmp_path / "failed-write.bin"
+        opened: list[media_download._DestinationHandle] = []
+        original_open = media_download._open_destination
+        failure = OSError("disk full")
+
+        def capture_destination(destination, *, resume):
+            handle = original_open(destination, resume=resume)
+            opened.append(handle)
+            return handle
+
+        def fail_write(writer, offset, payload):
+            del writer, offset, payload
+            raise failure
+
+        monkeypatch.setattr(media_download, "_open_destination", capture_destination)
+        monkeypatch.setattr(media_download._ConcurrentDestinationWriter, "_write", fail_write)
+        try:
+            with pytest.raises(OSError) as raised:
+                await download_file(OffsetInvoker(b"a" * 4096), document_location(), target, limit=4096, part_size=1024, concurrency=4, launch_stagger=False, adaptive_part_size=False)  # fmt: skip
+            assert raised.value is failure
+            assert opened[0].handle.closed
+            assert not target.exists()
+        finally:
+            for handle in opened:
+                handle.handle.close()
+
+    run(scenario())
+
+
+@pytest.mark.parametrize("failure_kind", ["request", "progress", "cancellation"])
+def test_download_file_unwind_joins_part_cleanup_under_repeated_cancellation(tmp_path, monkeypatch, failure_kind) -> None:  # fmt: skip
+    async def scenario() -> None:
+        target = tmp_path / "cancelled-parts.bin"
+        failure_ready = asyncio.Event()
+        part_ready = asyncio.Event()
+        cleanup_started = asyncio.Event()
+        cleanup_release = asyncio.Event()
+        cleanup_completed = asyncio.Event()
+        fail_request = asyncio.Event()
+        part_tasks: list[asyncio.Task[Any]] = []
+        primary = RuntimeError("original request failure")
+        original_submit = media_download._ConcurrentDestinationWriter.submit
+
+        async def completed_submit(writer, offset, payload, *, wait_for_completion=True):
+            acknowledgement = await original_submit(writer, offset, payload, wait_for_completion=wait_for_completion)
+            await acknowledgement
+            return acknowledgement
+
+        def fail_progress(current, total):
+            assert (current, total) == (1024, 3072)
+            raise primary
+
+        async def invoke(request: object, **kwargs: object) -> object:
+            del kwargs
+            assert isinstance(request, functions.UploadGetFile)
+            if request.offset == 0:
+                return upload_file_part(b"a" * 1024)
+            if request.offset == 1024:
+                failure_ready.set()
+                await fail_request.wait()
+                raise primary
+            task = asyncio.current_task()
+            assert task is not None
+            part_tasks.append(task)
+            part_ready.set()
+            try:
+                await asyncio.Future()
+            finally:
+                cleanup_started.set()
+                await cleanup_release.wait()
+                cleanup_completed.set()
+
+        if failure_kind == "progress":
+            monkeypatch.setattr(media_download._ConcurrentDestinationWriter, "submit", completed_submit)
+        download = asyncio.create_task(download_file(invoke, document_location(), target, limit=3072, part_size=1024, concurrency=3, launch_stagger=False, adaptive_part_size=False, progress=fail_progress if failure_kind == "progress" else None))  # fmt: skip
+        try:
+            await asyncio.wait_for(failure_ready.wait(), timeout=2.0)
+            await asyncio.wait_for(part_ready.wait(), timeout=2.0)
+            if failure_kind == "cancellation":
+                download.cancel("original cancellation")
+            elif failure_kind == "request":
+                fail_request.set()
+            await asyncio.wait_for(cleanup_started.wait(), timeout=2.0)
+            download.cancel("second cancellation")
+            loop = asyncio.get_running_loop()
+            barrier = loop.create_future()
+            loop.call_soon(barrier.set_result, None)
+            await barrier
+            assert not part_tasks[0].done()
+            assert not download.done()
+            download.cancel("third cancellation")
+            cleanup_release.set()
+            outcome = (await asyncio.gather(download, return_exceptions=True))[0]
+            if failure_kind == "cancellation":
+                assert download.cancelled(), outcome
+                with pytest.raises(asyncio.CancelledError, match="original cancellation"):
+                    download.result()
+            else:
+                assert outcome is primary
+            assert cleanup_completed.is_set()
+            assert part_tasks[0].done()
+            assert not target.exists()
+        finally:
+            cleanup_release.set()
+            fail_request.set()
+            if not download.done():
+                download.cancel()
+            await asyncio.gather(download, *part_tasks, return_exceptions=True)
+
+    run(scenario())
+
+
+@pytest.mark.parametrize("cancel", [False, True])
+def test_download_file_unwind_joins_active_write_under_repeated_cancellation(tmp_path, monkeypatch, cancel) -> None:
+    async def scenario() -> None:
+        target = tmp_path / "cancelled-writer.bin"
+        write_started = asyncio.Event()
+        cleanup_started = asyncio.Event()
+        release_write = threading.Event()
+        write_finished = threading.Event()
+        next_request_ready = asyncio.Event()
+        fail_request = asyncio.Event()
+        loop = asyncio.get_running_loop()
+        original_write = media_download._ConcurrentDestinationWriter._write
+        original_abort = media_download._ConcurrentDestinationWriter.abort
+        writers: list[media_download._ConcurrentDestinationWriter] = []
+        primary = RuntimeError("original request failure")
+
+        def blocked_write(writer, offset, payload):
+            writers.append(writer)
+            loop.call_soon_threadsafe(write_started.set)
+            assert release_write.wait(3.0)
+            original_write(writer, offset, payload)
+            write_finished.set()
+
+        async def observed_abort(writer):
+            cleanup_started.set()
+            await original_abort(writer)
+
+        async def invoke(request: object, **kwargs: object) -> object:
+            del kwargs
+            assert isinstance(request, functions.UploadGetFile)
+            if request.offset == 0:
+                return upload_file_part(b"a" * 1024)
+            next_request_ready.set()
+            await fail_request.wait()
+            raise primary
+
+        monkeypatch.setattr(media_download._ConcurrentDestinationWriter, "_write", blocked_write)
+        monkeypatch.setattr(media_download._ConcurrentDestinationWriter, "abort", observed_abort)
+        download = asyncio.create_task(download_file(invoke, document_location(), target, limit=2048, part_size=1024, concurrency=1, launch_stagger=False, adaptive_part_size=False))  # fmt: skip
+        try:
+            await asyncio.wait_for(write_started.wait(), timeout=2.0)
+            await asyncio.wait_for(next_request_ready.wait(), timeout=2.0)
+            if cancel:
+                download.cancel("original cancellation")
+            else:
+                fail_request.set()
+            await asyncio.wait_for(cleanup_started.wait(), timeout=2.0)
+            download.cancel("second cancellation")
+            # The event-loop barrier delivers cancellation while the disk operation remains blocked
+            barrier = loop.create_future()
+            loop.call_soon(barrier.set_result, None)
+            await barrier
+            assert not download.done()
+            download.cancel("third cancellation")
+            release_write.set()
+            outcome = (await asyncio.gather(download, return_exceptions=True))[0]
+            if cancel:
+                assert download.cancelled(), outcome
+                with pytest.raises(asyncio.CancelledError, match="original cancellation"):
+                    download.result()
+            else:
+                assert outcome is primary
+            assert write_finished.is_set()
+            assert writers[0]._worker.done()
+            assert writers[0]._destination.handle.closed
+            assert not target.exists()
+        finally:
+            release_write.set()
+            fail_request.set()
+            if not download.done():
+                download.cancel()
+            await asyncio.gather(download, return_exceptions=True)
+            for writer in writers:
+                await original_abort(writer)
+                writer._destination.handle.close()
 
     run(scenario())
 

@@ -1228,6 +1228,9 @@ class Client:
             options: Validated download configuration copied and narrowed for each worker range.
             total_size: Complete source size used to plan contiguous worker ranges.
             session_count: Preferred number of sessions before availability-based fallback.
+
+        Lifecycle:
+            Failed or cancelled transfers stop forwarding new progress callbacks, then cancel and join their workers before removing temporary parts and disconnecting auxiliary clients. An assembly already running in a thread is joined before cleanup and may finish writing the destination despite cancellation. The first failure or cancellation is preserved, and individual auxiliary disconnect failures are logged.
         """
         async with self._multi_session_download_lock:
             auxiliaries = await self._ensure_auxiliary_download_clients(session_count)
@@ -1245,6 +1248,7 @@ class Client:
             progress = options.get("progress")
             progress_by_worker = [0] * active_count
             progress_lock = asyncio.Lock()
+            stopping = False
 
             async def report(worker_index: int, current: int, _total: int | None) -> None:
                 """Aggregate worker progress before forwarding it to the caller callback.
@@ -1254,7 +1258,7 @@ class Client:
                     current: Bytes downloaded by that worker so far.
                     _total: Per-worker total supplied by the media layer but intentionally replaced by the full transfer total.
                 """
-                if progress is None:
+                if progress is None or stopping:
                     return
                 async with progress_lock:
                     progress_by_worker[worker_index] = current
@@ -1263,59 +1267,108 @@ class Client:
                 if inspect.isawaitable(callback_result):
                     await callback_result
 
+            temporary: tempfile.TemporaryDirectory[str] | None = None
+            workers: list[asyncio.Task[MediaDownloadResult]] = []
+            worker_group: asyncio.Future[list[MediaDownloadResult]] | None = None
+            assembly: asyncio.Task[tuple[Destination, bytes | None]] | None = None
+            failure: BaseException | None = None
+            completed: MediaDownloadResult | None = None
             try:
-                with tempfile.TemporaryDirectory(prefix="miniproto-download-") as temporary:
-                    part_paths = tuple(Path(temporary) / f"worker-{item.index}.part" for item in ranges)
+                temporary = tempfile.TemporaryDirectory(prefix="miniproto-download-")
+                part_paths = tuple(Path(temporary.name) / f"worker-{item.index}.part" for item in ranges)
 
-                    async def download_worker(worker_client: Client, worker_index: int) -> MediaDownloadResult:
-                        """Download one assigned range to its temporary part file.
+                async def download_worker(worker_client: Client, worker_index: int) -> MediaDownloadResult:
+                    """Download one assigned range to its temporary part file.
 
-                        Args:
-                            worker_client: Primary or auxiliary client assigned to this range.
-                            worker_index: Index selecting the range and temporary part path.
-                        """
-                        item = ranges[worker_index]
-                        worker_options = dict(options)
-                        worker_options.update(
-                            offset=item.offset,
-                            limit=item.limit,
-                            total_size=total_size,
-                            resume=False,
-                            progress=lambda current, total: report(worker_index, current, total),
-                            part_size=MAX_DOWNLOAD_CHUNK_SIZE,
-                            concurrency=1,
-                            media_lanes=1,
-                            adaptive_concurrency=True,
-                            adaptive_part_size=False,
-                            max_part_size=MAX_DOWNLOAD_CHUNK_SIZE,
-                            max_in_flight_bytes=None,
-                            range_cache=False,
-                            read_ahead_bytes=0,
+                    Args:
+                        worker_client: Primary or auxiliary client assigned to this range.
+                        worker_index: Index selecting the range and temporary part path.
+                    """
+                    item = ranges[worker_index]
+                    worker_options = dict(options)
+                    worker_options.update(
+                        offset=item.offset,
+                        limit=item.limit,
+                        total_size=total_size,
+                        resume=False,
+                        progress=lambda current, total: report(worker_index, current, total),
+                        part_size=MAX_DOWNLOAD_CHUNK_SIZE,
+                        concurrency=1,
+                        media_lanes=1,
+                        adaptive_concurrency=True,
+                        adaptive_part_size=False,
+                        max_part_size=MAX_DOWNLOAD_CHUNK_SIZE,
+                        max_in_flight_bytes=None,
+                        range_cache=False,
+                        read_ahead_bytes=0,
+                    )
+                    return await worker_client._download_media_single(media, part_paths[worker_index], worker_options)
+
+                for index, worker_client in enumerate(clients):
+                    workers.append(asyncio.create_task(download_worker(worker_client, index)))
+                worker_group = asyncio.gather(*workers)
+                # Waiting leaves cancellation and terminal exception retrieval with this owner
+                await asyncio.wait((worker_group,))
+                results = worker_group.result()
+                for item, result in zip(ranges, results, strict=True):
+                    if result.bytes_downloaded != item.limit:
+                        raise RuntimeError(
+                            f"multi-session worker {item.index} size mismatch: expected {item.limit}, got {result.bytes_downloaded}"
                         )
-                        return await worker_client._download_media_single(
-                            media, part_paths[worker_index], worker_options
-                        )
+                assembly = asyncio.create_task(asyncio.to_thread(assemble_download_parts, part_paths, destination, expected_size=total_size))  # fmt: skip
+                await asyncio.wait((assembly,))
+                resolved_destination, data = assembly.result()
+                completed = MediaDownloadResult(
+                    bytes_downloaded=total_size,
+                    offset=0,
+                    destination=resolved_destination,
+                    data=data,
+                    raw_location=download_location_from_media(media),
+                )
+            except BaseException as exc:
+                failure = exc
+            stopping = True
 
-                    results = await asyncio.gather(
-                        *(download_worker(worker_client, index) for index, worker_client in enumerate(clients))
-                    )
-                    for item, result in zip(ranges, results, strict=True):
-                        if result.bytes_downloaded != item.limit:
-                            raise RuntimeError(
-                                f"multi-session worker {item.index} size mismatch: expected {item.limit}, got {result.bytes_downloaded}"
-                            )
-                    resolved_destination, data = await asyncio.to_thread(
-                        assemble_download_parts, part_paths, destination, expected_size=total_size
-                    )
-                    return MediaDownloadResult(
-                        bytes_downloaded=total_size,
-                        offset=0,
-                        destination=resolved_destination,
-                        data=data,
-                        raw_location=download_location_from_media(media),
-                    )
-            finally:
-                await self._disconnect_auxiliary_download_clients(auxiliaries)
+            async def cleanup() -> None:
+                """Settle all users of the part files before releasing their files and sessions."""
+                nonlocal failure
+                for worker in workers:
+                    if not worker.done():
+                        worker.cancel()
+                if workers:
+                    await asyncio.gather(*workers, return_exceptions=True)
+                if worker_group is not None and not worker_group.cancelled():
+                    worker_group.exception()
+                if assembly is not None:
+                    await asyncio.gather(assembly, return_exceptions=True)
+                try:
+                    if temporary is not None:
+                        temporary.cleanup()
+                except BaseException as exc:
+                    if failure is None:
+                        failure = exc
+                    emit_event(_LOGGER, logging.ERROR, "client.download_media.temporary_cleanup_failed", outcome="error", error_type=type(exc).__name__)  # fmt: skip
+                finally:
+                    await self._disconnect_auxiliary_download_clients(auxiliaries)
+
+            cleanup_task = asyncio.create_task(cleanup(), name="miniproto-multi-session-cleanup")
+            while not cleanup_task.done():
+                try:
+                    await asyncio.wait((cleanup_task,))
+                except asyncio.CancelledError as exc:
+                    if failure is None:
+                        failure = exc
+                except BaseException:
+                    break
+            try:
+                cleanup_task.result()
+            except BaseException as exc:
+                if failure is None:
+                    failure = exc
+            if failure is not None:
+                raise failure
+            assert completed is not None
+            return completed
 
     async def _ensure_auxiliary_download_clients(self, session_count: int) -> tuple[Client, ...]:
         """Create, authorize and connect compatible sibling bot clients as needed.
