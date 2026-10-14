@@ -230,7 +230,8 @@ def test_auth_key_service_constructor_primitives_round_trip() -> None:
     assert encode_client_dh_inner_data(client_inner).startswith(b"T\xb6Cf")
     auth_key = compute_auth_key(g_a=_DH_PUBLIC_VALUE_BOUNDARY + 1, b=7, dh_prime=_TELEGRAM_DH_PRIME)
     assert len(auth_key) == 256
-    assert server_salt(inner.new_nonce, res_pq.server_nonce) == server_salt(inner.new_nonce, res_pq.server_nonce)
+    # The low nonce words 0x393a3b3c3d3e3f40 and 0x191a1b1c1d1e1f20 XOR to this salt
+    assert server_salt(inner.new_nonce, res_pq.server_nonce) == 0x2020202020202060
 
 
 def test_auth_key_exchange_rejects_weak_group_before_private_exponent() -> None:
@@ -292,7 +293,13 @@ def test_auth_key_exchange_validates_generated_public_value_before_send() -> Non
     assert transport.calls == 2
 
 
-def test_auth_key_exchange_retries_valid_dh_gen_retry_with_fresh_exponent(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize(
+    ("test_mode", "media_only", "expected_wire_dc"),
+    [(False, False, 2), (False, True, -2), (True, False, 10002), (True, True, -10002)],
+)
+def test_auth_key_exchange_retries_valid_dh_gen_retry_with_fresh_exponent(
+    monkeypatch: pytest.MonkeyPatch, test_mode: bool, media_only: bool, expected_wire_dc: int
+) -> None:
     nonce = int.from_bytes(b"\x01" * 16, "little")
     server_nonce = int.from_bytes(b"\x02" * 16, "little")
     new_nonce = int.from_bytes(b"\x03" * 32, "little")
@@ -346,7 +353,13 @@ def test_auth_key_exchange_retries_valid_dh_gen_retry_with_fresh_exponent(monkey
     def random_bytes(size: int) -> bytes:
         return next(random_values[size])
 
-    monkeypatch.setattr("miniproto.auth.key_exchange.rsa_pad", lambda *args, **kwargs: b"encrypted-pq")
+    wire_dc_ids: list[int] = []
+
+    def capture_pq_inner(data: bytes, *args, **kwargs) -> bytes:
+        wire_dc_ids.append(int.from_bytes(data[-4:], "little", signed=True))
+        return b"encrypted-pq"
+
+    monkeypatch.setattr("miniproto.auth.key_exchange.rsa_pad", capture_pq_inner)
     monkeypatch.setattr(
         "miniproto.auth.key_exchange.encrypt_client_dh_inner_data",
         lambda inner, **kwargs: client_inners.append(inner) or b"encrypted-client-dh",
@@ -354,10 +367,18 @@ def test_auth_key_exchange_retries_valid_dh_gen_retry_with_fresh_exponent(monkey
     monkeypatch.setattr("miniproto.auth.key_exchange.compute_new_nonce_hash", lambda _nonce, _key, number: number)
 
     result = run(
-        AuthKeyExchange(RetryTransport(), dc_id=2, rsa_keys=(rsa_key,), random_bytes=random_bytes).create_auth_key()
+        AuthKeyExchange(
+            RetryTransport(),
+            dc_id=2,
+            rsa_keys=(rsa_key,),
+            test_mode=test_mode,
+            media_only=media_only,
+            random_bytes=random_bytes,
+        ).create_auth_key()
     )
 
     assert result.dc_id == 2
+    assert wire_dc_ids == [expected_wire_dc]
     assert len(client_inners) == 2
     assert client_inners[0].retry_id == 0
     assert client_inners[1].retry_id != 0

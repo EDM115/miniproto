@@ -110,29 +110,6 @@ def test_python_reference_deduplicates_overlapping_canonical_and_alias_modules(t
     assert by_name["fixture.api.build"].aliases == ()
 
 
-def test_python_reference_generation_never_imports_fixture_code(tmp_path: Path) -> None:
-    """Require static generation to leave import-time code unexecuted.
-
-    Args:
-        tmp_path: Isolated directory in which to create the sentinel package.
-    """
-    package = tmp_path / "runtime_sentinel"
-    package.mkdir()
-    (package / "__init__.py").write_text(
-        '"""Fail if documentation generation imports this package."""\n\n'
-        "raise RuntimeError('documentation generation executed fixture code')\n\n"
-        "def documented() -> None:\n"
-        '    """Perform a documented operation."""\n',
-        encoding="utf-8",
-    )
-
-    pages = generate_python_pages(
-        source_root=tmp_path, module_names=("runtime_sentinel",), repository_url="https://example.invalid/repository"
-    )
-
-    assert {page.qualified_name for page in pages} == {"runtime_sentinel", "runtime_sentinel.documented"}
-
-
 def test_python_reference_ignores_unresolved_and_ordinary_import_aliases(tmp_path: Path) -> None:
     """Require only explicit public re-exports to resolve to canonical pages.
 

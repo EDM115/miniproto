@@ -1,11 +1,23 @@
 ---
 title: Installation
-description: Prepare a local miniproto source checkout with the supported Python and Rust toolchains.
+description: Install miniproto from PyPI or prepare a source checkout with the supported Python and Rust toolchains.
 slug: /start/installation/
 generated: false
 ---
 
-The current alpha workflow is source-first. The package metadata requires Python 3.13 or newer and the checkout builds a bundled Rust/PyO3 extension. Install Rust as well as Python before synchronizing the project.
+The published `0.1.0` package is available from PyPI. Install it in an application project with uv:
+
+```zsh
+uv add miniproto
+```
+
+Or install it with pip:
+
+```zsh
+python -m pip install miniproto
+```
+
+For development, clone the repository and install its toolchain dependencies. The source checkout requires Python 3.13 or newer and builds the bundled Rust/PyO3 extension, so install Rust as well as Python before synchronizing the project.
 
 ```pwsh
 git clone https://github.com/EDM115/miniproto.git

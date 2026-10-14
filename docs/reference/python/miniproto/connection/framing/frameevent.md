@@ -7,7 +7,7 @@ language: "python"
 kind: "attribute"
 qualified_name: "miniproto.connection.framing.FrameEvent"
 source_path: "src/miniproto/connection/framing.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/framing.py#L64"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/framing.py#L65"
 module: "miniproto.connection.framing"
 ---
 

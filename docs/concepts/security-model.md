@@ -21,7 +21,7 @@ Session-string import refuses to overwrite a nonempty target unless `replace=Tru
 
 Inbound transport/encrypted-message validation fails closed rather than treating malformed data as a normal reconnect. Request replay is conservative because an interrupted write may already have reached Telegram. Bounded pending RPCs, bounded update queues, transport payload limits and byte-bounded media permits protect local resource use but do not replace application-level admission control.
 
-Native code is an optimization boundary with fallback parity, not a reason to weaken validation or secret handling. Verify wheel provenance and runtime capability in the environment you deploy.
+Native code is an optimization boundary with fallback parity where both implementations are available, not a reason to weaken validation or secret handling. AES/Scrypt fallback uses `cryptography`, which the Windows ARM64 base dependencies exclude. Those operations need native capabilities there unless `cryptography` is installed separately. Verify wheel provenance and runtime capability in the environment you deploy.
 
 ## Responsible operation and reporting
 

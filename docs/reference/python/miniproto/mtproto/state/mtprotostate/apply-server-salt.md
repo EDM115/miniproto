@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.mtproto.state.MTProtoState.apply_server_salt"
 source_path: "src/miniproto/mtproto/state.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/mtproto/state.py#L241"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/mtproto/state.py#L276"
 aliases: ["miniproto.mtproto.MTProtoState.apply_server_salt"]
 module: "miniproto.mtproto.state"
 ---

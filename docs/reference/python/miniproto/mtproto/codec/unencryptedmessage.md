@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.mtproto.codec.UnencryptedMessage"
 source_path: "src/miniproto/mtproto/codec.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/mtproto/codec.py#L78"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/mtproto/codec.py#L82"
 module: "miniproto.mtproto.codec"
 ---
 

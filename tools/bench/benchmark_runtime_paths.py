@@ -189,14 +189,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Benchmark representative miniproto runtime paths")
     parser.parse_args(argv)
     print(
-        f"event_loop_backend={event_loop.backend_name()} "
-        f"installed={event_loop.installed()} version={event_loop.backend_version()}"
+        f"preferred_event_loop_backend={event_loop.backend_name()} "
+        f"legacy_policy_installed={event_loop.installed()} version={event_loop.backend_version()}"
     )
     return event_loop.run(_main())
 
 
 async def _main() -> int:
     """Run fixed-size synthetic workloads and print their measured units and gates."""
+    loop = asyncio.get_running_loop()
+    print(f"benchmark_event_loop={type(loop).__module__}.{type(loop).__name__}")
     payload = bytes((index * 17) % 256 for index in range(8 * 1024 * 1024))
     cases = (
         AsyncBenchmarkCase("update_dispatch_10k", lambda: _bench_update_dispatch(10_000)),
@@ -429,25 +431,38 @@ async def _bench_peer_cache_10k() -> None:
     numeric_queries = tuple(entry.id for entry in selected)
     username_queries = tuple(f"@{entry.username}" for entry in selected)
     phone_queries = tuple(f"+{_normalize_phone(entry.phone)}" for entry in selected)
+    expected_peers = tuple(Peer(id=entry.id, kind=entry.kind, access_hash=entry.access_hash) for entry in selected)
     cold_started = time.perf_counter_ns()
-    await cache.resolve_peer(kind_queries[0])
+    cold_result = await cache.resolve_peer(kind_queries[0])
     cold_ns = time.perf_counter_ns() - cold_started
+    if cold_result != expected_peers[0]:
+        raise AssertionError("cold peer lookup parity failed")
     warm_wrapper_loads = storage.load_count
     warm_backend_loads = backend.load_count
     warm_stats = dict(cache.index_stats)
     if warm_wrapper_loads != 1 or warm_backend_loads != 1 or warm_stats["canonical_tuple_visits"] != len(entries):
         raise AssertionError("peer cache cold build did not visit/load the cached wrapper and backend exactly once")
+    queries_by_kind = {
+        "kind": kind_queries,
+        "numeric": numeric_queries,
+        "username": username_queries,
+        "phone": phone_queries,
+    }
+    canonical_lookups = {
+        "kind": lambda query: _legacy_kind_lookup(record, query),
+        "numeric": lambda query: _legacy_numeric_lookup(record, query),
+        "username": lambda query: _legacy_username_lookup(record, query),
+        "phone": lambda query: _legacy_phone_lookup(record, query),
+    }
+    for name, queries in queries_by_kind.items():
+        for query, expected in zip(queries, expected_peers, strict=True):
+            if await cache.resolve_peer(query) != expected or await canonical_lookups[name](query) != expected:
+                raise AssertionError(f"{name} peer lookup parity failed")
     indexed_ns = {
-        "kind": await _median_lookup_ns(cache.resolve_peer, kind_queries),
-        "numeric": await _median_lookup_ns(cache.resolve_peer, numeric_queries),
-        "username": await _median_lookup_ns(cache.resolve_peer, username_queries),
-        "phone": await _median_lookup_ns(cache.resolve_peer, phone_queries),
+        name: await _median_lookup_ns(cache.resolve_peer, queries) for name, queries in queries_by_kind.items()
     }
     baseline_ns = {
-        "kind": await _median_lookup_ns(lambda query: _legacy_kind_lookup(record, query), kind_queries),
-        "numeric": await _median_lookup_ns(lambda query: _legacy_numeric_lookup(record, query), numeric_queries),
-        "username": await _median_lookup_ns(lambda query: _legacy_username_lookup(record, query), username_queries),
-        "phone": await _median_lookup_ns(lambda query: _legacy_phone_lookup(record, query), phone_queries),
+        name: await _median_lookup_ns(canonical_lookups[name], queries) for name, queries in queries_by_kind.items()
     }
     if (
         storage.load_count != warm_wrapper_loads

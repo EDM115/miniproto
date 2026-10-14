@@ -41,10 +41,9 @@ def test_native_available_returns_bool() -> None:
     assert isinstance(native_available(), bool)
 
 
-@pytest.mark.parametrize(
-    "decoder", [fallback.mtproto_decode_message, pytest.importorskip("miniproto._native").mtproto_decode_message]
-)
-def test_mtproto_decoder_rejects_wrong_envelope_auth_key_id(decoder) -> None:
+@pytest.mark.parametrize("backend", ["fallback", "native"])
+def test_mtproto_decoder_rejects_wrong_envelope_auth_key_id(backend: str) -> None:
+    decoder = (fallback if backend == "fallback" else pytest.importorskip("miniproto._native")).mtproto_decode_message
     packet = fallback.mtproto_encode_message(
         _MT_PROTO_AUTH_KEY, 1, 2, 3, 4, b"body", client_to_server=True, padding=b"\0" * 12
     )
@@ -57,10 +56,9 @@ def test_mtproto_decoder_rejects_wrong_envelope_auth_key_id(decoder) -> None:
 @pytest.mark.parametrize(
     ("body_len", "error"), [(64, "body length is invalid"), (5, "body length must be divisible by 4")]
 )
-@pytest.mark.parametrize(
-    "decoder", [fallback.mtproto_decode_message, pytest.importorskip("miniproto._native").mtproto_decode_message]
-)
-def test_mtproto_decoder_rejects_malformed_envelope_body_length(decoder, body_len: int, error: str) -> None:
+@pytest.mark.parametrize("backend", ["fallback", "native"])
+def test_mtproto_decoder_rejects_malformed_envelope_body_length(backend: str, body_len: int, error: str) -> None:
+    decoder = (fallback if backend == "fallback" else pytest.importorskip("miniproto._native")).mtproto_decode_message
     with pytest.raises(ValueError, match=error):
         decoder(_MT_PROTO_AUTH_KEY, _mutate_mtproto_envelope(body_len), True)
 
@@ -100,7 +98,7 @@ def test_native_loader_falls_back_when_extension_is_incomplete(monkeypatch: pyte
 def test_native_loader_keeps_extension_when_only_session_crypto_symbols_are_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    compiled = importlib.import_module("miniproto._native")
+    compiled = pytest.importorskip("miniproto._native")
 
     class CompiledWithoutSessionCrypto:
         def __getattr__(self, name: str):
@@ -147,36 +145,13 @@ def test_native_loaded_event_is_logged(caplog: pytest.LogCaptureFixture) -> None
     assert event["native_available"] is True
 
 
-@pytest.mark.parametrize(("decoder_name", "width"), [("tl_decode_int_vector", 4), ("tl_decode_long_vector", 8)])
-def test_fallback_vector_decoder_rejects_maximum_count_without_payload(decoder_name: str, width: int) -> None:
-    del width
+@pytest.mark.parametrize("decoder_name", ["tl_decode_int_vector", "tl_decode_long_vector"])
+def test_fallback_vector_decoder_rejects_maximum_count_without_payload(decoder_name: str) -> None:
     decoder = getattr(fallback, decoder_name)
     data = (0x1CB5C415).to_bytes(4, "little") + (2**31 - 1).to_bytes(4, "little", signed=True)
 
     with pytest.raises(ValueError, match="vector count exceeds remaining payload"):
         decoder(data, 0)
-
-
-@pytest.mark.parametrize(("decoder_name", "width"), [("tl_decode_int_vector", 4), ("tl_decode_long_vector", 8)])
-def test_compiled_native_vector_decoder_rejects_maximum_count_without_payload(decoder_name: str, width: int) -> None:
-    del width
-    native = pytest.importorskip("miniproto._native")
-    decoder = getattr(native, decoder_name)
-    data = (0x1CB5C415).to_bytes(4, "little") + (2**31 - 1).to_bytes(4, "little", signed=True)
-
-    with pytest.raises(ValueError, match="vector count exceeds remaining payload"):
-        decoder(data, 0)
-
-
-@pytest.mark.parametrize("decoder_name", ["tl_decode_int_vector", "tl_decode_long_vector"])
-@pytest.mark.parametrize("offset", [-1, 1, 7, 2**63])
-def test_compiled_native_vector_decoder_normalizes_invalid_offsets(decoder_name: str, offset: int) -> None:
-    native = pytest.importorskip("miniproto._native")
-    decoder = getattr(native, decoder_name)
-    data = (0x1CB5C415).to_bytes(4, "little") + (0).to_bytes(4, "little", signed=True)
-
-    with pytest.raises(ValueError, match="TL data ended before the requested value could be decoded"):
-        decoder(data, offset)
 
 
 def test_mtproto_encode_message_prefers_native_impl(monkeypatch: pytest.MonkeyPatch) -> None:

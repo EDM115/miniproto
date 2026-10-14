@@ -15,7 +15,7 @@ module: "miniproto.mtproto.state"
 ## `miniproto.mtproto.state.MTProtoState.validate_incoming`
 
 ```python
-validate_incoming(msg_id: int, *, session_id: int, now: float | None = None, provisional_time_offset: float | None = None, provisional_seen_msg_ids: Collection[int] = ()) -> None
+validate_incoming(msg_id: int, *, session_id: int, now: float | None = None, provisional_time_offset: float | None = None, provisional_seen_msg_ids: Collection[int] = (), allow_duplicate: bool = False) -> bool
 ```
 
 Validate an incoming envelope before permanently recording it.
@@ -27,6 +27,11 @@ Validate an incoming envelope before permanently recording it.
 - **now** (<code>[float](#float) | None</code>) – Optional wall-clock time for deterministic validation.
 - **provisional_time_offset** (<code>[float](#float) | None</code>) – Optional transactional offset to use for time-window checks.
 - **provisional_seen_msg_ids** (<code>[Collection](#collections.abc.Collection)[[int](#int)]</code>) – Additional IDs already staged in the current transaction.
+- **allow_duplicate** (<code>[bool](#bool)</code>) – Return ``False`` for a retained ID after validating its other envelope fields.
+
+**Returns:**
+
+- <code>[bool](#bool)</code> – ``True`` for a fresh ID or ``False`` for an explicitly allowed retained duplicate.
 
 **Raises:**
 

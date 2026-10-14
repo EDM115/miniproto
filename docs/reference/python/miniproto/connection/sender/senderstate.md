@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.connection.sender.SenderState"
 source_path: "src/miniproto/connection/sender.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/sender.py#L137"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/sender.py#L139"
 aliases: ["miniproto.connection.SenderState"]
 module: "miniproto.connection.sender"
 ---

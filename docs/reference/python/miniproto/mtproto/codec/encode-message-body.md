@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.mtproto.codec.encode_message_body"
 source_path: "src/miniproto/mtproto/codec.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/mtproto/codec.py#L378"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/mtproto/codec.py#L404"
 aliases: ["miniproto.mtproto.encode_message_body"]
 module: "miniproto.mtproto.codec"
 ---

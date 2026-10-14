@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from miniproto.raw import functions, types
-from miniproto.tl import fast
+from miniproto.tl import decode_object, fast
 
 if __package__:
     from tools.bench.reporting import (
@@ -75,7 +75,10 @@ def main() -> int:
     """
     parser = argparse.ArgumentParser(description="Benchmark the generated Rust TL hot-constructor mix")
     parser.add_argument(
-        "--iterations", type=int, default=32, help="hot-constructor operations per timed round; defaults to 32"
+        "--iterations",
+        type=int,
+        default=32,
+        help="complete four-operation constructor mixes per timed round; defaults to 32",
     )
     parser.add_argument(
         "--payload-bytes", type=int, default=256 * 1024, help="bytes in the benchmark payload field; defaults to 262144"
@@ -87,29 +90,64 @@ def main() -> int:
         "--mode",
         choices=("smoke", "full"),
         default="full",
-        help="workload size; smoke caps iterations, payload and rounds while full uses the supplied values",
+        help="workload size; smoke caps iterations at 8, payload at 64 KiB and rounds at 3 while full uses the supplied values",
     )
     parser.add_argument("--json", type=Path, help="write the normalized report to this path")
-    parser.add_argument("--check", action="store_true", help="fail unless the representative mix reaches 1.5x")
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="require 1.5x for the 64 KiB release or 256 KiB full mix, other payload sizes are diagnostic and cannot pass a check",
+    )
     args = parser.parse_args()
     if not fast.native_fast_paths_available():
         raise RuntimeError("native generated TL fast paths are unavailable")
     if args.iterations <= 0 or args.payload_bytes <= 0 or args.rounds <= 0:
         raise ValueError("iterations, payload-bytes and rounds must be positive")
+    if args.mode == "smoke":
+        args.iterations = min(args.iterations, 8)
+        args.payload_bytes = min(args.payload_bytes, 64 * 1024)
+        args.rounds = min(args.rounds, 3)
 
     result = _benchmark(iterations=args.iterations, payload_bytes=args.payload_bytes, rounds=args.rounds)
+    check = {
+        "enabled": args.check,
+        "target_speedup": 1.5,
+        "eligible": args.payload_bytes in (64 * 1024, 256 * 1024),
+        "workload": "four-operation constructor mix with a 64 KiB release or 256 KiB full payload",
+    }
+    failures = []
+    if args.check and not check["eligible"]:
+        failures.append(
+            {
+                "type": "BenchmarkConfigurationError",
+                "message": "the TL speed target requires a 64 KiB or 256 KiB payload",
+            }
+        )
+    elif args.check and result.speedup < 1.5:
+        failures.append(
+            {
+                "type": "PerformanceThresholdError",
+                "message": f"generated TL hot mix missed the 1.5x target: {result.speedup:.2f}x",
+            }
+        )
     report = build_benchmark_report(
         benchmark="generated_tl_hot_mix",
         mode=args.mode,
         warmup=3,
         samples=result.native_ms,
         unit="ms",
-        configuration={"iterations": args.iterations, "payload_bytes": args.payload_bytes, "rounds": args.rounds},
+        configuration={
+            "iterations": args.iterations,
+            "payload_bytes": args.payload_bytes,
+            "rounds": args.rounds,
+            "check": check,
+        },
         environment=collect_environment(),
         throughput={
-            "native_operations_per_second": args.iterations / max(result.native_median_ms / 1000, 1e-9),
-            "fallback_operations_per_second": args.iterations / max(result.fallback_median_ms / 1000, 1e-9),
+            "native_mix_iterations_per_second": args.iterations / max(result.native_median_ms / 1000, 1e-9),
+            "fallback_mix_iterations_per_second": args.iterations / max(result.fallback_median_ms / 1000, 1e-9),
         },
+        failures=failures,
         results=[
             {
                 "name": "representative_generated_constructor_mix",
@@ -124,8 +162,8 @@ def main() -> int:
     print(json.dumps(report, indent=2, sort_keys=True))
     if args.json is not None:
         write_benchmark_report(args.json, report)
-    if args.check and result.speedup < 1.5:
-        raise RuntimeError(f"generated TL hot mix missed the 1.5x target: {result.speedup:.2f}x")
+    if failures:
+        raise RuntimeError(failures[0]["message"])
     return 0
 
 
@@ -147,8 +185,6 @@ def _benchmark(*, iterations: int, payload_bytes: int, rounds: int) -> Result:
     )
     file_hash = types.FileHash(offset=1 << 40, limit=512 * 1024, hash=b"h" * 32)
     cdn_file = types.UploadCdnFile(bytes=payload)
-    encoded_hash = file_hash.serialize()
-    encoded_cdn = cdn_file.serialize()
     native_encode = fast._native_encode
     native_decode = fast._native_decode
 
@@ -169,6 +205,22 @@ def _benchmark(*, iterations: int, payload_bytes: int, rounds: int) -> Result:
         return checksum
 
     try:
+        fast._native_encode = None
+        fast._native_decode = None
+        encoded_upload = upload_part.serialize()
+        encoded_get_file = get_file.serialize()
+        encoded_hash = file_hash.serialize()
+        encoded_cdn = cdn_file.serialize()
+        expected_hash = (file_hash, len(encoded_hash))
+        expected_cdn = (cdn_file, len(encoded_cdn))
+        if decode_object(encoded_hash) != expected_hash or decode_object(encoded_cdn) != expected_cdn:
+            raise AssertionError("fallback TL decoded-field parity failed")
+        fast._native_encode = native_encode
+        fast._native_decode = native_decode
+        if upload_part.serialize() != encoded_upload or get_file.serialize() != encoded_get_file:
+            raise AssertionError("native and fallback TL encoding parity failed")
+        if decode_object(encoded_hash) != expected_hash or decode_object(encoded_cdn) != expected_cdn:
+            raise AssertionError("native and fallback TL decoded-field parity failed")
         expected = run_batch(native=False)
         if run_batch(native=True) != expected:
             raise AssertionError("native and fallback TL benchmark mixes produced different output")

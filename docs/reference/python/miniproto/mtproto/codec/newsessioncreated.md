@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.mtproto.codec.NewSessionCreated"
 source_path: "src/miniproto/mtproto/codec.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/mtproto/codec.py#L230"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/mtproto/codec.py#L256"
 aliases: ["miniproto.mtproto.NewSessionCreated"]
 module: "miniproto.mtproto.codec"
 ---

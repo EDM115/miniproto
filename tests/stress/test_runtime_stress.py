@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import os
 from dataclasses import dataclass, field
 
@@ -122,10 +123,9 @@ def test_stress_dispatches_many_updates_without_loss() -> None:
         )
         for index in range(count):
             await manager.emit_update(Update(raw=index))
-        received = [await anext(manager.iter_updates()) for _ in range(count)]
-        assert len(received) == count
-        assert received[0].raw == 0
-        assert received[-1].raw == count - 1
+        iterator = manager.iter_updates()
+        received = [await anext(iterator) for _ in range(count)]
+        assert [update.raw for update in received] == list(range(count))
 
     run(scenario())
 
@@ -152,11 +152,14 @@ def test_stress_sends_many_messages_through_cached_peer() -> None:
 
 def test_stress_repeated_client_lifecycle_does_not_leak_tasks() -> None:
     async def scenario() -> None:
+        baseline = asyncio.all_tasks()
         for _ in range(500):
             client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=InMemorySessionStorage()))
             await client.connect()
+            assert asyncio.all_tasks() > baseline
             await client.disconnect()
             assert not client.is_connected
+            assert asyncio.all_tasks() == baseline
 
     run(scenario())
 

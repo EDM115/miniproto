@@ -1,6 +1,6 @@
 ---
 title: Migration
-description: Current Alpha migration boundaries for session storage, portable sessions, custom backends and generated raw API changes.
+description: Current Alpha migration boundaries for session storage, portable sessions, RPC decoding, transport validation and generated raw API changes.
 slug: /project/migration/
 generated: false
 ---
@@ -20,6 +20,14 @@ Use a distinct session path for each account/deployment. Do not point multiple u
 Custom `SessionStorage` implementations must provide atomic synchronous `mutate()` and `domain_revisions()` behavior. An unlocked `load()` followed by `save()` can lose concurrent authorization, peer, update, salt or media-DC changes and is not conformant.
 
 Portable string import is deliberately guarded: it requires a disconnected client and refuses to replace nonempty storage unless `replace=True` is explicit. Telethon and Pyrogram formats preserve less state than a full miniproto record; configure original API credentials and allow the documented one-time update-state bootstrap. Treat every imported string and passphrase as a bearer secret.
+
+## Update duplicate-key migration
+
+After the channel-aware and zero-count duplicate-key change, one previously recovered PTS-less channel event may be delivered again after upgrading because older state may have recorded it under the former key. Positive-count PTS/QTS cursor checks still apply, so make durable application side effects idempotent.
+
+## RPC decoding and inbound framing
+
+`GzipPacked.unpack()` defaults to a 16 MiB total decompressed-output limit. `decode_rpc_response()` and `decode_result_payload()` default to 16 MiB per gzip wrapper and cap nesting at 16 wrappers. `Client` passes `ClientConfig.transport.max_payload_size` to RPC result decoding and pushed-update dispatch, so that setting controls those client paths. Malformed inbound framing is fatal and fails pending RPCs, while recoverable connection and I/O failures continue through bounded reconnection and the configured request retry policy.
 
 ## Generated raw API changes
 

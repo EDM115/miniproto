@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.mtproto.codec.MsgsAck"
 source_path: "src/miniproto/mtproto/codec.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/mtproto/codec.py#L91"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/mtproto/codec.py#L95"
 aliases: ["miniproto.mtproto.MsgsAck"]
 module: "miniproto.mtproto.codec"
 ---

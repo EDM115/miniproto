@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.connection.framing.PythonFrameCodec.feed_data"
 source_path: "src/miniproto/connection/framing.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/framing.py#L144"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/framing.py#L145"
 module: "miniproto.connection.framing"
 ---
 

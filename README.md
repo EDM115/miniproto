@@ -6,14 +6,24 @@
 
 </div>
 
-`miniproto` is a fast, async-first Telegram MTProto client core for Python. It owns protocol correctness, authorization, encrypted sessions, raw API bindings, updates, peers, messages and bounded media transfers while a bundled Rust/PyO3 extension accelerates measured hot paths.  
+`miniproto` is a fast, async-first Telegram MTProto client for Python with authorization, encrypted sessions, raw API bindings, updates, peers, messages and bounded media transfers. A bundled Rust/PyO3 extension accelerates selected hot paths with benchmark evidence.  
 The first public line is `0.1.x` Alpha : the implementation is substantial, but breaking changes remain possible while the API and operational defaults settle. Start with the [documentation website](https://miniproto.edm115.dev/) or the [five-minute quickstart](https://miniproto.edm115.dev/start/quickstart/).
 
 ## Install
 
+Install the published package from PyPI with either package manager:
+
 ```zsh
 uv add miniproto
 ```
+
+Or install it with pip:
+
+```zsh
+python -m pip install miniproto
+```
+
+For development from a source checkout, follow the [installation guide](https://miniproto.edm115.dev/start/installation/).
 
 The package requires Python 3.13+. Release automation targets normal CPython 3.13 and 3.14 plus free-threaded CPython 3.14t, with native wheels for Linux glibc/musl, Windows and macOS on x86-64 and ARM64. CPython 3.13t and ARMv7 are not supported.
 
@@ -100,7 +110,7 @@ async def consume_updates() -> None:
             await process(update)
 ```
 
-Update recovery persists MTProto state before public delivery, handles difference recovery and preserves FIFO order for the normalized events it emits. It is not an application-level exactly-once guarantee: durable side effects still need application-owned idempotency and a blocked iterator task must be cancelled during shutdown.
+Update recovery persists MTProto state before public delivery, handles difference recovery and preserves FIFO order for the normalized events it emits. It is not an application-level exactly-once guarantee: durable side effects still need application-owned idempotency and a blocked iterator task must be cancelled during shutdown. A changed channel/zero-count duplicate key can deliver one previously recovered PTS-less channel event again after an upgrade, and positive-count PTS/QTS cursor checks still apply.
 
 ## Bounded media transfers
 
@@ -119,7 +129,7 @@ Uploads and downloads use bounded request windows, shared byte-weighted per-DC s
 ## Sessions, native code and fallbacks
 
 Native miniproto session strings can be exported as a checksummed bearer value or protected with Scrypt and AES-256-GCM. Telethon v1 and Pyrogram compatibility formats are supported with explicitly lossy field mappings. Every session string is a bearer credential, even when encrypted at rest.  
-The private `miniproto._native` extension provides crypto, MTProto envelope, transport framing, TL and session hot paths. Public wrappers select capabilities rather than assuming that one successful import implements everything; supported Python/`cryptography` paths remain available when a native capability cannot load. Reproducible benchmark commands and result interpretation are documented in [Performance and benchmarks](https://miniproto.edm115.dev/guides/performance-and-benchmarks/); no local timing is presented as a universal Telegram throughput claim.
+The private `miniproto._native` extension provides crypto, MTProto envelope, transport framing, TL and session hot paths. Public wrappers select capabilities independently. Python helpers and `cryptography`-backed fallbacks remain available where their dependencies are installed. AES/Scrypt fallback uses `cryptography`, which the base dependencies exclude on Windows ARM64, so those operations need native capabilities there unless `cryptography` is installed separately. Reproducible benchmark commands and result interpretation are documented in [Performance and benchmarks](https://miniproto.edm115.dev/guides/performance-and-benchmarks/). No local timing is presented as a universal Telegram throughput claim.
 
 ## `miniproto` vs `mpgram`
 

@@ -30,7 +30,7 @@ Structured logging, lightweight metrics and process-memory observation helpers.
 - [`emit_event`](./emit-event/) — Emit one structured miniproto event if the level is enabled.
 - [`set_metrics_sink`](./set-metrics-sink/) — Set the process-global metrics destination or disable metric recording.
 - [`get_metrics_sink`](./get-metrics-sink/) — Return the currently configured process-global metrics sink, if any.
-- [`record_metric`](./record-metric/) — Record a metric through the configured sink, suppressing sink failures.
+- [`record_metric`](./record-metric/) — Redact attributes and record a metric synchronously, suppressing sink failures.
 - [`resource_snapshot`](./resource-snapshot/) — Capture current RSS, active tracemalloc counters and GC object count.
 - [`process_rss_bytes`](./process-rss-bytes/) — Return this process's reported RSS/working-set byte count when available.
 - [`current_process_id`](./current-process-id/) — Return the current operating-system process identifier.

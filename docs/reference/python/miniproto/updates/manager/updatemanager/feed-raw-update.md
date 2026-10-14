@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.updates.manager.UpdateManager.feed_raw_update"
 source_path: "src/miniproto/updates/manager.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/updates/manager.py#L135"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/updates/manager.py#L137"
 aliases: ["miniproto.updates.UpdateManager.feed_raw_update"]
 module: "miniproto.updates.manager"
 ---

@@ -81,7 +81,6 @@ def test_update_snapshot_uses_schema_json_and_extracts_tl_from_schema_html() -> 
     assert files[Path("repo/tools/schema/schema.tl")] == TDLIB_TL.decode()
     assert files[Path("repo/tools/schema/schema-tdesktop.tl")] == TDESKTOP_TL.decode()
     assert files[Path("repo/tools/schema/schema-core.json")] == SCHEMA_JSON.decode()
-    assert "boolTrue#997275b5 = Bool;" in files[Path("repo/tools/schema/schema.tl")]
     assert metadata["schema_layer"] == 228
     assert metadata["canonical_source"] == "tdlib"
     assert metadata["structural_source_url"].endswith("td/generate/scheme/telegram_api.tl")

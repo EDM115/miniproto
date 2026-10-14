@@ -64,8 +64,7 @@ def collect_environment() -> dict[str, Any]:
     """Collect non-secret local runtime evidence used to interpret benchmark results.
 
     Returns:
-        Package/native availability, platform, interpreter, tool, Git and event-loop
-        metadata. Missing commands and distributions are represented by ``None``.
+        Package/native availability, platform, interpreter, tool, Git and event-loop metadata. Platform backend preference is separate from the executing loop, which is ``None`` for synchronous callers. Missing commands and distributions are represented by ``None``.
 
     Evidence Limits:
         This is contextual metadata only. It does not prove clean-tree state,
@@ -74,6 +73,12 @@ def collect_environment() -> dict[str, Any]:
     """
     native_version: str | None = None
     native_available = False
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        running_backend = None
+    else:
+        running_backend = f"{type(loop).__module__}.{type(loop).__name__}"
     try:
         native = importlib.import_module("miniproto._native")
     except ImportError:
@@ -95,9 +100,10 @@ def collect_environment() -> dict[str, Any]:
         "python_implementation": platform.python_implementation(),
         "rust": _command_output(("rustc", "--version")),
         "event_loop": {
-            "backend": event_loop.backend_name(),
-            "installed": event_loop.installed(),
-            "version": event_loop.backend_version(),
+            "preferred_backend": event_loop.backend_name(),
+            "legacy_policy_installed": event_loop.installed(),
+            "preferred_version": event_loop.backend_version(),
+            "running_backend": running_backend,
         },
     }
 

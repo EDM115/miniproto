@@ -137,6 +137,7 @@ async def ensure_auth_key(config: ClientConfig, storage: SessionStorage) -> None
         result = await AuthKeyExchange(
             transport,
             dc_id=dc_id,
+            media_only=option.media_only and not option.cdn,
             rsa_keys=telegram_rsa_public_keys(test_mode=config.test_mode),
             test_mode=config.test_mode,
         ).create_auth_key()

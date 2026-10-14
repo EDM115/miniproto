@@ -15,6 +15,7 @@ from miniproto.connection.framing import (
     native_transport_available,
 )
 from miniproto.connection.transport import TransportError
+from miniproto.errors import ProtocolValidationError
 
 PAYLOAD = bytes(range(40))
 QUICK_ACK_TOKEN = 0x92345678
@@ -47,10 +48,11 @@ def test_frame_codec_drains_all_coalesced_frames(mode: str, monkeypatch: pytest.
         monkeypatch.setattr("miniproto.connection.framing.secrets.randbelow", lambda _upper: next(lengths))
         monkeypatch.setattr("miniproto.connection.framing.os.urandom", lambda length: b"\xa5" * length)
     first = codec.encode_packet(PAYLOAD)
-    second = codec.encode_packet(PAYLOAD)
+    second_payload = bytes(range(60, 116))
+    second = codec.encode_packet(second_payload)
 
     decoder = PythonFrameCodec(mode, max_payload_size=1024)
-    assert decoder.feed_data(first + second) == (PayloadFrame(PAYLOAD), PayloadFrame(PAYLOAD))
+    assert decoder.feed_data(first + second) == (PayloadFrame(PAYLOAD), PayloadFrame(second_payload))
 
 
 def test_abridged_long_header_roundtrips_at_every_split() -> None:
@@ -139,7 +141,7 @@ def test_abridged_payload_bytes_that_look_like_negative_error_remain_payload() -
 )
 def test_frame_codec_rejects_oversized_length_as_soon_as_header_is_complete(mode: str, header: bytes) -> None:
     codec = PythonFrameCodec(mode, max_payload_size=1024)
-    with pytest.raises(TransportError, match="exceeds"):
+    with pytest.raises(ProtocolValidationError, match="exceeds"):
         codec.feed_data(header)
 
 
@@ -173,19 +175,28 @@ def test_native_codec_errors_are_not_retried_through_python(monkeypatch: pytest.
             del data
             raise ValueError("native malformed input")
 
+        def feed_transport_data(self, data: bytes) -> list[bytes | int]:
+            del data
+            raise ValueError("native malformed input")
+
     monkeypatch.setattr(framing_module, "_native_codec_type", lambda: ExplodingNativeCodec)
     codec = create_frame_codec("tcp_intermediate", max_payload_size=1024)
     assert isinstance(codec, NativeFrameCodec)
     with pytest.raises(TransportError, match="native malformed input"):
+        codec.encode_packet(b"data")
+    with pytest.raises(ProtocolValidationError, match="native malformed input"):
         codec.feed_data(b"\x04\x00\x00\x00data")
+    with pytest.raises(ProtocolValidationError, match="native malformed input"):
+        codec.feed_transport_data(b"\x04\x00\x00\x00data")
 
 
 @pytest.mark.skipif(not native_transport_available(), reason="native extension was not built for this interpreter")
 @pytest.mark.parametrize("mode", ["tcp_abridged", "tcp_intermediate", "tcp_padded_intermediate"])
 def test_native_frame_codec_matches_python_for_fragmented_and_coalesced_frames(mode: str) -> None:
     python_encoder = PythonFrameCodec(mode, max_payload_size=1024)
-    wire = python_encoder.encode_packet(PAYLOAD) + python_encoder.encode_packet(PAYLOAD)
-    expected = (PayloadFrame(PAYLOAD), PayloadFrame(PAYLOAD))
+    second_payload = bytes(range(60, 116))
+    wire = python_encoder.encode_packet(PAYLOAD) + python_encoder.encode_packet(second_payload)
+    expected = (PayloadFrame(PAYLOAD), PayloadFrame(second_payload))
 
     for codec_type in (PythonFrameCodec, NativeFrameCodec):
         decoder = codec_type(mode, max_payload_size=1024)

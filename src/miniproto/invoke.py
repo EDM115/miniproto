@@ -23,13 +23,21 @@ from miniproto.errors import (
     FloodWait,
     InternalServerError,
     InvalidDatacenter,
+    ProtocolValidationError,
     RequestTimeout,
     ResultTypeMismatch,
     RpcError,
     RpcTimeout,
     classify_rpc_error,
 )
-from miniproto.mtproto.codec import GzipPacked, RpcErrorBody, decode_message_body
+from miniproto.mtproto.codec import (
+    DEFAULT_GZIP_MAX_OUTPUT_SIZE,
+    MAX_GZIP_WRAPPER_DEPTH,
+    GzipPacked,
+    RpcErrorBody,
+    decode_message_body,
+    encode_message_body,
+)
 from miniproto.mtproto.state import MTProtoState
 from miniproto.raw import functions, types
 from miniproto.raw.base import RAW_API_LAYER
@@ -200,12 +208,15 @@ def mark_sender_initialized(sender: object) -> None:
         cast(Any, sender).connection_initialized = True
 
 
-def decode_rpc_response(raw_result: object, raw_request: object) -> object:
+def decode_rpc_response(
+    raw_result: object, raw_request: object, *, max_output_size: int = DEFAULT_GZIP_MAX_OUTPUT_SIZE
+) -> object:
     """Decode and validate an RPC result, translating Telegram error bodies.
 
     Args:
         raw_result: Sender result, possibly encoded bytes or an MTProto error object.
         raw_request: Original request used to infer and validate its result type.
+        max_output_size: Maximum decompressed bytes per gzip wrapper, defaulting to 16 MiB.
 
     Returns:
         The decoded result matching the request's declared TL result type.
@@ -214,9 +225,10 @@ def decode_rpc_response(raw_result: object, raw_request: object) -> object:
         RpcError: A classified Telegram RPC error when the result is an error body.
         ResultTypeMismatch: If a non-generic decoded result disagrees with the request contract.
         TLCodecError: If an encoded result is malformed or contains trailing bytes.
+        ProtocolValidationError: If gzip expansion, nesting or stream validity violates the decoding bounds.
     """
     expected_type = result_type_for_request(raw_request)
-    result = decode_result_payload(raw_result, expected_type)
+    result = decode_result_payload(raw_result, expected_type, max_output_size=max_output_size)
     if isinstance(result, RpcErrorBody):
         raise classify_rpc_error(RpcError(result.error_message, code=result.error_code, request=raw_request))
     if isinstance(result, types.Error):
@@ -225,25 +237,29 @@ def decode_rpc_response(raw_result: object, raw_request: object) -> object:
     return result
 
 
-def decode_result_payload(raw_result: object, expected_type: str | None = None) -> object:
+def decode_result_payload(
+    raw_result: object, expected_type: str | None = None, *, max_output_size: int = DEFAULT_GZIP_MAX_OUTPUT_SIZE
+) -> object:
     """Decode bytes or gzip-packed RPC results while leaving decoded values unchanged.
 
     Args:
         raw_result: Encoded or already decoded sender result.
         expected_type: Optional TL result type used to decode primitive result payloads.
+        max_output_size: Maximum decompressed bytes per gzip wrapper, defaulting to 16 MiB.
 
     Returns:
         The recursively unpacked and decoded result object.
 
     Raises:
         TLCodecError: If the payload cannot be decoded exactly.
+        ProtocolValidationError: If gzip expansion, nesting or stream validity violates the decoding bounds.
     """
     if isinstance(raw_result, bytes | memoryview):
-        return _decode_result_bytes(raw_result, expected_type)
+        return _decode_result_bytes(raw_result, expected_type, max_output_size=max_output_size)
     if isinstance(raw_result, bytearray):
-        return _decode_result_bytes(memoryview(raw_result), expected_type)
+        return _decode_result_bytes(memoryview(raw_result), expected_type, max_output_size=max_output_size)
     if isinstance(raw_result, GzipPacked):
-        return decode_result_payload(raw_result.unpack(), expected_type)
+        return _decode_result_bytes(encode_message_body(raw_result), expected_type, max_output_size=max_output_size)
     return raw_result
 
 
@@ -302,6 +318,9 @@ def _is_retryable_request_type(request_type: type[object]) -> bool:
         request_type: Innermost raw request class to classify by Telegram qualified name.
     """
     qualname = str(getattr(request_type, "QUALNAME", "")).lower()
+    if qualname == "messages.getbotcallbackanswer":
+        # This getter presses a bot button without a random_id deduplication guarantee
+        return False
     if qualname.startswith(_SAFE_RETRY_PREFIXES):
         return True
     # Telegram de-duplicates these writes by random_id, so retrying after a
@@ -597,16 +616,21 @@ def wrap_transport_failure(exc: BaseException, raw_request: object, *, connected
     return RpcError(str(exc) or type(exc).__name__, request=raw_request)
 
 
-def _decode_result_bytes(data: bytes | memoryview, expected_type: str | None) -> object:
+def _decode_result_bytes(data: bytes | memoryview, expected_type: str | None, *, max_output_size: int) -> object:
     """Decode a complete RPC result byte payload, handling gzip and primitive result types.
 
     Args:
         data: Encoded MTProto RPC result bytes.
         expected_type: Optional concrete TL type for primitive value decoding.
+        max_output_size: Maximum decompressed bytes per gzip wrapper.
     """
-    body = decode_message_body(data)
-    if isinstance(body, GzipPacked):
-        return decode_result_payload(body.unpack(), expected_type)
+    for depth in range(MAX_GZIP_WRAPPER_DEPTH + 1):
+        body = decode_message_body(data)
+        if not isinstance(body, GzipPacked):
+            break
+        if depth == MAX_GZIP_WRAPPER_DEPTH:
+            raise ProtocolValidationError("gzip_wrapper_depth", context={"maximum": MAX_GZIP_WRAPPER_DEPTH})
+        data = body.unpack(max_output_size=max_output_size)
     if body is not data:
         return body
     if _starts_with_constructor(data, types.Error.CONSTRUCTOR_ID):

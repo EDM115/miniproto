@@ -147,7 +147,11 @@ def assemble_download_parts(
         for part_path in part_paths:
             with part_path.open("rb") as part:
                 while chunk := part.read(4 * MIB):
-                    output.write(chunk)
+                    accepted = output.write(chunk)
+                    if accepted != len(chunk):
+                        raise RuntimeError(
+                            f"destination write at offset {written} expected {len(chunk)} bytes but wrote {accepted}"
+                        )
                     written += len(chunk)
         if written != expected_size:
             raise RuntimeError(f"assembled download size mismatch: expected {expected_size}, wrote {written}")

@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.connection.framing.PayloadFrame"
 source_path: "src/miniproto/connection/framing.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/framing.py#L25"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/framing.py#L26"
 module: "miniproto.connection.framing"
 ---
 

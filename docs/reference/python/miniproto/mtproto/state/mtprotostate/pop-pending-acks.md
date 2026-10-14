@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.mtproto.state.MTProtoState.pop_pending_acks"
 source_path: "src/miniproto/mtproto/state.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/mtproto/state.py#L213"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/mtproto/state.py#L248"
 aliases: ["miniproto.mtproto.MTProtoState.pop_pending_acks"]
 module: "miniproto.mtproto.state"
 ---

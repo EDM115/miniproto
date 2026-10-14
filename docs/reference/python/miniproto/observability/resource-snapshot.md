@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.observability.resource_snapshot"
 source_path: "src/miniproto/observability.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/observability.py#L333"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/observability.py#L334"
 aliases: ["miniproto.resource_snapshot"]
 module: "miniproto.observability"
 ---

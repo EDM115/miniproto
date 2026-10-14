@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.mtproto.codec.BadServerSalt"
 source_path: "src/miniproto/mtproto/codec.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/mtproto/codec.py#L213"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/mtproto/codec.py#L239"
 aliases: ["miniproto.mtproto.BadServerSalt"]
 module: "miniproto.mtproto.codec"
 ---

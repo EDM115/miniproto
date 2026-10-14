@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.connection.framing.TransportFrameCodec.encode_packet"
 source_path: "src/miniproto/connection/framing.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/framing.py#L70"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/framing.py#L71"
 module: "miniproto.connection.framing"
 ---
 

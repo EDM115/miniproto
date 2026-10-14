@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import tools.bench.reporting as reporting
 from tools.bench.reporting import (
     BENCHMARK_SCHEMA,
     LoopLagProbe,
@@ -80,7 +81,7 @@ def test_write_benchmark_report_is_deterministic_and_creates_parent(tmp_path: Pa
     assert destination.read_text(encoding="utf-8") == json.dumps(report, indent=2, sort_keys=True) + "\n"
 
 
-def test_loop_lag_probe_reports_fixed_cadence_delays_and_stalls() -> None:
+def test_loop_lag_probe_lifecycle_reports_samples_and_callback_overhead() -> None:
     async def scenario() -> dict[str, Any]:
         probe = LoopLagProbe(interval_s=0.001, stall_threshold_s=0.005)
         await probe.start()
@@ -107,3 +108,18 @@ def test_loop_lag_probe_rejects_invalid_configuration() -> None:
         LoopLagProbe(interval_s=0)
     with pytest.raises(ValueError, match="stall_threshold_s"):
         LoopLagProbe(interval_s=0.001, stall_threshold_s=-1)
+
+
+def test_environment_distinguishes_running_loop_from_platform_preference(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(reporting, "_command_output", lambda command: None)
+    monkeypatch.setattr(reporting.event_loop, "backend_name", lambda: "preferred-loop")
+    monkeypatch.setattr(reporting.event_loop, "backend_version", lambda: "1.2.3")
+
+    async def collect():
+        loop = asyncio.get_running_loop()
+        return reporting.collect_environment(), f"{type(loop).__module__}.{type(loop).__name__}"
+
+    environment, actual = asyncio.run(collect())
+    assert environment["event_loop"]["preferred_backend"] == "preferred-loop"
+    assert environment["event_loop"]["running_backend"] == actual
+    assert reporting.collect_environment()["event_loop"]["running_backend"] is None

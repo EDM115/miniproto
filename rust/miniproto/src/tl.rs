@@ -1185,16 +1185,16 @@ mod tests {
     }
 
     #[test]
-    /// Guards the generated fast-path table's expected unique-constructor count.
-    fn generated_fast_path_table_has_thirty_unique_constructors() {
-        assert_eq!(crate::generated_tl::FAST_CONSTRUCTORS.len(), 30);
+    /// Guards the generated fast-path table against empty or duplicate constructor entries
+    fn generated_fast_path_table_has_unique_constructors() {
+        assert!(!crate::generated_tl::FAST_CONSTRUCTORS.is_empty());
         let mut ids = crate::generated_tl::FAST_CONSTRUCTORS
             .iter()
             .map(|spec| spec.constructor_id)
             .collect::<Vec<_>>();
         ids.sort_unstable();
         ids.dedup();
-        assert_eq!(ids.len(), 30);
+        assert_eq!(ids.len(), crate::generated_tl::FAST_CONSTRUCTORS.len());
     }
 
     #[test]

@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.invoke.is_retryable_request"
 source_path: "src/miniproto/invoke.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L279"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L295"
 module: "miniproto.invoke"
 ---
 

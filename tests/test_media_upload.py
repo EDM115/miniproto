@@ -177,7 +177,7 @@ def test_upload_file_cancels_pending_part_tasks_when_outer_upload_is_cancelled()
 
 def test_upload_file_uses_small_file_parts_and_md5() -> None:
     async def scenario() -> None:
-        payload = b"a" * (DEFAULT_CHUNK_SIZE + 3)
+        payload = b"a" * DEFAULT_CHUNK_SIZE + b"xyz"
         progress: list[tuple[int, int | None]] = []
         invoker = FakeInvoker([types.BoolTrue(), types.BoolTrue()])
         result = await upload_file(
@@ -197,9 +197,9 @@ def test_upload_file_uses_small_file_parts_and_md5() -> None:
             functions.UploadSaveFilePart,
         ]
         assert invoker.requests[0].file_part == 0
-        assert len(invoker.requests[0].bytes) == DEFAULT_CHUNK_SIZE
+        assert invoker.requests[0].bytes == payload[:DEFAULT_CHUNK_SIZE]
         assert invoker.requests[1].file_part == 1
-        assert invoker.requests[1].bytes == b"aaa"
+        assert invoker.requests[1].bytes == b"xyz"
         assert progress == [(DEFAULT_CHUNK_SIZE, len(payload)), (len(payload), len(payload))]
 
     run(scenario())
@@ -373,16 +373,10 @@ def test_upload_file_flood_threshold_is_a_hard_cap_override() -> None:
     run(scenario())
 
 
-def test_backoff_delay_grows_exponentially_with_jitter_and_cap() -> None:
-    for _ in range(50):
-        first = backoff_delay(0)
-        second = backoff_delay(1)
-        third = backoff_delay(2)
-        capped = backoff_delay(30)
-        assert 0.4 <= first <= 0.6
-        assert 0.8 <= second <= 1.2
-        assert 1.6 <= third <= 2.4
-        assert capped <= 12.0
+def test_backoff_delay_grows_exponentially_with_jitter_and_cap(monkeypatch: pytest.MonkeyPatch) -> None:
+    for endpoint, expected in ((0, (0.4, 0.8, 1.6, 8.0)), (1, (0.6, 1.2, 2.4, 12.0))):
+        monkeypatch.setattr("miniproto.media.retry.random.uniform", lambda low, high, endpoint=endpoint: (low, high)[endpoint])  # fmt: skip
+        assert [backoff_delay(attempt) for attempt in (0, 1, 2, 30)] == pytest.approx(expected)
 
 
 def test_upload_retry_backoff_sleeps_nonzero_delay(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -515,7 +509,7 @@ def test_client_send_file_uses_dedicated_media_lanes() -> None:
         client._sender_factory = sender_factory
         await client.connect()
         message = await client.send_file(
-            "@alice", b"a" * 2048, file_name="lanes.bin", part_size=1024, concurrency=2, random_id=10
+            "@alice", b"a" * 1024 + b"b" * 1024, file_name="lanes.bin", part_size=1024, concurrency=2, random_id=10
         )
         assert message.id == 301
         assert built_senders == lane_senders
@@ -525,7 +519,7 @@ def test_client_send_file_uses_dedicated_media_lanes() -> None:
         for request in (inner_request(sender.requests[0]) for sender in lane_senders):
             assert isinstance(request, functions.UploadSaveFilePart)
             upload_requests.append(request)
-        assert {request.file_part for request in upload_requests} == {0, 1}
+        assert {request.file_part: request.bytes for request in upload_requests} == {0: b"a" * 1024, 1: b"b" * 1024}
         assert isinstance(inner_request(main_sender.requests[0]), functions.MessagesSendMedia)
 
     run(scenario())

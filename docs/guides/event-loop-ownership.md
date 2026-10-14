@@ -39,7 +39,7 @@ with asyncio.Runner(loop_factory=event_loop.new_event_loop) as runner:
 
 `new_event_loop()` registers the new loop as current for the calling thread. The caller owns its lifecycle when using it directly; `asyncio.Runner` closes the loop it receives from its factory.
 
-Debug runners intentionally use the standard loop for the known debug-mode incompatibilities with uvloop through 0.22.1 and winloop through 0.6.3. This is a debugging trade-off, not evidence that the optimized backend is absent.
+Debug runners use the standard loop for the known debug-mode incompatibilities with uvloop through 0.23.0 and winloop through 0.8.0. These cutoffs follow backend async-generator-finalization behavior and may change with upstream releases.
 
 ## Avoid the legacy installer
 

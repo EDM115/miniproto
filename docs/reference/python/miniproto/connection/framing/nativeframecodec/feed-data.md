@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.connection.framing.NativeFrameCodec.feed_data"
 source_path: "src/miniproto/connection/framing.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/framing.py#L443"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/framing.py#L444"
 module: "miniproto.connection.framing"
 ---
 
@@ -25,6 +25,6 @@ Decode native frame-pump events into the portable event types.
 
 **Raises:**
 
-- <code>[TransportError](#miniproto.connection.transport.TransportError)</code> – If the backend rejects invalid framing under the
+- <code>[ProtocolValidationError](#miniproto.errors.ProtocolValidationError)</code> – If the backend rejects invalid inbound framing under the
 same rules as the Python codec.
 - <code>[RuntimeError](#RuntimeError)</code> – If the backend emits an unknown event kind.

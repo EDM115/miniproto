@@ -80,7 +80,7 @@ Public API for miniproto.
 - [`get_logger`](./observability/get-logger/) — Return the root miniproto logger or a named child logger.
 - [`get_metrics_sink`](./observability/get-metrics-sink/) — Return the currently configured process-global metrics sink, if any.
 - [`process_rss_bytes`](./observability/process-rss-bytes/) — Return this process's reported RSS/working-set byte count when available.
-- [`record_metric`](./observability/record-metric/) — Record a metric through the configured sink, suppressing sink failures.
+- [`record_metric`](./observability/record-metric/) — Redact attributes and record a metric synchronously, suppressing sink failures.
 - [`resource_snapshot`](./observability/resource-snapshot/) — Capture current RSS, active tracemalloc counters and GC object count.
 - [`set_metrics_sink`](./observability/set-metrics-sink/) — Set the process-global metrics destination or disable metric recording.
 - [`to_jsonable`](./observability/to-jsonable/) — Recursively convert supported observability values into JSON-compatible shapes.

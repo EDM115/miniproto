@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.invoke.should_sleep_for_flood_wait"
 source_path: "src/miniproto/invoke.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L321"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L340"
 module: "miniproto.invoke"
 ---
 

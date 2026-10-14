@@ -10,11 +10,15 @@ The public convenience surface is intentionally small. `Client.send_message()` r
 ```python
 import os
 
-from miniproto import Client, ClientConfig, event_loop
+from miniproto import Client, ClientConfig, InMemorySessionStorage, event_loop
 
 
 async def main() -> None:
-    config = ClientConfig(api_id=int(os.environ["MINIPROTO_API_ID"]), api_hash=os.environ["MINIPROTO_API_HASH"])
+    config = ClientConfig(
+        api_id=int(os.environ["MINIPROTO_API_ID"]),
+        api_hash=os.environ["MINIPROTO_API_HASH"],
+        session_storage=InMemorySessionStorage(),
+    )
     async with Client(config) as client:
         await client.sign_in_bot(os.environ["MINIPROTO_BOT_TOKEN"])
         message = await client.send_message("@your_test_chat", "Hello from miniproto")

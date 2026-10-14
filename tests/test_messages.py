@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 
 import pytest
 
@@ -215,7 +216,7 @@ def test_get_history_returns_normalized_messages_and_remembers_entities() -> Non
                 id=77,
                 peer=Peer(id=7, kind="user", access_hash=77),
                 text="history text",
-                date=messages[0].date,
+                date=datetime.fromtimestamp(1_700_000_001, UTC),
                 raw=raw_message,
             ),
         )

@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.auth.bootstrap.telegram_rsa_public_keys"
 source_path: "src/miniproto/auth/bootstrap.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/auth/bootstrap.py#L171"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/auth/bootstrap.py#L172"
 module: "miniproto.auth.bootstrap"
 ---
 

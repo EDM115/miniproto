@@ -9,17 +9,17 @@ miniproto separates unprivileged artifact construction from privileged publicati
 
 The `0.1.x` crates.io package is the source and provenance record for the bundled PyO3 accelerator. It is versioned and released with the Python package, but it is not yet a supported standalone Rust library API. The direct Rust-consumer boundary is deliberately deferred until the crate exposes an `rlib`, documents its Rust-facing stability policy and passes external-consumer tests.
 
-## Current `0.1.0` handoff state
+## `0.1.0` handoff and historical evidence
 
 - [x] Python, Rust, lockfile, documentation-site, changelog, license and Alpha metadata agree on exactly `0.1.0`.
-- [x] The post-reconciliation canonical local 22-stage offline gate passed on 2026-08-19, including the complete Python/Rust/docs/benchmark suites, strict wheel/sdist inspection and independent dependency-resolving installs. The immediately preceding Wave 6 package proof also passed Twine validation and packaged the Cargo source archive from the exact extracted sdist.
-- [x] Corrected hosted CI, documentation and all 24 wheel lanes passed at commit `c81533922ba63c89337f3959b881109c3b7e5dec` in runs `32228452630`, `32228472756` and `32228463727` respectively.
+- [x] Historical hosted [CI](https://github.com/EDM115/miniproto/actions/runs/32228452630), [documentation](https://github.com/EDM115/miniproto/actions/runs/32228472756) and [24 wheel lanes](https://github.com/EDM115/miniproto/actions/runs/32228463727) passed on 2026-08-19 at commit `c81533922ba63c89337f3959b881109c3b7e5dec`. Those runs establish that commit's results, subsequent source and dependency changes require fresh validation.
 - [x] The complete build-once candidate workflow, release manifest/checksum verifier, per-distribution attestations, protected OIDC publisher, draft-first immutable GitHub release sequence and failure recovery are implemented and contract-tested locally.
 - [ ] The maintainer must review and commit/push the final source tree, configure the protected `release` environment, both Trusted Publishers and GitHub release immutability.
+- [ ] The complete 22-stage offline gate must pass for the final source tree, retaining its reports, wheel/sdist inspections and dependency-resolving clean-install evidence.
 - [ ] The complete **Build release artifacts** workflow must pass from that exact final SHA and produce one verified set of 24 wheels, one sdist, one crate, `SHA256SUMS` and `release-manifest.json` with valid attestations.
 - [ ] The maintainer must approve the protected **Publish release** run, verify both registries and allow it to publish the populated GitHub draft last.
 
-The local files under `.tmp/wave6-20260819-final2/` and `.tmp/wave7-20260819-final/` are implementation evidence from a dirty working tree. Their hashes are retained in `PROGRESS.md` for reproducibility, but those bytes must never be uploaded to PyPI, crates.io or the GitHub release. Only the single final-SHA hosted build run is an authoritative release candidate.
+Historical [2026-08-19 run notes](https://github.com/EDM115/miniproto/blob/8ed6b99eb0909f87a90f604026d956c0ad16adaa/PROGRESS.md) survive in Git and cite local reports under `.tmp/wave6-20260819-final2/` and `.tmp/wave7-20260819-final/`. Their raw reports are absent from the current checkout, and the notes concern an earlier source and dependency set, so they cannot verify its current local release status. Only the single final-SHA hosted build run supplies an authoritative release candidate.
 
 ## Release topology
 

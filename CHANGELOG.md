@@ -9,7 +9,7 @@
 ## `v0.1.0` - First Alpha release
 
 > [!IMPORTANT]  
-> This is the first public Alpha of `miniproto` : a complete, usable MTProto client core whose APIs and operational defaults can still change before stability. We do NOT guarantee any stability or backwards compatibility. Do not use for production deployments.
+> This is the first public Alpha of `miniproto` : it covers async authorization, encrypted sessions, the Layer 230 raw API, updates, peer and message helpers, media transfers and asyncio transports. APIs and operational defaults can still change before stability. We do NOT guarantee any stability or backwards compatibility. Do not use for production deployments.
 
 ### Breaking changes
 
@@ -23,11 +23,11 @@
 ### Features
 
 ✨ feat : provide an async-first `Client` with serialized connect/disconnect, async-context-manager ownership, explicit timeouts/retries, datacenter migration and no import-time asyncio policy mutation  
-✨ feat : authorize phone accounts with code and optional 2FA callbacks, authorize bots with bearer tokens, persist normalized identity and expose `is_authorized()` plus `get_me()`  
+✨ feat : authorize phone accounts with code and optional 2FA callbacks, authorize bots with bearer tokens, persist normalized identity and expose local-state `is_authorized()` plus network identity refresh through `get_me(refresh=True)`  
 ✨ feat : generate the complete Telegram Layer 230 raw function/type surface from pinned TDLib structure validated against Telegram Desktop, with lazy facades, shards, registries, typed stubs and source provenance  
 ✨ feat : invoke generated requests through result-type validation, initialization envelopes, retry-safety classification, method-level flood-wait caching, migration recovery and typed RPC errors  
 ✨ feat : expose normalized peers and messages with indexed peer resolution, username/phone/numeric lookup, access-hash persistence, `send_message()`, `edit_message()` and `delete_messages()`  
-✨ feat : persist update cursors, recover global and channel gaps, deduplicate updates, dispatch pushed sender updates, expose ordered `iter_updates()` and support bounded queue overflow policies  
+✨ feat : persist update cursors, recover global and channel gaps, deduplicate updates with channel-aware keys, dispatch pushed sender updates, expose ordered `iter_updates()` and support bounded queue overflow policies  
 ✨ feat : upload paths, bytes, streams, sync iterables and async iterables with Telegram part limits, dedicated media lanes, progress reporting, file IDs and the thin `send_file()` path  
 ✨ feat : download to memory, paths or caller-owned destinations with ordered concurrent parts, ranges, resume, streaming `iter_download()`, read-ahead cache, adaptive sizing, reference refresh and cancellation cleanup  
 ✨ feat : support mandatory CDN redirect/decryption/hash verification and optional ordinary `upload.getFileHashes` verification before bytes reach the caller or destination  
@@ -41,7 +41,7 @@
 ### Performance improvements
 
 ⚡️ perf : bundle Rust/PyO3 acceleration for crypto, MTProto envelopes, transport framing, TL primitives, generated hot constructors, hashing, factorization and protected-session operations  
-⚡️ perf : select native capabilities independently, retain output/validation parity with supported Python or `cryptography` implementations and fall back when an optional native symbol cannot load  
+⚡️ perf : select native capabilities independently and retain output/validation parity with Python or `cryptography` implementations where their dependencies are available. AES/Scrypt fallback requires `cryptography`, which is excluded from Windows ARM64 base dependencies  
 ⚡️ perf : use a stateful Rust frame pump for fragmented/coalesced TCP input and generated Rust fast paths for a reviewed Layer 230 constructor set while leaving unsupported shapes on the canonical codec  
 ⚡️ perf : keep peer resolution warm through revision-aware indexes and incremental reconciliation rather than rescanning or copying the canonical peer collection on every lookup  
 ⚡️ perf : provide nine non-live benchmark families covering imports, runtime acceptance, media scheduling, native/fallback crypto, protected sessions, runtime paths, TL fast paths, transport framing and lazy raw-codec behavior  
@@ -72,6 +72,9 @@
 🐛 fix : recover global PTS/QTS/sequence and channel-too-long gaps without advancing unrecoverable channels and let authoritative peer updates clear stale aliases while ignoring inactive usernames  
 🐛 fix : enforce Telegram upload-part divisors, strictly bound local file IDs, assemble multi-session paths atomically, refresh file references during cached hash verification and recreate closed auxiliary in-memory sessions  
 🐛 fix : bracket IPv6 HTTP CONNECT authorities, clean up failed post-connect transports, preserve server RPC codes in generated fallback errors and classify only pacing-specific wait errors as flood waits
+🐛 fix : default omitted PTS counts to zero, preserve QTS's implicit count of one, advance PTS/QTS cursors with count-aware checks and include channel identity in update duplicate keys  
+🐛 fix : suppress accepted authenticated retransmissions while continuing fresh container siblings, answer message-state requests from bounded receive history, enforce configured gzip output/depth bounds before RPC results commit, keep malformed inbound framing fatal while recovering ordinary I/O failures and encode signed media-only DC IDs  
+🐛 fix : join owned part-task cancellation on public iterator close, reject short destination writes and redact recognized metric attributes before synchronous sink delivery  
 
 ### Documentation
 

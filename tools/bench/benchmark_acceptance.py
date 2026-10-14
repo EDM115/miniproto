@@ -267,7 +267,12 @@ def evaluate_acceptance_invariants(results: Sequence[Mapping[str, Any]]) -> list
 
     scheduler = by_name.get("scheduler_fairness")
     if scheduler is not None:
-        require(float(scheduler.get("fairness_ratio", 0.0)) >= 0.95, "scheduler fairness ratio fell below 0.95")
+        observed = scheduler.get("max_competing_grant_imbalance")
+        allowed = scheduler.get("allowed_competing_grant_imbalance")
+        require(
+            isinstance(observed, int) and isinstance(allowed, int) and 0 <= observed <= allowed,
+            "scheduler competing grant imbalance exceeded its admission-capacity bound",
+        )
         require(
             int(scheduler.get("peak_active_bytes", 0)) <= int(scheduler.get("configured_max_bytes", 0)),
             "scheduler exceeded its configured byte window",
@@ -363,7 +368,9 @@ async def run_acceptance_benchmark(profile: BenchmarkProfile, *, probe_loop_lag:
                 "name": "scheduler_fairness",
                 "duration_ms": scheduler["aggregate"]["duration_seconds"] * 1000,
                 "throughput_bytes_per_second": scheduler["aggregate"]["throughput_bytes_per_second"],
-                "fairness_ratio": scheduler["fairness"]["grant_ratio"],
+                "max_competing_grant_imbalance": scheduler["fairness"]["max_competing_grant_imbalance"],
+                "allowed_competing_grant_imbalance": scheduler["fairness"]["allowed_competing_grant_imbalance"],
+                "completed_grant_ratio": scheduler["accounting"]["grant_ratio"],
                 "peak_active_bytes": scheduler["accounting"]["peak_active_bytes"],
                 "configured_max_bytes": scheduler["accounting"]["configured_max_bytes"],
                 "leaked_bytes": scheduler["cancellation"]["leaked_bytes"],

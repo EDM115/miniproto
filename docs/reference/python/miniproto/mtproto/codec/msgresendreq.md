@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.mtproto.codec.MsgResendReq"
 source_path: "src/miniproto/mtproto/codec.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/mtproto/codec.py#L126"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/mtproto/codec.py#L130"
 aliases: ["miniproto.mtproto.MsgResendReq"]
 module: "miniproto.mtproto.codec"
 ---

@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.updates.manager.UpdateManager.iter_updates"
 source_path: "src/miniproto/updates/manager.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/updates/manager.py#L187"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/updates/manager.py#L189"
 aliases: ["miniproto.updates.UpdateManager.iter_updates"]
 module: "miniproto.updates.manager"
 ---

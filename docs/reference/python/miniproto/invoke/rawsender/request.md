@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.invoke.RawSender.request"
 source_path: "src/miniproto/invoke.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L91"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L99"
 module: "miniproto.invoke"
 ---
 

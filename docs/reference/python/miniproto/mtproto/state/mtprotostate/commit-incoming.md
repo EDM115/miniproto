@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.mtproto.state.MTProtoState.commit_incoming"
 source_path: "src/miniproto/mtproto/state.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/mtproto/state.py#L146"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/mtproto/state.py#L153"
 aliases: ["miniproto.mtproto.MTProtoState.commit_incoming"]
 module: "miniproto.mtproto.state"
 ---

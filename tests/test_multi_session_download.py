@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import io
 from itertools import pairwise
+from typing import BinaryIO, cast
 
 import pytest
 
@@ -64,3 +66,24 @@ def test_assemble_download_parts_preserves_existing_path_on_size_mismatch(tmp_pa
         assemble_download_parts((first, second), target, expected_size=7)
 
     assert target.read_bytes() == b"previous-good-result"
+
+
+@pytest.mark.parametrize("accepted_bytes", [0, 2, None])
+def test_assemble_download_parts_rejects_incomplete_destination_writes(tmp_path, accepted_bytes: int | None) -> None:
+    class IncompleteWriter:
+        def __init__(self) -> None:
+            self.buffer = io.BytesIO()
+
+        def write(self, payload: bytes) -> int | None:
+            if accepted_bytes is None:
+                return None
+            return self.buffer.write(payload[:accepted_bytes])
+
+    part = tmp_path / "part.bin"
+    part.write_bytes(b"abcdefgh")
+    destination = IncompleteWriter()
+    with pytest.raises(RuntimeError, match="destination write"):
+        assemble_download_parts((part,), cast(BinaryIO, destination), expected_size=8)
+    assert not destination.buffer.closed
+    expected = b"ab" if accepted_bytes == 2 else b""
+    assert destination.buffer.getvalue() == expected

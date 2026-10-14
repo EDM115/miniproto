@@ -15,7 +15,7 @@ module: "miniproto.mtproto.state"
 ## `miniproto.mtproto.state.MTProtoState`
 
 ```python
-MTProtoState(auth_key: bytes, server_salt: int = 0, session_id: int = (lambda: secrets.randbits(64))(), time_offset: float = 0.0, duplicate_window: int = 8192, _last_msg_id: int = 0, _content_related_count: int = 0, _seen_msg_ids: OrderedDict[int, None] = OrderedDict(), _pending_acks: OrderedDict[int, float] = OrderedDict(), _time_trusted: bool = False) -> None
+MTProtoState(auth_key: bytes, server_salt: int = 0, session_id: int = (lambda: secrets.randbits(64))(), time_offset: float = 0.0, duplicate_window: int = 8192, _last_msg_id: int = 0, _content_related_count: int = 0, _seen_msg_ids: OrderedDict[int, int] = OrderedDict(), _pending_acks: OrderedDict[int, float] = OrderedDict(), _time_trusted: bool = False) -> None
 ```
 
 Track one authorization key's MTProto session, timing and acknowledgement state.
@@ -29,6 +29,6 @@ Track one authorization key's MTProto session, timing and acknowledgement state.
 - [**duplicate_window**](#miniproto.mtproto.state.MTProtoState.duplicate_window) (<code>[int](#int)</code>) – Maximum retained incoming IDs, defaulting to ``8192``.
 - [**_last_msg_id**](#miniproto.mtproto.state.MTProtoState._last_msg_id) (<code>[int](#int)</code>) – Last locally allocated message ID used to preserve monotonicity.
 - [**_content_related_count**](#miniproto.mtproto.state.MTProtoState._content_related_count) (<code>[int](#int)</code>) – Count used to allocate content-related sequence numbers.
-- [**_seen_msg_ids**](#miniproto.mtproto.state.MTProtoState._seen_msg_ids) (<code>[OrderedDict](#collections.OrderedDict)[[int](#int), None]</code>) – Retained incoming IDs used for duplicate and replay checks.
+- [**_seen_msg_ids**](#miniproto.mtproto.state.MTProtoState._seen_msg_ids) (<code>[OrderedDict](#collections.OrderedDict)[[int](#int), [int](#int)]</code>) – Retained incoming IDs and receipt-status bytes used for replay checks and status replies.
 - [**_pending_acks**](#miniproto.mtproto.state.MTProtoState._pending_acks) (<code>[OrderedDict](#collections.OrderedDict)[[int](#int), [float](#float)]</code>) – Incoming content-related IDs awaiting acknowledgement.
 - [**_time_trusted**](#miniproto.mtproto.state.MTProtoState._time_trusted) (<code>[bool](#bool)</code>) – Whether an accepted incoming ID has established server time.

@@ -117,11 +117,13 @@ def test_in_memory_mutate_is_atomic_isolated_and_tracks_changed_domains() -> Non
         assert session_record_from_mapping(committed).peers[-1].id == 99
         assert storage.domain_revisions() == {"auth": 0, "peers": 1, "update_state": 0, "metadata": 0, "payload": 0}
 
-        mutable = dict(committed)
+        mutable = cast(dict[str, Any], committed)
         mutable["dc_id"] = 5
+        mutable["metadata"]["note"] = "caller edit"
         loaded = await storage.load()
         assert loaded is not None
         assert loaded["dc_id"] == 2
+        assert loaded["metadata"]["note"] == "kept"
 
     run(scenario())
 

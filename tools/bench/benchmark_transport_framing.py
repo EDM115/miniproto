@@ -6,8 +6,7 @@ orders alternate each round, while payload equality and end-of-stream checks
 protect comparison validity. Results are not socket, network, latency, or
 cross-platform benchmarks: event-loop implementation, extension build, CPU
 state and adapter choice (especially ``--raw-native``) can change them.
-``--check`` is a local acceptance threshold of 2x for every measured
-mode, not a universal performance guarantee.
+``--check`` is a local acceptance threshold of 2x for every measured mode on the 72-byte production-adapter workload, not a universal performance guarantee.
 """
 
 from __future__ import annotations
@@ -115,13 +114,17 @@ def main() -> int:
         "--mode",
         choices=("smoke", "full"),
         default="full",
-        help="workload size; smoke caps frames and rounds while full uses the supplied values",
+        help="workload size; smoke caps frames at 1024 and rounds at 3 while full uses the supplied values",
     )
     parser.add_argument(
         "--raw-native", action="store_true", help="diagnose the Rust/PyO3 boundary without adapter objects"
     )
     parser.add_argument("--json", type=Path, help="write the normalized report to this path")
-    parser.add_argument("--check", action="store_true", help="fail unless every mode reaches the 2x target")
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="require 2x in every mode for 72-byte payloads through the production adapter, other sizes or --raw-native are diagnostic and cannot pass a check",
+    )
     args = parser.parse_args()
     if not native_transport_available():
         raise RuntimeError("native transport frame codec is unavailable")
@@ -129,13 +132,40 @@ def main() -> int:
         raise ValueError("payload-bytes must be at least 40 and congruent to 8 modulo 16")
     if args.frames <= 0 or args.rounds <= 0:
         raise ValueError("frames and rounds must be positive")
+    if args.mode == "smoke":
+        args.frames = min(args.frames, 1024)
+        args.rounds = min(args.rounds, 3)
 
     payload = b"x" * args.payload_bytes
     results, loop_backend = event_loop.run(
         _benchmark_all(payload, frames=args.frames, rounds=args.rounds, raw_native=args.raw_native)
     )
     environment = collect_environment()
-    environment["benchmark_event_loop"] = loop_backend
+    environment["event_loop"]["running_backend"] = loop_backend
+    check = {
+        "enabled": args.check,
+        "target_speedup": 2.0,
+        "eligible": args.payload_bytes == 72 and not args.raw_native,
+        "workload": "72-byte frames through the production adapter in every supported TCP mode",
+    }
+    failures = []
+    if args.check and not check["eligible"]:
+        failures.append(
+            {
+                "type": "BenchmarkConfigurationError",
+                "message": "the transport speed target requires 72-byte payloads through the production adapter",
+            }
+        )
+    elif args.check:
+        below_target = tuple(result for result in results if result.speedup < 2.0)
+        if below_target:
+            rendered = ", ".join(f"{result.mode}={result.speedup:.2f}x" for result in below_target)
+            failures.append(
+                {
+                    "type": "PerformanceThresholdError",
+                    "message": f"native socket frame pump missed the 2x target: {rendered}",
+                }
+            )
     mode_results = [
         {
             "name": result.mode,
@@ -164,20 +194,19 @@ def main() -> int:
             "payload_bytes": args.payload_bytes,
             "rounds": args.rounds,
             "raw_native": args.raw_native,
+            "check": check,
         },
         environment=environment,
         throughput={"unit": "frames_per_second"},
+        failures=failures,
         results=mode_results,
     )
     json.dump(report, sys.stdout, indent=2)
     print()
     if args.json is not None:
         write_benchmark_report(args.json, report)
-    if args.check:
-        below_target = tuple(result for result in results if result.speedup < 2.0)
-        if below_target:
-            rendered = ", ".join(f"{result.mode}={result.speedup:.2f}x" for result in below_target)
-            raise RuntimeError(f"native socket frame pump missed the 2x target: {rendered}")
+    if failures:
+        raise RuntimeError(failures[0]["message"])
     return 0
 
 

@@ -164,6 +164,300 @@ def test_duplicate_updates_are_not_emitted_twice() -> None:
     run(scenario())
 
 
+# fmt: off
+@pytest.mark.parametrize("difference", [False, True])
+def test_channel_message_duplicate_keys_keep_independent_message_boxes(difference: bool, monkeypatch: pytest.MonkeyPatch) -> None:
+    async def scenario() -> None:
+        monkeypatch.setattr("miniproto.updates.manager.POSSIBLE_GAP_GRACE_SECONDS", 0.0)
+        storage = InMemorySessionStorage(SessionRecord(update_state=UpdateState(pts=10), peers=(PeerCacheEntry(id=123, kind="channel", access_hash=100), PeerCacheEntry(id=456, kind="channel", access_hash=200))))
+        messages = (raw_channel_message(7, "first", channel_id=123), raw_channel_message(7, "second", channel_id=456))
+        responses: list[object] = [types.UpdatesChannelDifference(final=True, pts=2, new_messages=(message,), other_updates=(), chats=(), users=()) for message in messages] if difference else []
+        client = FakeUpdateClient(ClientConfig(api_id=1, api_hash="hash", session_storage=storage), responses)
+        manager = client._update_manager
+        delivered: list[NewMessage] = []
+        manager.on(NewMessage, delivered.append)
+        if difference:
+            updates = tuple(types.UpdateDeleteChannelMessages(channel_id=channel_id, messages=(55,), pts=3, pts_count=1) for channel_id in (123, 456))
+        else:
+            updates = (types.Updates(updates=tuple(types.UpdateNewChannelMessage(message=message, pts=1, pts_count=1) for message in messages), chats=(), users=(), date=100, seq=0),)
+
+        for update in updates:
+            await manager.handle_raw_update(update)
+            await manager.handle_raw_update(update)
+
+        assert len(delivered) == 2
+        received = []
+        for event in delivered:
+            assert isinstance(event, NewMessage)
+            assert event.message is not None
+            received.append((event.message.peer.id, event.message.id, event.message.text))
+        assert received == [(123, 7, "first"), (456, 7, "second")]
+        loaded = await storage.load()
+        assert loaded is not None
+        record = session_record_from_mapping(loaded)
+        assert record.update_state.pts == 10
+        assert {key: value["pts"] for key, value in record.metadata["updates"]["channels"].items()} == {"123": 3 if difference else 1, "456": 3 if difference else 1}
+        if difference:
+            assert len(client.update_requests) == 2
+            for request, channel_id in zip(client.update_requests, (123, 456), strict=True):
+                assert isinstance(request, functions.UpdatesGetChannelDifference)
+                assert request.channel.channel_id == channel_id
+                assert request.pts == 0
+        else:
+            assert client.update_requests == []
+
+    run(scenario())
+
+
+def test_channel_identity_alone_does_not_deduplicate_unordered_updates() -> None:
+    async def scenario() -> None:
+        client = FakeUpdateClient(ClientConfig(api_id=1, api_hash="hash", session_storage=storage_with_state()))
+        manager = client._update_manager
+        delivered: list[Update] = []
+        manager.on(Update, delivered.append)
+        updates = (types.UpdateChannel(channel_id=123), types.UpdateChannel(channel_id=123))
+        for update in updates:
+            await manager.handle_raw_update(update)
+        assert [event.raw for event in delivered] == list(updates)
+
+    run(scenario())
+
+
+def test_zero_count_pts_updates_preserve_payload_identity_and_persist_before_delivery() -> None:
+    async def scenario() -> None:
+        storage = InMemorySessionStorage(SessionRecord(update_state=UpdateState(pts=10), metadata={"updates": {"recent_update_keys": ["UpdateReadHistoryInbox|pts:10"]}}))
+        client = FakeUpdateClient(ClientConfig(api_id=1, api_hash="hash", session_storage=storage))
+        manager = client._update_manager
+        delivered: list[Update] = []
+
+        async def receive(event: Update) -> None:
+            loaded = await storage.load()
+            assert loaded is not None
+            record = session_record_from_mapping(loaded)
+            assert record.update_state.pts == 10
+            assert len(record.metadata["updates"]["recent_update_keys"]) == len(delivered) + 2
+            delivered.append(event)
+
+        manager.on(Update, receive)
+        updates = tuple(types.UpdateReadHistoryInbox(peer=types.PeerUser(user_id=user_id), max_id=max_id, still_unread_count=unread, pts=10, pts_count=0) for user_id, max_id, unread in ((42, 8, 2), (77, 8, 2), (42, 9, 1), (42, 9, 0)))
+        for update in updates:
+            await manager.handle_raw_update(update)
+            await manager.handle_raw_update(types.UpdateReadHistoryInbox.deserialize(update.serialize()))
+
+        assert [event.raw for event in delivered] == list(updates)
+        persisted = await storage.load()
+        reopened = FakeUpdateClient(ClientConfig(api_id=1, api_hash="hash", session_storage=InMemorySessionStorage(persisted)))
+        replayed: list[Update] = []
+        reopened._update_manager.on(Update, replayed.append)
+        await reopened._update_manager.handle_raw_update(types.UpdateReadHistoryInbox.deserialize(updates[0].serialize()))
+        fresh = types.UpdateReadHistoryInbox(peer=types.PeerUser(user_id=42), max_id=10, still_unread_count=0, pts=10, pts_count=0)
+        await reopened._update_manager.handle_raw_update(fresh)
+        assert [event.raw for event in replayed] == [fresh]
+        assert client.update_requests == reopened.update_requests == []
+
+    run(scenario())
+
+
+@pytest.mark.parametrize("pts", [9, 10, 11])
+def test_channel_read_updates_default_missing_pts_count_to_zero(pts: int, monkeypatch: pytest.MonkeyPatch) -> None:
+    async def scenario() -> None:
+        monkeypatch.setattr("miniproto.updates.manager.POSSIBLE_GAP_GRACE_SECONDS", 0.0)
+        storage = storage_with_channel_state(pts=10)
+        responses: list[object] = [types.UpdatesChannelDifferenceEmpty(final=True, pts=11)] if pts == 11 else []
+        client = FakeUpdateClient(ClientConfig(api_id=1, api_hash="hash", session_storage=storage), responses)
+        manager = client._update_manager
+        delivered: list[Update] = []
+        manager.on(Update, delivered.append)
+        updates = tuple(types.UpdateReadChannelInbox(channel_id=123, max_id=max_id, still_unread_count=unread, pts=pts) for max_id, unread in ((7, 1), (8, 0)))
+
+        for update in updates:
+            await manager.handle_raw_update(update)
+            await manager.handle_raw_update(types.UpdateReadChannelInbox.deserialize(update.serialize()))
+
+        assert [event.raw for event in delivered] == (list(updates) if pts >= 10 else [])
+        loaded = await storage.load()
+        assert loaded is not None
+        record = session_record_from_mapping(loaded)
+        assert record.update_state.pts == 0
+        assert record.metadata["updates"]["channels"]["123"]["pts"] == max(10, pts)
+        if pts == 11:
+            assert len(client.update_requests) == 1
+            request = client.update_requests[0]
+            assert isinstance(request, functions.UpdatesGetChannelDifference)
+            assert request.pts == 10
+        else:
+            assert client.update_requests == []
+
+    run(scenario())
+
+
+@pytest.mark.parametrize(("origin", "notification_pts", "stored_pts"), [("direct", None, 10), ("container", 12, 10), ("difference", 10, 10), ("recovery", 12, None), ("direct", 12, 0), ("mixed", 12, None)])
+def test_channel_too_long_requests_recovery_instead_of_applying_pts(origin: str, notification_pts: int | None, stored_pts: int | None, monkeypatch: pytest.MonkeyPatch) -> None:
+    async def scenario() -> None:
+        monkeypatch.setattr("miniproto.updates.manager.POSSIBLE_GAP_GRACE_SECONDS", 0.0)
+        storage = storage_with_channel_state(pts=stored_pts) if stored_pts is not None else InMemorySessionStorage(SessionRecord(peers=(PeerCacheEntry(id=123, kind="channel", access_hash=999),)))
+        notification = types.UpdateChannelTooLong(channel_id=123, pts=notification_pts)
+        difference = types.UpdatesDifference(new_messages=(), new_encrypted_messages=(), other_updates=(notification,), chats=(), users=(), state=types.UpdatesState(pts=0, qts=0, date=100, seq=0, unread_count=0))
+        recovered_message = raw_channel_message(7, "recovered")
+        channel_difference = types.UpdatesChannelDifference(final=True, pts=13, new_messages=(recovered_message,), other_updates=(), chats=(), users=())
+        responses: list[object] = [difference, channel_difference] if origin == "recovery" else [channel_difference]
+        client = FakeUpdateClient(ClientConfig(api_id=1, api_hash="hash", session_storage=storage), responses)
+        manager = client._update_manager
+        delivered: list[Update] = []
+        manager.on(Update, delivered.append)
+        trailing_read = types.UpdateReadChannelInbox(channel_id=123, max_id=7, still_unread_count=0, pts=13)
+        if origin == "direct":
+            raw = notification
+        elif origin in {"container", "mixed"}:
+            raw = types.Updates(updates=(notification, trailing_read) if origin == "mixed" else (notification,), chats=(), users=(), date=100, seq=0)
+        elif origin == "difference":
+            raw = difference
+        else:
+            raw = types.UpdatesTooLong()
+
+        await manager.handle_raw_update(raw)
+
+        assert [event.raw for event in delivered] == ([recovered_message, trailing_read] if origin == "mixed" else [recovered_message])
+        requests = [request for request in client.update_requests if isinstance(request, functions.UpdatesGetChannelDifference)]
+        assert len(requests) == 1
+        assert requests[0].channel.channel_id == 123
+        assert requests[0].pts == (stored_pts if stored_pts is not None else notification_pts)
+        loaded = await storage.load()
+        assert loaded is not None
+        record = session_record_from_mapping(loaded)
+        assert record.update_state.pts == 0
+        assert record.metadata["updates"]["channels"]["123"]["pts"] == 13
+
+    run(scenario())
+
+
+@pytest.mark.parametrize("channel_id", [None, 123])
+@pytest.mark.parametrize(("pts", "pts_count", "applied"), [(9, 0, False), (10, 0, True), (10, 1, False), (11, 2, False), (12, 2, True)])
+def test_pts_comparison_uses_count_for_stale_equal_and_next_ranges(channel_id: int | None, pts: int, pts_count: int, applied: bool) -> None:
+    async def scenario() -> None:
+        storage = storage_with_state(pts=10) if channel_id is None else storage_with_channel_state(channel_id=channel_id, pts=10)
+        client = FakeUpdateClient(ClientConfig(api_id=1, api_hash="hash", session_storage=storage))
+        manager = client._update_manager
+        delivered: list[Update] = []
+        manager.on(Update, delivered.append)
+        update = types.UpdateDeleteMessages(messages=(55,), pts=pts, pts_count=pts_count) if channel_id is None else types.UpdateDeleteChannelMessages(channel_id=channel_id, messages=(55,), pts=pts, pts_count=pts_count)
+
+        await manager.handle_raw_update(update)
+        await manager.handle_raw_update(update)
+
+        assert [event.raw for event in delivered] == ([update] if applied else [])
+        loaded = await storage.load()
+        assert loaded is not None
+        record = session_record_from_mapping(loaded)
+        expected_pts = pts if applied else 10
+        if channel_id is None:
+            assert record.update_state.pts == expected_pts
+        else:
+            assert record.metadata["updates"]["channels"][str(channel_id)]["pts"] == expected_pts
+            assert record.update_state.pts == 0
+        assert client.update_requests == []
+
+    run(scenario())
+
+
+@pytest.mark.parametrize(("qts", "applied"), [(7, False), (8, False), (9, True)])
+def test_qts_comparison_ignores_stale_updates_and_applies_next(qts: int, applied: bool) -> None:
+    async def scenario() -> None:
+        storage = storage_with_state(pts=10, qts=8)
+        client = FakeUpdateClient(ClientConfig(api_id=1, api_hash="hash", session_storage=storage))
+        manager = client._update_manager
+        delivered: list[Update] = []
+        manager.on(Update, delivered.append)
+        update = types.UpdateBotDeleteBusinessMessage(connection_id="business", peer=types.PeerUser(user_id=42), messages=(7,), qts=qts)
+
+        await manager.handle_raw_update(update)
+        await manager.handle_raw_update(update)
+
+        assert [event.raw for event in delivered] == ([update] if applied else [])
+        loaded = await storage.load()
+        assert loaded is not None
+        record = session_record_from_mapping(loaded)
+        assert record.update_state.pts == 10
+        assert record.update_state.qts == (qts if applied else 8)
+        assert client.update_requests == []
+
+    run(scenario())
+
+
+@pytest.mark.parametrize("sequence", ["pts", "channel_pts", "channel_read", "qts"])
+def test_unresolved_update_gap_keeps_unit_retryable(sequence: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    async def scenario() -> None:
+        monkeypatch.setattr("miniproto.updates.manager.POSSIBLE_GAP_GRACE_SECONDS", 0.0)
+        if sequence in {"channel_pts", "channel_read"}:
+            storage = storage_with_channel_state(pts=10)
+            behind = types.UpdatesChannelDifferenceEmpty(final=True, pts=10)
+            caught_up = types.UpdatesChannelDifferenceEmpty(final=True, pts=13 if sequence == "channel_read" else 12)
+            update = types.UpdateReadChannelInbox(channel_id=123, max_id=7, still_unread_count=0, pts=13) if sequence == "channel_read" else types.UpdateDeleteChannelMessages(channel_id=123, messages=(55,), pts=13, pts_count=1)
+        else:
+            storage = storage_with_state(pts=10, qts=8)
+            behind = types.UpdatesDifference(new_messages=(), new_encrypted_messages=(), other_updates=(), chats=(), users=(), state=types.UpdatesState(pts=10, qts=8, date=100, seq=0, unread_count=0))
+            caught_up = types.UpdatesDifference(new_messages=(), new_encrypted_messages=(), other_updates=(), chats=(), users=(), state=types.UpdatesState(pts=12 if sequence == "pts" else 10, qts=10 if sequence == "qts" else 8, date=101, seq=0, unread_count=0))
+            update = types.UpdateDeleteMessages(messages=(55,), pts=13, pts_count=1) if sequence == "pts" else types.UpdateBotDeleteBusinessMessage(connection_id="business", peer=types.PeerUser(user_id=42), messages=(7,), qts=11)
+        client = FakeUpdateClient(ClientConfig(api_id=1, api_hash="hash", session_storage=storage), [behind, behind, caught_up])
+        manager = client._update_manager
+        delivered: list[Update] = []
+        manager.on(Update, delivered.append)
+
+        await manager.handle_raw_update(update)
+
+        assert delivered == []
+        loaded = await storage.load()
+        assert loaded is not None
+        record = session_record_from_mapping(loaded)
+        assert record.metadata["updates"]["recent_update_keys"] == []
+        if sequence in {"channel_pts", "channel_read"}:
+            assert record.metadata["updates"]["channels"]["123"]["pts"] == 10
+            assert record.update_state.pts == 0
+        else:
+            assert record.update_state.pts == 10
+            assert record.update_state.qts == 8
+
+        await manager.handle_raw_update(update)
+
+        assert [event.raw for event in delivered] == [update]
+        loaded = await storage.load()
+        assert loaded is not None
+        record = session_record_from_mapping(loaded)
+        if sequence in {"channel_pts", "channel_read"}:
+            assert record.metadata["updates"]["channels"]["123"]["pts"] == 13
+            assert record.update_state.pts == 0
+        else:
+            assert record.update_state.pts == (13 if sequence == "pts" else 10)
+            assert record.update_state.qts == (11 if sequence == "qts" else 8)
+        assert len(client.update_requests) == 3
+
+    run(scenario())
+
+
+def test_difference_updates_apply_after_messages_without_individual_pts() -> None:
+    async def scenario() -> None:
+        storage = storage_with_state(pts=10)
+        read = types.UpdateReadHistoryInbox(peer=types.PeerUser(user_id=42), max_id=8, still_unread_count=0, pts=13, pts_count=1)
+        difference = types.UpdatesDifference(new_messages=(raw_message(7, "first missing", date=100), raw_message(8, "second missing", date=101)), new_encrypted_messages=(), other_updates=(read,), chats=(), users=(), state=types.UpdatesState(pts=13, qts=0, date=102, seq=0, unread_count=0))
+        client = FakeUpdateClient(ClientConfig(api_id=1, api_hash="hash", session_storage=storage), [difference])
+        manager = client._update_manager
+        delivered: list[Update] = []
+        manager.on(Update, delivered.append)
+        current = short_message(9, "current", pts=14, date=103)
+
+        await manager.handle_raw_update(current)
+
+        assert [event.raw for event in delivered] == [*difference.new_messages, read, current]
+        loaded = await storage.load()
+        assert loaded is not None
+        record = session_record_from_mapping(loaded)
+        assert record.update_state.pts == 14
+        assert len(client.update_requests) == 1
+
+    run(scenario())
+# fmt: on
+
+
 def test_gap_recovery_fetches_difference_before_emitting_current_update() -> None:
     async def scenario() -> None:
         storage = storage_with_state(pts=10, qts=0, seq=0, date=50)

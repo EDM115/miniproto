@@ -367,8 +367,58 @@ def test_intermediate_bounded_read_rejects_oversized_frame() -> None:
         reader = asyncio.StreamReader()
         reader.feed_data((8).to_bytes(4, "little", signed=True))
         transport = TcpIntermediateTransport(ConnectionEndpoint("127.0.0.1", 443), TransportConfig(max_payload_size=4))
-        with pytest.raises(TransportError, match="exceeds"):
+        with pytest.raises(ProtocolValidationError, match="exceeds"):
             await transport.read_packet(reader)
+
+    event_loop.run(run())
+
+
+@pytest.mark.parametrize(
+    ("mode", "handshake", "header"),
+    [
+        ("tcp_abridged", b"\xef", b"\x7f\x01\x01\x00"),
+        ("tcp_intermediate", b"\xee" * 4, (1025).to_bytes(4, "little")),
+        ("tcp_padded_intermediate", b"\xdd" * 4, (1040).to_bytes(4, "little")),
+    ],
+)
+def test_sender_fails_malformed_frame_headers_without_reconnecting(mode: TransportMode, handshake: bytes, header: bytes) -> None:  # fmt: skip
+    async def run() -> None:
+        connections = 0
+
+        async def handle(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+            nonlocal connections
+            connections += 1
+            try:
+                assert await reader.readexactly(len(handshake)) == handshake
+                await reader.read(4096)
+                writer.write(header)
+                await writer.drain()
+                await reader.read()
+            finally:
+                writer.close()
+                await writer.wait_closed()
+
+        server = await asyncio.start_server(handle, "127.0.0.1", 0)
+        port = server.sockets[0].getsockname()[1]
+        state = MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID)
+        sender = MTProtoSender(
+            ConnectionEndpoint("127.0.0.1", port),
+            TransportConfig(mode=mode, max_payload_size=1024),
+            state,
+            reconnect_attempts=1,
+            reconnect_cooldown=0,
+        )
+        try:
+            with pytest.raises(ProtocolValidationError, match="transport_framing"):
+                await sender.request(b"request!", retry_safe=True, request_timeout=1)
+            assert connections == 1
+            assert sender.has_fatal_error
+            assert not sender.is_connected
+            assert not state._seen_msg_ids
+        finally:
+            await sender.disconnect()
+            server.close()
+            await server.wait_closed()
 
     event_loop.run(run())
 
@@ -531,6 +581,22 @@ def test_mtproto_state_uses_monotonic_time_for_pending_ack_age(monkeypatch: pyte
     assert state.oldest_pending_ack_age(now=501.25) == pytest.approx(1.25)
 
 
+def test_mtproto_state_reports_received_acknowledged_and_unknown_message_statuses() -> None:
+    state = MTProtoState(auth_key=AUTH_KEY, session_id=SESSION_ID, duplicate_window=3)
+    state.commit_incoming(101, content_related=False)
+    state.commit_incoming(109)
+    state.commit_incoming(117)
+    ids = (97, 105, 121, 101, 109, 117)
+    assert state.message_statuses(ids) == bytes((1, 2, 3, 20, 4, 4))
+    assert state.pop_pending_acks() == (109, 117)
+    assert state.message_statuses((109, 117)) == bytes((4, 4))
+    state.mark_acks_sent((109,))
+    assert state.message_statuses((109, 117)) == bytes((12, 4))
+    state.commit_incoming(125)
+    assert state.message_statuses((101, 109, 125)) == bytes((1, 12, 4))
+    assert len(state._seen_msg_ids) == 3
+
+
 def test_sender_prevalidates_container_before_committing_any_child() -> None:
     async def run() -> None:
         state = MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID)
@@ -586,6 +652,70 @@ def test_sender_rejects_a_container_child_not_older_than_its_parent_without_muta
         assert tuple(state._seen_msg_ids) == ()
         assert state.pending_ack_count == 0
         assert sender._incoming.empty()
+
+    event_loop.run(run())
+
+
+@pytest.mark.parametrize("mode", ["tcp_abridged", "tcp_intermediate", "tcp_padded_intermediate"])
+def test_sender_accepts_retransmitted_result_with_a_fresh_container_sibling(mode: TransportMode) -> None:
+    async def run() -> None:
+        base_id = int(time.time()) << 32
+        first_result: RpcResult | None = None
+
+        def handle(message: DecodedEncryptedMessage) -> object:
+            nonlocal first_result
+            if first_result is None:
+                first_result = RpcResult(message.msg_id, b"first!!!")
+                return MessageContainer((MessageContainerItem(base_id + 1, 1, first_result),))
+            return MessageContainer(
+                (
+                    MessageContainerItem(base_id + 1, 1, first_result),
+                    MessageContainerItem(base_id + 5, 3, RpcResult(message.msg_id, b"second!!")),
+                )
+            )
+
+        config = TransportConfig(mode=mode, read_timeout=60)
+        state = MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID)
+        async with FakeMTProtoServer(AUTH_KEY, config, handle) as server:
+            sender = MTProtoSender(server.endpoint, config, state, ack_max_delay=60, ack_flush_threshold=8192)
+            try:
+                assert await sender.request(b"request!", request_timeout=1) == b"first!!!"
+                assert await sender.request(b"request!", request_timeout=1) == b"second!!"
+                assert sender.is_connected
+                assert not sender.has_fatal_error
+                assert state.message_statuses((base_id + 1, base_id + 5)) == bytes((12, 4))
+                assert base_id + 1 in state.pop_pending_acks()
+            finally:
+                await sender.disconnect()
+
+    event_loop.run(run())
+
+
+def test_sender_suppresses_duplicate_delivery_but_validates_fresh_siblings_before_reacking() -> None:
+    async def run() -> None:
+        base_id = int(time.time()) << 32
+        state = MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID, duplicate_window=2)
+        sender = MTProtoSender(ConnectionEndpoint("127.0.0.1", 443), TransportConfig(), state)
+
+        def envelope(msg_id: int, body: object) -> DecodedEncryptedMessage:
+            return DecodedEncryptedMessage(state.auth_key_id, SERVER_SALT, SESSION_ID, msg_id, 1, encode_message_body(body), b"")  # fmt: skip
+
+        original = envelope(base_id + 1, b"push")
+        for message, body in await sender._prevalidate_and_commit_incoming(original):
+            await sender._handle_incoming(message, committed=True, decoded_body=body)
+        state.commit_incoming(base_id + 5, content_related=False)
+        state.pop_pending_acks()
+        assert await sender._prevalidate_and_commit_incoming(original) == ()
+        assert sender._incoming.qsize() == 1
+        assert state.pop_pending_acks() == (base_id + 1,)
+        before = tuple(state._seen_msg_ids)
+        invalid_body = MessageContainer((MessageContainerItem(base_id + 1, 1, b"push"), MessageContainerItem(base_id + 10, 3, b"bad!")))  # fmt: skip
+        invalid = envelope(base_id + 17, invalid_body)
+        with pytest.raises(ProtocolValidationError, match="parity"):
+            await sender._prevalidate_and_commit_incoming(invalid)
+        assert tuple(state._seen_msg_ids) == before
+        assert state.pending_ack_count == 0
+        assert sender._incoming.qsize() == 1
 
     event_loop.run(run())
 
@@ -1559,6 +1689,80 @@ def test_sender_rejects_gzip_payload_that_expands_past_transport_bound() -> None
     event_loop.run(run())
 
 
+@pytest.mark.parametrize("mode", ["tcp_abridged", "tcp_intermediate", "tcp_padded_intermediate"])
+@pytest.mark.parametrize(("size", "fails"), [(1024, False), (1028, True)])
+def test_sender_bounds_gzip_inside_rpc_result(mode: TransportMode, size: int, fails: bool) -> None:
+    async def run() -> None:
+        result = b"data" * (size // 4)
+
+        def handle(message: DecodedEncryptedMessage) -> RpcResult:
+            return RpcResult(message.msg_id, GzipPacked(gzip.compress(result)))
+
+        config = TransportConfig(mode=mode, max_payload_size=1024, read_timeout=5)
+        state = MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID)
+        async with FakeMTProtoServer(AUTH_KEY, config, handle) as server:
+            sender = MTProtoSender(server.endpoint, config, state)
+            try:
+                if fails:
+                    with pytest.raises(ProtocolValidationError, match="gzip_payload_too_large"):
+                        await sender.request(b"request!", request_timeout=1)
+                    assert not state._seen_msg_ids
+                else:
+                    assert await sender.request(b"request!", request_timeout=1) == result
+            finally:
+                await sender.disconnect()
+
+    event_loop.run(run())
+
+
+@pytest.mark.parametrize(("wrapper_count", "fails"), [(16, False), (17, True)])
+def test_sender_counts_gzip_depth_across_outer_body_and_rpc_result(wrapper_count: int, fails: bool) -> None:
+    async def run() -> None:
+        result: object = b"okay"
+        for _ in range(wrapper_count - 1):
+            result = gzip_pack(result)
+        body = gzip_pack(RpcResult(99, result))
+        state = MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID)
+        sender = MTProtoSender(ConnectionEndpoint("127.0.0.1", 443), TransportConfig(), state)
+        message = DecodedEncryptedMessage(state.auth_key_id, SERVER_SALT, SESSION_ID, (int(time.time()) << 32) | 1, 1, encode_message_body(body), b"")  # fmt: skip
+        if fails:
+            with pytest.raises(ProtocolValidationError, match="gzip_wrapper_depth"):
+                await sender._prevalidate_and_commit_incoming(message)
+            assert not state._seen_msg_ids
+        else:
+            dispatch = await sender._prevalidate_and_commit_incoming(message)
+            assert dispatch[0][1] == RpcResult(99, b"okay")
+
+    event_loop.run(run())
+
+
+@pytest.mark.parametrize("packed_data", [b"invalid gzip", gzip.compress(b"x" * 1028)])
+def test_sender_validates_compressed_result_before_any_container_state_commit(packed_data: bytes) -> None:
+    async def run() -> None:
+        state = MTProtoState(auth_key=AUTH_KEY, server_salt=SERVER_SALT, session_id=SESSION_ID)
+        sender = MTProtoSender(ConnectionEndpoint("127.0.0.1", 443), TransportConfig(max_payload_size=1024), state)
+        future = asyncio.get_running_loop().create_future()
+        sender._pending[99] = PendingRequest(body=b"request!", content_related=True, future=future)
+        base_id = int(time.time()) << 32
+        body = MessageContainer(
+            (
+                MessageContainerItem(base_id + 1, 1, RpcResult(99, b"okay")),
+                MessageContainerItem(base_id + 5, 3, NewSessionCreated(99, 42, SERVER_SALT + 1)),
+                MessageContainerItem(base_id + 9, 5, RpcResult(100, GzipPacked(packed_data))),
+            )
+        )
+        packet = encode_encrypted_message(AUTH_KEY, SERVER_SALT, SESSION_ID, base_id + 13, 6, body, client_to_server=False)  # fmt: skip
+        with pytest.raises(ProtocolValidationError, match="gzip_payload_"):
+            await sender._prevalidate_and_commit_incoming(decode_encrypted_message(AUTH_KEY, packet))
+        assert not future.done()
+        assert not state._seen_msg_ids
+        assert state.pending_ack_count == 0
+        assert state.server_salt == SERVER_SALT
+        assert not state.time_trusted
+
+    event_loop.run(run())
+
+
 def test_sender_rejects_excessively_nested_gzip_wrappers() -> None:
     async def run() -> None:
         body: object = MsgsAck(msg_ids=())
@@ -2203,23 +2407,48 @@ def test_sender_reserve_rolls_back_on_process_control_metric_failure() -> None:
     assert sender.sender_state.pending_count == 0
 
 
-def test_sender_replies_to_msgs_state_req_with_state_info() -> None:
+def test_sender_state_info_acknowledges_only_the_received_snapshot(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def run() -> None:
+        state = MTProtoState(auth_key=AUTH_KEY, session_id=SESSION_ID)
+        state.commit_incoming(101, content_related=False)
+        state.commit_incoming(109)
+        sender = MTProtoSender(ConnectionEndpoint("127.0.0.1", 443), TransportConfig(), state)
+
+        async def send(body: MsgsStateInfo, *, content_related: bool) -> int:
+            assert body.info == bytes((20, 2, 4))
+            assert content_related is False
+            state.commit_incoming(105)
+            return 100
+
+        monkeypatch.setattr(sender, "send", send)
+        await sender._send_state_info(109, (101, 105, 109))
+        assert state.message_statuses((101, 105, 109)) == bytes((28, 4, 12))
+
+    event_loop.run(run())
+
+
+@pytest.mark.parametrize("request_type", [MsgsStateReq, MsgResendReq])
+def test_sender_replies_to_msgs_state_req_with_state_info(request_type: type[MsgsStateReq | MsgResendReq]) -> None:
     async def run() -> None:
         seen_state_info: list[MsgsStateInfo] = []
+        received = asyncio.Event()
+        request_ids: list[int] = []
 
         def handle(message):
             body = decode_message_body(message.body)
             if isinstance(body, MsgsStateInfo):
                 seen_state_info.append(body)
+                received.set()
                 return None
+            request_ids.append(message.msg_id)
+            queried_ids = (message.msg_id + 1, message.msg_id + 13, message.msg_id + 5, message.msg_id + (60 << 32), 1, message.msg_id)  # fmt: skip
             return MessageContainer(
                 messages=(
+                    MessageContainerItem(msg_id=message.msg_id + 1, seq_no=0, body=MsgsAck(())),
+                    MessageContainerItem(msg_id=message.msg_id + 9, seq_no=0, body=request_type(msg_ids=queried_ids)),
                     MessageContainerItem(
-                        msg_id=message.msg_id + 1, seq_no=1, body=MsgsStateReq(msg_ids=(message.msg_id, 1234))
-                    ),
-                    MessageContainerItem(
-                        msg_id=message.msg_id + 5,
-                        seq_no=3,
+                        msg_id=message.msg_id + 13,
+                        seq_no=1,
                         body=RpcResult(req_msg_id=message.msg_id, result=b"response"),
                     ),
                 )
@@ -2230,12 +2459,10 @@ def test_sender_replies_to_msgs_state_req_with_state_info() -> None:
         async with FakeMTProtoServer(AUTH_KEY, config, handle) as server:
             sender = MTProtoSender(server.endpoint, config, state)
             assert await sender.request(b"question", request_timeout=2.0) == b"response"
-            for _ in range(50):
-                if seen_state_info:
-                    break
-                await asyncio.sleep(0.01)
-            assert seen_state_info
-            assert seen_state_info[0].info == b"\x00\x00"
+            await asyncio.wait_for(received.wait(), 1)
+            assert len(request_ids) == 1
+            assert seen_state_info[0].req_msg_id == request_ids[0] + 9
+            assert seen_state_info[0].info == bytes((20, 4, 2, 3, 1, 1))
             await sender.disconnect()
 
     event_loop.run(run())

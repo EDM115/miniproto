@@ -41,7 +41,8 @@ def test_acceptance_thresholds_use_correctness_invariants_instead_of_host_timing
             {"name": "pending_rpc_burst", "configured": 8, "peak": 7, "remaining": 1},
             {
                 "name": "scheduler_fairness",
-                "fairness_ratio": 0.5,
+                "max_competing_grant_imbalance": 7,
+                "allowed_competing_grant_imbalance": 2,
                 "peak_active_bytes": 9,
                 "configured_max_bytes": 8,
                 "leaked_bytes": 1,
@@ -81,6 +82,25 @@ def test_workload_exception_is_preserved_in_machine_readable_report(monkeypatch:
 
     assert report["results"] == []
     assert report["failures"] == [{"type": "RuntimeError", "message": "deterministic workload failed"}]
+
+
+def test_acceptance_rejects_unfair_service_when_final_grant_counts_are_equal() -> None:
+    failures = evaluate_acceptance_invariants(
+        [
+            {
+                "name": "scheduler_fairness",
+                "fairness_ratio": 1.0,
+                "max_competing_grant_imbalance": 7,
+                "allowed_competing_grant_imbalance": 2,
+                "peak_active_bytes": 8,
+                "configured_max_bytes": 8,
+                "leaked_bytes": 0,
+            }
+        ]
+    )
+
+    assert len(failures) == 1
+    assert "grant imbalance" in failures[0]["message"]
 
 
 def test_tiny_acceptance_workload_exercises_real_paths_without_absolute_timing_gates() -> None:
@@ -125,7 +145,11 @@ def test_tiny_acceptance_workload_exercises_real_paths_without_absolute_timing_g
     assert results["media_download"]["bytes"] == 8 * 1024
     assert results["iterator_backpressure"]["max_active_requests"] <= 2
     assert results["iterator_backpressure"]["requests_before_close"] <= 2
-    assert results["scheduler_fairness"]["fairness_ratio"] == 1.0
+    assert results["scheduler_fairness"]["completed_grant_ratio"] == 1.0
+    assert (
+        results["scheduler_fairness"]["max_competing_grant_imbalance"]
+        <= results["scheduler_fairness"]["allowed_competing_grant_imbalance"]
+    )
     assert results["scheduler_fairness"]["leaked_bytes"] == 0
     assert results["reconnect_transfer_cancel_soak"]["cycles"] == 1
     assert results["reconnect_transfer_cancel_soak"]["connections"] >= 2

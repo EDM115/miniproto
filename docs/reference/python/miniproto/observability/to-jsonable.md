@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.observability.to_jsonable"
 source_path: "src/miniproto/observability.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/observability.py#L420"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/observability.py#L421"
 aliases: ["miniproto.to_jsonable"]
 module: "miniproto.observability"
 ---

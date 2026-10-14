@@ -59,32 +59,68 @@ miniproto
 
 
 def _write_release_wheel(
-    path: Path, *, include_script_target: bool = True, extra_files: dict[str, str | bytes] | None = None
+    path: Path,
+    *,
+    include_script_target: bool = True,
+    extra_files: dict[str, str | bytes] | None = None,
+    omitted_file: str | None = None,
 ) -> None:
+    files: dict[str, str | bytes] = {
+        "miniproto/__init__.py": "",
+        "miniproto/py.typed": "",
+        "miniproto/_native.cp314-win_amd64.pyd": b"native",
+        "miniproto/raw/functions.py": "",
+        "miniproto/raw/functions.pyi": "",
+        "miniproto/raw/types.py": "",
+        "miniproto/raw/types.pyi": "",
+        "miniproto/raw/_function_shards/bucket_00.py": "",
+        "miniproto/raw/_types_shards/bucket_00.py": "",
+        "miniproto-0.1.0.dist-info/METADATA": _release_metadata(),
+        "miniproto-0.1.0.dist-info/licenses/LICENSE": "MIT License\n",
+        "miniproto-0.1.0.dist-info/entry_points.txt": "[console_scripts]\nminiproto-release-check = tools.release_check:main\n",
+    }
+    if include_script_target:
+        files["tools/release_check.py"] = "def main(): return 0\n"
+    files.update(extra_files or {})
+    if omitted_file is not None:
+        del files[omitted_file]
     with zipfile.ZipFile(path, "w") as archive:
-        archive.writestr("miniproto/__init__.py", "")
-        archive.writestr("miniproto/py.typed", "")
-        archive.writestr("miniproto/_native.cp314-win_amd64.pyd", b"native")
-        archive.writestr("miniproto/raw/functions.py", "")
-        archive.writestr("miniproto/raw/functions.pyi", "")
-        archive.writestr("miniproto/raw/types.py", "")
-        archive.writestr("miniproto/raw/types.pyi", "")
-        archive.writestr("miniproto/raw/_function_shards/bucket_00.py", "")
-        archive.writestr("miniproto/raw/_types_shards/bucket_00.py", "")
-        archive.writestr("miniproto-0.1.0.dist-info/METADATA", _release_metadata())
-        archive.writestr("miniproto-0.1.0.dist-info/licenses/LICENSE", "MIT License\n")
-        archive.writestr(
-            "miniproto-0.1.0.dist-info/entry_points.txt",
-            "[console_scripts]\nminiproto-release-check = tools.release_check:main\n",
-        )
-        if include_script_target:
-            archive.writestr("tools/release_check.py", "def main(): return 0\n")
-        for name, payload in (extra_files or {}).items():
+        for name, payload in files.items():
             archive.writestr(name, payload)
 
 
 def _write_release_sdist(path: Path, *, extra_files: dict[str, str | bytes] | None = None) -> None:
-    files: dict[str, str | bytes] = dict.fromkeys(release_check._REQUIRED_SDIST_PAYLOAD, "")
+    files: dict[str, str | bytes] = dict.fromkeys(
+        (
+            "Cargo.lock",
+            "Cargo.toml",
+            "LICENSE",
+            "PKG-INFO",
+            "README.md",
+            "pyproject.toml",
+            "rust/miniproto/Cargo.toml",
+            "rust/miniproto/README.md",
+            "rust/miniproto/src/lib.rs",
+            "src/miniproto/__init__.py",
+            "src/miniproto/py.typed",
+            "src/miniproto/raw/functions.py",
+            "src/miniproto/raw/functions.pyi",
+            "src/miniproto/raw/types.py",
+            "src/miniproto/raw/types.pyi",
+            "tools/release_artifacts.py",
+            "tools/release_check.py",
+            "tools/schema/generate.py",
+            "tools/schema/parser.py",
+            "tools/schema/rpc-errors.json",
+            "tools/schema/rust-fast-paths.json",
+            "tools/schema/schema-core.tl",
+            "tools/schema/schema-metadata.json",
+            "tools/schema/schema-tdesktop.tl",
+            "tools/schema/schema.tl",
+            "tools/schema/telegram-bindings.json",
+        ),
+        "",
+    )
     files["PKG-INFO"] = _release_metadata()
     files["src/miniproto/raw/_function_shards/bucket_00.py"] = ""
     files["src/miniproto/raw/_types_shards/bucket_00.py"] = ""
@@ -186,33 +222,45 @@ def test_fail_fast_preserves_exit_code_and_keep_going_collects_later_failures(tm
 
     fail_fast = run_stages(stages, ReleaseConfig("offline", False, tmp_path), runner=runner)
     assert calls == ["first", "second"]
+    assert fail_fast["mode"] == "offline"
     assert fail_fast["exit_code"] == 7
     assert [result["status"] for result in fail_fast["stages"]] == ["passed", "failed"]
 
     calls.clear()
-    complete = run_stages(stages, ReleaseConfig("offline", True, tmp_path), runner=runner)
+    complete = run_stages(stages, ReleaseConfig("quick", True, tmp_path), runner=runner)
     assert calls == ["first", "second", "third"]
-    assert complete["exit_code"] == 7
-    assert [result["status"] for result in complete["stages"]] == ["passed", "failed", "failed"]
+    decoded = json.loads(json.dumps(complete))
+    assert decoded["schema"] == "miniproto.release-check.v1"
+    assert decoded["mode"] == "quick"
+    assert decoded["exit_code"] == 7
+    assert [(stage["name"], stage["status"], stage["exit_code"]) for stage in decoded["stages"]] == [
+        ("first", "passed", 0),
+        ("second", "failed", 7),
+        ("third", "failed", 9),
+    ]
 
 
 def test_release_stage_runner_prints_live_progress_for_running_pending_and_failed_stages(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """The multi-minute release CLI must expose stage progress before its final JSON report."""
+    """The multi-minute release CLI must expose stage progress before its final JSON report"""
     stages = (
         Stage("first", ("first",)),
         Stage("docs", None, pending_reason="not configured"),
         Stage("last", ("last",)),
     )
 
-    run_stages(
-        stages,
-        ReleaseConfig("offline", True, tmp_path),
-        runner=lambda stage, _environment: 0 if stage.name == "first" else 7,
-    )
+    output_chunks: list[str] = []
 
-    output = capsys.readouterr().out
+    def runner(stage: Stage, _environment: dict[str, str]) -> int:
+        output_chunks.append(capsys.readouterr().out)
+        expected_running = {"first": "[release-check 1/3] first: running", "last": "[release-check 3/3] last: running"}
+        assert expected_running[stage.name] in output_chunks[-1]
+        return 0 if stage.name == "first" else 7
+
+    run_stages(stages, ReleaseConfig("offline", True, tmp_path), runner=runner)
+
+    output = "".join(output_chunks) + capsys.readouterr().out
     assert "[release-check 1/3] first: running" in output
     assert "[release-check 1/3] first: passed in" in output
     assert "[release-check 2/3] docs: pending - not configured" in output
@@ -223,7 +271,10 @@ def test_release_stage_runner_prints_live_progress_for_running_pending_and_faile
 def test_pending_stage_is_reported_without_invoking_runner(tmp_path: Path) -> None:
     stage = Stage("docs", None, pending_reason="Documentation tooling is not present")
 
-    report = run_stages((stage,), ReleaseConfig("offline", False, tmp_path), runner=lambda *_: 99)
+    def forbidden_runner(_stage: Stage, _environment: dict[str, str]) -> int:
+        raise AssertionError("a pending stage must not invoke its runner")
+
+    report = run_stages((stage,), ReleaseConfig("offline", False, tmp_path), runner=forbidden_runner)
 
     assert report["exit_code"] == 0
     assert report["stages"] == [
@@ -259,21 +310,38 @@ def test_wheel_inspection_requires_python_sources_and_native_extension_without_p
         inspect_wheel(cached)
 
 
-def test_wheel_inspection_rejects_incomplete_release_metadata_and_public_payload(tmp_path: Path) -> None:
+def test_wheel_inspection_rejects_incomplete_release_metadata_with_complete_public_payload(tmp_path: Path) -> None:
     incomplete = tmp_path / "miniproto-0.1.0-cp314-cp314-win_amd64.whl"
-    with zipfile.ZipFile(incomplete, "w") as archive:
-        archive.writestr("miniproto/__init__.py", "")
-        archive.writestr("miniproto/_native.cp314-win_amd64.pyd", b"native")
-        archive.writestr(
-            "miniproto-0.1.0.dist-info/METADATA", "Metadata-Version: 2.4\nName: miniproto\nVersion: 0.1.0\n"
-        )
-        archive.writestr(
-            "miniproto-0.1.0.dist-info/entry_points.txt",
-            "[console_scripts]\nminiproto-release-check = tools.release_check:main\n",
-        )
-        archive.writestr("tools/release_check.py", "def main(): return 0\n")
+    _write_release_wheel(
+        incomplete,
+        extra_files={"miniproto-0.1.0.dist-info/METADATA": "Metadata-Version: 2.4\nName: miniproto\nVersion: 0.1.0\n"},
+    )
 
-    with pytest.raises(ValueError, match=r"release metadata|public package payload"):
+    with pytest.raises(ValueError, match="release metadata"):
+        inspect_wheel(incomplete)
+
+
+@pytest.mark.parametrize(
+    ("missing", "error"),
+    [
+        ("miniproto/__init__.py", "public package payload"),
+        ("miniproto/py.typed", "public package payload"),
+        ("miniproto/raw/functions.py", "public package payload"),
+        ("miniproto/raw/functions.pyi", "public package payload"),
+        ("miniproto/raw/types.py", "public package payload"),
+        ("miniproto/raw/types.pyi", "public package payload"),
+        ("miniproto/raw/_function_shards/bucket_00.py", "generated function shard"),
+        ("miniproto/raw/_types_shards/bucket_00.py", "generated type shard"),
+        ("miniproto-0.1.0.dist-info/licenses/LICENSE", "declared LICENSE file"),
+    ],
+)
+def test_wheel_inspection_rejects_missing_public_payload_with_complete_release_metadata(
+    missing: str, error: str, tmp_path: Path
+) -> None:
+    incomplete = tmp_path / "miniproto-0.1.0-cp314-cp314-win_amd64.whl"
+    _write_release_wheel(incomplete, omitted_file=missing)
+
+    with pytest.raises(ValueError, match=error):
         inspect_wheel(incomplete)
 
 
@@ -328,9 +396,3 @@ def test_clean_import_verifies_wheel_and_sdist_in_separate_environments(
     assert len({command[-1] for command in venv_commands}) == 2
     assert {Path(command[-1]).name for command in install_commands} == {wheel.name, sdist.name}
     assert len(smoke_commands) == 2
-
-
-def test_release_summary_is_machine_readable(tmp_path: Path) -> None:
-    report = run_stages((Stage("ok", ("ok",)),), ReleaseConfig("quick", False, tmp_path), runner=lambda *_: 0)
-
-    assert json.loads(json.dumps(report))["mode"] == "quick"

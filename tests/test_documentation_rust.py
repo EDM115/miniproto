@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-import ast
 import json
+import sys
 from pathlib import Path
-from subprocess import CompletedProcess
+from subprocess import CompletedProcess, run
+from textwrap import dedent
 from typing import Any
 
 import pytest
-import tools.docs.generate_rust as generate_rust
 from tools.docs.audit import audit_maintained_rust_docs
 from tools.docs.generate_rust import (
     RustDocumentationError,
@@ -585,16 +585,58 @@ def _rendered_markdown() -> dict[str, str]:
     }
 
 
-def test_rust_documentation_toolchain_is_runtime_import_free() -> None:
-    """Verify docs aren't importing miniproto runtime code."""
-    imports = [
-        alias.name
-        for statement in ast.walk(ast.parse(Path(generate_rust.__file__).read_text(encoding="utf-8")))
-        if isinstance(statement, (ast.Import, ast.ImportFrom))
-        for alias in statement.names
-    ]
+def test_rust_documentation_toolchain_is_runtime_import_free(tmp_path: Path) -> None:
+    """Generate fixture pages while rejecting every miniproto package import in a fresh process
 
-    assert all(not imported_name.startswith("miniproto") for imported_name in imports)
+    Args:
+        tmp_path: Isolated source and rustdoc fixture root for the guarded child process
+    """
+    _write_fixture_sources(tmp_path)
+    rustdoc_json = _write_rustdoc_json(tmp_path, _rustdoc_fixture())
+    rendered = tmp_path / "rendered-markdown.json"
+    rendered.write_text(json.dumps(_rendered_markdown()), encoding="utf-8")
+    script = dedent(
+        """
+        import importlib.abc
+        import json
+        import sys
+        from pathlib import Path
+
+        forbidden_imports = []
+
+        class RejectRuntimeImports(importlib.abc.MetaPathFinder):
+            def find_spec(self, fullname, path=None, target=None):
+                if fullname == "miniproto" or fullname.startswith("miniproto."):
+                    forbidden_imports.append(fullname)
+                    raise AssertionError(f"documentation imported runtime package: {fullname}")
+                return None
+
+        assert not any(name == "miniproto" or name.startswith("miniproto.") for name in sys.modules)
+        sys.meta_path.insert(0, RejectRuntimeImports())
+        from tools.docs.generate_rust import generate_rust_pages
+
+        pages = generate_rust_pages(
+            rustdoc_json=Path(sys.argv[1]),
+            source_root=Path(sys.argv[2]),
+            rendered_markdown=json.loads(Path(sys.argv[3]).read_text(encoding="utf-8")),
+            repository_url="https://example.invalid/miniproto",
+            crate="miniproto-native",
+            reviewed_modules=("crypto",),
+        )
+        assert any(page.qualified_name == "miniproto_native::crypto::seal" for page in pages)
+        assert not forbidden_imports, forbidden_imports
+        """
+    )
+
+    result = run(  # noqa: S603 - executes the current interpreter with fixed test code and fixture paths
+        [sys.executable, "-c", script, str(rustdoc_json), str(tmp_path), str(rendered)],
+        cwd=Path(__file__).resolve().parents[1],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
 
 
 def test_cargo_docs_md_fragments_preserve_real_module_and_item_sections(tmp_path: Path) -> None:

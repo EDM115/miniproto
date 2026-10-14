@@ -28,7 +28,7 @@ class MTProtoState:
         duplicate_window: Maximum retained incoming IDs, defaulting to ``8192``.
         _last_msg_id: Last locally allocated message ID used to preserve monotonicity.
         _content_related_count: Count used to allocate content-related sequence numbers.
-        _seen_msg_ids: Retained incoming IDs used for duplicate and replay checks.
+        _seen_msg_ids: Retained incoming IDs and receipt-status bytes used for replay checks and status replies.
         _pending_acks: Incoming content-related IDs awaiting acknowledgement.
         _time_trusted: Whether an accepted incoming ID has established server time.
     """
@@ -40,7 +40,7 @@ class MTProtoState:
     duplicate_window: int = 8192
     _last_msg_id: int = 0
     _content_related_count: int = 0
-    _seen_msg_ids: OrderedDict[int, None] = field(default_factory=OrderedDict)
+    _seen_msg_ids: OrderedDict[int, int] = field(default_factory=OrderedDict)
     _pending_acks: OrderedDict[int, float] = field(default_factory=OrderedDict)
     _time_trusted: bool = False
 
@@ -112,7 +112,8 @@ class MTProtoState:
         now: float | None = None,
         provisional_time_offset: float | None = None,
         provisional_seen_msg_ids: Collection[int] = (),
-    ) -> None:
+        allow_duplicate: bool = False,
+    ) -> bool:
         """Validate an incoming envelope before permanently recording it.
 
         Args:
@@ -121,6 +122,10 @@ class MTProtoState:
             now: Optional wall-clock time for deterministic validation.
             provisional_time_offset: Optional transactional offset to use for time-window checks.
             provisional_seen_msg_ids: Additional IDs already staged in the current transaction.
+            allow_duplicate: Return ``False`` for a retained ID after validating its other envelope fields.
+
+        Returns:
+            ``True`` for a fresh ID or ``False`` for an explicitly allowed retained duplicate.
 
         Raises:
             ProtocolValidationError: If session, parity, duplicate, replay-window or trusted time checks fail.
@@ -129,10 +134,11 @@ class MTProtoState:
             raise ProtocolValidationError("session_id", context={"msg_id": msg_id})
         if msg_id & 1 != _SERVER_MSG_ID_PARITY:
             raise ProtocolValidationError("msg_id_parity", context={"msg_id": msg_id})
-        if msg_id in self._seen_msg_ids or msg_id in provisional_seen_msg_ids:
+        duplicate = msg_id in self._seen_msg_ids
+        if (duplicate and not allow_duplicate) or msg_id in provisional_seen_msg_ids:
             raise ProtocolValidationError("duplicate_msg_id", context={"msg_id": msg_id})
         replay_window = (*self._seen_msg_ids, *provisional_seen_msg_ids)
-        if replay_window and len(replay_window) >= self.duplicate_window and msg_id <= min(replay_window):
+        if not duplicate and replay_window and len(replay_window) >= self.duplicate_window and msg_id <= min(replay_window):  # fmt: skip
             raise ProtocolValidationError("replay_floor", context={"msg_id": msg_id})
         if self._time_trusted or provisional_time_offset is not None:
             offset = self.time_offset if provisional_time_offset is None else provisional_time_offset
@@ -142,6 +148,7 @@ class MTProtoState:
                 raise ProtocolValidationError("msg_id_future", context={"msg_id": msg_id})
             if server_time < current_time - MAX_SERVER_MSG_ID_PAST_SKEW:
                 raise ProtocolValidationError("msg_id_past", context={"msg_id": msg_id})
+        return not duplicate
 
     def commit_incoming(self, msg_id: int, *, content_related: bool = True, now: float | None = None) -> None:
         """Permanently record an already validated incoming message.
@@ -151,7 +158,7 @@ class MTProtoState:
             content_related: Queue an acknowledgement when ``True`` (the default).
             now: Optional wall-clock time used when initially trusting the server clock.
         """
-        self._seen_msg_ids[msg_id] = None
+        self._seen_msg_ids[msg_id] = 4 if content_related else 20
         while len(self._seen_msg_ids) > self.duplicate_window:
             self._seen_msg_ids.pop(min(self._seen_msg_ids))
         if content_related:
@@ -174,7 +181,7 @@ class MTProtoState:
         """
         if msg_id in self._seen_msg_ids:
             return False
-        self._seen_msg_ids[msg_id] = None
+        self._seen_msg_ids[msg_id] = 4 if content_related else 20
         self._seen_msg_ids.move_to_end(msg_id)
         while len(self._seen_msg_ids) > self.duplicate_window:
             self._seen_msg_ids.popitem(last=False)
@@ -190,6 +197,34 @@ class MTProtoState:
             msg_id: Server message ID to acknowledge.
         """
         self._pending_acks[msg_id] = time.monotonic()
+
+    def message_statuses(self, msg_ids: tuple[int, ...]) -> bytes:
+        """Describe received IDs and unknown IDs relative to the bounded receive window.
+
+        Args:
+            msg_ids: IDs in the order required by a ``msgs_state_info`` reply.
+
+        Returns:
+            One status byte per ID: unknown below the window (1), missing within it (2), above it (3), or received (4) with acknowledged (8) and no-ack-required (16) flags when known.
+        """
+        if not self._seen_msg_ids:
+            return b"\x01" * len(msg_ids)
+        oldest = min(self._seen_msg_ids)
+        newest = max(self._seen_msg_ids)
+        return bytes(
+            self._seen_msg_ids.get(msg_id, 1 if msg_id < oldest else 3 if msg_id > newest else 2) for msg_id in msg_ids
+        )
+
+    def mark_acks_sent(self, msg_ids: tuple[int, ...]) -> None:
+        """Mark retained messages acknowledged only after their receipt reply was written.
+
+        Args:
+            msg_ids: IDs covered by a successfully sent acknowledgement or state reply.
+        """
+        for msg_id in msg_ids:
+            status = self._seen_msg_ids.get(msg_id)
+            if status is not None:
+                self._seen_msg_ids[msg_id] = status | 8
 
     @property
     def pending_ack_count(self) -> int:

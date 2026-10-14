@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.connection.sender.PendingRequest"
 source_path: "src/miniproto/connection/sender.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/sender.py#L84"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/sender.py#L86"
 aliases: ["miniproto.connection.PendingRequest"]
 module: "miniproto.connection.sender"
 ---

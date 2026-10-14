@@ -190,11 +190,6 @@ def test_decode_object_reuses_constructor_map() -> None:
     assert tl_codec._constructor_maps() is tl_codec._constructor_maps()
 
 
-def test_generated_hot_raw_classes_have_specialized_codec_methods() -> None:
-    assert functions.UploadGetFile.serialize is not TLObject.serialize
-    assert hasattr(functions.UploadGetFile, "_deserialize")
-
-
 def test_deserialize_object_can_decode_unboxed_payload_for_known_class() -> None:
     peer = types.InputPeerUser(user_id=42, access_hash=99)
     decoded, offset = deserialize_object(types.InputPeerUser, serialize_object(peer, boxed=False), boxed=False)

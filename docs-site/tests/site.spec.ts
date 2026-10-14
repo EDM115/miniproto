@@ -1,3 +1,7 @@
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { expect, test } from "@playwright/test";
 
 const REQUIRED_FILTERS = ["kind", "language", "module", "namespace", "python_visible"];
@@ -6,6 +10,7 @@ const PUBLIC_BASE = REQUESTED_BASE === "/" ? "/" : `/${REQUESTED_BASE.replace(/^
 const PUBLIC_SITE = process.env.MINIPROTO_DOCS_SITE ?? "https://miniproto.edm115.dev";
 const sitePath = (route: string) => `${PUBLIC_BASE}${route.replace(/^\/+/, "")}`;
 const siteUrl = (route: string) => new URL(sitePath(route), PUBLIC_SITE).href;
+const DOCS_ROOT = fileURLToPath(new URL("../../docs/", import.meta.url));
 
 type PagefindData = {
   meta?: { title?: string };
@@ -109,6 +114,42 @@ test("nested documentation links and the handwritten sidebar remain complete wit
     sidebar.getByRole("link", { name: "Five-Minute Quickstart", exact: true }),
   ).toBeVisible();
   await expect(sidebar.getByRole("link", { name: "First Raw Call", exact: true })).toBeVisible();
+
+  const actualPaths = await sidebar.locator("a[href]").evaluateAll((anchors) =>
+    anchors.flatMap((anchor) => {
+      const url = new URL(anchor.getAttribute("href") ?? "", document.baseURI);
+      return url.origin === window.location.origin ? [url.pathname] : [];
+    }),
+  );
+  const expectedPaths = [
+    ...authoredSidebarRoutes(),
+    "/",
+    "/reference/",
+    "/reference/python/miniproto/",
+    "/reference/rust/miniproto-native/",
+    "/reference/telegram/",
+    "/reference/telegram/functions/",
+    "/reference/telegram/types/",
+    "/reference/telegram/errors/",
+  ].map(sitePath);
+  expect([...new Set(actualPaths)].toSorted()).toEqual([...new Set(expectedPaths)].toSorted());
+
+  const groupLabels = (await sidebar.locator("summary").allTextContents()).map((label) =>
+    label.trim(),
+  );
+  expect(groupLabels).toEqual(
+    expect.arrayContaining([
+      "Start",
+      "Guides",
+      "Concepts",
+      "Recipes",
+      "FAQ",
+      "Project",
+      "Codebase map",
+      "Reference",
+      "Telegram raw API",
+    ]),
+  );
 });
 
 test("Pagefind indexes every reference language, parameter terms, prose and filters", async ({
@@ -281,4 +322,40 @@ test("the reading experience remains usable on a narrow viewport and in both the
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function authoredSidebarRoutes(): string[] {
+  const sections = ["start", "guides", "concepts", "recipes", "faq", "project", "codebase"];
+  const rootPages = [
+    "media.md",
+    "session-security.md",
+    "raw-api.md",
+    "development.md",
+    "faked-methods.md",
+  ];
+  const sources = [
+    ...sections.flatMap((section) => markdownSources(join(DOCS_ROOT, section))),
+    ...rootPages.map((page) => join(DOCS_ROOT, page)),
+  ];
+  return sources.map((source) => {
+    const header = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/u.exec(
+      readFileSync(source, "utf8"),
+    )?.[1];
+    const slug = header ? /^slug:\s*["']?(\/[^"'\r\n]*)["']?\s*$/mu.exec(header)?.[1] : undefined;
+    if (!slug) {
+      throw new Error(`Authored sidebar page requires a public frontmatter slug: ${source}`);
+    }
+    return `/${slug.trim().split("/").filter(Boolean).join("/")}/`;
+  });
+}
+
+function markdownSources(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const source = join(directory, entry.name);
+    return entry.isDirectory()
+      ? markdownSources(source)
+      : entry.isFile() && entry.name.endsWith(".md")
+        ? [source]
+        : [];
+  });
 }

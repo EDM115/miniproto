@@ -23,11 +23,11 @@ after = monitor.finish()
 
 `format="text"` is the default; `format="json"` emits compact structured records. The formatter redacts recognized secret-bearing mapping keys and key/value-like text before output. It cannot discover every secret embedded in arbitrary strings, exception messages or user-provided objects. Keep authorization material, passphrases, proxy URLs with credentials and session strings out of log fields before they reach the formatter. The [production-operation guide](./production-operation.md) has the operational credential boundary.
 
-## Metrics are intentionally non-blocking
+## Metrics are best-effort and synchronous
 
-Use `set_metrics_sink(...)` to install the process-global sink consumed by `record_metric(...)`. A sink receives a name, numeric value, unit and optional attributes. Sink exceptions are suppressed so telemetry does not break a protocol operation. That makes a missing metric an observability incident to detect independently; it is not evidence that the operation failed or succeeded.
+Use `set_metrics_sink(...)` to install the process-global sink consumed by `record_metric(...)`. A sink receives a name, numeric value, unit and optional attributes. Miniproto calls it synchronously, so keep it fast or enqueue work inside the sink. Ordinary sink exceptions are suppressed so telemetry does not break a protocol operation. That makes a missing metric an observability incident to detect independently; it is not evidence that the operation failed or succeeded.
 
-The process-global sink also means libraries should not replace it casually. Let the application owner choose the sink, establish allowed attributes and apply its own cardinality and retention policy. Do not place credentials or unbounded user identifiers in metric attributes merely because the formatter redacts known keys.
+The process-global sink also means libraries should not replace it casually. Let the application owner choose the sink, establish allowed attributes and apply its own cardinality and retention policy. Known secret-bearing attribute keys pass through redaction, but that safety net cannot identify arbitrary secrets in values or unknown key names. Keep credentials and unbounded user identifiers out of metric attributes.
 
 ## Resource snapshots measure a point in time
 

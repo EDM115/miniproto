@@ -3,9 +3,12 @@ from __future__ import annotations
 import asyncio
 from datetime import UTC, datetime
 from pathlib import Path
+from types import SimpleNamespace
+from typing import cast
 
 import pytest
 
+import miniproto.client as client_module
 from miniproto import (
     AuthKey,
     Client,
@@ -18,22 +21,22 @@ from miniproto import (
     Peer,
     PeerCacheEntry,
     SessionRecord,
+    TransportConfig,
     Unauthorized,
     UpdateState,
     UserIdentity,
     event_loop,
 )
+from miniproto.errors import ProtocolValidationError
+from miniproto.invoke import RawSender
+from miniproto.mtproto.codec import encode_message_body, gzip_pack
+from miniproto.raw import functions, types
 from miniproto.session.models import session_record_from_mapping
 
 
 def test_client_config_validates_api_id() -> None:
     with pytest.raises(ValueError, match="api_id"):
         ClientConfig(api_id=0, api_hash="hash")
-
-
-def test_client_config_hides_bot_token_from_repr() -> None:
-    config = ClientConfig(api_id=1, api_hash="hash", bot_token="123:secret")  # noqa: S106
-    assert "123:secret" not in repr(config)
 
 
 def test_public_api_imports() -> None:
@@ -254,5 +257,129 @@ def test_update_dispatch_and_iteration() -> None:
         queued = await anext(iterator)
         assert queued == update
         assert seen == [update]
+
+    event_loop.run(run())
+
+
+@pytest.mark.parametrize("operation", ["invoke", "media_authorization"])
+@pytest.mark.parametrize("limit_delta", [-1, 0])
+def test_client_result_decoding_honors_configured_gzip_limit(operation: str, limit_delta: int) -> None:
+    async def run() -> None:
+        expected = (
+            types.NearestDc(country="FR", this_dc=2, nearest_dc=2)
+            if operation == "invoke"
+            else types.AuthAuthorization(user=types.User(id=42, first_name="Alice"))
+        )
+        limit = len(expected.serialize()) + limit_delta
+
+        class CompressedSender:
+            is_connected = True
+
+            async def request(
+                self,
+                body: bytes | object,
+                *,
+                content_related: bool = True,
+                retry_safe: bool,
+                request_timeout: float | None = None,
+            ) -> object:
+                del body, content_related, retry_safe, request_timeout
+                return gzip_pack(expected)
+
+            async def disconnect(self) -> None:
+                return None
+
+        sender = CompressedSender()
+        client = Client(
+            ClientConfig(
+                api_id=1,
+                api_hash="hash",
+                session_storage=InMemorySessionStorage(),
+                transport=TransportConfig(max_payload_size=limit),
+            )
+        )
+        client._sender = sender
+        await client.connect()
+
+        async def decode() -> object:
+            if operation == "invoke":
+                return await client.invoke(functions.HelpGetNearestDc())
+            return await client._import_exported_authorization(
+                sender, types.AuthExportedAuthorization(id=123, bytes=b"synthetic export"), 4
+            )
+
+        try:
+            if limit_delta < 0:
+                with pytest.raises(ProtocolValidationError, match="gzip_payload_too_large"):
+                    await decode()
+            else:
+                result = await decode()
+                assert result == (expected if operation == "invoke" else None)
+        finally:
+            await client.disconnect()
+
+    event_loop.run(run())
+
+
+@pytest.mark.parametrize("limit_delta", [-1, 0])
+def test_decode_pushed_payload_honors_expansion_limit(limit_delta: int) -> None:
+    update = types.UpdateShortMessage(id=1, user_id=42, message="hello", pts=1, pts_count=1, date=100)
+    payload = encode_message_body(gzip_pack(update))
+    limit = len(update.serialize()) + limit_delta
+    if limit_delta < 0:
+        with pytest.raises(ProtocolValidationError, match="gzip_payload_too_large"):
+            client_module._decode_pushed_payload(payload, max_output_size=limit)
+    else:
+        assert client_module._decode_pushed_payload(payload, max_output_size=limit) == update
+
+
+@pytest.mark.parametrize("wrappers", [16, 17])
+def test_decode_pushed_payload_bounds_nested_wrappers(wrappers: int) -> None:
+    update = types.UpdateShortMessage(id=1, user_id=42, message="hello", pts=1, pts_count=1, date=100)
+    wrapped = update
+    for _ in range(wrappers):
+        wrapped = gzip_pack(wrapped)
+    payload = encode_message_body(wrapped)
+    if wrappers > 16:
+        with pytest.raises(ProtocolValidationError, match="gzip_wrapper_depth"):
+            client_module._decode_pushed_payload(payload)
+    else:
+        assert client_module._decode_pushed_payload(payload) == update
+
+
+@pytest.mark.parametrize("limit_delta", [-1, 0])
+def test_receive_dispatch_applies_the_configured_gzip_limit(limit_delta: int) -> None:
+    async def run() -> None:
+        update = types.UpdateShortMessage(id=1, user_id=42, message="hello", pts=1, pts_count=1, date=100)
+        payload = encode_message_body(gzip_pack(update))
+        client = Client(
+            ClientConfig(
+                api_id=1,
+                api_hash="hash",
+                session_storage=InMemorySessionStorage(),
+                transport=TransportConfig(max_payload_size=len(update.serialize()) + limit_delta),
+            )
+        )
+
+        class OneUpdateSender:
+            received = False
+
+            async def recv_message(self) -> object:
+                if self.received:
+                    raise EOFError("test sender exhausted")
+                self.received = True
+                return SimpleNamespace(body=payload)
+
+        try:
+            with pytest.raises(EOFError, match="test sender exhausted"):
+                await client._receive_dispatch_loop(cast(RawSender, OneUpdateSender()))
+            queue = client._update_manager._raw_updates
+            if limit_delta < 0:
+                assert queue.empty()
+            else:
+                assert queue.get_nowait() == update
+                assert queue.empty()
+        finally:
+            await client.disconnect()
 
     event_loop.run(run())

@@ -1678,8 +1678,12 @@ async def iter_download_media(invoke: RawInvoker, media: object, **kwargs: Any) 
         )
         if resolved is not None:
             total_size = resolved.size
-    async for payload in iter_download(invoke, location, total_size=total_size, **kwargs):
-        yield payload
+    iterator = iter_download(invoke, location, total_size=total_size, **kwargs)
+    try:
+        async for payload in iterator:
+            yield payload
+    finally:
+        await iterator.aclose()
 
 
 async def download_media(

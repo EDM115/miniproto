@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.updates.manager.UpdateManager.stop"
 source_path: "src/miniproto/updates/manager.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/updates/manager.py#L107"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/updates/manager.py#L109"
 aliases: ["miniproto.updates.UpdateManager.stop"]
 module: "miniproto.updates.manager"
 ---

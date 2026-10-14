@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.client.Client.on"
 source_path: "src/miniproto/client.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L1781"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L1791"
 aliases: ["miniproto.Client.on"]
 module: "miniproto.client"
 ---

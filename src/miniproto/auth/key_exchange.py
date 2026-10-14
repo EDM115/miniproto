@@ -474,7 +474,8 @@ class AuthKeyExchange:
         transport: Unencrypted transport connected to the selected data center.
         dc_id: Logical Telegram DC identifier to authorize.
         rsa_keys: Trusted Telegram RSA public keys for the selected environment.
-        test_mode: Encode positive DC IDs for Telegram's test environment when true.
+        test_mode: Apply Telegram's test-DC offset before encoding the endpoint's wire role.
+        media_only: Encode a media endpoint's wire DC ID negatively, excluding CDN endpoints.
         random_bytes: Cryptographically secure random-byte source; defaults to :func:`os.urandom`.
     """
 
@@ -485,6 +486,7 @@ class AuthKeyExchange:
         dc_id: int,
         rsa_keys: tuple[RSAKey, ...],
         test_mode: bool = False,
+        media_only: bool = False,
         random_bytes: Callable[[int], bytes] | None = None,
     ) -> None:
         """Validate trusted keys and initialize exchange-specific dependencies.
@@ -493,7 +495,8 @@ class AuthKeyExchange:
             transport: Connected capability used to send unencrypted handshake requests.
             dc_id: Logical Telegram data-center ID to authorize.
             rsa_keys: Trusted public keys eligible for server fingerprint selection.
-            test_mode: Encode positive DC IDs for Telegram's test environment when true.
+            test_mode: Apply Telegram's test-DC offset before encoding the endpoint's wire role.
+            media_only: Whether the selected endpoint is media-only and not a CDN.
             random_bytes: Optional secure random-byte source; defaults to :func:`os.urandom`.
 
         Raises:
@@ -505,6 +508,7 @@ class AuthKeyExchange:
         self.dc_id = dc_id
         self.rsa_keys = rsa_keys
         self.test_mode = test_mode
+        self.media_only = media_only
         self._random_bytes = random_bytes or os.urandom
 
     async def create_auth_key(self) -> AuthKeyExchangeResult:
@@ -537,7 +541,7 @@ class AuthKeyExchange:
             nonce=nonce,
             server_nonce=res_pq.server_nonce,
             new_nonce=new_nonce,
-            dc_id=_auth_dc_id(self.dc_id, test_mode=self.test_mode),
+            dc_id=_auth_dc_id(self.dc_id, test_mode=self.test_mode, media_only=self.media_only),
         )
         req_dh = ReqDHParams(
             nonce=nonce,
@@ -911,16 +915,18 @@ def _validate_dh_inner(inner: ServerDHInnerData, *, nonce: int, server_nonce: in
     validate_dh_parameters(dh_prime, inner.g, g_a, "g_a")
 
 
-def _auth_dc_id(dc_id: int, *, test_mode: bool) -> int:
-    """Encode a logical positive DC ID for Telegram test-mode key exchange.
+def _auth_dc_id(dc_id: int, *, test_mode: bool, media_only: bool = False) -> int:
+    """Encode Telegram's environment offset and media sign without changing logical state.
 
     Args:
         dc_id: Logical data-center ID selected by the caller.
         test_mode: Whether Telegram's positive test-DC offset applies.
+        media_only: Whether the selected non-CDN endpoint requires a negative wire ID.
     """
     if dc_id == 0:
         raise ValueError("dc_id must not be zero")
-    return dc_id + 10000 if test_mode and dc_id > 0 else dc_id
+    wire_dc_id = abs(dc_id) + (10000 if test_mode else 0)
+    return -wire_dc_id if media_only or dc_id < 0 else wire_dc_id
 
 
 def _minimal_be(value: int) -> bytes:

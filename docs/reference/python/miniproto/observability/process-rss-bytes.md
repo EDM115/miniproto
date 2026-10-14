@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.observability.process_rss_bytes"
 source_path: "src/miniproto/observability.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/observability.py#L352"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/observability.py#L353"
 aliases: ["miniproto.process_rss_bytes"]
 module: "miniproto.observability"
 ---

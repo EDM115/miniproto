@@ -1,13 +1,13 @@
 ---
 title: Start Here
-description: Install miniproto from a source checkout and make a deliberately small first MTProto call.
+description: Install miniproto or prepare a source checkout, then make a deliberately small first MTProto call.
 slug: /start/
 generated: false
 ---
 
 miniproto is an async-first MTProto protocol SDK. It owns connection, authorization, sessions, raw invocation, update state and media primitives; it is not the future high-level application framework. Start with a throwaway bot session, then move to a protected durable session before handling a real account.
 
-1. [Install from a source checkout](./installation.md).
+1. [Install from PyPI or prepare a source checkout](./installation.md).
 2. Run the [five-minute bot quickstart](./quickstart.md) against an account and chat you control.
 3. Choose [phone or bot authorization](./authentication.md) and store durable session material safely.
 4. Make a [first raw call](./raw-api.md), then a [first high-level operation](./high-level-operation.md).

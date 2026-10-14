@@ -8,11 +8,13 @@ import time
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterable
 from contextlib import suppress
 from dataclasses import dataclass
+from hashlib import sha256
 from typing import Any, Literal, TypeVar, cast, overload
 
 from miniproto.config import ClientConfig
 from miniproto.observability import emit_event, get_logger, record_metric
 from miniproto.raw import functions, types
+from miniproto.raw.base import TLObject
 from miniproto.session.models import SessionRecord, session_record_from_mapping
 from miniproto.session.storage import SessionStorage
 from miniproto.types import Message, NewMessage, Peer, Update
@@ -315,10 +317,16 @@ class UpdateManager:
             | types.UpdatesDifferenceSlice
             | types.UpdatesDifferenceTooLong,
         ):
-            return self._apply_difference(raw_update)
+            return await self._apply_difference(raw_update)
         if isinstance(raw_update, types.UpdatesTooLong):
             return await self._recover_gap()
         events: list[Update] = []
+        units = _iter_update_units(raw_update)
+        for unit in units:
+            if isinstance(unit.raw, types.UpdateChannelTooLong):
+                recovered = await self._recover_channel_gap(unit.raw.channel_id, initial_pts=unit.raw.pts)
+                if recovered is not None:
+                    events.extend(recovered)
         channel_gaps = self._channel_pts_gaps(raw_update)
         if self._sequence_gap(raw_update) or self._pts_gap(raw_update) or self._qts_gap(raw_update):
             events.extend(await self._recover_gap())
@@ -326,7 +334,9 @@ class UpdateManager:
             recovered = await self._recover_channel_gap(channel_id)
             if recovered is not None:
                 events.extend(recovered)
-        for unit in _iter_update_units(raw_update):
+        for unit in units:
+            if isinstance(unit.raw, types.UpdateChannelTooLong):
+                continue
             unit_channel_gaps = self._channel_pts_gaps(unit.raw)
             if unit_channel_gaps:
                 recovered_all = True
@@ -340,7 +350,7 @@ class UpdateManager:
                     continue
             elif self._pts_gap(unit.raw) or self._qts_gap(unit.raw):
                 events.extend(await self._recover_gap())
-            events.extend(self._apply_update_unit(unit))
+            events.extend(self._apply_update_unit(unit, check_gap=True))
         self._apply_sequence(raw_update)
         self._remember_entities(_extract_entity_references(raw_update))
         return events
@@ -371,7 +381,7 @@ class UpdateManager:
                 | types.UpdatesDifferenceTooLong,
             ):
                 raise TypeError("updates.getDifference returned a non-updates.Difference result")
-            recovered.extend(self._apply_difference(difference))
+            recovered.extend(await self._apply_difference(difference))
             if not isinstance(difference, types.UpdatesDifferenceSlice):
                 events = _ordered_events(recovered)
                 _emit_update_event("updates.recover_gap", started, outcome="success", rounds=_ + 1, emitted=len(events))
@@ -379,13 +389,14 @@ class UpdateManager:
         _emit_update_event("updates.recover_gap", started, outcome="error", error_type="NoConvergence")
         raise RuntimeError("updates.getDifference did not converge")
 
-    async def _recover_channel_gap(self, channel_id: int) -> list[Update] | None:
+    async def _recover_channel_gap(self, channel_id: int, *, initial_pts: int | None = None) -> list[Update] | None:
         """Recover one channel PTS gap when a cached access hash permits the RPC.
 
         The method waits the configured possible-gap grace interval before polling and returns no events when the channel access hash is unavailable. Recovery stops after ten non-final rounds.
 
         Args:
             channel_id: Telegram channel identifier whose PTS gap is recovered.
+            initial_pts: Starting PTS from ``updateChannelTooLong`` when no channel cursor is stored.
 
         Raises:
             TypeError: If Telegram returns an unexpected channel-difference type.
@@ -402,6 +413,9 @@ class UpdateManager:
                 channel_id=channel_id,
             )
             return None
+        cursor = self._current_cursor()
+        if initial_pts is not None and not any(item.channel_id == channel_id for item in cursor.channel_cursors):
+            self._set_cursor(cursor.with_channel_state(channel_id, pts=initial_pts))
         if POSSIBLE_GAP_GRACE_SECONDS > 0:
             await asyncio.sleep(POSSIBLE_GAP_GRACE_SECONDS)
         record_metric("updates.channel_gaps", 1)
@@ -437,7 +451,7 @@ class UpdateManager:
         )
         raise RuntimeError("updates.getChannelDifference did not converge")
 
-    def _apply_difference(self, difference: object) -> list[Update]:
+    async def _apply_difference(self, difference: object) -> list[Update]:
         """Apply a global difference response and update cursor/entity state.
 
         Args:
@@ -455,7 +469,12 @@ class UpdateManager:
             for message in difference.new_messages:
                 events.extend(self._apply_update_unit(RawUpdateUnit(raw=message)))
             for update in difference.other_updates:
-                events.extend(self._apply_update_unit(RawUpdateUnit(raw=update)))
+                if isinstance(update, types.UpdateChannelTooLong):
+                    recovered = await self._recover_channel_gap(update.channel_id, initial_pts=update.pts)
+                    if recovered is not None:
+                        events.extend(recovered)
+                else:
+                    events.extend(self._apply_update_unit(RawUpdateUnit(raw=update)))
             state = (
                 difference.intermediate_state
                 if isinstance(difference, types.UpdatesDifferenceSlice)
@@ -500,19 +519,27 @@ class UpdateManager:
             return _ordered_events(events)
         return []
 
-    def _apply_update_unit(self, unit: RawUpdateUnit) -> list[Update]:
+    def _apply_update_unit(self, unit: RawUpdateUnit, *, check_gap: bool = False) -> list[Update]:
         """Drop duplicate/stale units or convert a new unit while advancing cursor state.
 
         Args:
             unit: Raw update paired with any enclosing-container timestamp.
+            check_gap: Reject unresolved live-update gaps, difference contents rely on their enclosing returned state.
         """
         raw = unit.raw
+        if isinstance(raw, types.UpdateChannelTooLong):
+            return []
         key = _raw_update_key(raw)
         cursor = self._current_cursor()
         pts = _optional_int_attr(raw, "pts")
+        pts_count = _optional_int_attr(raw, "pts_count") or 0
+        qts = _optional_int_attr(raw, "qts")
         channel_id = _channel_id_from_update(raw)
         comparison_pts = cursor.channel_cursor(channel_id).pts if channel_id is not None else cursor.pts
-        if pts is not None and pts <= comparison_pts:
+        expected_pts = comparison_pts + pts_count
+        if check_gap and ((pts is not None and pts > expected_pts) or (qts is not None and qts > cursor.qts + 1)):
+            return []
+        if (pts is not None and pts < expected_pts) or (qts is not None and qts <= cursor.qts):
             if key is not None:
                 self._duplicates.add(key)
             return []
@@ -521,12 +548,11 @@ class UpdateManager:
         events = _public_updates_from_raw(raw, unit.date)
         if key is not None:
             self._duplicates.add(key)
-        qts = _optional_int_attr(raw, "qts")
         date = _raw_date(raw, unit.date)
         next_cursor = cursor
         if pts is not None and channel_id is not None and pts > comparison_pts:
             next_cursor = next_cursor.with_channel_state(channel_id, pts=pts, date=date)
-        elif pts is not None and pts > next_cursor.pts:
+        elif pts is not None and channel_id is None and pts > next_cursor.pts:
             next_cursor = next_cursor.with_state(pts=pts, date=date)
         if qts is not None and qts > next_cursor.qts:
             next_cursor = next_cursor.with_state(qts=qts, date=date)
@@ -546,8 +572,8 @@ class UpdateManager:
             if _channel_id_from_update(unit.raw) is not None:
                 continue
             pts = _optional_int_attr(unit.raw, "pts")
-            pts_count = _optional_int_attr(unit.raw, "pts_count")
-            if pts is None or pts_count is None:
+            pts_count = _optional_int_attr(unit.raw, "pts_count") or 0
+            if pts is None:
                 continue
             if expected_pts == 0:
                 if pts > pts_count:
@@ -586,12 +612,14 @@ class UpdateManager:
         gaps: list[int] = []
         expected_by_channel: dict[int, int] = {}
         for unit in _iter_update_units(raw_update):
+            if isinstance(unit.raw, types.UpdateChannelTooLong):
+                continue
             channel_id = _channel_id_from_update(unit.raw)
             if channel_id is None:
                 continue
             pts = _optional_int_attr(unit.raw, "pts")
-            pts_count = _optional_int_attr(unit.raw, "pts_count")
-            if pts is None or pts_count is None:
+            pts_count = _optional_int_attr(unit.raw, "pts_count") or 0
+            if pts is None:
                 continue
             expected_pts = expected_by_channel.get(channel_id, self._current_cursor().channel_cursor(channel_id).pts)
             if expected_pts == 0:
@@ -798,8 +826,9 @@ def _channel_id_from_update(raw: object) -> int | None:
     direct_channel_id = getattr(raw, "channel_id", None)
     if isinstance(direct_channel_id, int):
         return direct_channel_id
-    raw_message = getattr(raw, "message", raw)
-    peer_id = getattr(raw_message, "peer_id", None)
+    peer_id = getattr(raw, "peer_id", None)
+    if peer_id is None:
+        peer_id = getattr(getattr(raw, "message", None), "peer_id", None)
     if isinstance(peer_id, types.PeerChannel):
         return peer_id.channel_id
     return None
@@ -901,6 +930,11 @@ def _raw_update_key(raw: object) -> str | None:
     Args:
         raw: Raw Telegram update/message from which identity attributes are read.
     """
+    if getattr(raw, "pts", None) is not None and (_optional_int_attr(raw, "pts_count") or 0) == 0:
+        # PTS does not identify zero-count events, retain their complete payload identity
+        if isinstance(raw, TLObject):
+            return f"{type(raw).__name__}|payload:{sha256(raw.serialize()).hexdigest()}"
+        return None
     parts = [type(raw).__name__]
     for attr in ("pts", "qts", "seq", "date", "id"):
         value = getattr(raw, attr, None)
@@ -911,7 +945,12 @@ def _raw_update_key(raw: object) -> str | None:
         nested_id = getattr(nested_message, "id", None)
         if isinstance(nested_id, int):
             parts.append(f"message:{nested_id}")
-    return "|".join(parts) if len(parts) > 1 else None
+    if len(parts) == 1:
+        return None
+    channel_id = _channel_id_from_update(raw)
+    if channel_id is not None:
+        parts.append(f"channel:{channel_id}")
+    return "|".join(parts)
 
 
 def _optional_int_attr(raw: object, attr: str) -> int | None:

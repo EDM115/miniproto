@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import asyncio
+import json
 import socket
 import time
+from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from urllib.error import URLError
@@ -9,11 +12,11 @@ from urllib.parse import urlencode
 from urllib.request import urlopen
 
 import pytest
+import tools.bench.benchmark_live_media_limit as benchmark
 from tools.bench.benchmark_live_media_limit import (
     DEFAULT_CHUNK_SIZE,
     MAX_DOWNLOAD_CHUNK_SIZE,
     TELEGRAM_DEFAULT_LIMIT_BYTES,
-    BenchmarkSummary,
     TransferRecorder,
     benchmark_peer_for_actor,
     deterministic_chunk,
@@ -42,8 +45,72 @@ def test_parse_size_accepts_telegram_default_and_units() -> None:
     assert parse_size("524288") == DEFAULT_CHUNK_SIZE
 
 
-def test_benchmark_summary_reports_native_availability() -> None:
-    assert "native_available" in BenchmarkSummary.__dataclass_fields__
+@pytest.mark.parametrize("available", [True, False])
+def test_benchmark_json_reports_observed_native_availability(
+    available: bool, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls: list[str] = []
+    source = tmp_path / "synthetic.bin"
+    destination = tmp_path / "report.json"
+
+    class OfflineClient:
+        async def disconnect(self) -> None:
+            calls.append("disconnect")
+
+    client = OfflineClient()
+
+    def forbid_live_work(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("offline report test must not read credentials, create sessions or perform live work")
+
+    def validate_offline_inputs(env: Mapping[str, str], *, actor: str) -> None:
+        assert env == {} and actor == "user"
+        calls.append("guard")
+
+    async def authorize(actor: str, _args: object, env: Mapping[str, str]) -> OfflineClient:
+        assert env == {} and actor == "user"
+        calls.append("authorize")
+        return client
+
+    async def transfer(actual_client: OfflineClient, **kwargs: object) -> tuple[()]:
+        assert actual_client is client
+        assert kwargs["operation"] == "download"
+        assert kwargs["source"] == source
+        assert kwargs["file_id"] == "mpf1_synthetic"
+        calls.append("transfer")
+        return ()
+
+    monkeypatch.setattr(benchmark.os, "environ", {})
+    for name in ("Client", "EncryptedSQLiteSessionStorage", "ensure_benchmark_file", "load_dotenv"):
+        monkeypatch.setattr(benchmark, name, forbid_live_work)
+    monkeypatch.setattr(benchmark, "require_live_env", validate_offline_inputs)
+    monkeypatch.setattr(benchmark, "authorized_client", authorize)
+    monkeypatch.setattr(benchmark, "benchmark_actor", transfer)
+    monkeypatch.setattr(benchmark, "native_available", lambda: available)
+    args = parse_args(
+        [
+            "--actor",
+            "user",
+            "--operation",
+            "download",
+            "--size",
+            "1024",
+            "--file",
+            str(source),
+            "--file-id",
+            "mpf1_synthetic",
+            "--json",
+            str(destination),
+        ],
+        {},
+    )
+
+    assert asyncio.run(benchmark._run_benchmark(args, {}, None)) == 0
+    report = json.loads(destination.read_text(encoding="utf-8"))
+    assert report["native_available"] is available
+    assert report["operation"] == "download"
+    assert report["results"] == []
+    assert calls == ["guard", "authorize", "transfer", "disconnect"]
+    assert not source.exists()
 
 
 def test_default_benchmark_file_name_follows_requested_size() -> None:
@@ -120,13 +187,13 @@ def test_sample_stats_reports_tails_and_percentiles() -> None:
 
 def test_transfer_recorder_samples_fixed_time_windows() -> None:
     one_mib = 1024 * 1024
-    recorder = TransferRecorder(total=10 * one_mib, label="bench", progress_interval_s=0, sample_interval_s=5)
+    recorder = TransferRecorder(total=15 * one_mib, label="bench", progress_interval_s=0, sample_interval_s=5)
     recorder.begin(now=1.0)
     recorder.record(one_mib, None, now=1.1)
     recorder.record(5 * one_mib, None, now=6.0)
-    recorder.record(10 * one_mib, 10 * one_mib, now=11.0)
-    assert recorder.samples_mib_s == pytest.approx([1.0, 1.0])
-    duration, transfer_duration, _stats = recorder.finish(10 * one_mib)
+    recorder.record(15 * one_mib, 15 * one_mib, now=11.0)
+    assert recorder.samples_mib_s == pytest.approx([1.0, 2.0])
+    duration, transfer_duration, _stats = recorder.finish(15 * one_mib)
     assert duration >= transfer_duration
     assert transfer_duration == pytest.approx(10.0)
 

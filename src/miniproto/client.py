@@ -32,6 +32,7 @@ from miniproto.errors import (
     DatacenterMigration,
     FloodWait,
     InvalidDatacenter,
+    ProtocolValidationError,
     RpcError,
     SessionStorageError,
     Unauthorized,
@@ -87,7 +88,12 @@ from miniproto.messages import (
     messages_from_history_result,
     parse_message_text,
 )
-from miniproto.mtproto.codec import GzipPacked, decode_message_body
+from miniproto.mtproto.codec import (
+    DEFAULT_GZIP_MAX_OUTPUT_SIZE,
+    MAX_GZIP_WRAPPER_DEPTH,
+    GzipPacked,
+    decode_message_body,
+)
 from miniproto.observability import emit_event, get_logger, record_metric
 from miniproto.peers import PeerCache, input_channel_from_peer, input_peer_from_peer
 from miniproto.raw import functions, types
@@ -1112,8 +1118,12 @@ class Client:
             dc_id=_resolve_media_dc_id(media),
             total_size=total_size,
         ) as media_invoke:
-            async for payload in iter_download_media_file(media_invoke, media, **options):
-                yield payload
+            iterator = iter_download_media_file(media_invoke, media, **options)
+            try:
+                async for payload in iterator:
+                    yield payload
+            finally:
+                await iterator.aclose()
 
     async def _download_media_single(
         self, media: object, destination: Destination, options: Mapping[str, Any]
@@ -1614,7 +1624,7 @@ class Client:
                         wrapped_request, content_related=True, retry_safe=retryable, request_timeout=timeout
                     )
                 mark_sender_initialized(sender)
-                result = decode_rpc_response(raw_result, raw_request)
+                result = decode_rpc_response(raw_result, raw_request, max_output_size=self.config.transport.max_payload_size)  # fmt: skip
                 _emit_rpc_event(
                     started, outcome="success", request=request_name, attempts=attempts + 1, retryable=retryable
                 )
@@ -1989,7 +1999,7 @@ class Client:
         while True:
             message = await recv_message()
             try:
-                raw_update = _decode_pushed_payload(message.body)
+                raw_update = _decode_pushed_payload(message.body, max_output_size=self.config.transport.max_payload_size)  # fmt: skip
             except (TLCodecError, ValueError) as exc:
                 record_metric("client.update_decode_errors", 1, attributes={"error_type": type(exc).__name__})
                 continue
@@ -2180,7 +2190,11 @@ class Client:
         transport = UnencryptedAuthKeyTransport(ConnectionEndpoint(option.ip_address, option.port), self.config)
         try:
             result = await AuthKeyExchange(
-                transport, dc_id=dc_id, rsa_keys=rsa_keys, test_mode=self.config.test_mode
+                transport,
+                dc_id=dc_id,
+                rsa_keys=rsa_keys,
+                test_mode=self.config.test_mode,
+                media_only=option.media_only and not option.cdn,
             ).create_auth_key()
         finally:
             await transport.close()
@@ -2270,6 +2284,7 @@ class Client:
                     dc_id=dc_id,
                     rsa_keys=telegram_rsa_public_keys(test_mode=self.config.test_mode),
                     test_mode=self.config.test_mode,
+                    media_only=option.media_only and not option.cdn,
                 ).create_auth_key()
             finally:
                 await transport.close()
@@ -2321,7 +2336,7 @@ class Client:
             wrapped, content_related=True, retry_safe=False, request_timeout=self.config.request_timeout
         )
         mark_sender_initialized(sender)
-        decode_rpc_response(raw_result, request)
+        decode_rpc_response(raw_result, request, max_output_size=self.config.transport.max_payload_size)
         record_metric("client.media_auth_imports", 1, attributes={"target_dc_id": dc_id})
         _emit_client_event("client.media_auth_import", started, outcome="success", target_dc_id=dc_id)
 
@@ -2901,18 +2916,24 @@ def _sender_fatal_pending(sender: RawSender) -> bool:
     return bool(getattr(sender, "has_fatal_error", False))
 
 
-def _decode_pushed_payload(data: bytes) -> object | None:
+def _decode_pushed_payload(data: bytes, *, max_output_size: int = DEFAULT_GZIP_MAX_OUTPUT_SIZE) -> object | None:
     """Decode nested gzip service payloads and return one complete TL update object.
 
     Raises:
         TLCodecError: If a decoded object leaves trailing payload bytes.
+        ProtocolValidationError: If gzip expansion or nesting exceeds its decoding bound.
 
     Args:
         data: Encoded pushed-message body, possibly wrapped in one or more gzip service envelopes.
+        max_output_size: Maximum decompressed bytes per wrapper, defaulting to 16 MiB.
     """
     body = decode_message_body(data)
+    depth = 0
     while isinstance(body, GzipPacked):
-        body = decode_message_body(body.unpack())
+        if depth == MAX_GZIP_WRAPPER_DEPTH:
+            raise ProtocolValidationError("gzip_wrapper_depth", context={"maximum": MAX_GZIP_WRAPPER_DEPTH})
+        body = decode_message_body(body.unpack(max_output_size=max_output_size))
+        depth += 1
     if isinstance(body, bytes | bytearray | memoryview):
         payload = bytes(body)
         value, offset = decode_object(payload, 0)

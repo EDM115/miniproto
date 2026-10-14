@@ -14,6 +14,7 @@ import time
 from collections.abc import Sequence
 from typing import Any
 
+from miniproto import event_loop
 from miniproto.media.scheduler import MEDIA_SCHEDULER_UNIT, MediaSchedulerRegistry
 
 
@@ -31,8 +32,7 @@ async def run_scheduler_benchmark(
             and must be at least :data:`MEDIA_SCHEDULER_UNIT`.
 
     Returns:
-        A report with byte/second throughput, per-transfer results, grant fairness
-        ratio, active/queued accounting, cross-DC/direction isolation and queued
+        A report with byte/second throughput, per-transfer results, competing grant-prefix imbalance, active/queued accounting, cross-DC/direction isolation and queued
         waiter cancellation cleanup. Byte counters are bytes; durations/waits are
         seconds; throughput is bytes per second.
 
@@ -62,6 +62,9 @@ async def run_scheduler_benchmark(
     started = time.perf_counter()
     transfer_results: list[dict[str, Any] | None] = [None] * transfers
     queue_wait_seconds: list[float] = []
+    grant_order: list[str] = []
+    observed_grants = [0] * transfers
+    max_competing_grant_imbalance = 0
 
     async def run_transfer(index: int) -> None:
         """Acquire/release every part for one transfer and store its ordered result.
@@ -69,7 +72,7 @@ async def run_scheduler_benchmark(
         Args:
             index: Position selecting this transfer's pre-opened scheduler handle.
         """
-        nonlocal peak_active_bytes
+        nonlocal peak_active_bytes, max_competing_grant_imbalance
         handle = handles[index]
         transfer_started = time.perf_counter()
         transfer_wait_seconds = 0.0
@@ -77,6 +80,11 @@ async def run_scheduler_benchmark(
             wait_started = time.perf_counter()
             permit = await handle.acquire(part_size)
             wait_seconds = max(time.perf_counter() - wait_started, 0.0)
+            grant_order.append(handle.transfer_id)
+            observed_grants[index] += 1
+            competing = [count for count in observed_grants if count < parts_per_transfer]
+            if competing:
+                max_competing_grant_imbalance = max(max_competing_grant_imbalance, max(competing) - min(competing))
             transfer_wait_seconds += wait_seconds
             queue_wait_seconds.append(wait_seconds)
             peak_active_bytes = max(peak_active_bytes, handle.scheduler_snapshot.active_bytes)
@@ -126,8 +134,23 @@ async def run_scheduler_benchmark(
     minimum_grants = min(grants, default=0)
     maximum_grants = max(grants, default=0)
     aggregate_bytes = transfers * parts_per_transfer * part_size
+    charged_part_size = ((part_size + MEDIA_SCHEDULER_UNIT - 1) // MEDIA_SCHEDULER_UNIT) * MEDIA_SCHEDULER_UNIT
+    allowed_competing_grant_imbalance = max(1, min(transfers, max_bytes // charged_part_size))
+    failures = []
+    if max_competing_grant_imbalance > allowed_competing_grant_imbalance:
+        failures.append(
+            {
+                "type": "SchedulerFairnessError",
+                "message": f"competing grant imbalance {max_competing_grant_imbalance} exceeded {allowed_competing_grant_imbalance}",
+            }
+        )
+    loop = asyncio.get_running_loop()
     return {
         "schema": "miniproto.media-scheduler-benchmark.v1",
+        "event_loop": {
+            "preferred_backend": event_loop.backend_name(),
+            "running_backend": f"{type(loop).__module__}.{type(loop).__name__}",
+        },
         "workload": {
             "transfers": transfers,
             "parts_per_transfer": parts_per_transfer,
@@ -141,12 +164,16 @@ async def run_scheduler_benchmark(
         },
         "transfers": [item for item in transfer_results if item is not None],
         "fairness": {
+            "max_competing_grant_imbalance": max_competing_grant_imbalance,
+            "allowed_competing_grant_imbalance": allowed_competing_grant_imbalance,
+            "completed_transfers_excluded": True,
+            "grant_order": grant_order,
+        },
+        "accounting": {
             "minimum_grants": minimum_grants,
             "maximum_grants": maximum_grants,
             "grant_ratio": minimum_grants / maximum_grants if maximum_grants else 1.0,
             "grants_by_transfer": primary_snapshot.grants_by_transfer,
-        },
-        "accounting": {
             "peak_active_bytes": peak_active_bytes,
             "configured_max_bytes": max_bytes,
             "active_bytes_after": drained_snapshot.active_bytes,
@@ -162,6 +189,7 @@ async def run_scheduler_benchmark(
             "queued_waiter_cancelled": queued_waiter_cancelled,
             "leaked_bytes": drained_snapshot.active_bytes + drained_snapshot.queued_bytes,
         },
+        "failures": failures,
     }
 
 
@@ -209,7 +237,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
     )
     print(json.dumps(report, sort_keys=True))
-    return 0
+    return 1 if report["failures"] else 0
 
 
 if __name__ == "__main__":

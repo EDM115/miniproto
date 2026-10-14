@@ -6,12 +6,12 @@ import asyncio
 import logging
 import secrets
 import time
-import zlib
 from collections import OrderedDict, deque
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass, field
 from functools import partial
+from typing import cast
 
 from miniproto.config import TransportConfig
 from miniproto.connection.framing import QuickAckFrame
@@ -25,6 +25,8 @@ from miniproto.connection.transport import (
 )
 from miniproto.errors import AmbiguousRpcResult, PendingRpcLimitExceeded, ProtocolValidationError
 from miniproto.mtproto.codec import (
+    _GZIP_PACKED_ID,
+    MAX_GZIP_WRAPPER_DEPTH,
     BadMsgNotification,
     BadServerSalt,
     DecodedEncryptedMessage,
@@ -56,7 +58,7 @@ DEFAULT_INCOMING_QUEUE_SIZE = 256
 DEFAULT_RECONNECT_COOLDOWN = 1.0
 RECONNECT_FLAP_WINDOW = 10.0
 _GZIP_THREAD_THRESHOLD_BYTES = 64 * 1024
-_MAX_GZIP_WRAPPER_DEPTH = 16
+_MAX_GZIP_WRAPPER_DEPTH = MAX_GZIP_WRAPPER_DEPTH
 _ACK_HISTORY_LIMIT = 4096
 _UNDECODED_BODY = object()
 
@@ -599,6 +601,7 @@ class MTProtoSender:
         except BaseException:
             self.state.requeue_acks(msg_ids)
             raise
+        self.state.mark_acks_sent(msg_ids)
         record_metric("sender.acks_flushed", len(msg_ids))
         return msg_id
 
@@ -683,6 +686,7 @@ class MTProtoSender:
                         raise
                     continue
                 if ack_ids:
+                    self.state.mark_acks_sent(ack_ids)
                     record_metric("sender.acks_piggybacked", len(ack_ids))
                 self._remember_sent_message_id(msg_id)
                 if envelope_msg_id != msg_id:
@@ -846,7 +850,9 @@ class MTProtoSender:
         """
         messages: list[tuple[DecodedEncryptedMessage, object, int | None]] = []
 
-        async def collect(candidate: DecodedEncryptedMessage, parent_container_msg_id: int | None = None) -> None:
+        async def collect(
+            candidate: DecodedEncryptedMessage, parent_container_msg_id: int | None = None, gzip_depth: int = 0
+        ) -> None:
             """Recursively unpack gzip/container bodies into a validation batch.
 
             Args:
@@ -854,15 +860,19 @@ class MTProtoSender:
                     append before recursively visiting its children.
                 parent_container_msg_id: Immediate enclosing container message
                     ID or ``None`` for the outer encrypted message.
+                gzip_depth: Gzip wrappers already traversed along this container branch.
             """
             body = decode_message_body(candidate.body)
-            gzip_depth = 0
             while isinstance(body, GzipPacked):
                 gzip_depth += 1
                 if gzip_depth > _MAX_GZIP_WRAPPER_DEPTH:
                     raise ProtocolValidationError("gzip_wrapper_depth", context={"maximum": _MAX_GZIP_WRAPPER_DEPTH})
                 body = decode_message_body(
                     await _unpack_gzip(body, max_output_size=self.transport_config.max_payload_size)
+                )
+            if isinstance(body, RpcResult):
+                body = await _unpack_rpc_result(
+                    body, max_output_size=self.transport_config.max_payload_size, gzip_depth=gzip_depth
                 )
             messages.append((candidate, body, parent_container_msg_id))
             if isinstance(body, MessageContainer):
@@ -878,37 +888,50 @@ class MTProtoSender:
                             padding=b"",
                         ),
                         candidate.msg_id,
+                        gzip_depth,
                     )
 
         await collect(message)
         now = time.time()
         seen: set[int] = set()
-        outer, outer_body, _outer_parent = messages[0]
-        self.state.validate_incoming(outer.msg_id, session_id=outer.session_id, now=now)
-        self._validate_bad_message_correlation(outer_body)
-        seen.add(outer.msg_id)
+        fresh_ids: set[int] = set()
+        suppressed_ids: set[int] = set()
+        repeated_content_ids: list[int] = []
+        outer = messages[0][0]
         provisional_time_offset = None if self.state.time_trusted else (outer.msg_id >> 32) - now
-        for candidate, body, parent_container_msg_id in messages[1:]:
+        for candidate, body, parent_container_msg_id in messages:
             if candidate.msg_id in seen:
                 raise ProtocolValidationError("duplicate_msg_id_in_container", context={"msg_id": candidate.msg_id})
-            self.state.validate_incoming(
+            fresh = self.state.validate_incoming(
                 candidate.msg_id,
                 session_id=candidate.session_id,
                 now=now,
-                provisional_time_offset=provisional_time_offset,
+                provisional_time_offset=provisional_time_offset if parent_container_msg_id is not None else None,
                 provisional_seen_msg_ids=seen,
+                allow_duplicate=True,
             )
             if parent_container_msg_id is not None and candidate.msg_id >= parent_container_msg_id:
                 raise ProtocolValidationError(
                     "container_child_msg_id_not_less",
                     context={"msg_id": candidate.msg_id, "container_msg_id": parent_container_msg_id},
                 )
-            self._validate_bad_message_correlation(body)
+            if fresh and parent_container_msg_id not in suppressed_ids:
+                self._validate_bad_message_correlation(body)
+                fresh_ids.add(candidate.msg_id)
+            else:
+                suppressed_ids.add(candidate.msg_id)
+                if not fresh and candidate.seq_no % 2 == 1:
+                    repeated_content_ids.append(candidate.msg_id)
             seen.add(candidate.msg_id)
         for candidate, _body, _parent_container_msg_id in messages:
-            self.state.commit_incoming(candidate.msg_id, content_related=candidate.seq_no % 2 == 1, now=now)
+            if candidate.msg_id in fresh_ids:
+                self.state.commit_incoming(candidate.msg_id, content_related=candidate.seq_no % 2 == 1, now=now)
+        for msg_id in repeated_content_ids:
+            self.state.queue_ack(msg_id)
         return tuple(
-            (candidate, body) for candidate, body, _parent in messages if not isinstance(body, MessageContainer)
+            (candidate, body)
+            for candidate, body, _parent in messages
+            if candidate.msg_id in fresh_ids and not isinstance(body, MessageContainer)
         )
 
     def _validate_bad_message_correlation(self, body: object) -> None:
@@ -948,6 +971,10 @@ class MTProtoSender:
                 body = decode_message_body(
                     await _unpack_gzip(body, max_output_size=self.transport_config.max_payload_size)
                 )
+            if isinstance(body, RpcResult):
+                body = await _unpack_rpc_result(
+                    body, max_output_size=self.transport_config.max_payload_size, gzip_depth=gzip_depth
+                )
         if isinstance(body, MessageContainer):
             for item in body.messages:
                 nested = DecodedEncryptedMessage(
@@ -970,13 +997,17 @@ class MTProtoSender:
                         self._acks_received.popitem(last=False)
             return
         if isinstance(body, MsgsStateReq):
-            await self.send(
-                MsgsStateInfo(req_msg_id=message.msg_id, info=b"\x00" * len(body.msg_ids)), content_related=False
-            )
+            await self._send_state_info(message.msg_id, body.msg_ids)
             return
         if isinstance(body, MsgsStateInfo):
             return
         if isinstance(body, MsgResendReq):
+            if any(
+                msg_id & 1 or (pending := self._pending.get(msg_id)) is None or pending.future.done()
+                for msg_id in body.msg_ids
+            ):
+                await self._send_state_info(message.msg_id, body.msg_ids)
+                return
             for msg_id in body.msg_ids:
                 await self._retry_bad_message(msg_id)
             return
@@ -1021,6 +1052,18 @@ class MTProtoSender:
                 pending.future.set_result(body.result)
             return
         self._put_incoming(message)
+
+    async def _send_state_info(self, req_msg_id: int, msg_ids: tuple[int, ...]) -> None:
+        """Answer a state query or an unfulfillable resend query using retained receipt state.
+
+        Args:
+            req_msg_id: Server message carrying the state or resend query.
+            msg_ids: Queried IDs whose status bytes must retain the same order.
+        """
+        info = self.state.message_statuses(msg_ids)
+        acknowledged = tuple(msg_id for msg_id, status in zip(msg_ids, info, strict=True) if status & 4)
+        await self.send(MsgsStateInfo(req_msg_id=req_msg_id, info=info), content_related=False)
+        self.state.mark_acks_sent((*acknowledged, req_msg_id))
 
     def _put_incoming(self, message: DecodedEncryptedMessage) -> None:
         """Queue an unsolicited message, evicting the oldest item on overflow.
@@ -1474,28 +1517,36 @@ async def _unpack_gzip(body: GzipPacked, *, max_output_size: int) -> bytes:
 
 
 def _unpack_gzip_bounded(packed_data: bytes, *, max_output_size: int) -> bytes:
-    """Decompress one gzip member without allocating beyond the configured bound.
+    """Decompress gzip members without allocating beyond their combined output bound.
 
     Args:
-        packed_data: Complete gzip member bytes.
+        packed_data: Complete gzip stream bytes.
         max_output_size: Maximum accepted decompressed byte count.
 
     Raises:
         ProtocolValidationError: The member is malformed, truncated or expands beyond the bound.
     """
-    try:
-        decompressor = zlib.decompressobj(16 + zlib.MAX_WBITS)
-        output = decompressor.decompress(packed_data, max_output_size + 1)
-        if len(output) > max_output_size or decompressor.unconsumed_tail:
-            raise ProtocolValidationError("gzip_payload_too_large", context={"maximum": max_output_size})
-        output += decompressor.flush(max_output_size + 1 - len(output))
-    except zlib.error as exc:
-        raise ProtocolValidationError("gzip_payload_invalid") from exc
-    if len(output) > max_output_size:
-        raise ProtocolValidationError("gzip_payload_too_large", context={"maximum": max_output_size})
-    if not decompressor.eof:
-        raise ProtocolValidationError("gzip_payload_invalid")
-    return output
+    return GzipPacked(packed_data).unpack(max_output_size=max_output_size)
+
+
+async def _unpack_rpc_result(body: RpcResult, *, max_output_size: int, gzip_depth: int = 0) -> RpcResult:
+    """Validate and unpack result-level gzip before committing any receive-batch effects.
+
+    Args:
+        body: RPC result whose encoded value may begin with a gzip wrapper.
+        max_output_size: Maximum decompressed bytes per wrapper.
+        gzip_depth: Wrappers already traversed in the enclosing message or container.
+    """
+    result = body.result
+    while isinstance(result, GzipPacked) or (
+        isinstance(result, bytes | memoryview) and int.from_bytes(result[:4], "little") == _GZIP_PACKED_ID
+    ):
+        gzip_depth += 1
+        if gzip_depth > _MAX_GZIP_WRAPPER_DEPTH:
+            raise ProtocolValidationError("gzip_wrapper_depth", context={"maximum": _MAX_GZIP_WRAPPER_DEPTH})
+        packed = result if isinstance(result, GzipPacked) else cast(GzipPacked, decode_message_body(result))
+        result = await _unpack_gzip(packed, max_output_size=max_output_size)
+    return body if result is body.result else RpcResult(body.req_msg_id, result)
 
 
 def _expected_pong_ping_id(body: bytes | object) -> int | None:

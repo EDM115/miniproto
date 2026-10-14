@@ -334,6 +334,90 @@ def test_iter_download_streams_ordered_chunks_before_transfer_completion() -> No
     run(scenario())
 
 
+@pytest.mark.parametrize("interface", ["media", "client"])
+def test_public_iter_download_close_joins_owned_part_cancellation(
+    interface: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def scenario() -> None:
+        invoker = DelayedMapOffsetInvoker(
+            responses={0: b"a" * 1024, 1024: b"b" * 1024, 2048: b"c" * 1024}, delays={0: 0.01, 1024: 1.0, 2048: 1.0}
+        )
+        client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage_with_auth()))
+        options = {
+            "limit": 3 * 1024,
+            "total_size": 3 * 1024,
+            "part_size": 1024,
+            "concurrency": 3,
+            "adaptive_concurrency": False,
+            "adaptive_part_size": False,
+            "launch_stagger": False,
+        }
+        if interface == "client":
+            monkeypatch.setattr(client, "invoke", invoker)
+            await client.connect()
+            iterator = client.iter_download(document_location(), media_lanes=0, **options)
+        else:
+            iterator = media_download.iter_download_media(invoker, document_location(), **options)
+        try:
+            assert await asyncio.wait_for(anext(iterator), 0.5) == b"a" * 1024
+            assert {request.offset for request in invoker.requests} == {0, 1024, 2048}
+            await iterator.aclose()
+            assert invoker.cancelled_offsets == {1024, 2048}
+        finally:
+            await iterator.aclose()
+            await client.disconnect()
+
+    run(scenario())
+
+
+@pytest.mark.parametrize("interface", ["media", "client"])
+def test_public_iter_download_close_preserves_borrowed_range_cache(
+    interface: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def scenario() -> None:
+        invoker = DelayedMapOffsetInvoker(responses={0: b"a" * 1024, 1024: b"b" * 1024}, delays={0: 0.01, 1024: 1.0})
+        cache = DownloadRangeCache(max_bytes=4096)
+        client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage_with_auth()))
+        options = {
+            "limit": 2 * 1024,
+            "total_size": 2 * 1024,
+            "part_size": 1024,
+            "concurrency": 2,
+            "adaptive_concurrency": False,
+            "adaptive_part_size": False,
+            "launch_stagger": False,
+            "range_cache": cache,
+            "range_cache_key": "shared-file",
+        }
+        if interface == "client":
+            monkeypatch.setattr(client, "invoke", invoker)
+            await client.connect()
+            iterator = client.iter_download(document_location(), media_lanes=0, **options)
+        else:
+            iterator = media_download.iter_download_media(invoker, document_location(), **options)
+
+        async def unexpected_fetch() -> bytes:
+            raise AssertionError("the cached request must already have a shared producer")
+
+        waiter = None
+        try:
+            assert await asyncio.wait_for(anext(iterator), 0.5) == b"a" * 1024
+            waiter = asyncio.create_task(cache.get_or_fetch("shared-file", 1024, 1024, unexpected_fetch))
+            await asyncio.sleep(0)
+            await iterator.aclose()
+            assert not waiter.done()
+            assert invoker.cancelled_offsets == set()
+            assert await cache.get("shared-file", 0, 1024) == b"a" * 1024
+        finally:
+            await iterator.aclose()
+            await cache.clear()
+            if waiter is not None:
+                await asyncio.gather(waiter, return_exceptions=True)
+            await client.disconnect()
+
+    run(scenario())
+
+
 def test_iter_download_reorders_concurrent_parts_and_matches_download_file() -> None:
     async def scenario() -> None:
         payload = b"a" * 1024 + b"b" * 1024 + b"c" * 1024
@@ -703,17 +787,23 @@ def test_plain_integrity_corruption_raises_before_iterator_yields_or_destination
 
 
 @pytest.mark.parametrize(
-    "hashes",
+    ("hashes", "reason"),
     [
-        (types.FileHash(offset=0, limit=0, hash=b"x" * 32),),
-        (types.FileHash(offset=0, limit=1024, hash=b"x" * 32), types.FileHash(offset=512, limit=1024, hash=b"y" * 32)),
-        (types.FileHash(offset=0, limit=1024, hash=b"short"),),
+        ((types.FileHash(offset=0, limit=0, hash=b"x" * 32),), "invalid hash metadata"),
+        (
+            (
+                types.FileHash(offset=0, limit=1024, hash=hashlib.sha256(b"a" * 1024).digest()),
+                types.FileHash(offset=512, limit=1024, hash=hashlib.sha256(b"a" * 1024).digest()),
+            ),
+            "contradictory overlapping hash metadata",
+        ),
+        ((types.FileHash(offset=0, limit=1024, hash=b"short"),), "invalid hash metadata"),
     ],
 )
-def test_plain_integrity_rejects_invalid_or_contradictory_hash_metadata(hashes: tuple[types.FileHash, ...]) -> None:
+def test_plain_integrity_rejects_invalid_or_contradictory_hash_metadata(hashes: tuple[types.FileHash, ...], reason: str) -> None:  # fmt: skip
     async def scenario() -> None:
         invoker = PlainHashInvoker(payload=b"a" * 2048, hashes=hashes)
-        with pytest.raises(media_download.MediaIntegrityError):
+        with pytest.raises(media_download.MediaIntegrityError, match=reason):
             await download_file(
                 invoker,
                 document_location(),
@@ -809,10 +899,13 @@ def test_download_file_resume_realigns_unaligned_tail(tmp_path) -> None:
 
 def test_download_file_concurrent_writes_ordered_payload(tmp_path) -> None:
     async def scenario() -> None:
-        payload = bytes(range(256)) * 20  # 5 KiB
+        chunks = (b"a" * 1024, b"b" * 1024, b"c" * 1024, b"d" * 1024, b"e" * 1024)
+        payload = b"".join(chunks)
         target = tmp_path / "concurrent.bin"
         progress: list[tuple[int, int | None]] = []
-        invoker = OffsetInvoker(payload)
+        invoker = DelayedMapOffsetInvoker(
+            {index * 1024: chunk for index, chunk in enumerate(chunks)}, delays={0: 0.03, 1024: 0.01}
+        )
         result = await download_file(
             invoker,
             document_location(),
@@ -820,7 +913,9 @@ def test_download_file_concurrent_writes_ordered_payload(tmp_path) -> None:
             limit=len(payload),
             part_size=1024,
             adaptive_part_size=False,
+            adaptive_concurrency=False,
             concurrency=3,
+            launch_stagger=False,
             progress=lambda current, total: progress.append((current, total)),
         )
         assert target.read_bytes() == payload
@@ -1736,7 +1831,7 @@ def test_download_requests_always_satisfy_telegram_alignment_rules() -> None:
     async def scenario() -> None:
         rng = random.Random(20260707)  # noqa: S311 - deterministic property-test seed
         mib = 1024 * 1024
-        for _ in range(30):
+        for index in range(30):
             total = rng.randrange(1, 192 * 1024)
             payload = bytes(rng.getrandbits(8) for _ in range(64)) * ((total // 64) + 1)
             payload = payload[:total]
@@ -1747,6 +1842,14 @@ def test_download_requests_always_satisfy_telegram_alignment_rules() -> None:
             part_size = rng.choice([1024, 4096, 16384, 65536])
             concurrency = rng.choice([1, 2, 4, 6])
             window = rng.choice([None, part_size, part_size * 4])
+            if index == 0:
+                total = mib + 8193
+                payload = b"a" * (mib - 1024) + b"b" * 1024 + b"c" * 8193
+                offset = mib - 1024
+                limit = 8193
+                part_size = 65536
+                concurrency = 4
+                window = None
             invoker = OffsetInvoker(payload)
             result = await download_file(
                 invoker,

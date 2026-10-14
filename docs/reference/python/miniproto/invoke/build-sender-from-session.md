@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.invoke.build_sender_from_session"
 source_path: "src/miniproto/invoke.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L477"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L496"
 module: "miniproto.invoke"
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: "miniproto.observability.record_metric"
-description: "Record a metric through the configured sink, suppressing sink failures."
+description: "Redact attributes and record a metric synchronously, suppressing sink failures."
 generated: true
 editUrl: false
 language: "python"
@@ -18,11 +18,11 @@ module: "miniproto.observability"
 record_metric(name: str, value: float, *, unit: str = 'count', attributes: Mapping[str, object] | None = None) -> None
 ```
 
-Record a metric through the configured sink, suppressing sink failures.
+Redact attributes and record a metric synchronously, suppressing sink failures.
 
 **Parameters:**
 
 - **name** (<code>[str](#str)</code>) – Metric name.
 - **value** (<code>[float](#float)</code>) – Numeric measurement.
 - **unit** (<code>[str](#str)</code>) – Unit label, defaulting to ``"count"``.
-- **attributes** (<code>[Mapping](#collections.abc.Mapping)[[str](#str), [object](#object)] | None</code>) – Optional metric dimensions.
+- **attributes** (<code>[Mapping](#collections.abc.Mapping)[[str](#str), [object](#object)] | None</code>) – Optional metric dimensions sanitized with the logging redaction helpers.

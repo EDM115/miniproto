@@ -156,11 +156,11 @@ def _api_object(entry: dict[str, Any], variant: int) -> TLObject:
 
 def _api_value(type_name: str, field_name: str, variant: int) -> object:
     if type_name == "true":
-        return variant % 2 == 1
-    if type_name == "int":
-        return _INT_VALUES[variant]
-    if type_name == "long":
-        return _LONG_VALUES[variant]
+        return bool(variant & (2 if field_name == "cdn_supported" else 1))
+    if type_name in {"int", "long"}:
+        values = _INT_VALUES if type_name == "int" else _LONG_VALUES
+        shift = {"file_total_parts": 1, "limit": 1, "access_hash": 1, "volume_id": 2, "secret": 3}.get(field_name, 0)
+        return values[(variant + shift) % len(values)]
     if type_name == "bytes":
         return bytes((index + variant) & 0xFF for index in range(_BYTE_LENGTHS[variant]))
     if type_name == "string":

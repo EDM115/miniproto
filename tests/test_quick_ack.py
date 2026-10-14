@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 from importlib import import_module
 
 import pytest
@@ -25,7 +26,10 @@ def test_quick_ack_token_matches_published_sha256_vector() -> None:
 
 
 def test_quick_ack_token_forces_high_bit() -> None:
-    assert quick_ack_token(b"a" * 256, b"b" * 40) & 0x80000000
+    # https://core.telegram.org/mtproto/mtproto-transports#quick-ack
+    digest_word = int.from_bytes(hashlib.sha256(b"a" * 32 + b"c" * 16).digest()[:4], "little")
+    assert digest_word == 0x4FCD5134
+    assert quick_ack_token(b"a" * 256, b"c" * 40) == 0xCFCD5134
 
 
 def test_quick_ack_token_rejects_invalid_auth_key() -> None:
@@ -39,7 +43,7 @@ def test_quick_ack_token_rejects_missing_encrypted_portion() -> None:
 
 
 def test_native_and_python_quick_ack_tokens_match() -> None:
-    native = import_module("miniproto._native")
+    native = pytest.importorskip("miniproto._native")
     fallback = import_module("miniproto._native_fallback")
     native_helper = getattr(native, "quick_ack_token", None)
     if native_helper is None:

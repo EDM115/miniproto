@@ -7,7 +7,7 @@ language: "python"
 kind: "attribute"
 qualified_name: "miniproto.client.UpdateT"
 source_path: "src/miniproto/client.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L109"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L115"
 module: "miniproto.client"
 ---
 

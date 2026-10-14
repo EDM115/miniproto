@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import ast
-import importlib.util
+import importlib
 import json
 from pathlib import Path
 from typing import cast
@@ -53,11 +53,6 @@ def test_codebase_knowledge_documents_follow_the_repository_site_contract() -> N
         assert text.startswith("---\n")
         assert "generated: false" in text
         assert f"slug: /project/codebase/{slug}/" in text
-
-
-def test_telegram_reference_extractor_module_is_available() -> None:
-    """Require the static Telegram reference extractor to have an owned module."""
-    assert importlib.util.find_spec("tools.docs.generate_telegram") is not None
 
 
 def test_telegram_reference_extraction_is_static_complete_and_deterministic(

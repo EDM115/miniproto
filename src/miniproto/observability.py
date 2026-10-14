@@ -316,18 +316,19 @@ def get_metrics_sink() -> MetricsSink | None:
 def record_metric(
     name: str, value: float, *, unit: str = "count", attributes: Mapping[str, object] | None = None
 ) -> None:
-    """Record a metric through the configured sink, suppressing sink failures.
+    """Redact attributes and record a metric synchronously, suppressing sink failures.
 
     Args:
         name: Metric name.
         value: Numeric measurement.
         unit: Unit label, defaulting to ``"count"``.
-        attributes: Optional metric dimensions.
+        attributes: Optional metric dimensions sanitized with the logging redaction helpers.
     """
     sink = _METRICS_SINK
     if sink is not None:
         with suppress(Exception):
-            sink.record_metric(name, value, unit=unit, attributes=attributes)
+            safe_attributes = redact_mapping(attributes) if attributes is not None else None
+            sink.record_metric(name, value, unit=unit, attributes=safe_attributes)
 
 
 def resource_snapshot() -> ResourceSnapshot:

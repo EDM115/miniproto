@@ -22,6 +22,8 @@ uv run miniproto-bench-media-scheduler
 uv run miniproto-bench-multi-session-download
 ```
 
+The multi-session download benchmark uses live Telegram sessions and is credentialed and opt-in. It requires both `MINIPROTO_LIVE_BENCH=1` and `MINIPROTO_MULTI_SESSION_DOWNLOAD_BENCH=1`; it also requires the integration/production gates and API/session credentials described in the [live benchmark setup](../development.md#live-media-limit-benchmark).
+
 Run the command that matches the component under investigation. For example, a native-versus-fallback crypto result measures that crypto workload and its input sizes, not the connection scheduler, update handlers or the whole client. A runtime-path result can include Python/C/Rust boundary costs that a microbenchmark intentionally excludes.
 
 ## Establish a comparable run

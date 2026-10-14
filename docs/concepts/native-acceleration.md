@@ -9,7 +9,7 @@ generated: false
 
 The bundled Rust/PyO3 extension is imported as the private `miniproto._native` module. Public crypto, TL, framing and session helpers use backend-neutral Python wrappers so callers depend on results, validation errors and documented lifecycle behavior rather than calling the extension directly.
 
-If the compiled module cannot import or does not expose the required baseline symbols, the wrappers select the internal pure-Python fallback and record a diagnostic through project observability. A successful import alone is not enough for every capability: for example, native transport framing is available only when the module exposes `TransportCodec`.
+If the compiled module cannot import or does not expose the required baseline symbols, the wrappers select the internal Python fallback and record a diagnostic through project observability. AES/Scrypt fallback uses `cryptography`, which this project's Windows ARM64 base dependencies exclude, so those operations need available native capabilities there unless `cryptography` is installed separately. A successful import alone is not enough for every capability: for example, native transport framing is available only when the module exposes `TransportCodec`.
 
 ## Native availability is not a blanket promise
 
@@ -19,6 +19,6 @@ For selected Rust crypto work, GIL detachment is operation- and input-size-depen
 
 ## Parity before performance
 
-Native and fallback paths are intended to agree on output and validation behavior. The framing adapter accepts fragmented TCP input and emits payload, quick-ack or negative transport-error events; malformed or oversized frames become Python errors rather than native process termination. A native codec initialization race/capability failure is distinct from an ordinary invalid-input `ValueError`.
+Native and fallback paths are intended to agree on output and validation behavior where both implementations are available. The framing adapter accepts fragmented TCP input and emits payload, quick-ack or negative transport-error events. Malformed or oversized frames become Python errors rather than native process termination. A native codec initialization race/capability failure is distinct from an ordinary invalid-input `ValueError`.
 
 Rust acceleration is part of the wheel's implementation, not a separately stable Rust SDK for the `0.1.x` Alpha line. When diagnosing a deployment, distinguish a missing/partial extension from an application error and retain the correct fallback rather than forcing a native-only path without capability evidence.

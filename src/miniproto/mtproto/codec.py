@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import gzip
+import zlib
 from dataclasses import dataclass
 from typing import cast
 
 from miniproto.crypto.native import mtproto_decode_message as _mtproto_decode_message
 from miniproto.crypto.native import mtproto_encode_message as _mtproto_encode_message
+from miniproto.errors import ProtocolValidationError
 from miniproto.tl import (
     decode_bytes,
     decode_constructor_id,
@@ -50,6 +52,8 @@ _FAST_SERVICE_IDS = frozenset(
     }
 )
 type ByteBuffer = bytes | memoryview
+DEFAULT_GZIP_MAX_OUTPUT_SIZE = 16 * 1024 * 1024
+MAX_GZIP_WRAPPER_DEPTH = 16
 
 
 @dataclass(frozen=True, slots=True)
@@ -170,16 +174,38 @@ class GzipPacked:
 
     packed_data: ByteBuffer
 
-    def unpack(self) -> bytes:
-        """Decompress the contained gzip payload.
+    def unpack(self, *, max_output_size: int = DEFAULT_GZIP_MAX_OUTPUT_SIZE) -> bytes:
+        """Decompress valid gzip members under one total output bound.
+
+        Args:
+            max_output_size: Maximum combined decompressed bytes, defaulting to 16 MiB.
 
         Returns:
             Uncompressed message-body bytes.
 
         Raises:
-            OSError: If the stored bytes are not a valid gzip stream.
+            ValueError: If the output bound is not positive.
+            ProtocolValidationError: If gzip data is invalid, truncated or expands beyond the bound.
         """
-        return gzip.decompress(self.packed_data)
+        if max_output_size <= 0:
+            raise ValueError("gzip maximum output size must be positive")
+        remaining = bytes(self.packed_data)
+        if not remaining:
+            raise ProtocolValidationError("gzip_payload_invalid")
+        output = bytearray()
+        while remaining:
+            try:
+                decompressor = zlib.decompressobj(16 + zlib.MAX_WBITS)
+                chunk = decompressor.decompress(remaining, max_output_size - len(output) + 1)
+            except zlib.error as exc:
+                raise ProtocolValidationError("gzip_payload_invalid") from exc
+            if len(output) + len(chunk) > max_output_size or decompressor.unconsumed_tail:
+                raise ProtocolValidationError("gzip_payload_too_large", context={"maximum": max_output_size})
+            if not decompressor.eof:
+                raise ProtocolValidationError("gzip_payload_invalid")
+            output.extend(chunk)
+            remaining = decompressor.unused_data.lstrip(b"\x00")
+        return bytes(output)
 
 
 @dataclass(frozen=True, slots=True)

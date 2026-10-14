@@ -26,9 +26,9 @@ The Python API is the supported product surface. The Rust crate is packaged prim
 
 | Dependency                                   | Version policy                                                            | Role                                                      | Evidence                                        |
 | -------------------------------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------- | ----------------------------------------------- |
-| `cryptography`                               | Exactly 50.0.0, except Windows ARM64 until an upstream wheel is available | Supported crypto/session fallback and CFFI dependency     | `pyproject.toml`                                |
-| `uvloop`                                     | Exactly 0.22.1 on Linux/macOS                                             | Optional optimized asyncio loop selected lazily           | `pyproject.toml`, `src/miniproto/event_loop.py` |
-| `winloop`                                    | Exactly 0.6.3 on Windows                                                  | Optional optimized asyncio loop selected lazily           | `pyproject.toml`, `src/miniproto/event_loop.py` |
+| `cryptography`                               | 50.0.2 in the current lock, excluded on Windows ARM64                     | AES/Scrypt fallback where installed and CFFI dependency   | `pyproject.toml`, `uv.lock`                    |
+| `uvloop`                                     | 0.23.0 in the current lock on Linux/macOS                                 | Optional optimized asyncio loop selected lazily           | `pyproject.toml`, `uv.lock`, `src/miniproto/event_loop.py` |
+| `winloop`                                    | 0.8.0 in the current lock on Windows                                      | Optional optimized asyncio loop selected lazily           | `pyproject.toml`, `uv.lock`, `src/miniproto/event_loop.py` |
 | PyO3                                         | `~0.29.2` with experimental async support                                 | Python extension bindings and free-threaded compatibility | `rust/miniproto/Cargo.toml`                     |
 | RustCrypto AES/GCM/cipher/hash/Scrypt crates | Exact or compatible versions in Cargo metadata and lockfile               | Native MTProto, hashing and protected-session operations | `rust/miniproto/Cargo.toml`, `Cargo.lock`       |
 | SQLite                                       | Python standard-library `sqlite3`                                         | Per-domain encrypted durable session storage              | `src/miniproto/session/storage.py`              |
@@ -58,7 +58,7 @@ uv run ruff format --check .
 uv run ruff check .
 uv run ty check
 uv run pytest
-pnpm --dir docs-site format:check
+pnpm --dir docs-site format
 pnpm --dir docs-site lint
 pnpm --dir docs-site check
 cargo fmt --check

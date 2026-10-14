@@ -737,8 +737,22 @@ mod tests {
                 );
             }
             let mut decoder = FramePump::new(mode, 1024, false).unwrap();
-            let coalesced = [encoded.as_slice(), encoded.as_slice()].concat();
-            assert_eq!(decoder.feed_data(&coalesced).unwrap().len(), 2);
+            let second_payload: Vec<u8> = (60..116).collect();
+            let second_encoded = encoder.encode_packet(&second_payload, false).unwrap();
+            let coalesced = [encoded.as_slice(), second_encoded.as_slice()].concat();
+            assert_eq!(
+                decoder.feed_data(&coalesced).unwrap(),
+                vec![
+                    FrameEvent::Payload {
+                        payload: PAYLOAD.to_vec(),
+                        quick_ack_requested: false,
+                    },
+                    FrameEvent::Payload {
+                        payload: second_payload,
+                        quick_ack_requested: false,
+                    },
+                ]
+            );
         }
     }
 

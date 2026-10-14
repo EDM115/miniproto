@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import gzip
 from dataclasses import dataclass, field
 from types import SimpleNamespace
 from typing import Any, cast
@@ -27,6 +28,7 @@ from miniproto.client import _CachedSessionStorage, _MediaInvokeContext
 from miniproto.connection.sender import MTProtoSender
 from miniproto.connection.transport import TransportClosed, TransportError
 from miniproto.errors import (
+    AmbiguousRpcResult,
     AuthKeyNotFound,
     AuthKeyRegenerationRequired,
     ClientDisconnected,
@@ -34,6 +36,7 @@ from miniproto.errors import (
     FloodPremiumWait,
     FloodWait,
     InvalidCode,
+    ProtocolValidationError,
     ResultTypeMismatch,
     RpcError,
     SessionStorageError,
@@ -47,7 +50,7 @@ from miniproto.invoke import (
     decode_result_payload,
     is_retryable_request,
 )
-from miniproto.mtproto.codec import BadServerSalt, RpcErrorBody, RpcResult, encode_message_body
+from miniproto.mtproto.codec import BadServerSalt, GzipPacked, RpcErrorBody, RpcResult, encode_message_body, gzip_pack
 from miniproto.observability import InMemoryMetrics, get_metrics_sink, set_metrics_sink
 from miniproto.raw import functions, types
 from miniproto.session.models import PeerCacheEntry, UpdateState, session_record_from_mapping
@@ -598,6 +601,28 @@ def test_decode_result_payload_accepts_namespaced_abstract_result_type() -> None
     assert decode_result_payload(authorization.serialize(), "auth.Authorization") == authorization
 
 
+@pytest.mark.parametrize("as_object", [False, True])
+def test_decode_result_payload_bounds_gzip_and_preserves_concatenated_members(as_object: bool) -> None:
+    expected = nearest_dc()
+    serialized = expected.serialize()
+    midpoint = len(serialized) // 2
+    packed = GzipPacked(gzip.compress(serialized[:midpoint]) + gzip.compress(serialized[midpoint:]) + b"\x00\x00")
+    data = packed if as_object else encode_message_body(packed)
+    assert decode_result_payload(data, "NearestDc", max_output_size=len(serialized)) == expected
+    with pytest.raises(ProtocolValidationError, match="gzip_payload_too_large"):
+        decode_result_payload(data, "NearestDc", max_output_size=len(serialized) - 1)
+
+
+def test_decode_result_payload_bounds_gzip_nesting() -> None:
+    expected = nearest_dc()
+    packed: object = expected
+    for _ in range(16):
+        packed = gzip_pack(packed)
+    assert decode_result_payload(encode_message_body(packed), "NearestDc") == expected
+    with pytest.raises(ProtocolValidationError, match="gzip_wrapper_depth"):
+        decode_result_payload(encode_message_body(gzip_pack(packed)), "NearestDc")
+
+
 def test_invoke_rejects_decoded_result_that_does_not_match_request_result_type() -> None:
     async def scenario() -> None:
         client = await connected_client(FakeSender([types.BoolTrue().serialize()]))
@@ -905,6 +930,50 @@ def test_invoke_does_not_retry_unsafe_requests_after_transport_failure() -> None
     run(scenario())
 
 
+@pytest.mark.parametrize(
+    ("callback", "retry_override", "expect_retry"),
+    [(True, None, False), (False, None, True), (True, True, True), (False, False, False)],
+)
+def test_callback_button_replay_differs_from_reads_and_honors_override(
+    callback: bool, retry_override: bool | None, expect_retry: bool
+) -> None:
+    async def scenario() -> None:
+        request = (
+            functions.MessagesGetBotCallbackAnswer(peer=types.InputPeerSelf(), msg_id=42, data=b"press")
+            if callback
+            else functions.MessagesGetMessages(id=())
+        )
+        expected = (
+            types.MessagesBotCallbackAnswer(cache_time=0)
+            if callback
+            else types.MessagesMessages(messages=(), topics=(), chats=(), users=())
+        )
+        retried_calls = 0
+
+        def handle(message):
+            nonlocal retried_calls
+            if message.seq_no % 2 == 0:
+                return None
+            retried_calls += 1
+            return RpcResult(req_msg_id=message.msg_id, result=expected.serialize())
+
+        transport = TransportConfig(mode="tcp_intermediate", read_timeout=60)
+        async with FakeMTProtoServer(AUTH_KEY, transport, handle, drop_connections_after_packet=1) as server:
+            client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=fake_server_storage(server), transport=transport))  # fmt: skip
+            try:
+                await client.connect()
+                if expect_retry:
+                    assert await client.invoke(request, retry=retry_override, request_timeout=3) == expected
+                else:
+                    with pytest.raises(AmbiguousRpcResult):
+                        await client.invoke(request, retry=retry_override, request_timeout=3)
+                assert retried_calls == int(expect_retry)
+            finally:
+                await client.disconnect()
+
+    run(scenario())
+
+
 def test_invoke_retries_random_id_message_requests_after_transport_failure() -> None:
     async def scenario() -> None:
         response = types.UpdateShortSentMessage(id=10, pts=1, pts_count=1, date=1_700_000_000)
@@ -1143,8 +1212,11 @@ def test_auth_bootstrap_and_service_persistence_use_atomic_mutation() -> None:
     run(scenario())
 
 
-def test_media_dc_auth_persistence_uses_atomic_mutation(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("media_only", [False, True])
+def test_media_dc_auth_persistence_uses_atomic_mutation(monkeypatch: pytest.MonkeyPatch, media_only: bool) -> None:
     async def scenario() -> None:
+        exchanged_roles: list[bool] = []
+
         class FakeTransport:
             def __init__(self, *args, **kwargs) -> None:
                 del args, kwargs
@@ -1154,7 +1226,9 @@ def test_media_dc_auth_persistence_uses_atomic_mutation(monkeypatch: pytest.Monk
 
         class FakeExchange:
             def __init__(self, *args, **kwargs) -> None:
-                del args, kwargs
+                del args
+                assert kwargs["dc_id"] == 4
+                exchanged_roles.append(kwargs["media_only"])
 
             async def create_auth_key(self):
                 return SimpleNamespace(auth_key=b"m" * 256, server_salt=789)
@@ -1166,13 +1240,14 @@ def test_media_dc_auth_persistence_uses_atomic_mutation(monkeypatch: pytest.Monk
                 dc_id=2,
                 dc_options=(
                     DCOption(id=2, ip_address="127.0.0.1", port=443),
-                    DCOption(id=4, ip_address="127.0.0.1", port=444),
+                    DCOption(id=4, ip_address="127.0.0.1", port=444, media_only=media_only),
                 ),
                 update_state=UpdateState(pts=17),
             )
         )
         client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=storage))
         assert await client._ensure_media_dc_auth(4) == (b"m" * 256, 789)
+        assert exchanged_roles == [media_only]
         loaded = await storage.load()
         assert loaded is not None
         record = session_record_from_mapping(loaded)
@@ -1211,9 +1286,10 @@ def test_cdn_sender_uses_cdn_endpoint_and_cdn_public_key(monkeypatch: pytest.Mon
                 observed["transport_closed"] = True
 
         class FakeExchange:
-            def __init__(self, transport: object, *, dc_id: int, rsa_keys: object, test_mode: bool) -> None:
+            def __init__(self, transport: object, *, dc_id: int, rsa_keys: object, test_mode: bool, media_only: bool) -> None:  # fmt: skip
                 del transport, test_mode
                 observed["exchange_dc_id"] = dc_id
+                observed["media_only"] = media_only
                 observed["rsa_keys"] = rsa_keys
 
             async def create_auth_key(self) -> object:
@@ -1234,6 +1310,7 @@ def test_cdn_sender_uses_cdn_endpoint_and_cdn_public_key(monkeypatch: pytest.Mon
         endpoint = cast(Any, observed["endpoint"])
         assert (endpoint.host, endpoint.port) == ("203.0.113.4", 443)
         assert observed["exchange_dc_id"] == 4
+        assert observed["media_only"] is False
         assert observed["rsa_keys"] == (cdn_key,)
         assert observed["transport_closed"] is True
         assert cast(dict[str, object], observed["build_kwargs"])["dc_id_override"] == 4

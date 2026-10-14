@@ -14,6 +14,7 @@ from typing import Protocol, cast
 
 from miniproto.config import TransportMode
 from miniproto.connection.transport import TransportError
+from miniproto.errors import ProtocolValidationError
 
 _ABRIDGED_LONG_MARKER = 0x7F
 _QUICK_ACK_MASK = 0x80000000
@@ -280,7 +281,7 @@ class PythonFrameCodec:
         if raw_length & _QUICK_ACK_MASK:
             if not self._server_side:
                 if padded:
-                    raise TransportError("tcp padded intermediate server frame has the quick-ACK request bit set")
+                    raise ProtocolValidationError("transport_framing", context={"detail": "tcp padded intermediate server frame has the quick-ACK request bit set"})  # fmt: skip
                 return QuickAckFrame(raw_length), 4
             quick_ack_requested = True
             payload_length = raw_length & ~_QUICK_ACK_MASK
@@ -328,7 +329,7 @@ class PythonFrameCodec:
         """
         maximum = self._max_payload_size + (_MAX_TRANSPORT_PADDING if padded else 0)
         if payload_length > maximum:
-            raise TransportError("transport frame length exceeds configured maximum")
+            raise ProtocolValidationError("transport_framing", context={"detail": "transport frame length exceeds configured maximum"})  # fmt: skip
 
     def _compact(self) -> None:
         """Release consumed input storage while retaining an incomplete suffix."""
@@ -357,16 +358,16 @@ def _strip_padded_intermediate_padding(payload: bytes, max_payload_size: int) ->
         body_length = int.from_bytes(payload[16:20], "little", signed=True)
         packet_length = 20 + body_length
         if body_length < 0 or body_length % 4 or packet_length > len(payload):
-            raise TransportError("invalid unencrypted MTProto payload in padded intermediate frame")
+            raise ProtocolValidationError("transport_framing", context={"detail": "invalid unencrypted MTProto payload in padded intermediate frame"})  # fmt: skip
     else:
         packet_length = len(payload) - ((len(payload) - 8) % 16)
         if packet_length < 40:
-            raise TransportError("invalid encrypted MTProto payload in padded intermediate frame")
+            raise ProtocolValidationError("transport_framing", context={"detail": "invalid encrypted MTProto payload in padded intermediate frame"})  # fmt: skip
     padding_length = len(payload) - packet_length
     if padding_length > _MAX_TRANSPORT_PADDING:
-        raise TransportError("padded intermediate frame has too much transport padding")
+        raise ProtocolValidationError("transport_framing", context={"detail": "padded intermediate frame has too much transport padding"})  # fmt: skip
     if packet_length > max_payload_size:
-        raise TransportError("transport payload exceeds configured maximum")
+        raise ProtocolValidationError("transport_framing", context={"detail": "transport payload exceeds configured maximum"})  # fmt: skip
     return payload[:packet_length]
 
 
@@ -447,7 +448,7 @@ class NativeFrameCodec:
             data: Transport bytes that may contain any number of partial frames.
 
         Raises:
-            TransportError: If the backend rejects invalid framing under the
+            ProtocolValidationError: If the backend rejects invalid inbound framing under the
                 same rules as the Python codec.
             RuntimeError: If the backend emits an unknown event kind.
         """
@@ -455,7 +456,7 @@ class NativeFrameCodec:
         try:
             native_events = self._codec.feed_data(data)
         except ValueError as exc:
-            raise TransportError(str(exc)) from exc
+            raise ProtocolValidationError("transport_framing", context={"detail": str(exc)}) from exc
         for kind, payload, value, quick_ack_requested in native_events:
             if kind == 0:
                 events.append(PayloadFrame(bytes(payload), quick_ack_requested=quick_ack_requested))
@@ -477,13 +478,13 @@ class NativeFrameCodec:
                 frame.
 
         Raises:
-            TransportError: If the backend rejects invalid framing under the
+            ProtocolValidationError: If the backend rejects invalid inbound framing under the
                 same rules as the Python codec.
         """
         try:
             native_events = self._codec.feed_transport_data(data)
         except ValueError as exc:
-            raise TransportError(str(exc)) from exc
+            raise ProtocolValidationError("transport_framing", context={"detail": str(exc)}) from exc
         events: list[bytes | QuickAckFrame | TransportErrorFrame] = []
         for event in native_events:
             if isinstance(event, bytes):

@@ -7,7 +7,7 @@ language: "python"
 kind: "attribute"
 qualified_name: "miniproto.invoke.TELEGRAM_LAYER"
 source_path: "src/miniproto/invoke.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L40"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L48"
 module: "miniproto.invoke"
 ---
 

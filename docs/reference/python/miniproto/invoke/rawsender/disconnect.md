@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.invoke.RawSender.disconnect"
 source_path: "src/miniproto/invoke.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L108"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L116"
 module: "miniproto.invoke"
 ---
 
