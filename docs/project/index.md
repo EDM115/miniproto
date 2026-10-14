@@ -12,6 +12,7 @@ generated: false
 ## Project operations
 
 - [Contributing](./contributing.md) points to the repository contribution policy and canonical developer command reference.
+- [Pre-merge checklist](./pre-merge.md) covers the review order and remaining Alpha acceptance before merging to `master`.
 - [Release](./release.md) explains the non-mutating release gate and the boundary between checks and user-controlled publishing.
 - [Changelog](https://github.com/EDM115/miniproto/blob/master/CHANGELOG.md) describes the complete `0.1.0` Alpha capability and limitation set without narrating private pre-release snapshots.
 - [Migration](./migration.md) covers the current Alpha changes most likely to affect storage, session strings, custom backends and generated raw imports.
