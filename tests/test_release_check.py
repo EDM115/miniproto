@@ -1,0 +1,462 @@
+from __future__ import annotations
+
+import importlib.util
+import io
+import json
+import os
+import subprocess
+import sys
+import tarfile
+import zipfile
+from pathlib import Path
+
+import pytest
+import tools.release_check as release_check
+from tools.release_check import (
+    ReleaseConfig,
+    Stage,
+    build_release_environment,
+    build_stages,
+    inspect_artifacts,
+    inspect_wheel,
+    parse_args,
+    run_stages,
+)
+
+
+def _release_metadata() -> str:
+    return """Metadata-Version: 2.4
+Name: miniproto
+Version: 0.1.0
+Summary: Async-first MTProto client core for Python with bundled Rust acceleration
+Keywords: telegram,mtproto,asyncio,pyo3,rust
+Author-email: EDM115 <miniproto@edm115.dev>
+License-Expression: MIT
+License-File: LICENSE
+Requires-Python: >=3.13
+Description-Content-Type: text/markdown
+Classifier: Development Status :: 3 - Alpha
+Classifier: Framework :: AsyncIO
+Classifier: Intended Audience :: Developers
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Classifier: Programming Language :: Rust
+Classifier: Typing :: Typed
+Project-URL: Homepage, https://miniproto.edm115.dev/
+Project-URL: Documentation, https://miniproto.edm115.dev/
+Project-URL: Source, https://github.com/EDM115/miniproto
+Project-URL: Changelog, https://github.com/EDM115/miniproto/blob/master/CHANGELOG.md
+Project-URL: Issues, https://github.com/EDM115/miniproto/issues
+Project-URL: Funding, https://github.com/EDM115#support-me-
+Project-URL: Security, https://github.com/EDM115/miniproto/security/policy
+Requires-Dist: cryptography==50.0.0
+Requires-Dist: uvloop==0.22.1; sys_platform == 'linux' or sys_platform == 'darwin'
+Requires-Dist: winloop==0.6.3; sys_platform == 'win32'
+Requires-Dist: maturin==1.15.0; extra == 'dev'
+Requires-Dist: griffe==2.2.0; extra == 'docs'
+Provides-Extra: dev
+Provides-Extra: docs
+
+miniproto
+"""
+
+
+def _write_release_wheel(
+    path: Path,
+    *,
+    include_script_target: bool = True,
+    extra_files: dict[str, str | bytes] | None = None,
+    omitted_file: str | None = None,
+) -> None:
+    files: dict[str, str | bytes] = {
+        "miniproto/__init__.py": "",
+        "miniproto/py.typed": "",
+        "miniproto/_native.cp314-win_amd64.pyd": b"native",
+        "miniproto/raw/functions.py": "",
+        "miniproto/raw/functions.pyi": "",
+        "miniproto/raw/types.py": "",
+        "miniproto/raw/types.pyi": "",
+        "miniproto/raw/_function_shards/bucket_00.py": "",
+        "miniproto/raw/_types_shards/bucket_00.py": "",
+        "miniproto-0.1.0.dist-info/METADATA": _release_metadata(),
+        "miniproto-0.1.0.dist-info/licenses/LICENSE": "MIT License\n",
+        "miniproto-0.1.0.dist-info/entry_points.txt": "[console_scripts]\nminiproto-release-check = tools.release_check:main\n",
+    }
+    if include_script_target:
+        files["tools/release_check.py"] = "def main(): return 0\n"
+    files.update(extra_files or {})
+    if omitted_file is not None:
+        del files[omitted_file]
+    with zipfile.ZipFile(path, "w") as archive:
+        for name, payload in files.items():
+            archive.writestr(name, payload)
+
+
+def _write_release_sdist(path: Path, *, extra_files: dict[str, str | bytes] | None = None) -> None:
+    files: dict[str, str | bytes] = dict.fromkeys(
+        (
+            "Cargo.lock",
+            "Cargo.toml",
+            "LICENSE",
+            "PKG-INFO",
+            "README.md",
+            "pyproject.toml",
+            "rust/miniproto/Cargo.toml",
+            "rust/miniproto/README.md",
+            "rust/miniproto/src/lib.rs",
+            "src/miniproto/__init__.py",
+            "src/miniproto/py.typed",
+            "src/miniproto/raw/functions.py",
+            "src/miniproto/raw/functions.pyi",
+            "src/miniproto/raw/types.py",
+            "src/miniproto/raw/types.pyi",
+            "tools/release_artifacts.py",
+            "tools/release_check.py",
+            "tools/schema/generate.py",
+            "tools/schema/parser.py",
+            "tools/schema/rpc-errors.json",
+            "tools/schema/rust-fast-paths.json",
+            "tools/schema/schema-core.tl",
+            "tools/schema/schema-metadata.json",
+            "tools/schema/schema-tdesktop.tl",
+            "tools/schema/schema.tl",
+            "tools/schema/telegram-bindings.json",
+        ),
+        "",
+    )
+    files["PKG-INFO"] = _release_metadata()
+    files["src/miniproto/raw/_function_shards/bucket_00.py"] = ""
+    files["src/miniproto/raw/_types_shards/bucket_00.py"] = ""
+    files.update(extra_files or {})
+    with tarfile.open(path, "w:gz") as archive:
+        for name, value in files.items():
+            payload = value.encode() if isinstance(value, str) else value
+            member = tarfile.TarInfo(f"miniproto-0.1.0/{name}")
+            member.size = len(payload)
+            archive.addfile(member, io.BytesIO(payload))
+
+
+def test_release_check_defaults_to_offline_and_cli_overrides_artifact_environment() -> None:
+    args = parse_args([], {"MINIPROTO_RELEASE_ARTIFACTS": ".tmp/from-env"})
+    explicit = parse_args(["--quick", "--artifacts-dir", ".tmp/explicit"], {})
+
+    assert args.mode == "offline"
+    assert args.artifacts_dir.as_posix() == ".tmp/from-env"
+    assert explicit.mode == "quick"
+    assert explicit.artifacts_dir.as_posix() == ".tmp/explicit"
+
+
+def test_offline_stage_order_uses_check_only_commands_and_marks_future_docs_pending(tmp_path: Path) -> None:
+    config = ReleaseConfig(mode="offline", keep_going=False, artifacts_dir=tmp_path / "artifacts")
+    stages = build_stages(config, repo=tmp_path)
+
+    assert [stage.name for stage in stages] == [
+        "environment",
+        "schema",
+        "ruff-format",
+        "ruff-lint",
+        "typecheck",
+        "docs",
+        "pytest",
+        "cargo-fmt",
+        "cargo-clippy",
+        "cargo-test",
+        "benchmark-imports",
+        "benchmark-smoke",
+        "benchmark-media-scheduler",
+        "benchmark-native-fallback",
+        "benchmark-session-crypto",
+        "benchmark-runtime-paths",
+        "benchmark-frame-pump",
+        "benchmark-hot-tl",
+        "profile-lazy-raw-codec",
+        "wheel-sdist",
+        "artifact-inspection",
+        "clean-import",
+    ]
+    commands = {stage.name: stage.command for stage in stages}
+    schema = commands["schema"]
+    ruff_format = commands["ruff-format"]
+    ruff_lint = commands["ruff-lint"]
+    cargo_fmt = commands["cargo-fmt"]
+    cargo_clippy = commands["cargo-clippy"]
+    assert schema is not None and schema[-1] == "--check"
+    assert ruff_format is not None and ruff_format[-2:] == ("--check", ".")
+    assert ruff_lint is not None and "--fix" not in ruff_lint
+    assert cargo_fmt is not None and cargo_fmt[-1] == "--check"
+    assert cargo_clippy is not None and cargo_clippy[-2:] == ("-D", "warnings")
+    assert (
+        next(stage for stage in stages if stage.name == "docs").pending_reason == "Documentation tooling is not present"
+    )
+
+
+def test_quick_mode_is_bounded_and_excludes_artifact_builds(tmp_path: Path) -> None:
+    stages = build_stages(ReleaseConfig(mode="quick", keep_going=False, artifacts_dir=tmp_path), repo=tmp_path)
+
+    names = {stage.name for stage in stages}
+    assert "pytest" in names
+    assert "cargo-test" in names
+    assert "benchmark-smoke" not in names
+    assert "wheel-sdist" not in names
+    assert "clean-import" not in names
+
+
+def test_live_stage_collects_every_integration_smoke(tmp_path: Path) -> None:
+    repo = Path(__file__).resolve().parents[1]
+    stages = build_stages(ReleaseConfig(mode="live", keep_going=False, artifacts_dir=tmp_path), repo=repo)
+    command = next(stage.command for stage in stages if stage.name == "live-integration")
+    assert command is not None
+    environment = build_release_environment(
+        "offline",
+        {
+            name: value
+            for name, value in os.environ.items()
+            if not name.startswith("MINIPROTO_") and name not in {"PYTEST_ADDOPTS", "PYTEST_PLUGINS"}
+        },
+    )
+    environment["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
+    expected_smokes = {
+        "tests/integration/test_auth_live.py::test_live_bot_auth_get_me",
+        "tests/integration/test_auth_live.py::test_live_phone_auth_get_me_and_reconnect",
+        "tests/integration/test_messages_live.py::test_live_saved_messages_send_and_history_read",
+        "tests/integration/test_media_live.py::test_live_saved_messages_media_upload_download",
+    }
+    selected: list[set[str]] = []
+    for pytest_command in ((sys.executable, "-m", "pytest", "tests/integration"), command):
+        collected = subprocess.run(  # noqa: S603 - fixed local pytest commands only collect guarded integration tests
+            (*pytest_command, "--collect-only", "-q"),
+            cwd=repo,
+            env=environment,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        assert collected.returncode == 0, collected.stdout + collected.stderr
+        selected.append({line.strip().replace("\\", "/") for line in collected.stdout.splitlines() if "::" in line})
+    unfiltered, live_stage = selected
+    assert expected_smokes <= unfiltered
+    assert live_stage == unfiltered
+
+
+@pytest.mark.parametrize("mode", ["offline", "quick"])
+@pytest.mark.parametrize("gate", ["MINIPROTO_INTEGRATION", "MINIPROTO_REAL_INTEGRATION"])
+def test_non_live_release_environment_preserves_integration_guards(
+    mode: str, gate: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    helper_path = Path(__file__).parent / "integration" / "live_helpers.py"
+    spec = importlib.util.spec_from_file_location("release_check_live_helpers", helper_path)
+    assert spec is not None and spec.loader is not None
+    live_helpers = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(live_helpers)
+    vars(live_helpers).update(_LOADED_DOTENV=True, _DOTENV_VALUES={})
+    environment = build_release_environment(mode, {"MINIPROTO_INTEGRATION": "1", "MINIPROTO_REAL_INTEGRATION": "1"})
+    for name, value in environment.items():
+        monkeypatch.setenv(name, value)
+    if gate == "MINIPROTO_REAL_INTEGRATION":
+        monkeypatch.setenv("MINIPROTO_INTEGRATION", "1")
+        for name in ("MINIPROTO_API_ID", "MINIPROTO_API_HASH", "MINIPROTO_SESSION_KEY"):
+            monkeypatch.setenv(name, "unused-test-value")
+    with pytest.raises(pytest.skip.Exception, match=f"{gate}=1"):
+        live_helpers.require_real_live()
+
+
+def test_windows_release_environment_prepends_uv_base_python_for_pyo3_dll_resolution() -> None:
+    environment = build_release_environment(
+        "offline",
+        {"PATH": "C:/Windows/System32", "MINIPROTO_INTEGRATION": "1"},
+        platform_name="nt",
+        python_base_prefix=Path("C:/uv/python/cpython-3.14"),
+    )
+
+    assert Path(environment["PATH"].split(";")[0]) == Path("C:/uv/python/cpython-3.14")
+    assert environment["MINIPROTO_INTEGRATION"] == "0"
+    assert environment["MINIPROTO_REAL_INTEGRATION"] == "0"
+
+
+def test_fail_fast_preserves_exit_code_and_keep_going_collects_later_failures(tmp_path: Path) -> None:
+    stages = (Stage("first", ("first",)), Stage("second", ("second",)), Stage("third", ("third",)))
+    calls: list[str] = []
+
+    def runner(stage: Stage, env: dict[str, str]) -> int:
+        del env
+        calls.append(stage.name)
+        return {"first": 0, "second": 7, "third": 9}[stage.name]
+
+    fail_fast = run_stages(stages, ReleaseConfig("offline", False, tmp_path), runner=runner)
+    assert calls == ["first", "second"]
+    assert fail_fast["mode"] == "offline"
+    assert fail_fast["exit_code"] == 7
+    assert [result["status"] for result in fail_fast["stages"]] == ["passed", "failed"]
+
+    calls.clear()
+    complete = run_stages(stages, ReleaseConfig("quick", True, tmp_path), runner=runner)
+    assert calls == ["first", "second", "third"]
+    decoded = json.loads(json.dumps(complete))
+    assert decoded["schema"] == "miniproto.release-check.v1"
+    assert decoded["mode"] == "quick"
+    assert decoded["exit_code"] == 7
+    assert [(stage["name"], stage["status"], stage["exit_code"]) for stage in decoded["stages"]] == [
+        ("first", "passed", 0),
+        ("second", "failed", 7),
+        ("third", "failed", 9),
+    ]
+
+
+def test_release_stage_runner_prints_live_progress_for_running_pending_and_failed_stages(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The multi-minute release CLI must expose stage progress before its final JSON report"""
+    stages = (
+        Stage("first", ("first",)),
+        Stage("docs", None, pending_reason="not configured"),
+        Stage("last", ("last",)),
+    )
+
+    output_chunks: list[str] = []
+
+    def runner(stage: Stage, _environment: dict[str, str]) -> int:
+        output_chunks.append(capsys.readouterr().out)
+        expected_running = {"first": "[release-check 1/3] first: running", "last": "[release-check 3/3] last: running"}
+        assert expected_running[stage.name] in output_chunks[-1]
+        return 0 if stage.name == "first" else 7
+
+    run_stages(stages, ReleaseConfig("offline", True, tmp_path), runner=runner)
+
+    output = "".join(output_chunks) + capsys.readouterr().out
+    assert "[release-check 1/3] first: running" in output
+    assert "[release-check 1/3] first: passed in" in output
+    assert "[release-check 2/3] docs: pending - not configured" in output
+    assert "[release-check 3/3] last: running" in output
+    assert "[release-check 3/3] last: failed with exit code 7 in" in output
+
+
+def test_pending_stage_is_reported_without_invoking_runner(tmp_path: Path) -> None:
+    stage = Stage("docs", None, pending_reason="Documentation tooling is not present")
+
+    def forbidden_runner(_stage: Stage, _environment: dict[str, str]) -> int:
+        raise AssertionError("a pending stage must not invoke its runner")
+
+    report = run_stages((stage,), ReleaseConfig("offline", False, tmp_path), runner=forbidden_runner)
+
+    assert report["exit_code"] == 0
+    assert report["stages"] == [
+        {"name": "docs", "status": "pending", "duration_seconds": 0.0, "reason": "Documentation tooling is not present"}
+    ]
+
+
+def test_wheel_inspection_requires_python_sources_and_native_extension_without_pth(tmp_path: Path) -> None:
+    good = tmp_path / "good.whl"
+    _write_release_wheel(good)
+
+    result = inspect_wheel(good)
+
+    assert result["python_sources"] is True
+    assert result["native_extension"] is True
+    assert result["pth_files"] == []
+    assert result["console_scripts"] == ["miniproto-release-check"]
+    assert result["metadata"]["runtime_dependencies"] == ["cryptography", "uvloop", "winloop"]
+
+    bad = tmp_path / "bad.whl"
+    _write_release_wheel(bad, extra_files={"miniproto.pth": "C:/checkout/src"})
+    with pytest.raises(ValueError, match="pth"):
+        inspect_wheel(bad)
+
+    missing_cli = tmp_path / "missing-cli.whl"
+    _write_release_wheel(missing_cli, include_script_target=False)
+    with pytest.raises(ValueError, match="console script target"):
+        inspect_wheel(missing_cli)
+
+    cached = tmp_path / "cached.whl"
+    _write_release_wheel(cached, extra_files={"tools/__pycache__/release_check.cpython-314.pyc": b"cached"})
+    with pytest.raises(ValueError, match="cache files"):
+        inspect_wheel(cached)
+
+
+def test_wheel_inspection_rejects_incomplete_release_metadata_with_complete_public_payload(tmp_path: Path) -> None:
+    incomplete = tmp_path / "miniproto-0.1.0-cp314-cp314-win_amd64.whl"
+    _write_release_wheel(
+        incomplete,
+        extra_files={"miniproto-0.1.0.dist-info/METADATA": "Metadata-Version: 2.4\nName: miniproto\nVersion: 0.1.0\n"},
+    )
+
+    with pytest.raises(ValueError, match="release metadata"):
+        inspect_wheel(incomplete)
+
+
+@pytest.mark.parametrize(
+    ("missing", "error"),
+    [
+        ("miniproto/__init__.py", "public package payload"),
+        ("miniproto/py.typed", "public package payload"),
+        ("miniproto/raw/functions.py", "public package payload"),
+        ("miniproto/raw/functions.pyi", "public package payload"),
+        ("miniproto/raw/types.py", "public package payload"),
+        ("miniproto/raw/types.pyi", "public package payload"),
+        ("miniproto/raw/_function_shards/bucket_00.py", "generated function shard"),
+        ("miniproto/raw/_types_shards/bucket_00.py", "generated type shard"),
+        ("miniproto-0.1.0.dist-info/licenses/LICENSE", "declared LICENSE file"),
+    ],
+)
+def test_wheel_inspection_rejects_missing_public_payload_with_complete_release_metadata(
+    missing: str, error: str, tmp_path: Path
+) -> None:
+    incomplete = tmp_path / "miniproto-0.1.0-cp314-cp314-win_amd64.whl"
+    _write_release_wheel(incomplete, omitted_file=missing)
+
+    with pytest.raises(ValueError, match=error):
+        inspect_wheel(incomplete)
+
+
+def test_artifact_inspection_rejects_sdist_without_required_source_build_inputs(tmp_path: Path) -> None:
+    wheel = tmp_path / "miniproto-0.1.0-cp314-cp314-win_amd64.whl"
+    _write_release_wheel(wheel)
+    sdist = tmp_path / "miniproto-0.1.0.tar.gz"
+    with tarfile.open(sdist, "w:gz") as archive:
+        payload = _release_metadata().encode()
+        member = tarfile.TarInfo("miniproto-0.1.0/PKG-INFO")
+        member.size = len(payload)
+        archive.addfile(member, io.BytesIO(payload))
+
+    with pytest.raises(ValueError, match=r"source distribution.*required source/build inputs"):
+        inspect_artifacts(tmp_path)
+
+
+def test_artifact_inspection_rejects_forbidden_sdist_residue(tmp_path: Path) -> None:
+    wheel = tmp_path / "miniproto-0.1.0-cp314-cp314-win_amd64.whl"
+    _write_release_wheel(wheel)
+    _write_release_sdist(tmp_path / "miniproto-0.1.0.tar.gz", extra_files={".env": "EXAMPLE=value"})
+
+    with pytest.raises(ValueError, match="forbidden temporary/cache paths"):
+        inspect_artifacts(tmp_path)
+
+
+def test_clean_import_verifies_wheel_and_sdist_in_separate_environments(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    artifacts = tmp_path / "artifacts"
+    distributions = artifacts / "distributions"
+    distributions.mkdir(parents=True)
+    wheel = distributions / "miniproto-0.1.0-cp314-cp314-win_amd64.whl"
+    sdist = distributions / "miniproto-0.1.0.tar.gz"
+    wheel.touch()
+    sdist.touch()
+    calls: list[tuple[str, ...]] = []
+
+    monkeypatch.setattr(release_check.shutil, "which", lambda _name: "uv")
+
+    def record(command: tuple[str, ...], **_kwargs: object) -> None:
+        calls.append(tuple(str(part) for part in command))
+
+    monkeypatch.setattr(release_check.subprocess, "run", record)
+
+    release_check._clean_import(artifacts, env={})
+
+    venv_commands = [command for command in calls if command[:2] == ("uv", "venv")]
+    install_commands = [command for command in calls if command[:3] == ("uv", "pip", "install")]
+    smoke_commands = [command for command in calls if "-I" in command]
+    assert len(venv_commands) == 2
+    assert len({command[-1] for command in venv_commands}) == 2
+    assert {Path(command[-1]).name for command in install_commands} == {wheel.name, sdist.name}
+    assert len(smoke_commands) == 2
