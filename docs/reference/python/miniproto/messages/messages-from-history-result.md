@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.messages.messages_from_history_result"
 source_path: "src/miniproto/messages.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/messages.py#L134"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/messages.py#L137"
 module: "miniproto.messages"
 ---
 

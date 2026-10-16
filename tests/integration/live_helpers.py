@@ -6,6 +6,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 import pytest
+from tools.bench.secret_prompt import prompt_secret
 
 from miniproto import Client, ClientConfig, EncryptedSQLiteSessionStorage
 from miniproto.invoke import load_session_record
@@ -82,7 +83,7 @@ def code_callback() -> Callable[[], str]:
         pytest.skip("set MINIPROTO_LIVE_PROMPT_CODE=1 and run interactively to enter the Telegram login code")
 
     def prompt() -> str:
-        return input("Telegram login code: ").strip()
+        return prompt_secret("Telegram login code: ").strip()
 
     return prompt
 
@@ -96,7 +97,7 @@ def password_callback() -> Callable[[], str] | None:
         return None
 
     def prompt() -> str:
-        return input("Telegram 2FA password: ")
+        return prompt_secret("Telegram 2FA password: ")
 
     return prompt
 

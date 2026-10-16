@@ -47,14 +47,17 @@ def parse_message_text(text: str, parse_mode: str | None = None) -> ParsedMessag
     output: list[str] = []
     entities: list[object] = []
     index = 0
+    offset = 0
+    measured_fragments = 0
     while index < len(text):
         if text[index] == "\\" and index + 1 < len(text):
             output.append(text[index + 1])
             index += 2
             continue
-        parsed = _parse_delimited_entity(text, index, output)
+        parsed = _parse_delimited_entity(text, index, output, offset, measured_fragments)
         if parsed is not None:
-            next_index, entity = parsed
+            next_index, offset, entity = parsed
+            measured_fragments = len(output)
             if entity is not None:
                 entities.append(entity)
             index = next_index
@@ -146,13 +149,15 @@ def messages_from_history_result(result: object, *, fallback_peer: Peer) -> tupl
     )
 
 
-def _parse_delimited_entity(text: str, index: int, output: list[str]) -> tuple[int, object | None] | None:
+def _parse_delimited_entity(text: str, index: int, output: list[str], offset: int, measured_fragments: int) -> tuple[int, int, object | None] | None:  # fmt: skip
     """Parse one closed delimiter at ``index`` and append its rendered content.
 
     Args:
         text: Original unrendered message text.
         index: Character offset where a delimiter may begin.
         output: Rendered text fragments emitted before and including this entity.
+        offset: UTF-16 length of the already measured output fragments.
+        measured_fragments: Number of output fragments already included in ``offset``.
     """
     for delimiter, kind in (("```", "pre"), ("**", "bold"), ("__", "italic"), ("`", "code")):
         if not text.startswith(delimiter, index):
@@ -162,11 +167,11 @@ def _parse_delimited_entity(text: str, index: int, output: list[str]) -> tuple[i
         if content_end < 0:
             return None
         content = text[content_start:content_end]
-        offset = _utf16_length("".join(output))
+        offset += _utf16_length("".join(output[measured_fragments:]))
         output.append(content)
         length = _utf16_length(content)
         entity = _entity(kind, offset, length) if length > 0 else None
-        return content_end + len(delimiter), entity
+        return content_end + len(delimiter), offset + length, entity
     return None
 
 

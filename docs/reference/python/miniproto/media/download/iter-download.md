@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.media.download.iter_download"
 source_path: "src/miniproto/media/download.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L962"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L1057"
 aliases: ["miniproto.iter_download","miniproto.media.iter_download"]
 module: "miniproto.media.download"
 ---
@@ -46,7 +46,7 @@ Stream a media range in order through a bounded window of part requests.
 - **range_cache_max_bytes** (<code>[int](#int)</code>) – Capacity for an implicitly created shared cache.
 - **read_ahead_bytes** (<code>[int](#int)</code>) – Speculative cache-fill distance ahead of the consumer. Disabled for open-ended requests or finite ranges reaching the known EOF.
 - **verify_plain_hashes** (<code>[bool](#bool)</code>) – Validate non-CDN chunks against complete Telegram hash intervals, fetching any missing bytes before yielding the requested slice.
-- **file_reference_refresher** (<code>[FileReferenceRefresher](#miniproto.media.download.FileReferenceRefresher) | None</code>) – Optional sync/async callback to renew an expired file reference once per part.
+- **file_reference_refresher** (<code>[FileReferenceRefresher](#miniproto.media.download.FileReferenceRefresher) | None</code>) – Optional sync/async callback to renew an expired file reference once per part. The returned location must preserve its concrete type and every field except ``file_reference``.
 
 **Yields:**
 

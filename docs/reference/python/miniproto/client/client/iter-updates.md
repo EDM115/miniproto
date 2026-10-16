@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.client.Client.iter_updates"
 source_path: "src/miniproto/client.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L1864"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L1968"
 aliases: ["miniproto.Client.iter_updates"]
 module: "miniproto.client"
 ---
@@ -15,20 +15,22 @@ module: "miniproto.client"
 ## `miniproto.client.Client.iter_updates`
 
 ```python
-iter_updates() -> AsyncIterator[Update]
+iter_updates() -> AsyncGenerator[Update]
 ```
 
 Yield updates accepted by the update manager's public FIFO queue.
 
 Multiple iterators compete for items from the same queue. Raw processing persists cursor and duplicate state before delivery. Gap-recovered events may precede the live update that triggered recovery.
 
+An iterator becomes active on its first ``anext`` and stays active until closed or cancelled. With handlers registered, only active iterators retain new queue entries, callback-only events are not available retroactively. Without handlers, the bounded queue also retains updates before iteration starts.
+
 **Yields:**
 
-- <code>[AsyncIterator](#collections.abc.AsyncIterator)[[Update](#miniproto.types.Update)]</code> – Public ``Update`` instances, subject to configured overflow and duplicate suppression.
+- <code>[AsyncGenerator](#collections.abc.AsyncGenerator)[[Update](#miniproto.types.Update)]</code> – Public ``Update`` instances, subject to configured overflow and duplicate suppression.
 
 <details class="lifecycle" open markdown="1">
 <summary>Lifecycle</summary>
 
-``disconnect`` does not end or wake this iterator. Cancel a waiting consumer yourself.
+``disconnect`` does not end or wake this iterator. Cancel a waiting consumer or close the iterator when finished.
 
 </details>

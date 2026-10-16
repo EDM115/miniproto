@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.tl.codec.deserialize_object"
 source_path: "src/miniproto/tl/codec.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/tl/codec.py#L365"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/tl/codec.py#L373"
 aliases: ["miniproto.tl.deserialize_object"]
 module: "miniproto.tl.codec"
 ---

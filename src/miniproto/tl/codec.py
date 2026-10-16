@@ -282,7 +282,7 @@ def decode_bool(data: bytes | memoryview, offset: int = 0) -> tuple[bool, int]:
 
 
 def encode_vector(values: Iterable[Any], item_type: str) -> bytes:
-    """Encode a boxed TL vector.
+    """Encode a boxed TL vector whose elements consume wire bytes.
 
     Args:
         values: Items to serialize.
@@ -290,9 +290,14 @@ def encode_vector(values: Iterable[Any], item_type: str) -> bytes:
 
     Returns:
         Vector constructor, item count and encoded items.
+
+    Raises:
+        TLCodecError: If the element type is zero-width ``true``, including an empty vector.
     """
-    items = tuple(values)
     clean_item_type = _clean_type(item_type)
+    if clean_item_type == "true":
+        raise TLCodecError("zero-width true elements are not supported in TL vectors")
+    items = tuple(values)
     if clean_item_type in {"int", "#"}:
         return _native.tl_encode_int_vector(int(item) for item in items)
     if clean_item_type == "long":
@@ -305,7 +310,7 @@ def encode_vector(values: Iterable[Any], item_type: str) -> bytes:
 
 
 def decode_vector(data: bytes | memoryview, offset: int, item_type: str) -> tuple[tuple[Any, ...], int]:
-    """Decode a boxed TL vector.
+    """Decode a boxed TL vector whose elements consume wire bytes.
 
     Args:
         data: TL wire bytes.
@@ -316,9 +321,12 @@ def decode_vector(data: bytes | memoryview, offset: int, item_type: str) -> tupl
         Decoded immutable item tuple and first unread offset.
 
     Raises:
+        TLCodecError: If the element type is zero-width ``true``, including an empty vector.
         ValueError: If the constructor, count or element bytes are invalid, including ``TLCodecError`` from the generic path.
     """
     clean_item_type = _clean_type(item_type)
+    if clean_item_type == "true":
+        raise TLCodecError("zero-width true elements are not supported in TL vectors")
     if clean_item_type in {"int", "#"}:
         return _native.tl_decode_int_vector(data, offset)
     if clean_item_type == "long":

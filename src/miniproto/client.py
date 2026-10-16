@@ -8,7 +8,7 @@ import logging
 import mimetypes
 import tempfile
 import time
-from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Iterable, Mapping
+from collections.abc import AsyncGenerator, Awaitable, Callable, Iterable, Mapping
 from contextlib import suppress
 from dataclasses import replace
 from pathlib import Path
@@ -64,6 +64,7 @@ from miniproto.media import (
     MAX_DOWNLOAD_CHUNK_SIZE,
     Destination,
     FileSource,
+    MediaDownloadError,
     MediaDownloadResult,
     download_location_from_media,
     media_from_raw,
@@ -71,6 +72,7 @@ from miniproto.media import (
 )
 from miniproto.media import download_media as download_media_file
 from miniproto.media import iter_download_media as iter_download_media_file
+from miniproto.media.download import _download_location_identity
 from miniproto.media.multi_session import assemble_download_parts, download_session_count, plan_download_ranges
 from miniproto.media.scheduler import (
     DEFAULT_DOWNLOAD_LARGE_LIMIT,
@@ -231,6 +233,34 @@ async def _complete_storage_operation[StorageResultT](
     return result
 
 
+async def _complete_migration_cleanup(operation: Awaitable[None], *, primary_error: BaseException | None) -> None:
+    """Finish migration cleanup before propagating its caller's error or cancellation.
+
+    Args:
+        operation: Provisional target disconnect or committed migration's source-sender removal.
+        primary_error: Failure or cancellation that cleanup must preserve.
+    """
+    started = time.perf_counter()
+    cleanup = asyncio.ensure_future(operation)
+    cancellation: asyncio.CancelledError | None = None
+    while not cleanup.done():
+        try:
+            await asyncio.shield(cleanup)
+        except asyncio.CancelledError as exc:
+            if cancellation is None:
+                cancellation = exc
+        except BaseException:
+            break
+    try:
+        cleanup.result()
+    except BaseException as exc:
+        _emit_client_event("client.dc_migration_cleanup", started, outcome="error", error_type=type(exc).__name__)
+        if primary_error is None and cancellation is None:
+            raise
+    if primary_error is None and cancellation is not None:
+        raise cancellation
+
+
 def _copy_session_payload(data: SessionPayload | object | None) -> Mapping[str, Any] | None:
     """Deep-copy a serialized session payload while converting cache sentinels to ``None``.
 
@@ -303,6 +333,7 @@ class Client:
         self._updates_enabled = _updates_enabled
         self._bot_token = config.bot_token
         self._connected = False
+        self._session_generation = 0
         self._connect_lock = asyncio.Lock()
         self._peer_cache = PeerCache(config, self._storage, self.invoke)
         self._update_manager = UpdateManager(config, self._storage, self.invoke)
@@ -433,8 +464,49 @@ class Client:
                 raise ValueError("session storage is not empty; pass replace=True to overwrite it")
             return record
 
-        await self._storage.mutate(store)
+        async with self._connect_lock:
+            if self.is_connected:
+                raise ConnectionError("session import requires a disconnected client")
+            store(await self._storage.load())
+            await _complete_storage_operation(self._reset_session_runtime(), lambda _result: None)
+            await self._storage.mutate(store)
         return record
+
+    async def _reset_session_runtime(self) -> None:
+        """Drain old account resources before committing a replacement session"""
+        self._session_generation += 1
+        self._latest_server_salt = None
+        self._salt_dirty = False
+        salt_task = self._salt_persist_task
+        self._salt_persist_task = None
+        if salt_task is not None:
+            salt_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await salt_task
+        results = await asyncio.gather(
+            self._update_manager._reset_session_state(),
+            self._drop_sender(),
+            self._close_media_pools(),
+            self._close_cdn_senders(),
+            self._media_schedulers.close(),
+            self._disconnect_auxiliary_download_clients(tuple(self._auxiliary_download_clients.values())),
+            return_exceptions=True,
+        )
+        async with self._dc_auth_lock:
+            self._dc_auth_cache.clear()
+        async with self._cdn_sender_lock:
+            self._cdn_auth_cache.clear()
+        self._app_config_hash = 0
+        self._upload_limit_parts_cache = None
+        self._method_flood_wait_cache = MethodFloodWaitCache(self.config.method_flood_cache_size)
+        self._media_schedulers.configure_download_limits(
+            small_limit=self.config.media_download_small_queue_limit or DEFAULT_DOWNLOAD_SMALL_LIMIT,
+            large_limit=self.config.media_download_large_queue_limit or DEFAULT_DOWNLOAD_LARGE_LIMIT,
+        )
+        self._bot_token = None
+        for result in results:
+            if isinstance(result, BaseException):
+                raise result
 
     async def connect(self) -> None:
         """Mark the client connected and start update handling when enabled.
@@ -1233,6 +1305,8 @@ class Client:
             Failed or cancelled transfers stop forwarding new progress callbacks, then cancel and join their workers before removing temporary parts and disconnecting auxiliary clients. An assembly already running in a thread is joined before cleanup and may finish writing the destination despite cancellation. The first failure or cancellation is preserved, and individual auxiliary disconnect failures are logged.
         """
         async with self._multi_session_download_lock:
+            original_location = download_location_from_media(media)
+            original_identity = _download_location_identity(original_location)
             auxiliaries = await self._ensure_auxiliary_download_clients(session_count)
             available = 1 + len(auxiliaries)
             active_count = 4 if session_count == 4 and available >= 4 else 2 if available >= 2 else 1
@@ -1311,6 +1385,8 @@ class Client:
                 await asyncio.wait((worker_group,))
                 results = worker_group.result()
                 for item, result in zip(ranges, results, strict=True):
+                    if _download_location_identity(result.raw_location) != original_identity:
+                        raise MediaDownloadError(f"multi-session worker {item.index} file identity changed")
                     if result.bytes_downloaded != item.limit:
                         raise RuntimeError(
                             f"multi-session worker {item.index} size mismatch: expected {item.limit}, got {result.bytes_downloaded}"
@@ -1323,7 +1399,7 @@ class Client:
                     offset=0,
                     destination=resolved_destination,
                     data=data,
-                    raw_location=download_location_from_media(media),
+                    raw_location=original_location,
                 )
             except BaseException as exc:
                 failure = exc
@@ -1625,6 +1701,8 @@ class Client:
         quick_ack_callback: Callable[[QuickAckReceipt], None] | None = None,
         without_updates: bool = False,
         migrate_session: bool = True,
+        cdn_auth: bool = False,
+        media_transfer: MediaTransfer | None = None,
     ) -> object:
         """Run a raw request through a supplied sender lifecycle with retries and telemetry.
 
@@ -1639,6 +1717,8 @@ class Client:
             quick_ack_callback: Optional callback for the first quick acknowledgement receipt.
             without_updates: Whether first-request initialization must suppress update delivery.
             migrate_session: Whether a datacenter migration may update the main session rather than be re-raised.
+            cdn_auth: Whether this sender belongs exclusively to the runtime CDN credential domain.
+            media_transfer: Optional transfer reserving the actual wire weight for each sender attempt.
         """
         if not self.is_connected:
             raise ConnectionError("client must be connected before invoking raw requests")
@@ -1703,6 +1783,7 @@ class Client:
                 )
                 raise cached_flood_wait
             sender = await ensure_sender()
+            sender_auth = _sender_auth_identity(sender)
             needs_init = sender_needs_init(sender)
             wrapped_request = wrap_raw_request(
                 raw_request,
@@ -1711,21 +1792,26 @@ class Client:
                 without_updates=(without_updates or not self._updates_enabled) and needs_init,
             )
             try:
-                if quick_ack or quick_ack_callback is not None:
-                    raw_result = await cast(QuickAckRawSender, sender).request(
-                        wrapped_request,
-                        content_related=True,
-                        retry_safe=retryable,
-                        request_timeout=timeout,
-                        quick_ack=True,
-                        quick_ack_callback=deliver_quick_ack,
-                    )
-                else:
-                    raw_result = await sender.request(
-                        wrapped_request, content_related=True, retry_safe=retryable, request_timeout=timeout
-                    )
-                mark_sender_initialized(sender)
-                result = decode_rpc_response(raw_result, raw_request, max_output_size=self.config.transport.max_payload_size)  # fmt: skip
+                permit = await media_transfer.acquire(_media_request_weight(raw_request)) if media_transfer is not None else None  # fmt: skip
+                try:
+                    if quick_ack or quick_ack_callback is not None:
+                        raw_result = await cast(QuickAckRawSender, sender).request(
+                            wrapped_request,
+                            content_related=True,
+                            retry_safe=retryable,
+                            request_timeout=timeout,
+                            quick_ack=True,
+                            quick_ack_callback=deliver_quick_ack,
+                        )
+                    else:
+                        raw_result = await sender.request(
+                            wrapped_request, content_related=True, retry_safe=retryable, request_timeout=timeout
+                        )
+                    mark_sender_initialized(sender)
+                    result = decode_rpc_response(raw_result, raw_request, max_output_size=self.config.transport.max_payload_size)  # fmt: skip
+                finally:
+                    if permit is not None:
+                        permit.release()
                 _emit_rpc_event(
                     started, outcome="success", request=request_name, attempts=attempts + 1, retryable=retryable
                 )
@@ -1814,8 +1900,10 @@ class Client:
                 )
                 raise
             except AuthKeyNotFound:
-                await clear_invalid_auth_key(self._storage, self.config)
-                await drop_sender(sender)
+                try:
+                    await self._invalidate_sender_auth(sender_auth, cdn=cdn_auth)
+                finally:
+                    await drop_sender(sender)
                 _emit_rpc_event(
                     started,
                     outcome="error",
@@ -1827,6 +1915,11 @@ class Client:
                 raise
             except RpcError as exc:
                 typed = classify_rpc_error(exc)
+                if isinstance(typed, AuthKeyNotFound):
+                    try:
+                        await self._invalidate_sender_auth(sender_auth, cdn=cdn_auth)
+                    finally:
+                        await drop_sender(sender)
                 if retryable and should_retry_rpc_error(typed) and attempts < self.config.max_request_retries:
                     # Server-side 5xx/timeouts are retried on the same connection; dropping
                     # the sender here would fail every other in-flight request on the lane.
@@ -1861,19 +1954,31 @@ class Client:
                 )
                 raise typed from exc
 
-    async def iter_updates(self) -> AsyncIterator[Update]:
+    async def wait_for_updates(self) -> None:
+        """Wait for the current update-processing task to stop or fail
+
+        Call after ``connect`` with updates enabled and before ``disconnect``. A normal disconnect completes the wait. Queue, handler, storage and recovery failures propagate as soon as the task fails. Cancelling this wait leaves update processing running. A later ``connect`` can start a new task after the failure's cause is resolved and requires a new wait, persisted events are not automatically replayed.
+
+        Raises:
+            RuntimeError: If no update task has been started or it has already been stopped.
+            Exception: The current update task's processing failure.
+        """
+        await self._update_manager.wait_stopped()
+
+    def iter_updates(self) -> AsyncGenerator[Update]:
         """Yield updates accepted by the update manager's public FIFO queue.
 
         Multiple iterators compete for items from the same queue. Raw processing persists cursor and duplicate state before delivery. Gap-recovered events may precede the live update that triggered recovery.
+
+        An iterator becomes active on its first ``anext`` and stays active until closed or cancelled. With handlers registered, only active iterators retain new queue entries, callback-only events are not available retroactively. Without handlers, the bounded queue also retains updates before iteration starts.
 
         Yields:
             Public ``Update`` instances, subject to configured overflow and duplicate suppression.
 
         Lifecycle:
-            ``disconnect`` does not end or wake this iterator. Cancel a waiting consumer yourself.
+            ``disconnect`` does not end or wake this iterator. Cancel a waiting consumer or close the iterator when finished.
         """
-        async for update in self._update_manager.iter_updates():
-            yield update
+        return self._update_manager.iter_updates()
 
     @overload
     def on(self, update_type: type[UpdateT]) -> Callable[[UpdateHandler[UpdateT]], UpdateHandler[UpdateT]]:
@@ -1899,7 +2004,7 @@ class Client:
     ) -> UpdateHandler[UpdateT] | Callable[[UpdateHandler[UpdateT]], UpdateHandler[UpdateT]]:
         """Register an update handler directly or return a decorator for that handler type.
 
-        Handlers match with ``isinstance`` and run sequentially after public-queue admission. ``drop_newest`` overflow skips their delivery. A handler failure during background raw processing stops its task and surfaces when the manager stops.
+        Handlers match with ``isinstance`` and run sequentially. Callback-only delivery retains no iterator copies. With an active iterator, public-queue admission precedes handlers and ``drop_newest`` overflow skips their delivery. A background handler failure stops processing and propagates through ``wait_for_updates``, subsequent raw intake and disconnect.
 
         Args:
             update_type: Normalized update subclass accepted by the handler.
@@ -1946,6 +2051,7 @@ class Client:
 
     async def _ensure_sender(self) -> RawSender:
         """Return the usable main sender, lazily rebuilding it after fatal disconnection."""
+        session_generation = self._session_generation
         sender = self._sender
         if sender is not None and _sender_is_usable(sender) and not _sender_fatal_pending(sender):
             return sender
@@ -1975,12 +2081,34 @@ class Client:
                     self._storage,
                     self._sender_factory,
                     server_salt_override=self._latest_server_salt,
-                    on_salt_change=self._on_salt_change,
+                    on_salt_change=lambda salt: self._on_salt_change(salt, session_generation=session_generation),
                 )
                 record_metric("client.sender_builds", 1)
                 if self._updates_enabled:
                     self._start_receive_dispatch(self._sender)
             return self._sender
+
+    async def _invalidate_sender_auth(self, identity: tuple[int, bytes] | None, *, cdn: bool) -> None:
+        """Invalidate only the rejected sender's snapshotted key in its credential domain.
+
+        Args:
+            identity: Sender DC and encryption key captured before dispatch, or absent for unknown provenance.
+            cdn: Whether credentials belong exclusively to the runtime CDN cache.
+        """
+        if identity is None:
+            return
+        dc_id, key = identity
+        if cdn:
+            async with self._cdn_sender_lock:
+                cached = self._cdn_auth_cache.get(dc_id)
+                if cached is not None and cached[0] == key:
+                    self._cdn_auth_cache.pop(dc_id)
+            return
+        async with self._dc_auth_lock:
+            cached = self._dc_auth_cache.get(dc_id)
+            if cached is not None and cached[0] == key:
+                self._dc_auth_cache.pop(dc_id)
+            await clear_invalid_auth_key(self._storage, self.config, expected_auth_key=AuthKey(dc_id=dc_id, key=key))
 
     async def _ensure_authorization_key(self) -> None:
         """Ensure the current session has an MTProto authorization key."""
@@ -1997,11 +2125,13 @@ class Client:
     async def _migrate_main_session(self, sender: RawSender, error: DatacenterMigration) -> None:
         """Create and authorize a target-DC key before activating a migrated session.
 
+        Cancellation before activation retains the source session. Once activation starts, its atomic storage mutation completes, reconciles the active salt and removes the source sender before cancellation propagates.
+
         Args:
             sender: Current source-DC sender whose authorization remains usable for export.
             error: Telegram migration response identifying the target datacenter.
         """
-        del sender
+        started = time.perf_counter()
         before = load_session_record(await self._storage.load(), self.config.dc_id)
         exported = await AuthService(self.config, self._storage, self.invoke).handle_dc_migration(error)
         target_key, target_salt = await self._ensure_media_dc_auth(error.dc_id)
@@ -2015,11 +2145,15 @@ class Client:
             auth_key_override=target_key,
             allow_media_only=False,
         )
+        primary_error: BaseException | None = None
         try:
             if exported is not None:
                 await self._import_exported_authorization(target_sender, exported, error.dc_id)
+        except BaseException as exc:
+            primary_error = exc
+            raise
         finally:
-            await target_sender.disconnect()
+            await _complete_migration_cleanup(target_sender.disconnect(), primary_error=primary_error)
 
         def activate(payload: Mapping[str, Any] | None) -> SessionPayload:
             """Activate the target key while retaining the source key by DC.
@@ -2039,8 +2173,25 @@ class Client:
                 current, dc_id=error.dc_id, auth_key=AuthKey(dc_id=error.dc_id, key=target_key), metadata=metadata
             )
 
-        await self._storage.mutate(activate)
-        self._latest_server_salt = target_salt
+        target_activated = False
+
+        def reconcile_target(_committed: Mapping[str, Any] | None) -> None:
+            """Record successful activation before any deferred cancellation propagates.
+
+            Args:
+                _committed: Successful storage result whose completion establishes target activation.
+            """
+            nonlocal target_activated
+            self._latest_server_salt = target_salt
+            target_activated = True
+
+        try:
+            await _complete_storage_operation(self._storage.mutate(activate), reconcile_target)
+        except asyncio.CancelledError as exc:
+            if target_activated:
+                await _complete_migration_cleanup(self._drop_sender(sender), primary_error=exc)
+            raise
+        _emit_client_event("client.dc_migration", started, outcome="success", target_dc_id=error.dc_id)
 
     async def _drop_sender(self, expected: RawSender | None = None) -> None:
         """Disconnect the main sender unless ``expected`` has already been replaced.
@@ -2116,12 +2267,15 @@ class Client:
             record_metric("client.raw_updates_dispatched", 1)
             await self._update_manager.feed_raw_update(raw_update)
 
-    def _on_salt_change(self, server_salt: int) -> None:
+    def _on_salt_change(self, server_salt: int, *, session_generation: int | None = None) -> None:
         """Record a changed main-session salt and schedule debounced persistence.
 
         Args:
             server_salt: Newly observed main-session MTProto server salt.
+            session_generation: Sender's account generation, when called by a sender callback
         """
+        if session_generation is not None and session_generation != self._session_generation:
+            return
         self._latest_server_salt = server_salt
         self._salt_dirty = True
         if self._salt_persist_task is None or self._salt_persist_task.done():
@@ -2191,6 +2345,8 @@ class Client:
                     attributes={"kind": kind, "dc_id": target_dc, "lanes": lane_count},
                 )
                 return pool
+            record = load_session_record(await self._storage.load(), self.config.dc_id)
+            select_dc_option(record.dc_options, target_dc, allow_media_only=True)
             pool = _MediaSenderPool(self, lane_count, kind=kind, dc_id=target_dc)
             self._media_pools[key] = pool
             return pool
@@ -2206,7 +2362,10 @@ class Client:
             pools = tuple(self._media_pools.values())
             self._media_pools.clear()
         if pools:
-            await asyncio.gather(*(pool.close() for pool in pools))
+            results = await asyncio.gather(*(pool.close() for pool in pools), return_exceptions=True)
+            for result in results:
+                if isinstance(result, BaseException):
+                    raise result
 
     async def _get_cdn_sender(self, dc_id: int) -> RawSender:
         """Return a cached sender authenticated specifically for a Telegram CDN datacenter.
@@ -2244,7 +2403,10 @@ class Client:
             senders = tuple(self._cdn_senders.values())
             self._cdn_senders.clear()
         if senders:
-            await asyncio.gather(*(sender.disconnect() for sender in senders))
+            results = await asyncio.gather(*(sender.disconnect() for sender in senders), return_exceptions=True)
+            for result in results:
+                if isinstance(result, BaseException):
+                    raise result
 
     async def _build_cdn_sender(self, dc_id: int) -> RawSender:
         """Build a sender using Telegram's CDN endpoint and CDN-specific RSA key.
@@ -2317,6 +2479,7 @@ class Client:
         Args:
             dc_id: Target datacenter that hosts the media lane.
         """
+        session_generation = self._session_generation
         session_dc = await self._current_dc_id()
         if dc_id == session_dc:
             return await build_sender_from_session(
@@ -2325,20 +2488,23 @@ class Client:
                 self._sender_factory,
                 fresh_session_id=True,
                 server_salt_override=self._latest_server_salt,
-                on_salt_change=self._on_salt_change,
+                on_salt_change=lambda salt: self._on_salt_change(salt, session_generation=session_generation),
             )
-        return await self._build_foreign_media_sender(dc_id)
+        return await self._build_foreign_media_sender(dc_id, session_generation=session_generation)
 
-    async def _build_foreign_media_sender(self, dc_id: int) -> RawSender:
+    async def _build_foreign_media_sender(self, dc_id: int, *, session_generation: int | None = None) -> RawSender:
         """Build a foreign-DC media sender with its own auth key and imported authorization.
 
         Store foreign-DC auth material alongside the main session without replacing its active DC or key.
 
         Args:
             dc_id: Foreign media datacenter requiring its own key and imported authorization.
+            session_generation: Account generation captured before resolving the media DC
         """
         auth_key_override: bytes | None = None
         server_salt: int | None = None
+        if session_generation is None:
+            session_generation = self._session_generation
         if self._sender_factory is None:
             auth_key_override, server_salt = await self._ensure_media_dc_auth(dc_id)
         sender = await build_sender_from_session(
@@ -2347,7 +2513,7 @@ class Client:
             self._sender_factory,
             fresh_session_id=True,
             server_salt_override=server_salt,
-            on_salt_change=lambda salt: self._on_media_dc_salt(dc_id, salt),
+            on_salt_change=lambda salt: self._on_media_dc_salt(dc_id, salt, session_generation=session_generation),
             dc_id_override=dc_id,
             auth_key_override=auth_key_override,
             allow_media_only=True,
@@ -2447,13 +2613,16 @@ class Client:
         record_metric("client.media_auth_imports", 1, attributes={"target_dc_id": dc_id})
         _emit_client_event("client.media_auth_import", started, outcome="success", target_dc_id=dc_id)
 
-    def _on_media_dc_salt(self, dc_id: int, server_salt: int) -> None:
+    def _on_media_dc_salt(self, dc_id: int, server_salt: int, *, session_generation: int | None = None) -> None:
         """Update the in-memory salt for an already cached foreign media key.
 
         Args:
             dc_id: Foreign media datacenter whose cached key may be present.
             server_salt: Newly observed salt associated with that datacenter's key.
+            session_generation: Sender's account generation, when called by a sender callback
         """
+        if session_generation is not None and session_generation != self._session_generation:
+            return
         cached = self._dc_auth_cache.get(dc_id)
         if cached is not None:
             self._dc_auth_cache[dc_id] = (cached[0], server_salt)
@@ -2503,11 +2672,14 @@ class _MediaInvokeContext:
         self._defer_transfer = defer_transfer
         self._pool: _MediaSenderPool | None = None
         self._transfer: MediaTransfer | None = None
+        self._cdn_transfers: dict[int, MediaTransfer] = {}
         self._target_dc: int | None = None
         self._closed = False
 
     async def __aenter__(self) -> _MediaInvokeContext:
         """Resolve and prewarm lanes, then register a transfer unless registration is deferred."""
+        if not self._client.is_connected:
+            raise ConnectionError("client must be connected before starting media requests")
         self._target_dc = self._dc_id if self._dc_id is not None else await self._client._current_dc_id()
         if self._lane_count > 0:
             self._pool = await self._client._get_media_pool(
@@ -2521,7 +2693,7 @@ class _MediaInvokeContext:
     async def __aexit__(
         self, exc_type: type[BaseException] | None, exc: BaseException | None, tb: object | None
     ) -> None:
-        """Close the owned scheduler transfer when leaving the async context.
+        """Close the owned scheduler transfers when leaving the async context.
 
         Args:
             exc_type: Exception class that left the context, if any.
@@ -2534,6 +2706,10 @@ class _MediaInvokeContext:
         self._transfer = None
         if transfer is not None:
             await transfer.close()
+        cdn_transfers = tuple(self._cdn_transfers.values())
+        self._cdn_transfers.clear()
+        for cdn_transfer in cdn_transfers:
+            await cdn_transfer.close()
 
     async def register_transfer(
         self, total_size: int | None, *, priority: MediaPriority | None = None
@@ -2626,6 +2802,18 @@ class _MediaInvokeContext:
             dc_id: CDN datacenter carried by the file redirect.
             **kwargs: Request timeout, flood-wait and retry options forwarded to the sender lifecycle.
         """
+        if self._closed:
+            raise RuntimeError("media invoke context is closed")
+        transfer = self._cdn_transfers.get(dc_id)
+        if transfer is None:
+            origin_transfer = self._transfer or await self.register_transfer(self._total_size)
+            transfer = self._client._media_schedulers.open_transfer(
+                dc_id=dc_id,
+                direction="download",
+                total_size=origin_transfer.total_size,
+                priority=origin_transfer.priority,
+            )
+            self._cdn_transfers[dc_id] = transfer
 
         async def ensure_sender() -> RawSender:
             """Return the current cached sender for the redirected CDN datacenter."""
@@ -2648,6 +2836,8 @@ class _MediaInvokeContext:
             retry=kwargs.pop("retry", None),
             without_updates=True,
             migrate_session=False,
+            cdn_auth=True,
+            media_transfer=transfer,
             **kwargs,
         )
 
@@ -2774,11 +2964,22 @@ class _MediaSenderPool:
         self._closing = True
         reaper = self._idle_reaper
         self._idle_reaper = None
-        if reaper is not None and not reaper.done():
-            reaper.cancel()
-            with suppress(asyncio.CancelledError):
+        reaper_error: BaseException | None = None
+        if reaper is not None:
+            if not reaper.done():
+                reaper.cancel()
+            try:
                 await reaper
-        await asyncio.gather(*(lane.close() for lane in tuple(self._lanes)))
+            except asyncio.CancelledError:
+                pass
+            except BaseException as exc:
+                reaper_error = exc
+        results = await asyncio.gather(*(lane.close() for lane in tuple(self._lanes)), return_exceptions=True)
+        if reaper_error is not None:
+            raise reaper_error
+        for result in results:
+            if isinstance(result, BaseException):
+                raise result
 
     async def _reap_idle_lanes(self, idle_close: float) -> None:
         """Periodically close inactive lane senders after ``idle_close`` seconds.
@@ -3000,6 +3201,19 @@ def _resolve_media_dc_id(media: object) -> int | None:
     if resolved is None:
         return None
     return resolved.dc_id
+
+
+def _sender_auth_identity(sender: RawSender) -> tuple[int, bytes] | None:
+    """Snapshot optional DC and encryption-key provenance without consulting mutable session storage.
+
+    Args:
+        sender: Built-in or compatible sender exposing ``auth_key_dc_id`` and ``state.auth_key``.
+    """
+    dc_id = getattr(sender, "auth_key_dc_id", None)
+    key = getattr(getattr(sender, "state", None), "auth_key", None)
+    if type(dc_id) is not int or dc_id <= 0 or not isinstance(key, bytes | bytearray | memoryview) or len(key) != 256:
+        return None
+    return dc_id, bytes(key)
 
 
 def _sender_is_usable(sender: RawSender) -> bool:

@@ -5,9 +5,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from collections.abc import AsyncIterator, Awaitable, Callable, Iterable
+from collections.abc import AsyncGenerator, Awaitable, Callable, Iterable
 from contextlib import suppress
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from hashlib import sha256
 from typing import Any, Literal, TypeVar, cast, overload
 
@@ -15,7 +15,9 @@ from miniproto.config import ClientConfig
 from miniproto.observability import emit_event, get_logger, record_metric
 from miniproto.raw import functions, types
 from miniproto.raw.base import TLObject
-from miniproto.session.models import SessionRecord, session_record_from_mapping
+from miniproto.session.models import PeerCacheEntry, SessionRecord, session_record_from_mapping
+from miniproto.session.peer_aliases import normalize_username, peer_usernames
+from miniproto.session.peer_merge import _full_observation_revision, merge_peer_entry
 from miniproto.session.storage import SessionStorage
 from miniproto.types import Message, NewMessage, Peer, Update
 from miniproto.updates.state import (
@@ -23,7 +25,6 @@ from miniproto.updates.state import (
     EntityReference,
     UpdateCursor,
     coerce_update_datetime,
-    merge_peer_cache_entries,
     metadata_with_duplicate_keys,
 )
 
@@ -79,10 +80,12 @@ class UpdateManager:
         self._updates: asyncio.Queue[Update] = asyncio.Queue(maxsize=config.update_queue_size)
         self._raw_updates: asyncio.Queue[object] = asyncio.Queue(maxsize=config.update_queue_size)
         self._handlers: dict[type[Update], list[UpdateHandler[Any]]] = {}
+        self._iterator_count = 0
         self._task: asyncio.Task[None] | None = None
         self._state_lock = asyncio.Lock()
         self._cursor: UpdateCursor | None = None
         self._duplicates = DuplicateTracker(max_size=config.update_duplicate_window)
+        self._pending_entities: list[tuple[EntityReference, PeerCacheEntry | None]] = []
 
     @property
     def handlers(self) -> dict[type[Update], list[UpdateHandler[Any]]]:
@@ -134,6 +137,38 @@ class UpdateManager:
             await task
         _emit_update_event("updates.stop", started, outcome="success", had_task=True)
 
+    async def _reset_session_state(self) -> None:
+        """Discard the stopped account's state and queued events while retaining subscribers"""
+        async with self._state_lock:
+            if self._task is not None:
+                raise RuntimeError("session reset requires a stopped update manager")
+            self._cursor = None
+            self._duplicates = DuplicateTracker(max_size=self._config.update_duplicate_window)
+            self._pending_entities.clear()
+            while not self._raw_updates.empty():
+                self._raw_updates.get_nowait()
+            while not self._updates.empty():
+                self._updates.get_nowait()
+
+    async def wait_stopped(self) -> None:
+        """Wait for the current drainer to stop, propagating its processing failure
+
+        Call after ``start`` and before ``stop``. Normal shutdown completes the wait. Cancelling this wait leaves the drainer running. Restarting the manager creates a new drainer and requires a new wait.
+
+        Raises:
+            RuntimeError: If no drainer has been started or it has already been stopped.
+            Exception: The current drainer's processing failure, including queue or handler errors.
+        """
+        task = self._task
+        if task is None:
+            raise RuntimeError("update manager is not running")
+        try:
+            await asyncio.shield(task)
+        except asyncio.CancelledError:
+            waiter = asyncio.current_task()
+            if not task.cancelled() or (waiter is not None and waiter.cancelling()):
+                raise
+
     async def feed_raw_update(self, raw_update: object) -> None:
         """Offer a raw Telegram update to the bounded background-processing queue.
 
@@ -141,7 +176,12 @@ class UpdateManager:
 
         Args:
             raw_update: Decoded Telegram update or update-container object to enqueue.
+
+        Raises:
+            Exception: An already-failed drainer's exception, before accepting another raw update.
         """
+        if self._task is not None and self._task.done():
+            self._task.result()
         if not self._offer_queue(self._raw_updates, raw_update):
             return
 
@@ -159,8 +199,11 @@ class UpdateManager:
         started = time.perf_counter()
         async with self._state_lock:
             await self._ensure_loaded()
-            events = await self._process_raw_update(raw_update)
-            await self._persist_cursor()
+            try:
+                events = await self._process_raw_update(raw_update)
+                await self._persist_cursor()
+            finally:
+                self._pending_entities.clear()
         for event in events:
             await self.emit_update(event)
         _emit_update_event(
@@ -170,7 +213,7 @@ class UpdateManager:
     async def emit_update(self, update: Update) -> None:
         """Offer a normalized update to consumers, then invoke matching handlers sequentially.
 
-        If the public queue rejects the item under a dropping overflow policy, handlers are not invoked. Matching registered types are visited in registration-mapping order and each handler is awaited before the next one when it returns an awaitable.
+        Registered handlers without an active iterator receive updates without retaining iterator copies. Otherwise public-queue admission precedes handlers, and a rejected item is not passed to handlers. Matching registered types are visited in registration-mapping order and each handler is awaited before the next one when it returns an awaitable.
 
         Args:
             update: Normalized public update to queue and dispatch.
@@ -179,15 +222,18 @@ class UpdateManager:
             asyncio.QueueFull: If the public queue is full and policy is ``"raise"``.
             Exception: Propagates a matching handler failure.
         """
-        if not self._offer_queue(self._updates, update):
+        queue_update = self._iterator_count > 0 or not any(self._handlers.values())
+        if queue_update and not self._offer_queue(self._updates, update):
             record_metric(
                 "updates.queue_dropped", 1, attributes={"queue": "public", "policy": self._config.update_queue_overflow}
             )
             return
         await self._dispatch_handlers(update)
 
-    async def iter_updates(self) -> AsyncIterator[Update]:
+    async def iter_updates(self) -> AsyncGenerator[Update]:
         """Yield normalized public updates from the FIFO queue until the consumer is cancelled.
+
+        The iterator becomes active on its first ``anext`` and stays active until closed or cancelled, including while its consumer processes an event. Multiple iterators compete for the same queue. Callback-only events emitted before activation are not retained, while clients without handlers retain the bounded pre-iteration backlog.
 
         Yields:
             Updates accepted by the public queue. Dropped updates and items never processed due to drainer cancellation are not yielded.
@@ -195,8 +241,12 @@ class UpdateManager:
         Cancellation:
             Stopping the manager does not end this iterator or wake a waiting consumer.
         """
-        while True:
-            yield await self._updates.get()
+        self._iterator_count += 1
+        try:
+            while True:
+                yield await self._updates.get()
+        finally:
+            self._iterator_count -= 1
 
     @overload
     def on(self, update_type: type[UpdateT]) -> Callable[[UpdateHandler[UpdateT]], UpdateHandler[UpdateT]]:
@@ -280,9 +330,10 @@ class UpdateManager:
         self._duplicates = DuplicateTracker(self._cursor.duplicate_keys, max_size=self._config.update_duplicate_window)
 
     async def _persist_cursor(self) -> None:
-        """Atomically persist the current cursor, duplicate window and merged peer entities."""
+        """Atomically persist cursor state and peer observations while retaining newer field corrections"""
         cursor = self._current_cursor().with_duplicate_keys(self._duplicates.keys())
         self._cursor = cursor
+        observations = tuple(self._pending_entities)
 
         def persist(payload):
             """Rebuild the session record with the manager's current persisted update state.
@@ -291,13 +342,14 @@ class UpdateManager:
                 payload: Latest stored session mapping supplied by ``storage.mutate``.
             """
             record = session_record_from_mapping(payload or {})
+            peers = _merge_observed_peers(record.peers, observations) if observations else record.peers
             return SessionRecord(
                 dc_id=record.dc_id,
                 auth_key=record.auth_key,
                 dc_options=record.dc_options,
                 user=record.user,
                 update_state=cursor.to_update_state(),
-                peers=merge_peer_cache_entries(record.peers, cursor.entities),
+                peers=peers,
                 metadata=metadata_with_duplicate_keys(record.metadata, cursor.duplicate_keys, cursor.channel_cursors),
             )
 
@@ -309,7 +361,6 @@ class UpdateManager:
         Args:
             raw_update: Decoded Telegram update or container to inspect and apply.
         """
-        self._remember_entities(_extract_entity_references(raw_update))
         if isinstance(
             raw_update,
             types.UpdatesDifferenceEmpty
@@ -318,6 +369,7 @@ class UpdateManager:
             | types.UpdatesDifferenceTooLong,
         ):
             return await self._apply_difference(raw_update)
+        await self._remember_entities(_extract_entity_references(raw_update))
         if isinstance(raw_update, types.UpdatesTooLong):
             return await self._recover_gap()
         events: list[Update] = []
@@ -352,7 +404,6 @@ class UpdateManager:
                 events.extend(await self._recover_gap())
             events.extend(self._apply_update_unit(unit, check_gap=True))
         self._apply_sequence(raw_update)
-        self._remember_entities(_extract_entity_references(raw_update))
         return events
 
     async def _recover_gap(self) -> list[Update]:
@@ -434,7 +485,7 @@ class UpdateManager:
                 | types.UpdatesChannelDifferenceTooLong,
             ):
                 raise TypeError("updates.getChannelDifference returned a non-channel difference result")
-            recovered.extend(self._apply_channel_difference(channel_id, difference))
+            recovered.extend(await self._apply_channel_difference(channel_id, difference))
             if getattr(difference, "final", True):
                 events = _ordered_events(recovered)
                 _emit_update_event(
@@ -457,7 +508,7 @@ class UpdateManager:
         Args:
             difference: Decoded result of ``updates.getDifference``.
         """
-        self._remember_entities(_extract_entity_references(difference))
+        await self._remember_entities(_extract_entity_references(difference))
         if isinstance(difference, types.UpdatesDifferenceEmpty):
             self._set_cursor(self._current_cursor().with_state(seq=difference.seq, date=difference.date))
             return []
@@ -487,14 +538,14 @@ class UpdateManager:
             return _ordered_events(events)
         return []
 
-    def _apply_channel_difference(self, channel_id: int, difference: object) -> list[Update]:
+    async def _apply_channel_difference(self, channel_id: int, difference: object) -> list[Update]:
         """Apply one channel difference response and update that channel's cursor.
 
         Args:
             channel_id: Channel whose cursor is updated.
             difference: Decoded result of ``updates.getChannelDifference``.
         """
-        self._remember_entities(_extract_entity_references(difference))
+        await self._remember_entities(_extract_entity_references(difference))
         if isinstance(difference, types.UpdatesChannelDifferenceEmpty):
             self._set_cursor(self._current_cursor().with_channel_state(channel_id, pts=difference.pts))
             return []
@@ -557,7 +608,6 @@ class UpdateManager:
         if qts is not None and qts > next_cursor.qts:
             next_cursor = next_cursor.with_state(qts=qts, date=date)
         self._set_cursor(next_cursor)
-        self._remember_entities(_extract_entity_references(raw))
         return events
 
     def _pts_gap(self, raw_update: object) -> bool:
@@ -659,8 +709,8 @@ class UpdateManager:
         if seq > cursor.seq:
             self._set_cursor(cursor.with_state(seq=seq, date=_raw_date(raw_update, None)))
 
-    def _remember_entities(self, entities: Iterable[EntityReference]) -> None:
-        """Merge observed entities into cursor state when the iterable is nonempty.
+    async def _remember_entities(self, entities: Iterable[EntityReference]) -> None:
+        """Retain raw observations and their durable baselines separately from the recovery cursor
 
         Args:
             entities: Entity references extracted from raw update data.
@@ -668,6 +718,9 @@ class UpdateManager:
         collected = tuple(entities)
         if not collected:
             return
+        record = session_record_from_mapping(await self._storage.load() or {})
+        current_peers = {(peer.kind, peer.id): peer for peer in record.peers}
+        self._pending_entities.extend((entity, current_peers.get((entity.kind, entity.id))) for entity in collected)
         self._set_cursor(self._current_cursor().with_entities(collected))
 
     def _offer_queue(self, queue: asyncio.Queue[Any], item: Any) -> bool:
@@ -745,6 +798,110 @@ class UpdateManager:
             if entity.kind == "channel" and entity.id == channel_id and entity.access_hash is not None:
                 return types.InputChannel(channel_id=channel_id, access_hash=entity.access_hash)
         return None
+
+
+def _merge_observed_peers(
+    existing: tuple[PeerCacheEntry, ...], observations: tuple[tuple[EntityReference, PeerCacheEntry | None], ...]
+) -> tuple[PeerCacheEntry, ...]:
+    """Merge transaction observations in order against one durable snapshot
+
+    Args:
+        existing: Current durable peers at mutation entry.
+        observations: Ordered raw entities paired with their admission-time peer baselines.
+    """
+    snapshot = {(peer.kind, peer.id): peer for peer in existing}
+    merged = dict(snapshot)
+    for entity, baseline in observations:
+        key = (entity.kind, entity.id)
+        current = snapshot.get(key)
+        if current != baseline and (current is None or baseline is None):
+            continue
+        incoming = entity.to_peer_cache_entry()
+        if not entity.complete:
+            incoming = replace(incoming, raw={**(incoming.raw or {}), "_miniproto_complete": False})
+        previous = merged.get(key)
+        candidate = incoming if previous is None else merge_peer_entry(previous, incoming)
+        if current != baseline:
+            assert current is not None and baseline is not None
+            candidate = _retain_newer_peer_fields(candidate, baseline, current)
+        if entity.kind == "self":
+            merged.pop(("user", entity.id), None)
+        merged[key] = candidate
+    return tuple(merged.values())
+
+
+def _retain_newer_peer_fields(
+    candidate: PeerCacheEntry, baseline: PeerCacheEntry, current: PeerCacheEntry
+) -> PeerCacheEntry:
+    """Retain newer fields without discarding unrelated pending alias removals
+
+    Args:
+        candidate: Result of applying the pending observation to earlier transaction observations.
+        baseline: Durable peer snapshot captured when this observation was admitted.
+        current: Current durable peer at mutation entry, excluding this transaction's changes.
+    """
+    if _full_observation_revision(current) != _full_observation_revision(baseline):
+        return current
+    baseline_raw = dict(baseline.raw or {})
+    current_raw = dict(current.raw or {})
+    raw = dict(candidate.raw or {})
+    baseline_aliases = set(peer_usernames(baseline.username, baseline.raw))
+    current_aliases = peer_usernames(current.username, current.raw)
+    baseline_times = baseline.username_observed_at or {}
+    current_times = current.username_observed_at or {}
+    protected_aliases = {
+        alias
+        for alias in baseline_aliases | set(current_aliases)
+        if (alias in baseline_aliases, baseline_times.get(alias))
+        != (alias in current_aliases, current_times.get(alias))
+    }
+    current_primary = normalize_username(current.username or "")
+    if current.username != baseline.username and current_primary is not None:
+        protected_aliases.add(current_primary)
+    aliases = [alias for alias in peer_usernames(candidate.username, candidate.raw) if alias not in protected_aliases]
+    observed = {
+        alias: timestamp
+        for alias, timestamp in (candidate.username_observed_at or {}).items()
+        if alias not in protected_aliases
+    }
+    for alias in current_aliases:
+        if alias in protected_aliases:
+            aliases.append(alias)
+            if alias in current_times:
+                observed[alias] = current_times[alias]
+    username = (
+        current.username
+        if current.username != baseline.username or current_primary in protected_aliases
+        else candidate.username
+    )
+    if normalize_username(username or "") not in aliases:
+        username = None
+    raw["usernames"] = aliases
+
+    # Name fields are one display value, a newer raw name must also supersede an older projected title
+    name_fields = {"title", "first_name", "last_name"}
+    changed_names = {key for key in name_fields if baseline_raw.get(key) != current_raw.get(key)}
+    for key in (baseline_raw.keys() | current_raw.keys()) - {"usernames", "_miniproto_complete"}:
+        if baseline_raw.get(key) != current_raw.get(key):
+            raw.pop(key, None)
+            if key in current_raw:
+                raw[key] = current_raw[key]
+    if changed_names:
+        for key in name_fields:
+            raw.pop(key, None)
+            if key in current_raw and (
+                key != "title" or key in changed_names or not changed_names & {"first_name", "last_name"}
+            ):
+                raw[key] = current_raw[key]
+    return replace(
+        candidate,
+        username=username,
+        phone=current.phone if current.phone != baseline.phone else candidate.phone,
+        access_hash=current.access_hash if current.access_hash != baseline.access_hash else candidate.access_hash,
+        updated_at=current.updated_at,
+        raw=raw,
+        username_observed_at=observed,
+    )
 
 
 def _iter_update_units(raw_update: object) -> tuple[RawUpdateUnit, ...]:
@@ -846,9 +1003,10 @@ def _extract_entity_references(raw: object) -> tuple[EntityReference, ...]:
             entities.append(
                 EntityReference(
                     id=user.id,
-                    kind="user",
+                    kind="self" if user.self_ else "user",
                     access_hash=None if user.min else user.access_hash,
                     username=user.username,
+                    usernames=tuple(username.username for username in user.usernames or () if username.active),
                     phone=user.phone,
                     title=" ".join(part for part in (user.first_name, user.last_name) if part) or None,
                     complete=not user.min,
@@ -864,11 +1022,12 @@ def _extract_entity_references(raw: object) -> tuple[EntityReference, ...]:
                     kind="channel",
                     access_hash=None if chat.min else chat.access_hash,
                     username=chat.username,
+                    usernames=tuple(username.username for username in chat.usernames or () if username.active),
                     title=chat.title,
                     complete=not chat.min,
                 )
             )
-    if isinstance(raw, types.UpdatesDifference | types.UpdatesDifferenceSlice):
+    if isinstance(raw, types.UpdatesDifference | types.UpdatesDifferenceSlice | types.UpdatesChannelDifference):
         for update in raw.other_updates:
             entities.extend(_extract_entity_references(update))
     if isinstance(raw, types.Updates | types.UpdatesCombined):

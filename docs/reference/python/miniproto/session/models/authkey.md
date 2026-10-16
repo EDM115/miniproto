@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.session.models.AuthKey"
 source_path: "src/miniproto/session/models.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/models.py#L40"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/models.py#L41"
 aliases: ["miniproto.AuthKey","miniproto.session.AuthKey"]
 module: "miniproto.session.models"
 ---

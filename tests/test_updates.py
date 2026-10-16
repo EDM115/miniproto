@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import asyncio
 from datetime import UTC, datetime
+from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, Literal
 
 import pytest
 from tools.bench.fake_mtproto import FakeMTProtoServer
@@ -13,17 +14,23 @@ from miniproto import (
     Client,
     ClientConfig,
     DCOption,
+    EncryptedSQLiteSessionStorage,
     InMemorySessionStorage,
     NewMessage,
     SessionRecord,
     TransportConfig,
+    encode_file_id,
     event_loop,
 )
+from miniproto.config import UpdateQueueOverflowPolicy
+from miniproto.errors import NotFound
 from miniproto.mtproto.codec import MessageContainer, MessageContainerItem, RpcResult
+from miniproto.peers import PeerCache
 from miniproto.raw import functions, types
 from miniproto.session.models import PeerCacheEntry, UpdateState, session_record_from_mapping
 from miniproto.session.storage import SessionPayload
 from miniproto.types import Message, Peer, Update
+from miniproto.updates.manager import UpdateManager
 from miniproto.updates.state import EntityReference, UpdateCursor, merge_peer_cache_entries
 
 AUTH_KEY = b"u" * 256
@@ -807,13 +814,17 @@ def test_update_queue_drop_newest_overflow_policy_keeps_existing_update() -> Non
             if event.message is not None:
                 seen.append(event.message.text)
 
+        iterator = client.iter_updates()
+        pending = asyncio.create_task(anext(iterator))
+        await asyncio.sleep(0)
         await client._emit_new_message(public_message("old", message_id=1))
         await client._emit_new_message(public_message("new", message_id=2))
-        event = await anext(client.iter_updates())
+        event = await pending
         assert isinstance(event, NewMessage)
         assert event.message is not None
         assert event.message.text == "old"
         assert seen == ["old"]
+        await iterator.aclose()
 
     run(scenario())
 
@@ -880,6 +891,7 @@ def test_min_update_entity_cannot_poison_full_cached_access_hash() -> None:
             username="full-channel",
             updated_at=partial.updated_at,
             raw={"title": "Full channel"},
+            username_observed_at=full.username_observed_at,
         ),
     )
 
@@ -896,6 +908,7 @@ def test_min_update_preserves_live_cursor_channel_access_hash() -> None:
             username="full-channel",
             title="Full channel",
             updated_at=partial.updated_at,
+            username_observed_at={"full-channel": full.updated_at},
         ),
     )
 
@@ -906,13 +919,11 @@ def test_update_delivered_entity_invalidates_warm_peer_index_once() -> None:
         client = FakeUpdateClient(ClientConfig(api_id=1, api_hash="hash", session_storage=storage))
         assert await client.resolve_peer(1) == Peer(id=1, kind="user", access_hash=11)
         warm = client._peer_cache.index_stats
-        client._update_manager._cursor = UpdateCursor(
-            entities=(
-                EntityReference(id=1, kind="user", access_hash=11),
-                EntityReference(id=2, kind="user", access_hash=22, username="delivered"),
+        await client._update_manager.handle_raw_update(
+            types.Updates(
+                updates=(), users=(types.User(id=2, access_hash=22, username="delivered"),), chats=(), date=100, seq=0
             )
         )
-        await client._update_manager._persist_cursor()
         assert await client.resolve_peer("@delivered") == Peer(id=2, kind="user", access_hash=22)
         assert client._peer_cache.index_stats["rebuilds"] == warm["rebuilds"] + 1
         after = client._peer_cache.index_stats
@@ -920,3 +931,719 @@ def test_update_delivered_entity_invalidates_warm_peer_index_once() -> None:
         assert client._peer_cache.index_stats == after
 
     run(scenario())
+
+
+def client_with_queue(size: int = 1000, policy: UpdateQueueOverflowPolicy = "raise") -> Client:
+    return Client(ClientConfig(api_id=1, api_hash="synthetic-update-queue", session_storage=InMemorySessionStorage(), update_queue_size=size, update_queue_overflow=policy))  # fmt: skip
+
+
+def _queued_message(number: int) -> NewMessage:
+    date = datetime.fromtimestamp(100, UTC)
+    return NewMessage(date=date, message=Message(id=number, peer=Peer(id=42, kind="user"), text=str(number), date=date))
+
+
+def _queued_raw_message(number: int) -> types.UpdateShortMessage:
+    return types.UpdateShortMessage(id=number, user_id=42, message=str(number), pts=number, pts_count=1, date=100 + number)  # fmt: skip
+
+
+@pytest.mark.parametrize(("policy", "size"), [("raise", 1000), ("drop_newest", 2), ("drop_oldest", 2)])
+def test_callback_only_delivery_exceeds_queue_capacity(policy: UpdateQueueOverflowPolicy, size: int) -> None:
+    async def scenario() -> None:
+        client = client_with_queue(size=size, policy=policy)
+        seen: list[int] = []
+        delivered = asyncio.Event()
+
+        @client.on(NewMessage)
+        def receive(update: NewMessage) -> None:
+            assert update.message is not None
+            seen.append(update.message.id)
+            delivered.set()
+
+        await client.connect()
+        waiter = asyncio.create_task(client.wait_for_updates())
+        try:
+            for number in range(1, client.config.update_queue_size + 8):
+                delivered.clear()
+                await client._feed_raw_update(_queued_raw_message(number))
+                await asyncio.wait_for(delivered.wait(), timeout=1)
+                await client._emit_update(Update(raw=number))
+            assert seen == list(range(1, size + 8))
+            assert client._update_manager._updates.empty()
+            assert not waiter.done()
+            stored = await client._storage.load()
+            assert session_record_from_mapping(stored or {}).update_state.pts == size + 7
+        finally:
+            await client.disconnect()
+            await waiter
+
+    event_loop.run(scenario())
+
+
+@pytest.mark.parametrize("callbacks", [False, True])
+@pytest.mark.parametrize("policy", ["raise", "drop_newest", "drop_oldest"])
+def test_active_iterator_preserves_overflow(callbacks: bool, policy: UpdateQueueOverflowPolicy) -> None:
+    async def scenario() -> None:
+        client = client_with_queue(size=2, policy=policy)
+        seen: list[int] = []
+
+        if callbacks:
+
+            @client.on(NewMessage)
+            def receive(update: NewMessage) -> None:
+                assert update.message is not None
+                seen.append(update.message.id)
+
+        iterator = client.iter_updates()
+        first = asyncio.create_task(anext(iterator))
+        await asyncio.sleep(0)
+        await client._emit_update(_queued_message(7))
+        assert await first == _queued_message(7)
+        await client._emit_update(_queued_message(31))
+        await client._emit_update(_queued_message(12))
+        if policy == "raise":
+            with pytest.raises(asyncio.QueueFull):
+                await client._emit_update(_queued_message(99))
+        else:
+            await client._emit_update(_queued_message(99))
+        expected = [12, 99] if policy == "drop_oldest" else [31, 12]
+        received = [await anext(iterator), await anext(iterator)]
+        assert [event.message.id for event in received if isinstance(event, NewMessage) and event.message] == expected
+        expected_callbacks = [7, 31, 12, 99] if policy == "drop_oldest" else [7, 31, 12]
+        assert seen == (expected_callbacks if callbacks else [])
+        await iterator.aclose()
+
+    event_loop.run(scenario())
+
+
+def test_callback_awaiting_iterator_observes_queue_admission_first() -> None:
+    async def scenario() -> None:
+        client = client_with_queue(size=1)
+        consumed = asyncio.Event()
+        order: list[str] = []
+
+        @client.on(NewMessage)
+        async def receive(_: NewMessage) -> None:
+            await asyncio.wait_for(consumed.wait(), timeout=1)
+            order.append("callback")
+
+        iterator = client.iter_updates()
+
+        async def consume() -> None:
+            assert await anext(iterator) == _queued_message(23)
+            order.append("iterator")
+            consumed.set()
+
+        consumer = asyncio.create_task(consume())
+        await asyncio.sleep(0)
+        await client._emit_update(_queued_message(23))
+        await consumer
+        assert order == ["iterator", "callback"]
+        await iterator.aclose()
+
+    event_loop.run(scenario())
+
+
+@pytest.mark.parametrize("cancel", [False, True], ids=["close", "cancel"])
+def test_last_iterator_releases_callback_only_delivery_without_retaining_new_copies(cancel: bool) -> None:
+    async def scenario() -> None:
+        client = client_with_queue(size=1)
+        seen: list[NewMessage] = []
+        client.on(NewMessage, seen.append)
+        iterator = client.iter_updates()
+        pending = asyncio.create_task(anext(iterator))
+        await asyncio.sleep(0)
+        if cancel:
+            pending.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await pending
+        else:
+            await client._emit_update(_queued_message(4))
+            assert await pending == _queued_message(4)
+            await iterator.aclose()
+        for number in [17, 6, 29]:
+            await client._emit_update(_queued_message(number))
+        assert seen == [_queued_message(number) for number in ([17, 6, 29] if cancel else [4, 17, 6, 29])]
+        assert client._update_manager._updates.empty()
+
+    event_loop.run(scenario())
+
+
+def test_competing_iterators_keep_queue_owned_until_last_closes() -> None:
+    async def scenario() -> None:
+        client = client_with_queue(size=1)
+        seen: list[NewMessage] = []
+        client.on(NewMessage, seen.append)
+        first = client.iter_updates()
+        second = client.iter_updates()
+        pending_first = asyncio.create_task(anext(first))
+        pending_second = asyncio.create_task(anext(second))
+        await asyncio.sleep(0)
+        await client._emit_update(_queued_message(8))
+        assert await pending_first == _queued_message(8)
+        await first.aclose()
+        await client._emit_update(_queued_message(3))
+        assert await pending_second == _queued_message(3)
+        await client._emit_update(_queued_message(19))
+        with pytest.raises(asyncio.QueueFull):
+            await client._emit_update(_queued_message(27))
+        assert await anext(second) == _queued_message(19)
+        await second.aclose()
+        await client._emit_update(_queued_message(41))
+        await client._emit_update(_queued_message(56))
+        assert seen == [_queued_message(number) for number in [8, 3, 19, 41, 56]]
+        assert client._update_manager._updates.empty()
+
+    event_loop.run(scenario())
+
+
+def test_callback_history_is_not_replayed_and_empty_handler_lists_keep_iterator_buffering() -> None:
+    async def scenario() -> None:
+        client = client_with_queue(size=1)
+        client.on(NewMessage, lambda _: None)
+        unopened = client.iter_updates()
+        await client._emit_update(_queued_message(14))
+        await client._emit_update(_queued_message(9))
+        pending = asyncio.create_task(anext(unopened))
+        await asyncio.sleep(0)
+        assert not pending.done()
+        await client._emit_update(_queued_message(22))
+        assert await pending == _queued_message(22)
+        await unopened.aclose()
+        client._update_manager.handlers[NewMessage].clear()
+        await client._emit_update(_queued_message(64))
+        iterator = client.iter_updates()
+        assert await anext(iterator) == _queued_message(64)
+        await iterator.aclose()
+
+    event_loop.run(scenario())
+
+
+def test_background_iterator_failure_is_public_and_cursor_commits_before_delivery() -> None:
+    async def scenario() -> None:
+        client = client_with_queue(size=1)
+        await client._handle_raw_update(_queued_raw_message(1))
+        await client.connect()
+        waiter = asyncio.create_task(client.wait_for_updates())
+        await client._feed_raw_update(_queued_raw_message(2))
+        with pytest.raises(asyncio.QueueFull):
+            await asyncio.wait_for(waiter, timeout=1)
+        assert client.is_connected
+        stored = await client._storage.load()
+        assert session_record_from_mapping(stored or {}).update_state.pts == 2
+        with pytest.raises(asyncio.QueueFull):
+            await client._feed_raw_update(_queued_raw_message(3))
+        assert client._update_manager._raw_updates.empty()
+        iterator = client.iter_updates()
+        first = await anext(iterator)
+        assert isinstance(first, NewMessage) and first.message is not None and first.message.id == 1
+        await client.connect()
+        recovered_waiter = asyncio.create_task(client.wait_for_updates())
+        await client._handle_raw_update(_queued_raw_message(2))
+        assert client._update_manager._updates.empty()
+        await client._feed_raw_update(_queued_raw_message(3))
+        recovered = await asyncio.wait_for(anext(iterator), timeout=1)
+        assert isinstance(recovered, NewMessage) and recovered.message is not None and recovered.message.id == 3
+        await iterator.aclose()
+        await client.disconnect()
+        await recovered_waiter
+
+    event_loop.run(scenario())
+
+
+def test_handler_failure_reaches_public_waiter_and_subsequent_raw_intake() -> None:
+    async def scenario() -> None:
+        client = client_with_queue()
+
+        @client.on(NewMessage)
+        def fail(_: NewMessage) -> None:
+            raise RuntimeError("synthetic handler failure")
+
+        await client.connect()
+        waiter = asyncio.create_task(client.wait_for_updates())
+        await client._feed_raw_update(_queued_raw_message(1))
+        with pytest.raises(RuntimeError, match="synthetic handler failure"):
+            await asyncio.wait_for(waiter, timeout=1)
+        with pytest.raises(RuntimeError, match="synthetic handler failure"):
+            await client._feed_raw_update(_queued_raw_message(2))
+        assert client._update_manager._raw_updates.empty()
+        assert client._update_manager._updates.empty()
+        with pytest.raises(RuntimeError, match="synthetic handler failure"):
+            await client.disconnect()
+
+    event_loop.run(scenario())
+
+
+def test_waiter_cancellation_leaves_drainer_running_and_disconnect_completes_new_waiter() -> None:
+    async def scenario() -> None:
+        client = client_with_queue(size=1)
+        delivered = asyncio.Event()
+        client.on(NewMessage, lambda _: delivered.set())
+        with pytest.raises(RuntimeError, match="not running"):
+            await client.wait_for_updates()
+        await client.connect()
+        cancelled_waiter = asyncio.create_task(client.wait_for_updates())
+        await asyncio.sleep(0)
+        cancelled_waiter.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await cancelled_waiter
+        await client._feed_raw_update(_queued_raw_message(1))
+        await asyncio.wait_for(delivered.wait(), timeout=1)
+        waiter = asyncio.create_task(client.wait_for_updates())
+        await asyncio.sleep(0)
+        await client.disconnect()
+        await asyncio.wait_for(waiter, timeout=1)
+
+    event_loop.run(scenario())
+
+
+def test_slow_callback_still_exposes_real_raw_queue_backpressure() -> None:
+    async def scenario() -> None:
+        client = client_with_queue(size=1)
+        started = asyncio.Event()
+        release = asyncio.Event()
+        finished = asyncio.Event()
+        seen: list[int] = []
+
+        @client.on(NewMessage)
+        async def receive(update: NewMessage) -> None:
+            assert update.message is not None
+            seen.append(update.message.id)
+            if update.message.id == 1:
+                started.set()
+                await release.wait()
+            else:
+                finished.set()
+
+        await client.connect()
+        await client._feed_raw_update(_queued_raw_message(1))
+        await asyncio.wait_for(started.wait(), timeout=1)
+        await client._feed_raw_update(_queued_raw_message(2))
+        with pytest.raises(asyncio.QueueFull):
+            await client._feed_raw_update(_queued_raw_message(3))
+        release.set()
+        await asyncio.wait_for(finished.wait(), timeout=1)
+        assert seen == [1, 2]
+        assert client._update_manager._updates.empty()
+        await client.disconnect()
+
+    event_loop.run(scenario())
+
+
+UPDATE_ALIAS_STORAGE_KEY = b"offline-update-alias-fixture-key"
+
+
+UPDATE_OLD_PHONE = "+15550103300"
+
+
+# fmt: off
+def raw_entity(kind: Literal["user", "self", "channel"], *, replacement: bool, minimal: bool = False) -> types.User | types.Channel:
+    usernames = (
+        types.Username(username="oldsecondary", active=False),
+        types.Username(username="newsecondary", active=True),
+        types.Username(username="othersecondary", active=True),
+        types.Username(username="inactive", active=False),
+    ) if replacement else None
+    username = "newprimary" if replacement else None
+    if kind in {"user", "self"}:
+        return types.User(id=71, self_=kind == "self", access_hash=999 if minimal else 717, first_name="Observed", username=username, usernames=usernames, min=minimal)
+    return types.Channel(id=71, access_hash=999 if minimal else 717, title="Observed channel", photo=types.ChatPhotoEmpty(), date=100, username=username, usernames=usernames, min=minimal)
+
+
+def container(entity: types.User | types.Channel, source: str) -> object:
+    users = (entity,) if isinstance(entity, types.User) else ()
+    chats = (entity,) if isinstance(entity, types.Channel) else ()
+    if source == "difference":
+        return types.UpdatesDifference(new_messages=(), new_encrypted_messages=(), other_updates=(), users=users, chats=chats, state=types.UpdatesState(pts=0, qts=0, date=100, seq=0, unread_count=0))
+    return types.Updates(updates=(), users=users, chats=chats, date=100, seq=0)
+
+
+@pytest.mark.parametrize("kind", ["user", "self", "channel"])
+@pytest.mark.parametrize("source", ["push", "difference"])
+@pytest.mark.parametrize("replacement", [False, True], ids=["remove", "replace"])
+def test_full_update_replaces_aliases_in_warm_and_reloaded_storage(tmp_path: Path, kind: Literal["user", "self", "channel"], source: str, replacement: bool) -> None:
+    async def scenario() -> None:
+        path = tmp_path / "session.sqlite"
+        storage = EncryptedSQLiteSessionStorage(path, key=UPDATE_ALIAS_STORAGE_KEY)
+        initial = SessionRecord(peers=(PeerCacheEntry(id=71, kind=kind, access_hash=710, username="oldprimary", phone=UPDATE_OLD_PHONE if kind in {"user", "self"} else None, raw={"_miniproto_complete": True, "usernames": ["oldsecondary"]}),))
+        await storage.save(initial)
+        requests: list[str] = []
+
+        async def remote(request: object) -> object:
+            assert isinstance(request, functions.ContactsResolveUsername)
+            requests.append(request.username)
+            if request.username == "oldprimary":
+                return types.ContactsResolvedPeer(peer=types.PeerUser(user_id=99), users=(types.User(id=99, access_hash=990, username="oldprimary"),), chats=())
+            raise NotFound("alias requires remote resolution")
+
+        config = ClientConfig(api_id=1, api_hash="offline", session_storage=storage)
+        cache = PeerCache(config, storage, remote)
+        manager = UpdateManager(config, storage, remote)
+        try:
+            assert await cache.resolve_peer("@oldprimary") == Peer(id=71, kind=kind, access_hash=710)
+            assert await cache.resolve_peer("@oldsecondary") == Peer(id=71, kind=kind, access_hash=710)
+            if kind in {"user", "self"}:
+                assert await cache.resolve_peer(UPDATE_OLD_PHONE) == Peer(id=71, kind=kind, access_hash=710)
+            await manager.handle_raw_update(container(raw_entity(kind, replacement=replacement), source))
+            record = session_record_from_mapping(await storage.load() or {})
+            assert len(record.peers) == 1
+            peer = record.peers[0]
+            assert peer.username == ("newprimary" if replacement else None)
+            assert peer.phone is None
+            assert peer.access_hash == 717
+
+            async def check_aliases(candidate: PeerCache) -> None:
+                before = len(requests)
+                if replacement:
+                    for alias in ("newprimary", "newsecondary", "othersecondary"):
+                        assert await candidate.resolve_peer(f"@{alias}") == Peer(id=71, kind=kind, access_hash=717)
+                assert len(requests) == before
+                for alias in ("oldsecondary", "inactive"):
+                    with pytest.raises(NotFound, match="alias requires remote resolution"):
+                        await candidate.resolve_peer(f"@{alias}")
+                assert requests[before:] == ["oldsecondary", "inactive"]
+                if kind in {"user", "self"}:
+                    with pytest.raises(NotFound, match="phone peer is not cached"):
+                        await candidate.resolve_peer(UPDATE_OLD_PHONE)
+                assert await candidate.resolve_peer("@oldprimary") == Peer(id=99, kind="user", access_hash=990)
+
+            await check_aliases(cache)
+            direct = PeerCache(config, InMemorySessionStorage(initial), remote)
+            await direct.remember_raw_entities(raw_entity(kind, replacement=replacement))
+            await check_aliases(direct)
+            await storage.close()
+            reloaded = EncryptedSQLiteSessionStorage(path, key=UPDATE_ALIAS_STORAGE_KEY)
+            try:
+                await check_aliases(PeerCache(config, reloaded, remote))
+                reloaded_manager = UpdateManager(config, reloaded, remote)
+                await reloaded_manager.handle_raw_update(types.UpdateShort(update=types.UpdateUserStatus(user_id=71, status=types.UserStatusEmpty()), date=101))
+                await check_aliases(PeerCache(config, reloaded, remote))
+            finally:
+                await reloaded.close()
+        finally:
+            await storage.close()
+
+    event_loop.run(scenario())
+
+
+@pytest.mark.parametrize("kind", ["user", "self", "channel"])
+def test_min_update_preserves_omitted_cached_aliases_and_usable_hash(tmp_path: Path, kind: Literal["user", "self", "channel"]) -> None:
+    async def scenario() -> None:
+        storage = EncryptedSQLiteSessionStorage(tmp_path / "session.sqlite", key=UPDATE_ALIAS_STORAGE_KEY)
+        await storage.save(SessionRecord(peers=(PeerCacheEntry(id=71, kind=kind, access_hash=710, username="oldprimary", phone=UPDATE_OLD_PHONE if kind in {"user", "self"} else None, raw={"_miniproto_complete": True, "usernames": ["oldsecondary"]}),)))
+
+        async def no_remote(request: object) -> object:
+            raise AssertionError(f"unexpected remote request: {type(request).__name__}")
+
+        config = ClientConfig(api_id=1, api_hash="offline", session_storage=storage)
+        try:
+            await UpdateManager(config, storage, no_remote).handle_raw_update(container(raw_entity(kind, replacement=False, minimal=True), "push"))
+            cache = PeerCache(config, storage, no_remote)
+            for alias in ("oldprimary", "oldsecondary"):
+                assert await cache.resolve_peer(f"@{alias}") == Peer(id=71, kind=kind, access_hash=710)
+            record = session_record_from_mapping(await storage.load() or {})
+            assert record.peers[0].access_hash == 710
+            if kind in {"user", "self"}:
+                assert record.peers[0].phone == UPDATE_OLD_PHONE
+                assert await cache.resolve_peer(UPDATE_OLD_PHONE) == Peer(id=71, kind=kind, access_hash=710)
+        finally:
+            await storage.close()
+
+    event_loop.run(scenario())
+
+
+OBSERVATION_STORAGE_KEY = b"offline-peer-observation-fixture-key"
+
+
+OBSERVATION_OLD_PHONE = "+15550103400"
+
+
+OBSERVATION_NEW_PHONE = "+15550103499"
+
+
+# fmt: off
+def original_peer(peer_id: int = 71) -> PeerCacheEntry:
+    return PeerCacheEntry(id=peer_id, kind="user", access_hash=710, username="oldprimary", phone=OBSERVATION_OLD_PHONE, raw={"_miniproto_complete": True, "usernames": ["oldsecondary"]})
+
+
+def pushed(entity: types.User, *, seq: int = 0) -> types.Updates:
+    return types.Updates(updates=(), users=(entity,), chats=(), date=100, seq=seq)
+
+
+def unrelated_update() -> types.UpdateShort:
+    return types.UpdateShort(update=types.UpdateUserStatus(user_id=99, status=types.UserStatusEmpty()), date=101)
+
+
+@pytest.mark.parametrize("route", ["history", "message", "media"])
+@pytest.mark.parametrize("replace_username", [False, True], ids=["remove", "replace"])
+def test_rpc_correction_survives_cursor_persistence_and_reload(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, route: str, replace_username: bool) -> None:
+    async def scenario() -> None:
+        path = tmp_path / "session.sqlite"
+        storage = EncryptedSQLiteSessionStorage(path, key=OBSERVATION_STORAGE_KEY)
+        await storage.save(SessionRecord(peers=(original_peer(),)))
+        config = ClientConfig(api_id=1, api_hash="offline", session_storage=storage)
+        client = Client(config)
+        corrected_username = "corrected" if replace_username else None
+        correction = types.User(id=71, access_hash=717, username=corrected_username, usernames=(types.Username(username="correctedsecondary", active=True),) if replace_username else None)
+        requests: list[object] = []
+
+        async def remote(request: object, **kwargs: object) -> object:
+            del kwargs
+            requests.append(request)
+            if isinstance(request, functions.ContactsResolveUsername):
+                raise NotFound("alias needs remote resolution")
+            if isinstance(request, functions.UpdatesGetState):
+                return types.UpdatesState(pts=0, qts=0, date=102, seq=0, unread_count=0)
+            if isinstance(request, functions.MessagesGetHistory):
+                return types.MessagesMessages(messages=(), users=(correction,), chats=(), topics=())
+            assert isinstance(request, functions.MessagesSendMessage | functions.MessagesSendMedia)
+            return pushed(correction)
+
+        monkeypatch.setattr(client, "_invoke_via_sender", remote)
+
+        async def assert_correction(cache: PeerCache) -> None:
+            expected = Peer(id=71, kind="user", access_hash=717)
+            assert await cache.resolve_peer(71) == expected
+            if corrected_username is not None:
+                assert await cache.resolve_peer(f"@{corrected_username}") == expected
+                assert await cache.resolve_peer("@correctedsecondary") == expected
+            for alias in ("oldprimary", "oldsecondary"):
+                with pytest.raises(NotFound, match="alias needs remote resolution"):
+                    await cache.resolve_peer(f"@{alias}")
+            with pytest.raises(NotFound, match="phone peer is not cached"):
+                await cache.resolve_peer(OBSERVATION_OLD_PHONE)
+
+        try:
+            await client.connect()
+            assert await client.resolve_peer("@oldprimary") == Peer(id=71, kind="user", access_hash=710)
+            assert await client.resolve_peer(OBSERVATION_OLD_PHONE) == Peer(id=71, kind="user", access_hash=710)
+            destination = Peer(id=71, kind="user", access_hash=710)
+            if route == "history":
+                await client.get_history(destination)
+            elif route == "message":
+                await client.send_message(destination, "offline fixture", random_id=34)
+            else:
+                document = types.Document(id=340, access_hash=341, file_reference=b"offline-reference", date=100, mime_type="application/octet-stream", size=1, dc_id=2, attributes=())
+                await client.send_file(destination, encode_file_id(document), caption="offline fixture", random_id=34)
+            assert isinstance(requests[0], {"history": functions.MessagesGetHistory, "message": functions.MessagesSendMessage, "media": functions.MessagesSendMedia}[route])
+            await assert_correction(client._peer_cache)
+            corrected_record = session_record_from_mapping(await storage.load() or {})
+            corrected_peer = corrected_record.peers[0]
+            assert corrected_peer.username == corrected_username
+            assert corrected_peer.phone is None
+            peers_revision = client._storage.domain_revisions()["peers"]
+
+            await client._handle_raw_update(unrelated_update())
+            await client._update_manager.sync_state()
+
+            assert session_record_from_mapping(await storage.load() or {}).peers == (corrected_peer,)
+            assert client._storage.domain_revisions()["peers"] == peers_revision
+            await assert_correction(client._peer_cache)
+            reloaded = EncryptedSQLiteSessionStorage(path, key=OBSERVATION_STORAGE_KEY)
+            try:
+                assert session_record_from_mapping(await reloaded.load() or {}).peers == (corrected_peer,)
+                await assert_correction(PeerCache(config, reloaded, remote))
+            finally:
+                await reloaded.close()
+
+            await client._handle_raw_update(pushed(types.User(id=71, min=True, access_hash=999, first_name="Partial")))
+            await assert_correction(client._peer_cache)
+            newer = types.User(id=71, access_hash=719, username="newest", phone=OBSERVATION_NEW_PHONE, usernames=(types.Username(username="newestsecondary", active=True),))
+            await client._handle_raw_update(pushed(newer))
+            expected = Peer(id=71, kind="user", access_hash=719)
+            for alias in ("@newest", "@newestsecondary", OBSERVATION_NEW_PHONE):
+                assert await client.resolve_peer(alias) == expected
+            with pytest.raises(NotFound, match="alias needs remote resolution"):
+                await client.resolve_peer("@correctedsecondary")
+            await client.disconnect()
+            reloaded = EncryptedSQLiteSessionStorage(path, key=OBSERVATION_STORAGE_KEY)
+            try:
+                cache = PeerCache(config, reloaded, remote)
+                for alias in ("@newest", "@newestsecondary", OBSERVATION_NEW_PHONE):
+                    assert await cache.resolve_peer(alias) == expected
+            finally:
+                await reloaded.close()
+        finally:
+            await client.disconnect()
+
+    event_loop.run(scenario())
+
+
+@pytest.mark.parametrize("rpc_peer_id", [71, 72], ids=["same-peer", "unrelated-peer"])
+def test_rpc_correction_during_recovery_only_supersedes_matching_pending_peer(rpc_peer_id: int) -> None:
+    async def scenario() -> None:
+        storage = InMemorySessionStorage(SessionRecord(peers=(original_peer(71), original_peer(72))))
+        config = ClientConfig(api_id=1, api_hash="offline", session_storage=storage)
+
+        async def remote(request: object) -> object:
+            if isinstance(request, functions.ContactsResolveUsername):
+                raise NotFound("older pending alias is no longer authoritative")
+            assert isinstance(request, functions.UpdatesGetDifference)
+            await cache.remember_raw_entities(types.User(id=rpc_peer_id, access_hash=800, username="rpc-corrected"))
+            return types.UpdatesDifferenceEmpty(date=102, seq=2)
+
+        cache = PeerCache(config, storage, remote)
+        manager = UpdateManager(config, storage, remote)
+        await manager.handle_raw_update(pushed(types.User(id=71, access_hash=711, username="envelope"), seq=2))
+
+        peers = {peer.id: peer for peer in session_record_from_mapping(await storage.load() or {}).peers}
+        assert peers[71].username == ("rpc-corrected" if rpc_peer_id == 71 else "envelope")
+        assert peers[71].access_hash == (800 if rpc_peer_id == 71 else 711)
+        assert peers[rpc_peer_id].username == "rpc-corrected"
+        assert peers[rpc_peer_id].phone is None
+        if rpc_peer_id == 71:
+            with pytest.raises(NotFound, match="older pending alias is no longer authoritative"):
+                await cache.resolve_peer("@envelope")
+        await manager.handle_raw_update(unrelated_update())
+        assert session_record_from_mapping(await storage.load() or {}).peers == tuple(peers.values())
+        await manager.handle_raw_update(pushed(types.User(id=71, access_hash=719, username="newest")))
+        assert await cache.resolve_peer("@newest") == Peer(id=71, kind="user", access_hash=719)
+
+    event_loop.run(scenario())
+
+
+@pytest.mark.parametrize("channel_difference", [False, True], ids=["global", "channel"])
+def test_newer_difference_entity_wins_over_envelope_with_shared_baseline(monkeypatch: pytest.MonkeyPatch, channel_difference: bool) -> None:
+    async def scenario() -> None:
+        monkeypatch.setattr("miniproto.updates.manager.POSSIBLE_GAP_GRACE_SECONDS", 0.0)
+        storage = InMemorySessionStorage(SessionRecord(peers=(original_peer(), PeerCacheEntry(id=8, kind="channel", access_hash=88))))
+        config = ClientConfig(api_id=1, api_hash="offline", session_storage=storage)
+        newest = types.User(id=71, access_hash=719, username="difference", phone=OBSERVATION_NEW_PHONE)
+
+        async def remote(request: object) -> object:
+            if channel_difference:
+                assert isinstance(request, functions.UpdatesGetChannelDifference)
+                return types.UpdatesChannelDifference(final=True, pts=2, new_messages=(), other_updates=(), chats=(), users=(newest,))
+            assert isinstance(request, functions.UpdatesGetDifference)
+            return types.UpdatesDifference(new_messages=(), new_encrypted_messages=(), other_updates=(), chats=(), users=(newest,), state=types.UpdatesState(pts=0, qts=0, date=102, seq=2, unread_count=0))
+
+        manager = UpdateManager(config, storage, remote)
+        updates = (types.UpdateChannelTooLong(channel_id=8, pts=1),) if channel_difference else ()
+        envelope = types.Updates(updates=updates, users=(types.User(id=71, access_hash=711, username="envelope"),), chats=(), date=100, seq=0 if channel_difference else 2)
+        await manager.handle_raw_update(envelope)
+        cache = PeerCache(config, storage, remote)
+        expected = Peer(id=71, kind="user", access_hash=719)
+        assert await cache.resolve_peer("@difference") == expected
+        assert await cache.resolve_peer(OBSERVATION_NEW_PHONE) == expected
+        peer = next(peer for peer in session_record_from_mapping(await storage.load() or {}).peers if peer.id == 71)
+        assert peer.username == "difference"
+        assert peer.phone == OBSERVATION_NEW_PHONE
+        assert peer.raw is not None and peer.raw["_miniproto_complete"] is True
+
+    event_loop.run(scenario())
+
+
+@pytest.mark.parametrize("partial_field", ["name", "phone", "username"])
+def test_partial_observation_during_recovery_does_not_block_independent_alias_removals(tmp_path: Path, partial_field: str) -> None:
+    async def scenario() -> None:
+        path = tmp_path / "partial.sqlite"
+        storage = EncryptedSQLiteSessionStorage(path, key=OBSERVATION_STORAGE_KEY)
+        await storage.save(SessionRecord(peers=(original_peer(),)))
+        config = ClientConfig(api_id=1, api_hash="offline", session_storage=storage)
+
+        async def remote(request: object) -> object:
+            if isinstance(request, functions.ContactsResolveUsername):
+                raise NotFound("retired alias requires remote resolution")
+            assert isinstance(request, functions.UpdatesGetDifference)
+            if partial_field == "name":
+                await cache.remember_raw_entities(types.User(id=71, min=True, access_hash=999, first_name="Newer partial"))
+            elif partial_field == "phone":
+                await cache.remember_raw_entities(types.User(id=71, min=True, phone=OBSERVATION_NEW_PHONE))
+            else:
+                await UpdateManager(config, storage, remote).handle_raw_update(pushed(types.User(id=71, min=True, username="partialprimary")))
+            return types.UpdatesDifferenceEmpty(date=102, seq=2)
+
+        cache = PeerCache(config, storage, remote)
+
+        async def check(candidate: PeerCache) -> None:
+            assert await candidate.resolve_peer(71) == Peer(id=71, kind="user", access_hash=711)
+            for alias in ("oldprimary", "oldsecondary"):
+                with pytest.raises(NotFound, match="retired alias requires remote resolution"):
+                    await candidate.resolve_peer(f"@{alias}")
+            with pytest.raises(NotFound, match="phone peer is not cached"):
+                await candidate.resolve_peer(OBSERVATION_OLD_PHONE)
+            if partial_field == "phone":
+                assert await candidate.resolve_peer(OBSERVATION_NEW_PHONE) == Peer(id=71, kind="user", access_hash=711)
+            if partial_field == "username":
+                assert await candidate.resolve_peer("@partialprimary") == Peer(id=71, kind="user", access_hash=711)
+
+        try:
+            assert await cache.resolve_peer("@oldsecondary") == Peer(id=71, kind="user", access_hash=710)
+            manager = UpdateManager(config, storage, remote)
+            await manager.handle_raw_update(pushed(types.User(id=71, access_hash=711, first_name="Older full"), seq=2))
+            record = session_record_from_mapping(await storage.load() or {})
+            peer = record.peers[0]
+            assert peer.username == ("partialprimary" if partial_field == "username" else None)
+            assert peer.phone == (OBSERVATION_NEW_PHONE if partial_field == "phone" else None)
+            assert peer.access_hash == 711
+            if partial_field == "name":
+                assert peer.raw is not None and peer.raw["first_name"] == "Newer partial"
+                assert peer.raw.get("title") != "Older full"
+            await check(cache)
+            await storage.close()
+            reloaded = EncryptedSQLiteSessionStorage(path, key=OBSERVATION_STORAGE_KEY)
+            try:
+                assert session_record_from_mapping(await reloaded.load() or {}).peers == (peer,)
+                await check(PeerCache(config, reloaded, remote))
+            finally:
+                await reloaded.close()
+        finally:
+            await storage.close()
+
+    event_loop.run(scenario())
+
+
+@pytest.mark.parametrize("full_source", ["rpc", "push"])
+@pytest.mark.parametrize("partial_count", [1, 3])
+def test_full_alias_absence_authority_survives_later_partials_and_reload(tmp_path: Path, full_source: str, partial_count: int) -> None:
+    async def scenario() -> None:
+        path = tmp_path / "full-then-partial.sqlite"
+        storage = EncryptedSQLiteSessionStorage(path, key=OBSERVATION_STORAGE_KEY)
+        await storage.save(SessionRecord(peers=(original_peer(),)))
+        config = ClientConfig(api_id=1, api_hash="offline", session_storage=storage)
+        authoritative: PeerCacheEntry | None = None
+
+        async def remote(request: object) -> object:
+            nonlocal authoritative
+            if isinstance(request, functions.ContactsResolveUsername):
+                raise NotFound("alias absent from newer full observation")
+            assert isinstance(request, functions.UpdatesGetDifference)
+            full = types.User(id=71, access_hash=800, username="rpc-corrected")
+            if full_source == "rpc":
+                await cache.remember_raw_entities(full)
+            else:
+                await UpdateManager(config, storage, remote).handle_raw_update(pushed(full))
+            partials = (types.User(id=71, min=True, first_name="Later partial"), types.User(id=71, min=True, username="partial-alias"), types.User(id=71, min=True, phone=OBSERVATION_NEW_PHONE))
+            for partial in partials[:partial_count]:
+                await cache.remember_raw_entities(partial)
+            authoritative = session_record_from_mapping(await storage.load() or {}).peers[0]
+            return types.UpdatesDifferenceEmpty(date=102, seq=2)
+
+        cache = PeerCache(config, storage, remote)
+
+        async def check(candidate: PeerCache) -> None:
+            for alias in ("envelope", "oldprimary", "oldsecondary"):
+                with pytest.raises(NotFound, match="alias absent from newer full observation"):
+                    await candidate.resolve_peer(f"@{alias}")
+            active = "rpc-corrected" if partial_count == 1 else "partial-alias"
+            assert await candidate.resolve_peer(f"@{active}") == Peer(id=71, kind="user", access_hash=800)
+            if partial_count == 3:
+                assert await candidate.resolve_peer(OBSERVATION_NEW_PHONE) == Peer(id=71, kind="user", access_hash=800)
+
+        try:
+            manager = UpdateManager(config, storage, remote)
+            await manager.handle_raw_update(pushed(types.User(id=71, access_hash=711, username="envelope"), seq=2))
+            await check(cache)
+            assert authoritative is not None
+            assert authoritative.raw is not None and authoritative.raw["first_name"] == "Later partial"
+            assert session_record_from_mapping(await storage.load() or {}).peers == (authoritative,)
+            await storage.close()
+            reloaded = EncryptedSQLiteSessionStorage(path, key=OBSERVATION_STORAGE_KEY)
+            try:
+                assert session_record_from_mapping(await reloaded.load() or {}).peers == (authoritative,)
+                await check(PeerCache(config, reloaded, remote))
+            finally:
+                await reloaded.close()
+        finally:
+            await storage.close()
+
+    event_loop.run(scenario())

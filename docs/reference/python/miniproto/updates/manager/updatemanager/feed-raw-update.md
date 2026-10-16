@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.updates.manager.UpdateManager.feed_raw_update"
 source_path: "src/miniproto/updates/manager.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/updates/manager.py#L137"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/updates/manager.py#L172"
 aliases: ["miniproto.updates.UpdateManager.feed_raw_update"]
 module: "miniproto.updates.manager"
 ---
@@ -25,3 +25,7 @@ Queue-full behavior is controlled by ``ClientConfig.update_queue_overflow``: ``"
 **Parameters:**
 
 - **raw_update** (<code>[object](#object)</code>) – Decoded Telegram update or update-container object to enqueue.
+
+**Raises:**
+
+- <code>[Exception](#Exception)</code> – An already-failed drainer's exception, before accepting another raw update.

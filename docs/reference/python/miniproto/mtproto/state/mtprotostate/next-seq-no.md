@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.mtproto.state.MTProtoState.next_seq_no"
 source_path: "src/miniproto/mtproto/state.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/mtproto/state.py#L78"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/mtproto/state.py#L122"
 aliases: ["miniproto.mtproto.MTProtoState.next_seq_no"]
 module: "miniproto.mtproto.state"
 ---

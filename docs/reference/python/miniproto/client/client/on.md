@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.client.Client.on"
 source_path: "src/miniproto/client.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L1897"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L2002"
 aliases: ["miniproto.Client.on"]
 module: "miniproto.client"
 ---
@@ -20,7 +20,7 @@ on(update_type: type[UpdateT], handler: UpdateHandler[UpdateT] | None = None) ->
 
 Register an update handler directly or return a decorator for that handler type.
 
-Handlers match with ``isinstance`` and run sequentially after public-queue admission. ``drop_newest`` overflow skips their delivery. A handler failure during background raw processing stops its task and surfaces when the manager stops.
+Handlers match with ``isinstance`` and run sequentially. Callback-only delivery retains no iterator copies. With an active iterator, public-queue admission precedes handlers and ``drop_newest`` overflow skips their delivery. A background handler failure stops processing and propagates through ``wait_for_updates``, subsequent raw intake and disconnect.
 
 **Parameters:**
 

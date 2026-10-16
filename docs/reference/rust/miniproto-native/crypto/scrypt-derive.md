@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::crypto::scrypt_derive"
 source_path: "rust/miniproto/src/crypto.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L439"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L443"
 aliases: ["miniproto._native.scrypt_derive"]
 python_visible: true
 ---
@@ -15,7 +15,7 @@ python_visible: true
 ## Provenance
 
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L439)
+- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L443)
 - Python exposure: `miniproto._native.scrypt_derive` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -42,7 +42,7 @@ fn scrypt_derive(py: _, password: _, salt: _, n: u32, r: u32, p: u32, length: us
 fn scrypt_derive(py: Python<'_>, password: Vec<u8>, salt: Vec<u8>, n: u32, r: u32, p: u32, length: usize) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:439-456`*
+*Defined in `rust/miniproto/src/crypto.rs:443-460`*
 
 Derives Python `scrypt_derive` bytes from password, salt and scrypt cost parameters.
 

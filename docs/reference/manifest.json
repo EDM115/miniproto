@@ -6,7 +6,7 @@
     }
   ],
   "page_counts": {
-    "python": 519,
+    "python": 521,
     "rust": 62,
     "telegram": 4095
   },
@@ -116,7 +116,7 @@
       "path": "python/miniproto/auth/key_exchange/authkeyexchange.md",
       "qualified_name": "miniproto.auth.key_exchange.AuthKeyExchange",
       "route": "/reference/python/miniproto/auth/key_exchange/authkeyexchange/",
-      "sha256": "3d9a7ae2b747ecc4724e4dfab101b0575dd489ac8c32dfaa8471fccf368639e6",
+      "sha256": "5c070be41bfc0a3b40b3e58666d90e2aae1ef9589bc1ecb4ada55ea8f5502289",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -125,7 +125,7 @@
       "path": "python/miniproto/auth/key_exchange/authkeyexchange/create-auth-key.md",
       "qualified_name": "miniproto.auth.key_exchange.AuthKeyExchange.create_auth_key",
       "route": "/reference/python/miniproto/auth/key_exchange/authkeyexchange/create-auth-key/",
-      "sha256": "f9be63c41d1a6d44c6bf7a82dd66b5983061c528c75625c3629b27d7c10871a1",
+      "sha256": "da4d40deaa33f0c7f9980577413225481473f2feb08da65325abdbf4e557f2a6",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -134,7 +134,7 @@
       "path": "python/miniproto/auth/key_exchange/authkeyexchangeresult.md",
       "qualified_name": "miniproto.auth.key_exchange.AuthKeyExchangeResult",
       "route": "/reference/python/miniproto/auth/key_exchange/authkeyexchangeresult/",
-      "sha256": "ff0541e164a4b13f92939fc546a8a20035827a5fa640190c689584463fe0c92e",
+      "sha256": "587dc46077e0158ce1581ec1ed8aec473e5f41ece13bbcb807c52963df10d78c",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -143,7 +143,7 @@
       "path": "python/miniproto/auth/key_exchange/authkeytransport.md",
       "qualified_name": "miniproto.auth.key_exchange.AuthKeyTransport",
       "route": "/reference/python/miniproto/auth/key_exchange/authkeytransport/",
-      "sha256": "89ccc816546e8bb3c060593781e42f01250bc36d6a94a40f15928545f709bdf4",
+      "sha256": "d1d77902563a5691d71783dcbe1861d1633178b5b8126380ff5f1dd5963029f7",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -152,7 +152,7 @@
       "path": "python/miniproto/auth/key_exchange/authkeytransport/send-unencrypted.md",
       "qualified_name": "miniproto.auth.key_exchange.AuthKeyTransport.send_unencrypted",
       "route": "/reference/python/miniproto/auth/key_exchange/authkeytransport/send-unencrypted/",
-      "sha256": "4ccca4dd80de53f65336f1b5fc224c565cfd0c58a8f0d54edab4f1f425c2b6ff",
+      "sha256": "f9e80f5311759c597647d788dd9ebb7de1868c952e93a411c92a9806c5166119",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -161,7 +161,7 @@
       "path": "python/miniproto/auth/key_exchange/clientdhinnerdata.md",
       "qualified_name": "miniproto.auth.key_exchange.ClientDHInnerData",
       "route": "/reference/python/miniproto/auth/key_exchange/clientdhinnerdata/",
-      "sha256": "7c30f6ec262ba3d8c0b16ff3428090539f7de18b09a795f21a053e9214eae45c",
+      "sha256": "3cdd452390216c9269dd88e2b111095e444a0afc920d3e3aa812e0eefd772a02",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -170,7 +170,7 @@
       "path": "python/miniproto/auth/key_exchange/clientdhinnerdata/serialize.md",
       "qualified_name": "miniproto.auth.key_exchange.ClientDHInnerData.serialize",
       "route": "/reference/python/miniproto/auth/key_exchange/clientdhinnerdata/serialize/",
-      "sha256": "26f7ccdf4076898212acac549f85f12802366ad12a5e0f2e84a406e42b497f00",
+      "sha256": "e3c63e6ebbdab61e94b7f7830ef41ab834cb657f5bc8f4b188549e7e29ebc715",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -179,7 +179,7 @@
       "path": "python/miniproto/auth/key_exchange/compute-auth-key.md",
       "qualified_name": "miniproto.auth.key_exchange.compute_auth_key",
       "route": "/reference/python/miniproto/auth/key_exchange/compute-auth-key/",
-      "sha256": "0236835745c4db2da6a23b437b36593fdee8d5d25f25bb4b69bb40e19857cb38",
+      "sha256": "5bed07513d96d17256696593686183d4080b0658cac9d8abc9ec67a9db237535",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -188,7 +188,7 @@
       "path": "python/miniproto/auth/key_exchange/compute-new-nonce-hash.md",
       "qualified_name": "miniproto.auth.key_exchange.compute_new_nonce_hash",
       "route": "/reference/python/miniproto/auth/key_exchange/compute-new-nonce-hash/",
-      "sha256": "5eca9a5c7d2b52f11d152be9854689d5309c98311b8eb269f4b4973ef0886d30",
+      "sha256": "f8e0e44a15c20fedbeedcb6e6aa486bc0edc5f344216be8e03c505b409c2e06f",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -197,7 +197,7 @@
       "path": "python/miniproto/auth/key_exchange/decrypt-server-dh-answer.md",
       "qualified_name": "miniproto.auth.key_exchange.decrypt_server_dh_answer",
       "route": "/reference/python/miniproto/auth/key_exchange/decrypt-server-dh-answer/",
-      "sha256": "686a8a4c70d5ae68c9efc6002f3173075231874fff0a227a9f26ddf1ad1ddc11",
+      "sha256": "d10bb9f2ee14b69aedc374c603b85b738c31a39727c8cec10e2e7d793ab37f7b",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -206,7 +206,7 @@
       "path": "python/miniproto/auth/key_exchange/derive-tmp-aes-key-iv.md",
       "qualified_name": "miniproto.auth.key_exchange.derive_tmp_aes_key_iv",
       "route": "/reference/python/miniproto/auth/key_exchange/derive-tmp-aes-key-iv/",
-      "sha256": "ae3225ae08f2df92eb8b86639a488130a32f2b10487cce10f43ea166b284901d",
+      "sha256": "44f78b60187acc91a36348415dd4c1ed0f59fbba2e77e3887d001a7fbcf07b26",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -215,7 +215,7 @@
       "path": "python/miniproto/auth/key_exchange/dhgenfail.md",
       "qualified_name": "miniproto.auth.key_exchange.DHGenFail",
       "route": "/reference/python/miniproto/auth/key_exchange/dhgenfail/",
-      "sha256": "2972db039fd8938805534454485496bd2c2bec0112c64066b16824a6783ea610",
+      "sha256": "b3ddaa2357775d9339cf7051218b0f2ee66798778241fc0bc80b424ecb3391b8",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -224,7 +224,7 @@
       "path": "python/miniproto/auth/key_exchange/dhgenok.md",
       "qualified_name": "miniproto.auth.key_exchange.DHGenOk",
       "route": "/reference/python/miniproto/auth/key_exchange/dhgenok/",
-      "sha256": "d1fabaa898a9fc1eae21f7ad1398b1b02e9af39d5a631495ce9b4218db282a17",
+      "sha256": "d6999a564099a175c669d38e52d11d6e04990ec9842fe9e024104e7f3b577c33",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -233,7 +233,7 @@
       "path": "python/miniproto/auth/key_exchange/dhgenretry.md",
       "qualified_name": "miniproto.auth.key_exchange.DHGenRetry",
       "route": "/reference/python/miniproto/auth/key_exchange/dhgenretry/",
-      "sha256": "e4b88cb2669bb7d2b87a4710fb86e89084ec9af874e95d7c62b3058cfbe42d89",
+      "sha256": "e8f35cc27c1f9a2ab278a0a0d1ae025d5a0c1d1e2c04e620c4cce35348fde86f",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -242,7 +242,7 @@
       "path": "python/miniproto/auth/key_exchange/encode-client-dh-inner-data.md",
       "qualified_name": "miniproto.auth.key_exchange.encode_client_dh_inner_data",
       "route": "/reference/python/miniproto/auth/key_exchange/encode-client-dh-inner-data/",
-      "sha256": "5c13967583dfb04bbfb991935e817190d7ff759e5bd89b19e06a467ccf9f669f",
+      "sha256": "dcbffbbf5433153c43de731b0c8269b260bc9602ae1fe10a5e242ca1382e1907",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -251,7 +251,7 @@
       "path": "python/miniproto/auth/key_exchange/encode-pq-inner-data-dc.md",
       "qualified_name": "miniproto.auth.key_exchange.encode_pq_inner_data_dc",
       "route": "/reference/python/miniproto/auth/key_exchange/encode-pq-inner-data-dc/",
-      "sha256": "97c3e07d3e3992c95f2d1902850f74e52346d3ea2a8e9b488f3828d846ab98de",
+      "sha256": "49345c4a3699152b34dcfddc8f03a48d5a6b3e2dbd55d7ecb133493e1728813d",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -260,7 +260,7 @@
       "path": "python/miniproto/auth/key_exchange/factorize-pq.md",
       "qualified_name": "miniproto.auth.key_exchange.factorize_pq",
       "route": "/reference/python/miniproto/auth/key_exchange/factorize-pq/",
-      "sha256": "f55462e5d8e61fb996b1e05ef855f933e6a29b6a62af8aec056bb565350e0a93",
+      "sha256": "d3ebbac54ccb9cf50c85528ad853a7441d846574684c7f5dba0ef8e60e168fea",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -269,7 +269,7 @@
       "path": "python/miniproto/auth/key_exchange/pqinnerdatadc.md",
       "qualified_name": "miniproto.auth.key_exchange.PQInnerDataDC",
       "route": "/reference/python/miniproto/auth/key_exchange/pqinnerdatadc/",
-      "sha256": "0ec0b488d52f06afb18f65fe061e34c201ef2abd1c9f4cdac40dd54846665707",
+      "sha256": "0f6de005cf4d2b4ffe30a8b74c7d178fbcc079f5576e68703f33572e09766b24",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -278,7 +278,7 @@
       "path": "python/miniproto/auth/key_exchange/pqinnerdatadc/serialize.md",
       "qualified_name": "miniproto.auth.key_exchange.PQInnerDataDC.serialize",
       "route": "/reference/python/miniproto/auth/key_exchange/pqinnerdatadc/serialize/",
-      "sha256": "959bf2e451b6e1d32342b68b0f83cad70a9ab3d533a13878cfab77df0feb1812",
+      "sha256": "c895c7a2a061059a76f972a2a84c4dede95e482536e5aeb3c1163315809c7121",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -287,7 +287,7 @@
       "path": "python/miniproto/auth/key_exchange/public-rsa-fingerprint.md",
       "qualified_name": "miniproto.auth.key_exchange.public_rsa_fingerprint",
       "route": "/reference/python/miniproto/auth/key_exchange/public-rsa-fingerprint/",
-      "sha256": "bd1f3a6d3f6f088e9a692150f885db225ed6e8d700ffdab58fe429704b141de8",
+      "sha256": "f0241747f3568417a81bb5afa716c5195786f6008d12a5265c801d66eabe7f89",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -296,7 +296,7 @@
       "path": "python/miniproto/auth/key_exchange/reqdhparams.md",
       "qualified_name": "miniproto.auth.key_exchange.ReqDHParams",
       "route": "/reference/python/miniproto/auth/key_exchange/reqdhparams/",
-      "sha256": "2bfc8da2f78a5c1b6d5c5115354dc49294e5920788243ade290663aceffb2d9e",
+      "sha256": "fd11c655608509b64e2816ff042d8e47f9fc7f3476e103f2de84b3817defa212",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -305,7 +305,7 @@
       "path": "python/miniproto/auth/key_exchange/reqdhparams/serialize.md",
       "qualified_name": "miniproto.auth.key_exchange.ReqDHParams.serialize",
       "route": "/reference/python/miniproto/auth/key_exchange/reqdhparams/serialize/",
-      "sha256": "1d134521677457cf54cadce6e2b59a304f6ca212bddb96e899dbcddb5640ee8b",
+      "sha256": "fe7dc8ccb7012c1cbc3d2e1e65abc9cec0136b591ca6f4ecfb8fee2f562b6586",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -314,7 +314,7 @@
       "path": "python/miniproto/auth/key_exchange/reqpqmulti.md",
       "qualified_name": "miniproto.auth.key_exchange.ReqPQMulti",
       "route": "/reference/python/miniproto/auth/key_exchange/reqpqmulti/",
-      "sha256": "457f1a25a8119ff9e466efc5c88c8e3d069edc1821d14364535cb57e3d927d77",
+      "sha256": "23312522363c462c877fcaca0adc55ad3094240f7deed28df69ffd9e9fe34aa7",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -323,7 +323,7 @@
       "path": "python/miniproto/auth/key_exchange/reqpqmulti/serialize.md",
       "qualified_name": "miniproto.auth.key_exchange.ReqPQMulti.serialize",
       "route": "/reference/python/miniproto/auth/key_exchange/reqpqmulti/serialize/",
-      "sha256": "6f210b6618508ff3839b6d5937ff8d48de6e7eeea4a5c418acea4a273c9647e7",
+      "sha256": "6825fe6d4673d5240ee239649e226589011abe6e3256a93c2558778642576bed",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -332,7 +332,7 @@
       "path": "python/miniproto/auth/key_exchange/respq.md",
       "qualified_name": "miniproto.auth.key_exchange.ResPQ",
       "route": "/reference/python/miniproto/auth/key_exchange/respq/",
-      "sha256": "156772b08d1de48752517ce3783dee343d2365c077774ff774d2624204b15056",
+      "sha256": "a9e47f48a9057bf2bcc4f45efb8e4f9cb9f46c1eda1891e2895f265b37a34fbb",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -341,7 +341,7 @@
       "path": "python/miniproto/auth/key_exchange/respq/deserialize.md",
       "qualified_name": "miniproto.auth.key_exchange.ResPQ.deserialize",
       "route": "/reference/python/miniproto/auth/key_exchange/respq/deserialize/",
-      "sha256": "567929d2faf043e9c98d7bce4e09811ec9903855dcd30ed443e1ca85fbb94736",
+      "sha256": "2721371ba6c338844cff23df011844a385a011820fbcf0956d8c58600925c6c7",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -350,7 +350,7 @@
       "path": "python/miniproto/auth/key_exchange/respq/serialize.md",
       "qualified_name": "miniproto.auth.key_exchange.ResPQ.serialize",
       "route": "/reference/python/miniproto/auth/key_exchange/respq/serialize/",
-      "sha256": "19f2a08ff3b6a88e5666ec3e286dccb3596c38145829b8dcec7c8a12aed0eeb6",
+      "sha256": "6a06a791027e0452f3a0434594d4544c987ede54ec4795b3e209708f6db40930",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -359,7 +359,7 @@
       "path": "python/miniproto/auth/key_exchange/rsa-pad.md",
       "qualified_name": "miniproto.auth.key_exchange.rsa_pad",
       "route": "/reference/python/miniproto/auth/key_exchange/rsa-pad/",
-      "sha256": "e8d75e6b25c6a5602c6005370eac3a3d7bc513effeffd1258504fc5b7aff40d7",
+      "sha256": "407a962d9263f8a6f0166ed157a16951f242d69e88429b4b9f0b577f05ce800d",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -368,7 +368,7 @@
       "path": "python/miniproto/auth/key_exchange/rsakey.md",
       "qualified_name": "miniproto.auth.key_exchange.RSAKey",
       "route": "/reference/python/miniproto/auth/key_exchange/rsakey/",
-      "sha256": "bd6746221d38fae998a40f56757a615d7f8ee64844d4fb2cdb81008a9e3134f8",
+      "sha256": "f992a087090a11d4e2c40d7c48135785f16b320b7d788e87ce36a88dca55c82f",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -377,7 +377,7 @@
       "path": "python/miniproto/auth/key_exchange/rsakey/from-bytes.md",
       "qualified_name": "miniproto.auth.key_exchange.RSAKey.from_bytes",
       "route": "/reference/python/miniproto/auth/key_exchange/rsakey/from-bytes/",
-      "sha256": "0f41514dab4df7deffb4882ff0dbb141dc8d426fdcf3692c3a672f7a111ba020",
+      "sha256": "bfb936194855b143f7bc81274d13654bb6b62d1939a862f48d83bc961f7ef719",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -386,7 +386,7 @@
       "path": "python/miniproto/auth/key_exchange/select-rsa-key.md",
       "qualified_name": "miniproto.auth.key_exchange.select_rsa_key",
       "route": "/reference/python/miniproto/auth/key_exchange/select-rsa-key/",
-      "sha256": "f744549b5808c16adcc262891f316ffb374a54bd79fb189b364db2a953170f40",
+      "sha256": "565bb4a5e92c4313ce189a37819e29f7b09df2a47c0dae2f73a1a2b180cab798",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -395,7 +395,7 @@
       "path": "python/miniproto/auth/key_exchange/server-salt.md",
       "qualified_name": "miniproto.auth.key_exchange.server_salt",
       "route": "/reference/python/miniproto/auth/key_exchange/server-salt/",
-      "sha256": "5bd6639a36ce34cba261b24cda7a4f141c8dfc5e60d5c93dea2ad0582fd59dae",
+      "sha256": "4879c2a46175d6b267f32444792527b0a2561dacd46b966b5a08cc053a1e6a7c",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -404,7 +404,7 @@
       "path": "python/miniproto/auth/key_exchange/serverdhinnerdata.md",
       "qualified_name": "miniproto.auth.key_exchange.ServerDHInnerData",
       "route": "/reference/python/miniproto/auth/key_exchange/serverdhinnerdata/",
-      "sha256": "3fbf55c37b9f925cbc946e1d8ea93a19309d11b0251d1d0d7d3e8b3e908a1447",
+      "sha256": "f2ddc57ae6c3a47ea741629b35092d3d96b01a79797f4cfe3a70634fe3428399",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -413,7 +413,7 @@
       "path": "python/miniproto/auth/key_exchange/serverdhinnerdata/deserialize.md",
       "qualified_name": "miniproto.auth.key_exchange.ServerDHInnerData.deserialize",
       "route": "/reference/python/miniproto/auth/key_exchange/serverdhinnerdata/deserialize/",
-      "sha256": "3eeeb5e45d90e9819cecdec5f2e3895a76ff57868eea513cfb064fcf8aa72680",
+      "sha256": "5eb08f186e544c3030153bce0fa55ec72b9ab9346eb1cbdb709e6561ae9f8819",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -422,7 +422,7 @@
       "path": "python/miniproto/auth/key_exchange/serverdhinnerdata/serialize.md",
       "qualified_name": "miniproto.auth.key_exchange.ServerDHInnerData.serialize",
       "route": "/reference/python/miniproto/auth/key_exchange/serverdhinnerdata/serialize/",
-      "sha256": "4893892b24af0ab1400f73c804ef49b5cf71be1cca5588bfb5e2daaab2f74c88",
+      "sha256": "c24ac534ff9303b83712fbb869181238f5ebebf8029f065b50da24eecfbea37e",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -431,7 +431,7 @@
       "path": "python/miniproto/auth/key_exchange/serverdhparamsfail.md",
       "qualified_name": "miniproto.auth.key_exchange.ServerDHParamsFail",
       "route": "/reference/python/miniproto/auth/key_exchange/serverdhparamsfail/",
-      "sha256": "f2dc0c488d6c85df19a4bf15b8ff9ea4fc05ca54a7eed47515aff29522500d09",
+      "sha256": "93ff745da41684d06141148ae4679d58363ecf5786df196b2967c51343b83660",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -440,7 +440,7 @@
       "path": "python/miniproto/auth/key_exchange/serverdhparamsfail/deserialize-from.md",
       "qualified_name": "miniproto.auth.key_exchange.ServerDHParamsFail.deserialize_from",
       "route": "/reference/python/miniproto/auth/key_exchange/serverdhparamsfail/deserialize-from/",
-      "sha256": "766419796b0ed867fb3f9dcdb7a0994dad63e467fbd192060b25980f26b1da14",
+      "sha256": "e7af513078086b12363a265eec83b0e1d6d12b78e0702237f1778dbf1b85b786",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -449,7 +449,7 @@
       "path": "python/miniproto/auth/key_exchange/serverdhparamsfail/serialize.md",
       "qualified_name": "miniproto.auth.key_exchange.ServerDHParamsFail.serialize",
       "route": "/reference/python/miniproto/auth/key_exchange/serverdhparamsfail/serialize/",
-      "sha256": "71dc9c145c3a06afe05b43914d1ae57c8241d28f440485d40b91959786e99d83",
+      "sha256": "b39dd899a390f42139ed8f403b74264eeff20d1f4efb9ab9cba87fe9f2ceffd5",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -458,7 +458,7 @@
       "path": "python/miniproto/auth/key_exchange/serverdhparamsok.md",
       "qualified_name": "miniproto.auth.key_exchange.ServerDHParamsOk",
       "route": "/reference/python/miniproto/auth/key_exchange/serverdhparamsok/",
-      "sha256": "9784fede5bfecffbcd81651eab268958821f7154f084b7b9e55dbf17b617a986",
+      "sha256": "f67b6528eda1102a71fa83eb7e9b0c1bba045f98207d57d465610a6eb185871f",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -467,7 +467,7 @@
       "path": "python/miniproto/auth/key_exchange/serverdhparamsok/deserialize-from.md",
       "qualified_name": "miniproto.auth.key_exchange.ServerDHParamsOk.deserialize_from",
       "route": "/reference/python/miniproto/auth/key_exchange/serverdhparamsok/deserialize-from/",
-      "sha256": "871b880bc4273a747e624ea14ca1faa05d2affb597919575c776837cccba855e",
+      "sha256": "c82af165450564da030bcbd9edf97c1139d99876242ec58a01ace74e7da003d0",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -476,7 +476,7 @@
       "path": "python/miniproto/auth/key_exchange/serverdhparamsok/serialize.md",
       "qualified_name": "miniproto.auth.key_exchange.ServerDHParamsOk.serialize",
       "route": "/reference/python/miniproto/auth/key_exchange/serverdhparamsok/serialize/",
-      "sha256": "ab755e82cae07a205b6738c23046ec63c748e3e375abe5333b485dd193464e81",
+      "sha256": "ab17b8950b9bbccbd96d84261f7b69873b6d31e86cd6e7bff5bd7e4fa87eff9d",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -485,7 +485,7 @@
       "path": "python/miniproto/auth/key_exchange/setclientdhparams.md",
       "qualified_name": "miniproto.auth.key_exchange.SetClientDHParams",
       "route": "/reference/python/miniproto/auth/key_exchange/setclientdhparams/",
-      "sha256": "c54822dc045da7fa05aa018cdc9d9ad6bea947af5787fa1c18abb8d90fc5958b",
+      "sha256": "c4ac78d22c7ea71bdb758d20dd3b9a7f2d070f7dbff886598c936663ac1d37ec",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -494,7 +494,7 @@
       "path": "python/miniproto/auth/key_exchange/setclientdhparams/serialize.md",
       "qualified_name": "miniproto.auth.key_exchange.SetClientDHParams.serialize",
       "route": "/reference/python/miniproto/auth/key_exchange/setclientdhparams/serialize/",
-      "sha256": "10a94bf4ea7695a7bb6716fbd2b9c24e9401d3aa4e8ae98f633e0548215a19ee",
+      "sha256": "279d6b36d60cc586f0fca5647a44f009c36e4222c09e2a85f5e7760a02370405",
       "source_path": "src/miniproto/auth/key_exchange.py"
     },
     {
@@ -530,7 +530,7 @@
       "path": "python/miniproto/auth/service/authservice/handle-dc-migration.md",
       "qualified_name": "miniproto.auth.service.AuthService.handle_dc_migration",
       "route": "/reference/python/miniproto/auth/service/authservice/handle-dc-migration/",
-      "sha256": "9f72dcb206a4b8852f58340fed93471896a109bbc85c9bc88904e54ae27b9096",
+      "sha256": "3d9fa81681db7102003c81ed5368a32ad131c4285ac99b0f0d171ebaba9325fd",
       "source_path": "src/miniproto/auth/service.py"
     },
     {
@@ -584,7 +584,7 @@
       "path": "python/miniproto/client/client.md",
       "qualified_name": "miniproto.client.Client",
       "route": "/reference/python/miniproto/client/client/",
-      "sha256": "413e672341298d3fa8c3877d10ffc4d9f65cecc30d4aacc8390f67ec2ea07621",
+      "sha256": "68a12c719a04938392dd1089366d66c3c9192bfa73baabea57d16666ba275a64",
       "source_path": "src/miniproto/client.py"
     },
     {
@@ -593,7 +593,7 @@
       "path": "python/miniproto/client/client/connect.md",
       "qualified_name": "miniproto.client.Client.connect",
       "route": "/reference/python/miniproto/client/client/connect/",
-      "sha256": "2abb4c0d2c66a9fd9004cb50778efdaaae77981ef2df80fb19835e7c2e283970",
+      "sha256": "79cd4160327616602359fba3ea78f5cbfcccc02c7de6c1ad00b79441c49aeb1a",
       "source_path": "src/miniproto/client.py"
     },
     {
@@ -602,7 +602,7 @@
       "path": "python/miniproto/client/client/delete-messages.md",
       "qualified_name": "miniproto.client.Client.delete_messages",
       "route": "/reference/python/miniproto/client/client/delete-messages/",
-      "sha256": "e2f055726de0b01be26ff84c2cd6245858784ea752a4c6365405cd60783cd47c",
+      "sha256": "3644ee8ac174bb444309cfde745118a318b6fdc1ae49a08fd1154d684aebee48",
       "source_path": "src/miniproto/client.py"
     },
     {
@@ -611,7 +611,7 @@
       "path": "python/miniproto/client/client/disconnect.md",
       "qualified_name": "miniproto.client.Client.disconnect",
       "route": "/reference/python/miniproto/client/client/disconnect/",
-      "sha256": "2f5eda24730b89e6afce9a5eff817dbf5b672c84d18fda0b693308e622f8c4a9",
+      "sha256": "ba9c716b0cb1db2bd667bc46aed6df494d3c3eabd150ef1f3fa62039181bcbda",
       "source_path": "src/miniproto/client.py"
     },
     {
@@ -620,7 +620,7 @@
       "path": "python/miniproto/client/client/download-media.md",
       "qualified_name": "miniproto.client.Client.download_media",
       "route": "/reference/python/miniproto/client/client/download-media/",
-      "sha256": "987a55e7b2761e233cdc59ea6dddfea12497bf5119f7ab6bdb1ae51173de15bd",
+      "sha256": "7cb657ff5d93c911f931bda81550c433347c488c9de16aef734ffc91456bc140",
       "source_path": "src/miniproto/client.py"
     },
     {
@@ -629,7 +629,7 @@
       "path": "python/miniproto/client/client/edit-message.md",
       "qualified_name": "miniproto.client.Client.edit_message",
       "route": "/reference/python/miniproto/client/client/edit-message/",
-      "sha256": "fca01edc6e95dce0cae28cda736a3de1da9d0c3dde6e2e15268e76d82db4097f",
+      "sha256": "3c6abbe373ac5fbcc4fd7634ea62875dab61db20777b99fbbb5633f37233912a",
       "source_path": "src/miniproto/client.py"
     },
     {
@@ -638,7 +638,7 @@
       "path": "python/miniproto/client/client/export-session-string.md",
       "qualified_name": "miniproto.client.Client.export_session_string",
       "route": "/reference/python/miniproto/client/client/export-session-string/",
-      "sha256": "9313b3741e5e9163c8dd99ae3381593472ac89a7f7dcc84319d2e3cb18440957",
+      "sha256": "eb54c98eb797cd0ac4e7b02c5474eb7c286462cd6fb6581071c9da6f0ef6ed11",
       "source_path": "src/miniproto/client.py"
     },
     {
@@ -647,7 +647,7 @@
       "path": "python/miniproto/client/client/get-history.md",
       "qualified_name": "miniproto.client.Client.get_history",
       "route": "/reference/python/miniproto/client/client/get-history/",
-      "sha256": "562b0cede5d6cc8fe11c545ef665f5237f0db0e32e6b26ff002fe551635cfd34",
+      "sha256": "33059f1e92c5c20634529d5b8906e867dbd03eaa851d0f923700425704da5665",
       "source_path": "src/miniproto/client.py"
     },
     {
@@ -656,7 +656,7 @@
       "path": "python/miniproto/client/client/get-me.md",
       "qualified_name": "miniproto.client.Client.get_me",
       "route": "/reference/python/miniproto/client/client/get-me/",
-      "sha256": "67d804b7ad6884a6e374075a434e325e2f85a475185131fe8689aeacb39cd54f",
+      "sha256": "5605fa867b07b0691d4f58ab9701ba7ff78b9f7c3e2e567a3177f464cd85f6cc",
       "source_path": "src/miniproto/client.py"
     },
     {
@@ -665,7 +665,7 @@
       "path": "python/miniproto/client/client/import-session-string.md",
       "qualified_name": "miniproto.client.Client.import_session_string",
       "route": "/reference/python/miniproto/client/client/import-session-string/",
-      "sha256": "2d404c297d6842001304715aa5f0407b7c79d29b17052feb479bdb9c64de99d7",
+      "sha256": "a8b87d3821a93a2207fdeac4c21c411d7de4bb8d0ec4de1f16c67f88d7552caf",
       "source_path": "src/miniproto/client.py"
     },
     {
@@ -674,7 +674,7 @@
       "path": "python/miniproto/client/client/invoke.md",
       "qualified_name": "miniproto.client.Client.invoke",
       "route": "/reference/python/miniproto/client/client/invoke/",
-      "sha256": "014ffc2635672b35e8d98db34ee8f34d394c1c5f0e313a40839b97bbb8d71237",
+      "sha256": "f2f5c915597c4aa5d118f3c588966ff75d47fc6ce26350511e922d08a296e4f6",
       "source_path": "src/miniproto/client.py"
     },
     {
@@ -683,7 +683,7 @@
       "path": "python/miniproto/client/client/is-authorized.md",
       "qualified_name": "miniproto.client.Client.is_authorized",
       "route": "/reference/python/miniproto/client/client/is-authorized/",
-      "sha256": "ce9ebea9e10fd8d9be1ae4e29a71e3aec6a5458cade0de287e43a230ec388850",
+      "sha256": "6f2892dae169bd22f4fc841f8d3a05866b968957db8b141d5140289f6b55add8",
       "source_path": "src/miniproto/client.py"
     },
     {
@@ -692,7 +692,7 @@
       "path": "python/miniproto/client/client/iter-download.md",
       "qualified_name": "miniproto.client.Client.iter_download",
       "route": "/reference/python/miniproto/client/client/iter-download/",
-      "sha256": "37bc08399bc7450c80b2ad1f172c6ae3c215b2eea2742b196d2f3756de42addd",
+      "sha256": "1479cd07af34d4a5e8a2bd2521ca63dec2356d8789104778460bb1e2d93449e6",
       "source_path": "src/miniproto/client.py"
     },
     {
@@ -701,7 +701,7 @@
       "path": "python/miniproto/client/client/iter-updates.md",
       "qualified_name": "miniproto.client.Client.iter_updates",
       "route": "/reference/python/miniproto/client/client/iter-updates/",
-      "sha256": "1bb5240b25d1a57a5bf5f43ec71669b27658b74094b695fd8c29524153d4298b",
+      "sha256": "cddd34779312fb20ee100e65b3e075834554e99970ad719dc795af812131159e",
       "source_path": "src/miniproto/client.py"
     },
     {
@@ -710,7 +710,7 @@
       "path": "python/miniproto/client/client/on.md",
       "qualified_name": "miniproto.client.Client.on",
       "route": "/reference/python/miniproto/client/client/on/",
-      "sha256": "9ca0f6b4608ece9132f76c5aa322c19c4928859d36c57c73c4f2e1c12b16f78a",
+      "sha256": "beb9737dfdd572adff22eb1308199ffbc5f4e2b37b3ba19d264895fa0432e22f",
       "source_path": "src/miniproto/client.py"
     },
     {
@@ -719,7 +719,7 @@
       "path": "python/miniproto/client/client/resolve-peer.md",
       "qualified_name": "miniproto.client.Client.resolve_peer",
       "route": "/reference/python/miniproto/client/client/resolve-peer/",
-      "sha256": "71569280a0a8d52988daff070dc847762b548a98f0d9c79dbcc73f9f80a4f6fe",
+      "sha256": "83760706c25f8245666b4919b47cdca21a2bbd3d79792a32d3fae1ca3ff2a502",
       "source_path": "src/miniproto/client.py"
     },
     {
@@ -728,7 +728,7 @@
       "path": "python/miniproto/client/client/send-file.md",
       "qualified_name": "miniproto.client.Client.send_file",
       "route": "/reference/python/miniproto/client/client/send-file/",
-      "sha256": "bd9819698b8b101d7f8351a022e547ffd10ccec7f1f7da570b6acaf5e5796dcb",
+      "sha256": "5b925d87bcc0501769785eb906bf5471b930684a6003bfbd6a67d0ddc5093c5b",
       "source_path": "src/miniproto/client.py"
     },
     {
@@ -737,7 +737,7 @@
       "path": "python/miniproto/client/client/send-message.md",
       "qualified_name": "miniproto.client.Client.send_message",
       "route": "/reference/python/miniproto/client/client/send-message/",
-      "sha256": "9d3df1b91c4ab898c6998a687d4585e521824daa0d87cf355f6164d72a3005bf",
+      "sha256": "9489500b4f2cbefca6e0ffaabe6afe829b0c0c2f3a71a07fbe271a45400d035c",
       "source_path": "src/miniproto/client.py"
     },
     {
@@ -746,7 +746,7 @@
       "path": "python/miniproto/client/client/sign-in-bot.md",
       "qualified_name": "miniproto.client.Client.sign_in_bot",
       "route": "/reference/python/miniproto/client/client/sign-in-bot/",
-      "sha256": "401d037a4381c580ca1a8ba08edd3741f961d637910e75933b88738324d11f0a",
+      "sha256": "ef3044f5c4027b239387272c29578bf9f8bce8edbc7d81d2958726e00bf639e1",
       "source_path": "src/miniproto/client.py"
     },
     {
@@ -755,7 +755,16 @@
       "path": "python/miniproto/client/client/sign-in-phone.md",
       "qualified_name": "miniproto.client.Client.sign_in_phone",
       "route": "/reference/python/miniproto/client/client/sign-in-phone/",
-      "sha256": "963f28b9cfe130c0cfff14b3a17bf9f6bc889be7b1a2a9cd84cf8842d2ad536a",
+      "sha256": "c1e64ecc7f4903fdd3b89f6b27cd049d0e47e031aed2f2d2043d460bb341ef44",
+      "source_path": "src/miniproto/client.py"
+    },
+    {
+      "kind": "function",
+      "language": "python",
+      "path": "python/miniproto/client/client/wait-for-updates.md",
+      "qualified_name": "miniproto.client.Client.wait_for_updates",
+      "route": "/reference/python/miniproto/client/client/wait-for-updates/",
+      "sha256": "1e4e4be0cbced282e1ae3f8579c2c7c951b21a97448c70165654228a75b7754b",
       "source_path": "src/miniproto/client.py"
     },
     {
@@ -773,7 +782,7 @@
       "path": "python/miniproto/client/updatet.md",
       "qualified_name": "miniproto.client.UpdateT",
       "route": "/reference/python/miniproto/client/updatet/",
-      "sha256": "00e3bc56efac060125565e8252729689297139d096ecb5beeea1bd2e41cc066a",
+      "sha256": "946234fe7d9609ee91679dc7fc6eab29e87f0ebb7784585c9a6eb4c771052fcb",
       "source_path": "src/miniproto/client.py"
     },
     {
@@ -998,7 +1007,7 @@
       "path": "python/miniproto/connection/sender/mtprotosender.md",
       "qualified_name": "miniproto.connection.sender.MTProtoSender",
       "route": "/reference/python/miniproto/connection/sender/mtprotosender/",
-      "sha256": "406bbf58968b5907e6c659a2225450461f50a9bcb9005d489af08fb90d97aa83",
+      "sha256": "3ab1d9d668fe913b5697b55180b29adbce27e5de8555e38f922ed37d17d1bbf6",
       "source_path": "src/miniproto/connection/sender.py"
     },
     {
@@ -1007,7 +1016,7 @@
       "path": "python/miniproto/connection/sender/mtprotosender/acked.md",
       "qualified_name": "miniproto.connection.sender.MTProtoSender.acked",
       "route": "/reference/python/miniproto/connection/sender/mtprotosender/acked/",
-      "sha256": "de873d23246d38552040cf18f43325c07f7a0eb58e02f14fb25927ab05982e75",
+      "sha256": "8196bf0b7b213468e68907963691aeb2c2b8af348b6f2a96c22f45e359be8419",
       "source_path": "src/miniproto/connection/sender.py"
     },
     {
@@ -1016,7 +1025,7 @@
       "path": "python/miniproto/connection/sender/mtprotosender/connect.md",
       "qualified_name": "miniproto.connection.sender.MTProtoSender.connect",
       "route": "/reference/python/miniproto/connection/sender/mtprotosender/connect/",
-      "sha256": "931979abfd6adb2f3d84722f752e7af9c965695fceb62f94fae389f56ff2d2ba",
+      "sha256": "6f1eadc69fa8a84f9ed458456472e1073e74065a98d5ad2ed1f6279cf6880c30",
       "source_path": "src/miniproto/connection/sender.py"
     },
     {
@@ -1025,7 +1034,7 @@
       "path": "python/miniproto/connection/sender/mtprotosender/disconnect.md",
       "qualified_name": "miniproto.connection.sender.MTProtoSender.disconnect",
       "route": "/reference/python/miniproto/connection/sender/mtprotosender/disconnect/",
-      "sha256": "6fa9b96b59c616d9be4b9a9f51c15934103f62cf7d606726a02c7718517525d0",
+      "sha256": "bfe76f81d3cce848f949ef0c612f00a36e7aecdb78e28988e325ec613abd0d4a",
       "source_path": "src/miniproto/connection/sender.py"
     },
     {
@@ -1034,7 +1043,7 @@
       "path": "python/miniproto/connection/sender/mtprotosender/flush-acks.md",
       "qualified_name": "miniproto.connection.sender.MTProtoSender.flush_acks",
       "route": "/reference/python/miniproto/connection/sender/mtprotosender/flush-acks/",
-      "sha256": "7f1c924312fa35f11120e67af6e0a01b2f8d75897fc672bdfe9954dc1043601b",
+      "sha256": "896340396b0e58bd7416b235a9034801b16d50152fcdcf160ea889ea49e2ac25",
       "source_path": "src/miniproto/connection/sender.py"
     },
     {
@@ -1043,7 +1052,7 @@
       "path": "python/miniproto/connection/sender/mtprotosender/ping.md",
       "qualified_name": "miniproto.connection.sender.MTProtoSender.ping",
       "route": "/reference/python/miniproto/connection/sender/mtprotosender/ping/",
-      "sha256": "8f83fda7064a65e2a35507c5b9a66c00ebc0b669f438f42c7dfc53887dfc8278",
+      "sha256": "80cabd5d1e5c1a8031bc65f2bffb83b5bf59b46555cee6d17e77a19f7435fd4a",
       "source_path": "src/miniproto/connection/sender.py"
     },
     {
@@ -1052,7 +1061,7 @@
       "path": "python/miniproto/connection/sender/mtprotosender/recv-message.md",
       "qualified_name": "miniproto.connection.sender.MTProtoSender.recv_message",
       "route": "/reference/python/miniproto/connection/sender/mtprotosender/recv-message/",
-      "sha256": "599067f19c2d7b356b9e0826fa7c03ac6152bef14a4b55ca2867f8473aa4cd53",
+      "sha256": "afb883731150e4e652bb92595fb821f806809361c1fecd93d103c50ddb09c08d",
       "source_path": "src/miniproto/connection/sender.py"
     },
     {
@@ -1061,7 +1070,7 @@
       "path": "python/miniproto/connection/sender/mtprotosender/request.md",
       "qualified_name": "miniproto.connection.sender.MTProtoSender.request",
       "route": "/reference/python/miniproto/connection/sender/mtprotosender/request/",
-      "sha256": "73d69b9596ecc9239847ef195a63620f6f54694002e48f290c17daa5036017ec",
+      "sha256": "c72c1add54ac8b39b24c9130235953ba53178ada0ea7d960e9e515a722a95d6b",
       "source_path": "src/miniproto/connection/sender.py"
     },
     {
@@ -1070,7 +1079,7 @@
       "path": "python/miniproto/connection/sender/mtprotosender/send.md",
       "qualified_name": "miniproto.connection.sender.MTProtoSender.send",
       "route": "/reference/python/miniproto/connection/sender/mtprotosender/send/",
-      "sha256": "d6ae466a67003f6d13534d4823517aa10cd2b10401fb58c6fad6dac4dbe50517",
+      "sha256": "a363a645c0a090fd4d1762d3d9c4dbaa27dbbd9927fbb8ebc899afeefc14bf1c",
       "source_path": "src/miniproto/connection/sender.py"
     },
     {
@@ -1079,7 +1088,7 @@
       "path": "python/miniproto/connection/sender/mtprotosender/take-fatal-error.md",
       "qualified_name": "miniproto.connection.sender.MTProtoSender.take_fatal_error",
       "route": "/reference/python/miniproto/connection/sender/mtprotosender/take-fatal-error/",
-      "sha256": "bd220a58930e6f1f1371e3839aeffe1de709c62da5b61b1207ea9423552762e2",
+      "sha256": "be3bb61e7475a4596f07d5b86499f124313a2a5fd2ccbb3066282b6c1f41c1e4",
       "source_path": "src/miniproto/connection/sender.py"
     },
     {
@@ -1088,7 +1097,7 @@
       "path": "python/miniproto/connection/sender/pendingrequest.md",
       "qualified_name": "miniproto.connection.sender.PendingRequest",
       "route": "/reference/python/miniproto/connection/sender/pendingrequest/",
-      "sha256": "476d4fd7c5467235ab220548af148587b2b12edb98d0f15e8844f1392e265219",
+      "sha256": "218b5e7f50337259f2ae77e2b92989b1fc5cc813a9bc91b4e2a1a552de162953",
       "source_path": "src/miniproto/connection/sender.py"
     },
     {
@@ -1097,7 +1106,7 @@
       "path": "python/miniproto/connection/sender/quickackreceipt.md",
       "qualified_name": "miniproto.connection.sender.QuickAckReceipt",
       "route": "/reference/python/miniproto/connection/sender/quickackreceipt/",
-      "sha256": "35caf4170d8c8ca8c7d80ec4f6f50480eb551d47fc83611b990e415504516feb",
+      "sha256": "2e148dbb7182e4bd1afbbbf3c8d2da70688da46cf395106fd62125840fd4a3c0",
       "source_path": "src/miniproto/connection/sender.py"
     },
     {
@@ -1106,7 +1115,7 @@
       "path": "python/miniproto/connection/sender/senderstate.md",
       "qualified_name": "miniproto.connection.sender.SenderState",
       "route": "/reference/python/miniproto/connection/sender/senderstate/",
-      "sha256": "68dcfa76a44fc229523cc96f41b4e97d64a2f407cb1949d8a6b8a821a5417001",
+      "sha256": "08965cad43684a4ad20c222c046c1f79c026b411f2ed755cfc43e07ae1eeb2fe",
       "source_path": "src/miniproto/connection/sender.py"
     },
     {
@@ -1115,7 +1124,7 @@
       "path": "python/miniproto/connection/transport/connectionendpoint.md",
       "qualified_name": "miniproto.connection.transport.ConnectionEndpoint",
       "route": "/reference/python/miniproto/connection/transport/connectionendpoint/",
-      "sha256": "2f71dfa807c3ff1f192538cff2ee07361f4be618bede3c29c65026fe6909d7a4",
+      "sha256": "7e4f4e7e5e29268abcc23d8185ee4533263520d6a33060bb11017114ae93a7f2",
       "source_path": "src/miniproto/connection/transport.py"
     },
     {
@@ -1124,7 +1133,7 @@
       "path": "python/miniproto/connection/transport/open-transport.md",
       "qualified_name": "miniproto.connection.transport.open_transport",
       "route": "/reference/python/miniproto/connection/transport/open-transport/",
-      "sha256": "9fa5420f2b6420d33566508db35d3702fab5362e0e9d00b05af68e9ad789e3db",
+      "sha256": "a2013609ee29318af1f10c03da6f0ae8a4121ea56ac1797ef1f9833cc9f25dce",
       "source_path": "src/miniproto/connection/transport.py"
     },
     {
@@ -1133,7 +1142,7 @@
       "path": "python/miniproto/connection/transport/streamconnector.md",
       "qualified_name": "miniproto.connection.transport.StreamConnector",
       "route": "/reference/python/miniproto/connection/transport/streamconnector/",
-      "sha256": "6033ce32badcae55fb1337d33d08875167fd2070a08d83764200c6eb5b861476",
+      "sha256": "91efd59758bf19f37b837968d0fe447761ca866a414282383998c3f7d7750721",
       "source_path": "src/miniproto/connection/transport.py"
     },
     {
@@ -1142,7 +1151,7 @@
       "path": "python/miniproto/connection/transport/transport.md",
       "qualified_name": "miniproto.connection.transport.Transport",
       "route": "/reference/python/miniproto/connection/transport/transport/",
-      "sha256": "1c91e3ce70e647babd89951f4ad1d0b3a3d798f411d80e4625370d7449749fd5",
+      "sha256": "c68bdba4e04ee82f1abfdf6cfb21323d474e3ec35af910e7f99198f1510ede3f",
       "source_path": "src/miniproto/connection/transport.py"
     },
     {
@@ -1151,7 +1160,7 @@
       "path": "python/miniproto/connection/transport/transport/close.md",
       "qualified_name": "miniproto.connection.transport.Transport.close",
       "route": "/reference/python/miniproto/connection/transport/transport/close/",
-      "sha256": "7d9efad5a413afbfa0a07dea5b1eb284583f67334bbf0302d22dccc9f29d61b1",
+      "sha256": "017b2d1a5eadbd49c5c785e86a89686cef4a69336bc952da37304d3430ce3533",
       "source_path": "src/miniproto/connection/transport.py"
     },
     {
@@ -1160,7 +1169,7 @@
       "path": "python/miniproto/connection/transport/transport/connect.md",
       "qualified_name": "miniproto.connection.transport.Transport.connect",
       "route": "/reference/python/miniproto/connection/transport/transport/connect/",
-      "sha256": "4be1501be36139c5c392b37de760a1de86e4bcaa968b15b9bdcb192af8fc7f0b",
+      "sha256": "4e34b719813d897e39c67e908aba812c62fc9fa5053f7c5a34f1ee6dcb4a1e8e",
       "source_path": "src/miniproto/connection/transport.py"
     },
     {
@@ -1169,7 +1178,7 @@
       "path": "python/miniproto/connection/transport/transport/recv.md",
       "qualified_name": "miniproto.connection.transport.Transport.recv",
       "route": "/reference/python/miniproto/connection/transport/transport/recv/",
-      "sha256": "5dddac8808a9d71669a9e02c7552280d267ef03f5d941a9f272d6a4319c0feac",
+      "sha256": "5b8cc70dbd2442428faa9947013990e948e3b5da5af842359f1f3e3f01725b65",
       "source_path": "src/miniproto/connection/transport.py"
     },
     {
@@ -1178,7 +1187,7 @@
       "path": "python/miniproto/connection/transport/transport/send.md",
       "qualified_name": "miniproto.connection.transport.Transport.send",
       "route": "/reference/python/miniproto/connection/transport/transport/send/",
-      "sha256": "4d4dca0dfdfb6a8311289f2d4fd09c88a94155d22baa85fc4f477387432a79a5",
+      "sha256": "c3dd0143d36beddbb1e4c49deda82e76dce1e6491bcd97759a123382d3f862f6",
       "source_path": "src/miniproto/connection/transport.py"
     },
     {
@@ -1187,7 +1196,7 @@
       "path": "python/miniproto/connection/transport/transportclosed.md",
       "qualified_name": "miniproto.connection.transport.TransportClosed",
       "route": "/reference/python/miniproto/connection/transport/transportclosed/",
-      "sha256": "18e9e36591bc9f5a5783214242401cdc62a5d1c8a29315d623b468aefc0b015e",
+      "sha256": "d10baef96fb543f898e5cb8e2fcc8755a036dfdb1aa39ad05d2ecc3bb17e7ce2",
       "source_path": "src/miniproto/connection/transport.py"
     },
     {
@@ -1196,7 +1205,7 @@
       "path": "python/miniproto/connection/transport/transporterror.md",
       "qualified_name": "miniproto.connection.transport.TransportError",
       "route": "/reference/python/miniproto/connection/transport/transporterror/",
-      "sha256": "c08d768160a65f4af7dc93bb49cbc70de6f8f9b4b9560506567492908528b01a",
+      "sha256": "36faf5aa77659831426ce2450608c02c7e8dd5a1017ca07bb8798a3e7c9613d5",
       "source_path": "src/miniproto/connection/transport.py"
     },
     {
@@ -1205,7 +1214,7 @@
       "path": "python/miniproto/connection/transport/transporttimeout.md",
       "qualified_name": "miniproto.connection.transport.TransportTimeout",
       "route": "/reference/python/miniproto/connection/transport/transporttimeout/",
-      "sha256": "187f89478a8560808c5b6fbf422203addafa64e8e6b7ca5fce61d84ef5c4111c",
+      "sha256": "adc7b2ccebb1db9ce6dc0dc8f5396315707e88a9412455f04e6ef3f8250b4fd5",
       "source_path": "src/miniproto/connection/transport.py"
     },
     {
@@ -1430,7 +1439,7 @@
       "path": "python/miniproto/crypto/native/pq-factorize.md",
       "qualified_name": "miniproto.crypto.native.pq_factorize",
       "route": "/reference/python/miniproto/crypto/native/pq-factorize/",
-      "sha256": "8f0970fb5ac35c59b0458c4c9eb0caa6e8595dfeaafc2da233dbc44b94495e9d",
+      "sha256": "b8e1c87a18f2b5b1f385d96816612c03836ab670729a1a63dae56ed53fcfddd3",
       "source_path": "src/miniproto/crypto/native.py"
     },
     {
@@ -1961,7 +1970,7 @@
       "path": "python/miniproto/invoke/build-sender-from-session.md",
       "qualified_name": "miniproto.invoke.build_sender_from_session",
       "route": "/reference/python/miniproto/invoke/build-sender-from-session/",
-      "sha256": "0ce56cc421078feabc6f89b59e9388024021b58307d80256f6581b2e1f6f715d",
+      "sha256": "8ed5dd4d83dedb43ba44407a8adc1dca4140217530e5493cad1c21661b60aedb",
       "source_path": "src/miniproto/invoke.py"
     },
     {
@@ -1970,7 +1979,7 @@
       "path": "python/miniproto/invoke/clear-invalid-auth-key.md",
       "qualified_name": "miniproto.invoke.clear_invalid_auth_key",
       "route": "/reference/python/miniproto/invoke/clear-invalid-auth-key/",
-      "sha256": "f06a722bb8ee5808a25cf3ce46fc21159fedf0a5120dda2ede5cb9e6924f837f",
+      "sha256": "d67c5bd3ce27ee63049692fc569abcf6973148bd1e0fe4179f3506c9a0df0ece",
       "source_path": "src/miniproto/invoke.py"
     },
     {
@@ -1979,7 +1988,7 @@
       "path": "python/miniproto/invoke/decode-result-payload.md",
       "qualified_name": "miniproto.invoke.decode_result_payload",
       "route": "/reference/python/miniproto/invoke/decode-result-payload/",
-      "sha256": "541792e631cf351019bcc1569453e8cc43e8eff86421ad3e4ef5dc2f3107a695",
+      "sha256": "a5fd35194bd36098812bb083f63148dfa9ebd17901461eb60e7615f5b2a8ccbd",
       "source_path": "src/miniproto/invoke.py"
     },
     {
@@ -1988,7 +1997,7 @@
       "path": "python/miniproto/invoke/decode-rpc-response.md",
       "qualified_name": "miniproto.invoke.decode_rpc_response",
       "route": "/reference/python/miniproto/invoke/decode-rpc-response/",
-      "sha256": "c50191549e22facf61690eb9ce6902d395632e106aae38bb8ca5fe05d2e7da6a",
+      "sha256": "54e5f1667bfadd274c687585eaa89f32e756a453faaba77f84c38e66b2aaa6af",
       "source_path": "src/miniproto/invoke.py"
     },
     {
@@ -1997,7 +2006,7 @@
       "path": "python/miniproto/invoke/index.md",
       "qualified_name": "miniproto.invoke",
       "route": "/reference/python/miniproto/invoke/",
-      "sha256": "35a98ef6623ff3ca0f449d28e179f181f178d945cda092fd8c83f6387a056312",
+      "sha256": "b82689c47316e9a36b824a02874d7e1eb716b8dec00276f0dd06541a7b6bfebf",
       "source_path": "src/miniproto/invoke.py"
     },
     {
@@ -2015,7 +2024,7 @@
       "path": "python/miniproto/invoke/is-retryable-request.md",
       "qualified_name": "miniproto.invoke.is_retryable_request",
       "route": "/reference/python/miniproto/invoke/is-retryable-request/",
-      "sha256": "0b803f44237a1e7531d42aed415875a5e8ad226c521d2c571d5d4231de67f44f",
+      "sha256": "faf9a674b4c58349f2dbe7121f7717ee214f0c4033b332da09b69cd1cc4eaa6b",
       "source_path": "src/miniproto/invoke.py"
     },
     {
@@ -2024,7 +2033,7 @@
       "path": "python/miniproto/invoke/load-session-record.md",
       "qualified_name": "miniproto.invoke.load_session_record",
       "route": "/reference/python/miniproto/invoke/load-session-record/",
-      "sha256": "57785a6ce74d41941512a541596ddb0ace7b682bf83a033483d1035cba471c23",
+      "sha256": "551cfa42573f0df841c2024abe6ba472be85bdc49209b2c56eff2bb041979356",
       "source_path": "src/miniproto/invoke.py"
     },
     {
@@ -2033,7 +2042,7 @@
       "path": "python/miniproto/invoke/mark-sender-initialized.md",
       "qualified_name": "miniproto.invoke.mark_sender_initialized",
       "route": "/reference/python/miniproto/invoke/mark-sender-initialized/",
-      "sha256": "60dff438ceee6ff7faa14d1d2e33379ca499b60773bfc79fead3c72231d477b6",
+      "sha256": "8b5ce4bf1bf0fec415d172f524004154b99d99f18d12029c91839d3fc71df6dc",
       "source_path": "src/miniproto/invoke.py"
     },
     {
@@ -2042,7 +2051,7 @@
       "path": "python/miniproto/invoke/method-name-for-request.md",
       "qualified_name": "miniproto.invoke.method_name_for_request",
       "route": "/reference/python/miniproto/invoke/method-name-for-request/",
-      "sha256": "3fd8dfdc18ad499aff8d7933c12457870df0ca23eedebab7c12040e3ce47d5bc",
+      "sha256": "bfc7e30649195124ec5f407189cb181510ae35a00118071714da04c165ccfcd4",
       "source_path": "src/miniproto/invoke.py"
     },
     {
@@ -2051,7 +2060,7 @@
       "path": "python/miniproto/invoke/methodfloodwaitcache.md",
       "qualified_name": "miniproto.invoke.MethodFloodWaitCache",
       "route": "/reference/python/miniproto/invoke/methodfloodwaitcache/",
-      "sha256": "00bea01828db7cf39530e71ee37b971421047090be7606c4598c15725866981a",
+      "sha256": "41092e0101fd364a6e6102de31c5f0479464882073b9f4a83e97e07ec1dc392b",
       "source_path": "src/miniproto/invoke.py"
     },
     {
@@ -2060,7 +2069,7 @@
       "path": "python/miniproto/invoke/methodfloodwaitcache/get.md",
       "qualified_name": "miniproto.invoke.MethodFloodWaitCache.get",
       "route": "/reference/python/miniproto/invoke/methodfloodwaitcache/get/",
-      "sha256": "383010e2c20e5fa17d307fa78b30b82ea256747f552b774c4157a334e1d0b4ac",
+      "sha256": "16e52df126b19dc7f62acbc4d5f76bc27d27c1fcec4f099c89580bb82b90226b",
       "source_path": "src/miniproto/invoke.py"
     },
     {
@@ -2069,7 +2078,7 @@
       "path": "python/miniproto/invoke/methodfloodwaitcache/remember.md",
       "qualified_name": "miniproto.invoke.MethodFloodWaitCache.remember",
       "route": "/reference/python/miniproto/invoke/methodfloodwaitcache/remember/",
-      "sha256": "01b0f155b599d18f58a98cb6495d0bddf94071898ceac25f48a83bbd353abbe3",
+      "sha256": "d1c27f7343fd4d50cba549b5b44b9c22c794308c68d8f24d8e965024b1518958",
       "source_path": "src/miniproto/invoke.py"
     },
     {
@@ -2078,7 +2087,7 @@
       "path": "python/miniproto/invoke/rawsender.md",
       "qualified_name": "miniproto.invoke.RawSender",
       "route": "/reference/python/miniproto/invoke/rawsender/",
-      "sha256": "bf8136ac6de500f1f57baf153c90013ad097d93de8e5ee129bd93ce45e9570c7",
+      "sha256": "f6c8c390538802a6f87fdd7e38948b1c005283161c26308216c5c53c7bff3660",
       "source_path": "src/miniproto/invoke.py"
     },
     {
@@ -2087,7 +2096,7 @@
       "path": "python/miniproto/invoke/rawsender/disconnect.md",
       "qualified_name": "miniproto.invoke.RawSender.disconnect",
       "route": "/reference/python/miniproto/invoke/rawsender/disconnect/",
-      "sha256": "e30a041bfe465f33f87114d65117bab90fd51e8c2858b30a302bf9963f9eeeac",
+      "sha256": "6d239c49e77602fd2d38e1e2a89f0d58db86784371789f3feb17705bbed37425",
       "source_path": "src/miniproto/invoke.py"
     },
     {
@@ -2096,7 +2105,7 @@
       "path": "python/miniproto/invoke/rawsender/request.md",
       "qualified_name": "miniproto.invoke.RawSender.request",
       "route": "/reference/python/miniproto/invoke/rawsender/request/",
-      "sha256": "8779ea39b805b9ebfe1da608b8763602db2a1b334ec11937dc3be15211e575b5",
+      "sha256": "7edfbe9e5f66d09fb2a83af9ee438106bd64e152725170bd423de3c93c2ad6c3",
       "source_path": "src/miniproto/invoke.py"
     },
     {
@@ -2105,7 +2114,7 @@
       "path": "python/miniproto/invoke/result-type-for-request.md",
       "qualified_name": "miniproto.invoke.result_type_for_request",
       "route": "/reference/python/miniproto/invoke/result-type-for-request/",
-      "sha256": "5bd21df67140026bfa5cc8b7924c300fe7b83f1bb7f159be979b8e5beb7bfc55",
+      "sha256": "e4fc102874c23aeb749eb080ea6b88ebe7333944a27e75855ff0d8c2b2df9ecc",
       "source_path": "src/miniproto/invoke.py"
     },
     {
@@ -2114,7 +2123,7 @@
       "path": "python/miniproto/invoke/sender-needs-init.md",
       "qualified_name": "miniproto.invoke.sender_needs_init",
       "route": "/reference/python/miniproto/invoke/sender-needs-init/",
-      "sha256": "6fb27820729bde476dea26d233fb2e8ff834c80c0ce36df5bd17adb300676d0e",
+      "sha256": "5dbc0eb1766f28b193f62e94bcb96ebfd7543078b3f4c513f673cb57272f646e",
       "source_path": "src/miniproto/invoke.py"
     },
     {
@@ -2123,7 +2132,7 @@
       "path": "python/miniproto/invoke/senderfactory.md",
       "qualified_name": "miniproto.invoke.SenderFactory",
       "route": "/reference/python/miniproto/invoke/senderfactory/",
-      "sha256": "309edf82774bb27ef59b2b5dc7203c685ed9dcfd36b3b2c10f4493562522ab65",
+      "sha256": "115411734ec921f3a6a549b7d8dbb76fdbb5d9e15617ca7baa39e1ce159d100f",
       "source_path": "src/miniproto/invoke.py"
     },
     {
@@ -2132,7 +2141,7 @@
       "path": "python/miniproto/invoke/should-retry-rpc-error.md",
       "qualified_name": "miniproto.invoke.should_retry_rpc_error",
       "route": "/reference/python/miniproto/invoke/should-retry-rpc-error/",
-      "sha256": "48643678a1ebb46b70f64042be9f8fc697ecd24a7ef81c7f52b462ab028f1f8e",
+      "sha256": "6f32026f0993a41120135113c083de291edcdaf141792d8eaa4b1f052a47e5be",
       "source_path": "src/miniproto/invoke.py"
     },
     {
@@ -2141,7 +2150,7 @@
       "path": "python/miniproto/invoke/should-sleep-for-flood-wait.md",
       "qualified_name": "miniproto.invoke.should_sleep_for_flood_wait",
       "route": "/reference/python/miniproto/invoke/should-sleep-for-flood-wait/",
-      "sha256": "b2b4d5336edb55751048fc812e4590acb9959d64ffd7220b4183c68bf71848f2",
+      "sha256": "22ef2a87c2a4cb009a5116d38c060393b3b1c720e0395737a553db75f5de226f",
       "source_path": "src/miniproto/invoke.py"
     },
     {
@@ -2159,7 +2168,7 @@
       "path": "python/miniproto/invoke/validate-result-type.md",
       "qualified_name": "miniproto.invoke.validate_result_type",
       "route": "/reference/python/miniproto/invoke/validate-result-type/",
-      "sha256": "dde226d65c4724f2cd4010a93f5625f50c28606d9c082027fd36c53997bae02f",
+      "sha256": "48e2b8665e78a602f74c692c776e6def421a4e7e616aa40e00fefc7088f466b6",
       "source_path": "src/miniproto/invoke.py"
     },
     {
@@ -2168,7 +2177,7 @@
       "path": "python/miniproto/invoke/wrap-raw-request.md",
       "qualified_name": "miniproto.invoke.wrap_raw_request",
       "route": "/reference/python/miniproto/invoke/wrap-raw-request/",
-      "sha256": "0af661f6d0ea3eecdd45d69d44d7d22394b69a32f3d538703d6d5f0f87a3f13c",
+      "sha256": "0a9483fade2c6f29e8b8d1acd94327d6bfa1eb59fd65037e3d72e0d8fa87b4ab",
       "source_path": "src/miniproto/invoke.py"
     },
     {
@@ -2177,7 +2186,7 @@
       "path": "python/miniproto/invoke/wrap-transport-failure.md",
       "qualified_name": "miniproto.invoke.wrap_transport_failure",
       "route": "/reference/python/miniproto/invoke/wrap-transport-failure/",
-      "sha256": "568752d6f5018137c6526698f76cf40afa8bf0ea522debe3b59aa54725934b9f",
+      "sha256": "b797aea79b9d923b013ab02f5a179c9f71d41ee2745d51ee6c1bf778c2418500",
       "source_path": "src/miniproto/invoke.py"
     },
     {
@@ -2267,7 +2276,7 @@
       "path": "python/miniproto/media/download/default-download-concurrency.md",
       "qualified_name": "miniproto.media.download.DEFAULT_DOWNLOAD_CONCURRENCY",
       "route": "/reference/python/miniproto/media/download/default-download-concurrency/",
-      "sha256": "da882b18285a89b3d1fd8aa6321d9ad6704a1848cc9569d19b3ae6e9a78b6ca0",
+      "sha256": "f2d5d44a8b925e250e529cb7368514f58a2b8283206b899ec1e064132aeea150",
       "source_path": "src/miniproto/media/download.py"
     },
     {
@@ -2276,7 +2285,7 @@
       "path": "python/miniproto/media/download/default-download-in-flight-bytes.md",
       "qualified_name": "miniproto.media.download.DEFAULT_DOWNLOAD_IN_FLIGHT_BYTES",
       "route": "/reference/python/miniproto/media/download/default-download-in-flight-bytes/",
-      "sha256": "e8456576ab3566ce353453d1143a1f8c44106c626068e46adcf4b58946ad265e",
+      "sha256": "659940c992f946882ff564f8850c00edd7d61c4ef18decfa0b1172198aabccca",
       "source_path": "src/miniproto/media/download.py"
     },
     {
@@ -2285,7 +2294,7 @@
       "path": "python/miniproto/media/download/default-download-part-size.md",
       "qualified_name": "miniproto.media.download.DEFAULT_DOWNLOAD_PART_SIZE",
       "route": "/reference/python/miniproto/media/download/default-download-part-size/",
-      "sha256": "f53c1a380c223aff95707a49bb88077b92b895df3ddc9f852baa14b13035d91e",
+      "sha256": "72f0eb146c4ca0210e5c629a35c77fc386291c62514d00de4247e46001607809",
       "source_path": "src/miniproto/media/download.py"
     },
     {
@@ -2294,7 +2303,7 @@
       "path": "python/miniproto/media/download/default-range-cache-bytes.md",
       "qualified_name": "miniproto.media.download.DEFAULT_RANGE_CACHE_BYTES",
       "route": "/reference/python/miniproto/media/download/default-range-cache-bytes/",
-      "sha256": "af8d59bdace5f52d8640a351e8476f17383570da526e046e8d3eef5b9a35eea0",
+      "sha256": "05d21bd0cd4030a1e6018cd2f8d7e7cbcd96e170e48b1a303ba4dce030c6dc7f",
       "source_path": "src/miniproto/media/download.py"
     },
     {
@@ -2303,7 +2312,7 @@
       "path": "python/miniproto/media/download/destination.md",
       "qualified_name": "miniproto.media.download.Destination",
       "route": "/reference/python/miniproto/media/download/destination/",
-      "sha256": "30baa061cf4b682baa112dd58f5e2837b74a3c8d805021ac7798a08e260ec0d0",
+      "sha256": "0fc000b9fbf1c54fcf616154cb52feeaabba2fc5a8c255301e32fe3759e2f2fc",
       "source_path": "src/miniproto/media/download.py"
     },
     {
@@ -2312,7 +2321,7 @@
       "path": "python/miniproto/media/download/download-file.md",
       "qualified_name": "miniproto.media.download.download_file",
       "route": "/reference/python/miniproto/media/download/download-file/",
-      "sha256": "5247b4fcf0e4dd1a3a2fee708aef0bed4e864f0691df787247229f8fe3053a74",
+      "sha256": "4d09d6a6adab8d017d1ccf09ffd023033949d56187c3513da041560cb3679b24",
       "source_path": "src/miniproto/media/download.py"
     },
     {
@@ -2321,7 +2330,7 @@
       "path": "python/miniproto/media/download/download-location-from-media.md",
       "qualified_name": "miniproto.media.download.download_location_from_media",
       "route": "/reference/python/miniproto/media/download/download-location-from-media/",
-      "sha256": "7017281606e1a73fc7b2adf8cfca46c05dee980dfff8a875b1bab287cf873c03",
+      "sha256": "4139ccce22be13eb7f3857babfbc564498e6fe0ededf4406d7f242ae505deb84",
       "source_path": "src/miniproto/media/download.py"
     },
     {
@@ -2330,7 +2339,7 @@
       "path": "python/miniproto/media/download/download-media.md",
       "qualified_name": "miniproto.media.download.download_media",
       "route": "/reference/python/miniproto/media/download/download-media/",
-      "sha256": "5f1f08c8f6d70c08cd3b0a419de326b1be7748d4c5baa5294a28086df0930b64",
+      "sha256": "1f2ec39ca099d6deb7dd2a817aae85d2b91b55331e97d6e3e959494611185c03",
       "source_path": "src/miniproto/media/download.py"
     },
     {
@@ -2339,7 +2348,7 @@
       "path": "python/miniproto/media/download/downloadrangecache.md",
       "qualified_name": "miniproto.media.download.DownloadRangeCache",
       "route": "/reference/python/miniproto/media/download/downloadrangecache/",
-      "sha256": "843887fbeeea348185a49701b4ce14858ac8da473e1faba9913d0c2758e6ddf3",
+      "sha256": "8c121caf2fee499bcf9f46af898d39eb01370206234558965d526b9cc720ac4d",
       "source_path": "src/miniproto/media/download.py"
     },
     {
@@ -2348,7 +2357,7 @@
       "path": "python/miniproto/media/download/downloadrangecache/clear.md",
       "qualified_name": "miniproto.media.download.DownloadRangeCache.clear",
       "route": "/reference/python/miniproto/media/download/downloadrangecache/clear/",
-      "sha256": "1860aebee00c5aa06b97921cdd16147a4a24744a34e5642a448da2fdb2478a87",
+      "sha256": "35a9dc345351774f4ff839b3de4811c51d273759e8a803a3c1cac7e5ba0e4d17",
       "source_path": "src/miniproto/media/download.py"
     },
     {
@@ -2357,7 +2366,7 @@
       "path": "python/miniproto/media/download/downloadrangecache/get-or-fetch.md",
       "qualified_name": "miniproto.media.download.DownloadRangeCache.get_or_fetch",
       "route": "/reference/python/miniproto/media/download/downloadrangecache/get-or-fetch/",
-      "sha256": "4b4b2d19769b882f21da98c33aa164aaa5069a47d5d3427ac55a9028c4c35d49",
+      "sha256": "98430603f8a3aa2f1090afd7104f58a9c6ff46ee412dbc8a10c63d4ed9e86b8f",
       "source_path": "src/miniproto/media/download.py"
     },
     {
@@ -2366,7 +2375,7 @@
       "path": "python/miniproto/media/download/downloadrangecache/get.md",
       "qualified_name": "miniproto.media.download.DownloadRangeCache.get",
       "route": "/reference/python/miniproto/media/download/downloadrangecache/get/",
-      "sha256": "3f5086ed972e2af3894d52897b97261d81719ebd66e99287389e441d50ef93d7",
+      "sha256": "79ccdfe598928e4bae7e4b443db679de2cbd1ecce022cbcbc8f5cc7d452e7f31",
       "source_path": "src/miniproto/media/download.py"
     },
     {
@@ -2375,7 +2384,7 @@
       "path": "python/miniproto/media/download/downloadrangecache/prefetch.md",
       "qualified_name": "miniproto.media.download.DownloadRangeCache.prefetch",
       "route": "/reference/python/miniproto/media/download/downloadrangecache/prefetch/",
-      "sha256": "4103b2286ba93870013636e8fada32c8930154de7cb1a74c46120317d8ae9225",
+      "sha256": "651c0a402dbbdf1f72cc0ea4a5d867d15483367ee0f868e89b9878947628fc48",
       "source_path": "src/miniproto/media/download.py"
     },
     {
@@ -2384,7 +2393,7 @@
       "path": "python/miniproto/media/download/downloadrangecache/put.md",
       "qualified_name": "miniproto.media.download.DownloadRangeCache.put",
       "route": "/reference/python/miniproto/media/download/downloadrangecache/put/",
-      "sha256": "c446a2d9bcd290fba15a4f8df013d70ec27844e762534721d70db0d688090470",
+      "sha256": "e7647b4de7af14dbbe823e1ecd98dd748bcae9820bb164bbaa76ee6ea02c8d81",
       "source_path": "src/miniproto/media/download.py"
     },
     {
@@ -2402,7 +2411,7 @@
       "path": "python/miniproto/media/download/iter-download-media.md",
       "qualified_name": "miniproto.media.download.iter_download_media",
       "route": "/reference/python/miniproto/media/download/iter-download-media/",
-      "sha256": "25efa8012f6520d008b7b05e573bcea2d2a16c1bcd7c4a8265c4b427debd3918",
+      "sha256": "01133076d48506784f7a126ae01a537d9446d590c0259333f86983b3a6f36ac7",
       "source_path": "src/miniproto/media/download.py"
     },
     {
@@ -2411,7 +2420,7 @@
       "path": "python/miniproto/media/download/iter-download.md",
       "qualified_name": "miniproto.media.download.iter_download",
       "route": "/reference/python/miniproto/media/download/iter-download/",
-      "sha256": "cd5fbd01b0eed5da0044de0a7dab68a8df3707251fec3c67f5a65af99ab7eb55",
+      "sha256": "ad83fb1edca56e6ed60a15e2a13cde19f90e26c84f4f0f9859f35153cd559762",
       "source_path": "src/miniproto/media/download.py"
     },
     {
@@ -2420,7 +2429,7 @@
       "path": "python/miniproto/media/download/max-download-chunk-size.md",
       "qualified_name": "miniproto.media.download.MAX_DOWNLOAD_CHUNK_SIZE",
       "route": "/reference/python/miniproto/media/download/max-download-chunk-size/",
-      "sha256": "4fc79c8a66b97f9342982eca1917ed2fb7f45ef2bd9f4d8ee8293ba8ec0eee38",
+      "sha256": "cb2d783488e0019c66a67ad539078524326861193ac7b144b015f5eb8976127d",
       "source_path": "src/miniproto/media/download.py"
     },
     {
@@ -2429,7 +2438,7 @@
       "path": "python/miniproto/media/download/media-from-raw.md",
       "qualified_name": "miniproto.media.download.media_from_raw",
       "route": "/reference/python/miniproto/media/download/media-from-raw/",
-      "sha256": "342582d5a0fbeaf5f5b8e38742fd7059d0d24739bdd444625fa342a78ceaf8c9",
+      "sha256": "afa0ac27aed27d2dd7c8d34167028db41df39eb3d93bbc08d73983ef16b85394",
       "source_path": "src/miniproto/media/download.py"
     },
     {
@@ -2438,7 +2447,7 @@
       "path": "python/miniproto/media/download/mediadownloaderror.md",
       "qualified_name": "miniproto.media.download.MediaDownloadError",
       "route": "/reference/python/miniproto/media/download/mediadownloaderror/",
-      "sha256": "78a20e19524a53af288abaddfbdfa2ab798df80da85e7aa567a6bbbb242a5b1e",
+      "sha256": "2ef498658cf88a2239ad94b91edeec59257ce08bb5900521b27d57bdd760cfff",
       "source_path": "src/miniproto/media/download.py"
     },
     {
@@ -2447,7 +2456,7 @@
       "path": "python/miniproto/media/download/mediadownloadresult.md",
       "qualified_name": "miniproto.media.download.MediaDownloadResult",
       "route": "/reference/python/miniproto/media/download/mediadownloadresult/",
-      "sha256": "3b28e375ac78f8b409830cfceb5cecfce946c12972daa2115dc47aab7ace5daf",
+      "sha256": "d8d0815675698093e39d4c77048e8b2e30fc448d9d2dcaed8b491672995f0cfe",
       "source_path": "src/miniproto/media/download.py"
     },
     {
@@ -2456,7 +2465,7 @@
       "path": "python/miniproto/media/download/mediaintegrityerror.md",
       "qualified_name": "miniproto.media.download.MediaIntegrityError",
       "route": "/reference/python/miniproto/media/download/mediaintegrityerror/",
-      "sha256": "197dcf255507b3f30b2f21ca79e35e3b191410423abe5720fa36f1d218e36389",
+      "sha256": "ddd38659222d48dee98ce9da2128b7bfed7c79aa73dd5407c7f7ad9af05d358a",
       "source_path": "src/miniproto/media/download.py"
     },
     {
@@ -2762,7 +2771,7 @@
       "path": "python/miniproto/media/upload/upload-file.md",
       "qualified_name": "miniproto.media.upload.upload_file",
       "route": "/reference/python/miniproto/media/upload/upload-file/",
-      "sha256": "3a1a2c2df5adb85345d6789b1d8a55ff1978ebb1bd9ef9885e591fd68a403a57",
+      "sha256": "49a521a69d1ffb3b805f57d6fd7233409cd91a9a753b79bce188e93e6b60c1d6",
       "source_path": "src/miniproto/media/upload.py"
     },
     {
@@ -2780,7 +2789,7 @@
       "path": "python/miniproto/messages/make-random-id.md",
       "qualified_name": "miniproto.messages.make_random_id",
       "route": "/reference/python/miniproto/messages/make-random-id/",
-      "sha256": "09a5d2308512c2a1096a2c9932080c1e6ea0e4c0ef973667d8a3873c13bebd71",
+      "sha256": "120aed7a5d62ce3aa29c12b3932e266d41c34c03dfac46a10034127e7b1ab0be",
       "source_path": "src/miniproto/messages.py"
     },
     {
@@ -2789,7 +2798,7 @@
       "path": "python/miniproto/messages/message-from-raw.md",
       "qualified_name": "miniproto.messages.message_from_raw",
       "route": "/reference/python/miniproto/messages/message-from-raw/",
-      "sha256": "97437e8ac212ea23de96733fc8e1705154fedcbaebf31b5717c12e2d0597b0bc",
+      "sha256": "918a53c88d7f6b6e50050f3923688aeafb3dfa72acc9fa42d5c61e24df9ccbd8",
       "source_path": "src/miniproto/messages.py"
     },
     {
@@ -2798,7 +2807,7 @@
       "path": "python/miniproto/messages/message-from-send-result.md",
       "qualified_name": "miniproto.messages.message_from_send_result",
       "route": "/reference/python/miniproto/messages/message-from-send-result/",
-      "sha256": "67263374aa3d97eba2fd827cb9607cbea83c2ad4d825b49b1f86efed547a6d31",
+      "sha256": "0781085de5ca2ed202f705b570ae92c70517e46910c927c1a48b68f025e49e18",
       "source_path": "src/miniproto/messages.py"
     },
     {
@@ -2807,7 +2816,7 @@
       "path": "python/miniproto/messages/message-from-update-result.md",
       "qualified_name": "miniproto.messages.message_from_update_result",
       "route": "/reference/python/miniproto/messages/message-from-update-result/",
-      "sha256": "d86bf92cfa1b9597455e8b67fd3476ca1de75070da2c35e432f784ae0ff40852",
+      "sha256": "791f17ac7dee06e838bed05beb2ac1ff33de527a5472a8bbf216f261cd1041fc",
       "source_path": "src/miniproto/messages.py"
     },
     {
@@ -2825,7 +2834,7 @@
       "path": "python/miniproto/messages/messages-from-history-result.md",
       "qualified_name": "miniproto.messages.messages_from_history_result",
       "route": "/reference/python/miniproto/messages/messages-from-history-result/",
-      "sha256": "3ccbe9695e9fc9e54d334dcce9544fbd0c2ab06d5d1e32eda8b606d1fac3bbaf",
+      "sha256": "3de16c57a3b889e5d40e292ba09009ca2b87b8bfbe3e8656115e311a97633110",
       "source_path": "src/miniproto/messages.py"
     },
     {
@@ -2852,7 +2861,7 @@
       "path": "python/miniproto/mtproto/codec/badmsgnotification.md",
       "qualified_name": "miniproto.mtproto.codec.BadMsgNotification",
       "route": "/reference/python/miniproto/mtproto/codec/badmsgnotification/",
-      "sha256": "217502a0641d0a378f73aa717cf2378517acea184553a5372d27c3af2084fdfc",
+      "sha256": "98bf0898b5aea70b0f651d059ef382f93b8194553f33b3140ca9ada1303d32a7",
       "source_path": "src/miniproto/mtproto/codec.py"
     },
     {
@@ -2861,7 +2870,7 @@
       "path": "python/miniproto/mtproto/codec/badserversalt.md",
       "qualified_name": "miniproto.mtproto.codec.BadServerSalt",
       "route": "/reference/python/miniproto/mtproto/codec/badserversalt/",
-      "sha256": "08e01f8cbe26e0396dea3402afb90368d942aa8ed471d001a126f575c5a59102",
+      "sha256": "0af894e99c3c9f27e4e40a601de5e0145142d6d5d836746fb09d71f096c373ae",
       "source_path": "src/miniproto/mtproto/codec.py"
     },
     {
@@ -2870,7 +2879,7 @@
       "path": "python/miniproto/mtproto/codec/decode-encrypted-message.md",
       "qualified_name": "miniproto.mtproto.codec.decode_encrypted_message",
       "route": "/reference/python/miniproto/mtproto/codec/decode-encrypted-message/",
-      "sha256": "d7912638661936d9f7101c9a4f6af2e0921e7db24287a7280ff58ce44690ae3c",
+      "sha256": "932e96003eb2ef1d5c1c65cf01c80af7e76bc04f9651b374abc6ec2c7a112b40",
       "source_path": "src/miniproto/mtproto/codec.py"
     },
     {
@@ -2879,7 +2888,7 @@
       "path": "python/miniproto/mtproto/codec/decode-message-body.md",
       "qualified_name": "miniproto.mtproto.codec.decode_message_body",
       "route": "/reference/python/miniproto/mtproto/codec/decode-message-body/",
-      "sha256": "14778bc89dce7843c224e5a7772f946e7f55236f29576d9a5fa91dd24e5f0fff",
+      "sha256": "36a5f1ffe29105a91f5172e71729f9f82c8048da63015fc90e594c343f8914a7",
       "source_path": "src/miniproto/mtproto/codec.py"
     },
     {
@@ -2888,7 +2897,7 @@
       "path": "python/miniproto/mtproto/codec/decode-unencrypted-message.md",
       "qualified_name": "miniproto.mtproto.codec.decode_unencrypted_message",
       "route": "/reference/python/miniproto/mtproto/codec/decode-unencrypted-message/",
-      "sha256": "c5b9581acc084310fe9612c1a898255e4cf63495dfbb40270a8aeb70b2fb5fe1",
+      "sha256": "04bf7e239576615dc12e0ec009af2367cdd7bbe830797bb9055ed40aea8e017d",
       "source_path": "src/miniproto/mtproto/codec.py"
     },
     {
@@ -2897,7 +2906,7 @@
       "path": "python/miniproto/mtproto/codec/decodedencryptedmessage.md",
       "qualified_name": "miniproto.mtproto.codec.DecodedEncryptedMessage",
       "route": "/reference/python/miniproto/mtproto/codec/decodedencryptedmessage/",
-      "sha256": "1c7415a6c837e0b9ae3d5a75c73655d61ad19b589896bbeff23ef1ed23a47a05",
+      "sha256": "4e1e96dc0239f4c7ef2915dade62a2ae9a43a55f5c39c901bc7b38eb7677f4a5",
       "source_path": "src/miniproto/mtproto/codec.py"
     },
     {
@@ -2906,7 +2915,7 @@
       "path": "python/miniproto/mtproto/codec/encode-encrypted-message.md",
       "qualified_name": "miniproto.mtproto.codec.encode_encrypted_message",
       "route": "/reference/python/miniproto/mtproto/codec/encode-encrypted-message/",
-      "sha256": "a77b5649970863ec46e2d5b19aa1ed633716aa8f4e650ee2fb8bf49b03cac387",
+      "sha256": "785e2fefb176bf78835a5622c6b341e47c6c573f6d78b69e3fb9fd3f9b8a4869",
       "source_path": "src/miniproto/mtproto/codec.py"
     },
     {
@@ -2915,7 +2924,7 @@
       "path": "python/miniproto/mtproto/codec/encode-message-body.md",
       "qualified_name": "miniproto.mtproto.codec.encode_message_body",
       "route": "/reference/python/miniproto/mtproto/codec/encode-message-body/",
-      "sha256": "6ca7853e123b2bc89cfae0949b26a767ea556680f6aad3914cdbe0eb426b0092",
+      "sha256": "185ce92257c168456b6d265410cc5cdde17ee7f2d205b4484eeac8663d44a1f2",
       "source_path": "src/miniproto/mtproto/codec.py"
     },
     {
@@ -2924,7 +2933,7 @@
       "path": "python/miniproto/mtproto/codec/encode-ping-delay-disconnect.md",
       "qualified_name": "miniproto.mtproto.codec.encode_ping_delay_disconnect",
       "route": "/reference/python/miniproto/mtproto/codec/encode-ping-delay-disconnect/",
-      "sha256": "a7241b2b3dbaf0812f5afcbbf8dbd2ee7f4f7d05c3acf8c233d48fe50a3cd2fe",
+      "sha256": "e4b2ffd8d2fdd05e04a8a84ddcee6e6c36c075bb92b54cb50b6e75f8459aed34",
       "source_path": "src/miniproto/mtproto/codec.py"
     },
     {
@@ -2933,7 +2942,7 @@
       "path": "python/miniproto/mtproto/codec/encode-ping.md",
       "qualified_name": "miniproto.mtproto.codec.encode_ping",
       "route": "/reference/python/miniproto/mtproto/codec/encode-ping/",
-      "sha256": "9a04da5b6a56d19d2df9b746c451bb3bf554d6f5be5c59a7657053b3681b2f01",
+      "sha256": "9e1174a17e77f701c89b466da967b62c0e5e56f88bd9f8937bad8ec3c043d1d1",
       "source_path": "src/miniproto/mtproto/codec.py"
     },
     {
@@ -2942,7 +2951,7 @@
       "path": "python/miniproto/mtproto/codec/encode-unencrypted-message.md",
       "qualified_name": "miniproto.mtproto.codec.encode_unencrypted_message",
       "route": "/reference/python/miniproto/mtproto/codec/encode-unencrypted-message/",
-      "sha256": "1471e1e71b70cca4b75db7d62c0ecd6f7cc6541ca2029f459d54c1e3209d8f2a",
+      "sha256": "e0ce620da628dbf3f6288d98821adfc9d3c4b4e699709afcb68a768e448bb7ba",
       "source_path": "src/miniproto/mtproto/codec.py"
     },
     {
@@ -2951,7 +2960,7 @@
       "path": "python/miniproto/mtproto/codec/gzip-pack.md",
       "qualified_name": "miniproto.mtproto.codec.gzip_pack",
       "route": "/reference/python/miniproto/mtproto/codec/gzip-pack/",
-      "sha256": "46fa97304845cd8ba05c3c271a5776a028be5b738df214ef2b4a29732f49f98e",
+      "sha256": "c735da91ef28675117b41ea05888dc369b88df93abd625e78e1df200153af23c",
       "source_path": "src/miniproto/mtproto/codec.py"
     },
     {
@@ -2960,7 +2969,7 @@
       "path": "python/miniproto/mtproto/codec/gzippacked.md",
       "qualified_name": "miniproto.mtproto.codec.GzipPacked",
       "route": "/reference/python/miniproto/mtproto/codec/gzippacked/",
-      "sha256": "33b50898d036542b07511515a6948b361eb04ec94bcd8a122a0fa182eaf15891",
+      "sha256": "2664f2fe514b3547f705dbf09ab02c16d2385e415b4c606a98f15a68d1c9e84f",
       "source_path": "src/miniproto/mtproto/codec.py"
     },
     {
@@ -2969,7 +2978,7 @@
       "path": "python/miniproto/mtproto/codec/gzippacked/unpack.md",
       "qualified_name": "miniproto.mtproto.codec.GzipPacked.unpack",
       "route": "/reference/python/miniproto/mtproto/codec/gzippacked/unpack/",
-      "sha256": "35c555487ebb58189dcc2030175e3cea911738b0cd18477f30ea7215cea72862",
+      "sha256": "9e59be14e61ad0fc5fed3e3e09aa3b08138ca5b8f7a19686eaa6f634a24132f0",
       "source_path": "src/miniproto/mtproto/codec.py"
     },
     {
@@ -2987,7 +2996,7 @@
       "path": "python/miniproto/mtproto/codec/messagecontainer.md",
       "qualified_name": "miniproto.mtproto.codec.MessageContainer",
       "route": "/reference/python/miniproto/mtproto/codec/messagecontainer/",
-      "sha256": "33faba09e7ebc7b229f1e980e9dc6cca2e5564be280722ee5432d13890c88ee8",
+      "sha256": "d3bbf85ad4c9d276dfa55586cfd4a9cc479b89011c652ebeefefed4c3e30424b",
       "source_path": "src/miniproto/mtproto/codec.py"
     },
     {
@@ -2996,7 +3005,7 @@
       "path": "python/miniproto/mtproto/codec/messagecontaineritem.md",
       "qualified_name": "miniproto.mtproto.codec.MessageContainerItem",
       "route": "/reference/python/miniproto/mtproto/codec/messagecontaineritem/",
-      "sha256": "14be86b389bde921a22246ccbdf11bba12e427517f3fc38ad7e4764050478550",
+      "sha256": "4031a0601a4e5a54f207a130e6d5ee20a71a613525f72db9e0573265da4d3e79",
       "source_path": "src/miniproto/mtproto/codec.py"
     },
     {
@@ -3005,7 +3014,7 @@
       "path": "python/miniproto/mtproto/codec/msgresendreq.md",
       "qualified_name": "miniproto.mtproto.codec.MsgResendReq",
       "route": "/reference/python/miniproto/mtproto/codec/msgresendreq/",
-      "sha256": "cf09d04dbdf28d1076922a32ee5a331a31e589cb0524455f08d196b599050bbe",
+      "sha256": "f4648d6047ae8809bbba909b18accff97642404d576aa442e5d6aa214e46fdc8",
       "source_path": "src/miniproto/mtproto/codec.py"
     },
     {
@@ -3014,7 +3023,7 @@
       "path": "python/miniproto/mtproto/codec/msgsack.md",
       "qualified_name": "miniproto.mtproto.codec.MsgsAck",
       "route": "/reference/python/miniproto/mtproto/codec/msgsack/",
-      "sha256": "c17558285ee5e48e63b74589a50b774a1c18d486fe9dd4ed49908ba98df256d9",
+      "sha256": "da66c72778fc32a9b9e1d8af619e092f82339c9de1fdc7536f0ca093982aaa26",
       "source_path": "src/miniproto/mtproto/codec.py"
     },
     {
@@ -3023,7 +3032,7 @@
       "path": "python/miniproto/mtproto/codec/msgsstateinfo.md",
       "qualified_name": "miniproto.mtproto.codec.MsgsStateInfo",
       "route": "/reference/python/miniproto/mtproto/codec/msgsstateinfo/",
-      "sha256": "edd7a14418ba4bb7705cbbf8082c1be491a48e44f04dba5b788e623c22d3a730",
+      "sha256": "a6e07d9321e19665608be9bf373f24a9d894f62c69491c9ceca5065f4a5b70bf",
       "source_path": "src/miniproto/mtproto/codec.py"
     },
     {
@@ -3032,7 +3041,7 @@
       "path": "python/miniproto/mtproto/codec/msgsstatereq.md",
       "qualified_name": "miniproto.mtproto.codec.MsgsStateReq",
       "route": "/reference/python/miniproto/mtproto/codec/msgsstatereq/",
-      "sha256": "a1a334aaac49f8b5385c903f0ce3e9afe799354545cf1727206937bd7fb1a30f",
+      "sha256": "9cbf53525f187e12a93b1b317fd3c85914f0ad6e073e8b18556ecc471de60440",
       "source_path": "src/miniproto/mtproto/codec.py"
     },
     {
@@ -3041,7 +3050,7 @@
       "path": "python/miniproto/mtproto/codec/newsessioncreated.md",
       "qualified_name": "miniproto.mtproto.codec.NewSessionCreated",
       "route": "/reference/python/miniproto/mtproto/codec/newsessioncreated/",
-      "sha256": "529d11451034535859d87b3bf72f78ecf77617311d37801584904579448a19d8",
+      "sha256": "259a4dcd5e095b692f6ebca5233da12319531d21cb6da4cfb05e81ba0530285d",
       "source_path": "src/miniproto/mtproto/codec.py"
     },
     {
@@ -3050,7 +3059,7 @@
       "path": "python/miniproto/mtproto/codec/pong.md",
       "qualified_name": "miniproto.mtproto.codec.Pong",
       "route": "/reference/python/miniproto/mtproto/codec/pong/",
-      "sha256": "0bed2f02def4ff785c7af042f90921d889931c80c9395908e3cf3d255ed5819d",
+      "sha256": "d41d799f29b389d7088dde1930a027292cfa20af260899f4f2e9a022da5728c5",
       "source_path": "src/miniproto/mtproto/codec.py"
     },
     {
@@ -3059,7 +3068,7 @@
       "path": "python/miniproto/mtproto/codec/rpcerrorbody.md",
       "qualified_name": "miniproto.mtproto.codec.RpcErrorBody",
       "route": "/reference/python/miniproto/mtproto/codec/rpcerrorbody/",
-      "sha256": "6d295f552f8cdc3725ea0e8f05e9fa8a704e33d9a03a6e16494bdf215ba1e919",
+      "sha256": "845df67493139f42ec3d65d0a8a519f9dfd9766e21b6f9579c11e7e772a073b5",
       "source_path": "src/miniproto/mtproto/codec.py"
     },
     {
@@ -3068,7 +3077,7 @@
       "path": "python/miniproto/mtproto/codec/rpcresult.md",
       "qualified_name": "miniproto.mtproto.codec.RpcResult",
       "route": "/reference/python/miniproto/mtproto/codec/rpcresult/",
-      "sha256": "42a7a4d8d4a1fe52e83f9438cc346b9e06fdaf191864f564ea4a76cdea54790d",
+      "sha256": "a551bdcf3ed743961a2e921e858db1f2d3b600695911fd3de1452fe915bd8e2f",
       "source_path": "src/miniproto/mtproto/codec.py"
     },
     {
@@ -3077,7 +3086,7 @@
       "path": "python/miniproto/mtproto/codec/unencryptedmessage.md",
       "qualified_name": "miniproto.mtproto.codec.UnencryptedMessage",
       "route": "/reference/python/miniproto/mtproto/codec/unencryptedmessage/",
-      "sha256": "db27164e83eae0c89e8b10aedb044476a0fcb3b30b1e7059c45f6a90058a2270",
+      "sha256": "e28eb020fc8f47768a0ddf24885487f49c774abf6530cbf83de9af02ce53b6f3",
       "source_path": "src/miniproto/mtproto/codec.py"
     },
     {
@@ -3113,7 +3122,7 @@
       "path": "python/miniproto/mtproto/state/mtprotostate.md",
       "qualified_name": "miniproto.mtproto.state.MTProtoState",
       "route": "/reference/python/miniproto/mtproto/state/mtprotostate/",
-      "sha256": "590d7bbd51d0e4007b56aacb4b73b77901c7b6360feae9eb614a1373593bfffb",
+      "sha256": "e8cebd77f8e0bb04511d6f17b9414c5440ca36c709c3103fa1fe8e6a1e177da5",
       "source_path": "src/miniproto/mtproto/state.py"
     },
     {
@@ -3122,7 +3131,7 @@
       "path": "python/miniproto/mtproto/state/mtprotostate/apply-server-salt.md",
       "qualified_name": "miniproto.mtproto.state.MTProtoState.apply_server_salt",
       "route": "/reference/python/miniproto/mtproto/state/mtprotostate/apply-server-salt/",
-      "sha256": "47c25dbe8d82a1c9e199091831e38fb31f143838d865440eb45e40d0aa7e944f",
+      "sha256": "aa5e57a211b9272251d81d7b2cfdf490b79d32b8683e08a1440ced2c960d87e9",
       "source_path": "src/miniproto/mtproto/state.py"
     },
     {
@@ -3131,7 +3140,7 @@
       "path": "python/miniproto/mtproto/state/mtprotostate/commit-incoming.md",
       "qualified_name": "miniproto.mtproto.state.MTProtoState.commit_incoming",
       "route": "/reference/python/miniproto/mtproto/state/mtprotostate/commit-incoming/",
-      "sha256": "4b00e93370c8472f49b8fbc42ab1bdcfe5cbebb568d73b12ff6be5d5223f45df",
+      "sha256": "c6316395c1d1d24d7db892a5e5415646c81935821e024a1d4f1ad17b7cf0bbb4",
       "source_path": "src/miniproto/mtproto/state.py"
     },
     {
@@ -3140,7 +3149,7 @@
       "path": "python/miniproto/mtproto/state/mtprotostate/correct-time-offset-from-msg-id.md",
       "qualified_name": "miniproto.mtproto.state.MTProtoState.correct_time_offset_from_msg_id",
       "route": "/reference/python/miniproto/mtproto/state/mtprotostate/correct-time-offset-from-msg-id/",
-      "sha256": "b6bcc48d3e97a051f621b9d157986c4d9b06a528730eeb01b80ecc05758b55ec",
+      "sha256": "631e64ed4bb89db7d6ba0dca92f90793587db88dff1fd2cb9745bf775e124f2d",
       "source_path": "src/miniproto/mtproto/state.py"
     },
     {
@@ -3149,7 +3158,7 @@
       "path": "python/miniproto/mtproto/state/mtprotostate/mark-acks-sent.md",
       "qualified_name": "miniproto.mtproto.state.MTProtoState.mark_acks_sent",
       "route": "/reference/python/miniproto/mtproto/state/mtprotostate/mark-acks-sent/",
-      "sha256": "699aca993f1b0e7602ddf93351d01457be345211cf82743f56efdde218405c92",
+      "sha256": "db726cd01ccef29493e53d683dfc64b07091a044131616b1b24cfb024f4e97f4",
       "source_path": "src/miniproto/mtproto/state.py"
     },
     {
@@ -3158,7 +3167,7 @@
       "path": "python/miniproto/mtproto/state/mtprotostate/message-statuses.md",
       "qualified_name": "miniproto.mtproto.state.MTProtoState.message_statuses",
       "route": "/reference/python/miniproto/mtproto/state/mtprotostate/message-statuses/",
-      "sha256": "25c85d0151b27c9eecf35f31703d6ab3e02275bb9591564fb964ed51e13edc97",
+      "sha256": "70b01d74403439922c93d4465020dc9c07336df7c64a9475d8be2a9357a0afd9",
       "source_path": "src/miniproto/mtproto/state.py"
     },
     {
@@ -3167,7 +3176,7 @@
       "path": "python/miniproto/mtproto/state/mtprotostate/next-msg-id.md",
       "qualified_name": "miniproto.mtproto.state.MTProtoState.next_msg_id",
       "route": "/reference/python/miniproto/mtproto/state/mtprotostate/next-msg-id/",
-      "sha256": "eb15555490d9ca79bd51f4ca4369a64698c28f0dd989b981046e8de4562a0c7b",
+      "sha256": "da4771e72265092a545e9418b603231704e191dc8bb6cb6d985bfe9797568e79",
       "source_path": "src/miniproto/mtproto/state.py"
     },
     {
@@ -3176,7 +3185,7 @@
       "path": "python/miniproto/mtproto/state/mtprotostate/next-seq-no.md",
       "qualified_name": "miniproto.mtproto.state.MTProtoState.next_seq_no",
       "route": "/reference/python/miniproto/mtproto/state/mtprotostate/next-seq-no/",
-      "sha256": "4ca2af754f6791c9dbff68c0520b222a393d92b50316a41a20de7b8e99c60b9c",
+      "sha256": "542cc5226a989d8606cafec6fb6aea1117131b170a6ccf992e9a4484c3795823",
       "source_path": "src/miniproto/mtproto/state.py"
     },
     {
@@ -3185,7 +3194,7 @@
       "path": "python/miniproto/mtproto/state/mtprotostate/observe-server-msg-id.md",
       "qualified_name": "miniproto.mtproto.state.MTProtoState.observe_server_msg_id",
       "route": "/reference/python/miniproto/mtproto/state/mtprotostate/observe-server-msg-id/",
-      "sha256": "090124b6530cb339c7bb759d5e2cfdeba925bd252175a50699988268621b978f",
+      "sha256": "3914557e3b26680925e204defd60b3ad1e26183215866e935cadef5f9e447325",
       "source_path": "src/miniproto/mtproto/state.py"
     },
     {
@@ -3194,7 +3203,7 @@
       "path": "python/miniproto/mtproto/state/mtprotostate/oldest-pending-ack-age.md",
       "qualified_name": "miniproto.mtproto.state.MTProtoState.oldest_pending_ack_age",
       "route": "/reference/python/miniproto/mtproto/state/mtprotostate/oldest-pending-ack-age/",
-      "sha256": "9c1617887d3f7acb6f2aafd4c19a9e88efb46fd54804b9a490a71d86f3313fdc",
+      "sha256": "aa3c63cc7ef9865c107acac0c9c485e72c7958debede40dce930ff68249d7659",
       "source_path": "src/miniproto/mtproto/state.py"
     },
     {
@@ -3203,7 +3212,7 @@
       "path": "python/miniproto/mtproto/state/mtprotostate/pop-pending-acks.md",
       "qualified_name": "miniproto.mtproto.state.MTProtoState.pop_pending_acks",
       "route": "/reference/python/miniproto/mtproto/state/mtprotostate/pop-pending-acks/",
-      "sha256": "83b5fd24717f91050f92087350bf98f860e1e876a5e5f39e3eee9f1abb6ffcfa",
+      "sha256": "fadf092400ac170f758e832b6abaa885b5ab89596d617c3ce6b6e09de564acd1",
       "source_path": "src/miniproto/mtproto/state.py"
     },
     {
@@ -3212,7 +3221,7 @@
       "path": "python/miniproto/mtproto/state/mtprotostate/queue-ack.md",
       "qualified_name": "miniproto.mtproto.state.MTProtoState.queue_ack",
       "route": "/reference/python/miniproto/mtproto/state/mtprotostate/queue-ack/",
-      "sha256": "21d574c5d6a4c35bed98d7252da59c1ee2bd8b41ef132d1ec0a854d83da8947d",
+      "sha256": "0f7e23d63d89e530cc02c05bed981f6e8b9a23d7822308665d478b91635af638",
       "source_path": "src/miniproto/mtproto/state.py"
     },
     {
@@ -3221,7 +3230,7 @@
       "path": "python/miniproto/mtproto/state/mtprotostate/record-incoming.md",
       "qualified_name": "miniproto.mtproto.state.MTProtoState.record_incoming",
       "route": "/reference/python/miniproto/mtproto/state/mtprotostate/record-incoming/",
-      "sha256": "0862e5cd2317572beb1ea10ded2fa0c69f68ae290e9e531eba735552f1282b18",
+      "sha256": "2b41471a9b77d15d87f533044eba6169b4c36b45bfb27e2425324c5bc3181a1c",
       "source_path": "src/miniproto/mtproto/state.py"
     },
     {
@@ -3230,7 +3239,7 @@
       "path": "python/miniproto/mtproto/state/mtprotostate/requeue-acks.md",
       "qualified_name": "miniproto.mtproto.state.MTProtoState.requeue_acks",
       "route": "/reference/python/miniproto/mtproto/state/mtprotostate/requeue-acks/",
-      "sha256": "5cbd9bf3e2c52d647491a03919d088d9bdbd9be9fc0f0e66132cd642b785cfce",
+      "sha256": "3064be9cd470f107b0227fb42636e38a50b43c1e65dffe7b2f2204462f2e8a0b",
       "source_path": "src/miniproto/mtproto/state.py"
     },
     {
@@ -3239,7 +3248,7 @@
       "path": "python/miniproto/mtproto/state/mtprotostate/validate-incoming.md",
       "qualified_name": "miniproto.mtproto.state.MTProtoState.validate_incoming",
       "route": "/reference/python/miniproto/mtproto/state/mtprotostate/validate-incoming/",
-      "sha256": "31bb8f13ec94ea57821d0edb3e26bd09334fbfab588797c1c06ace8cdb173c27",
+      "sha256": "a7d25f98b5b092d99211652c9b752ac13745e6bb86f7fe1ed7a1c686d91876bc",
       "source_path": "src/miniproto/mtproto/state.py"
     },
     {
@@ -3491,7 +3500,7 @@
       "path": "python/miniproto/peers/input-channel-from-peer.md",
       "qualified_name": "miniproto.peers.input_channel_from_peer",
       "route": "/reference/python/miniproto/peers/input-channel-from-peer/",
-      "sha256": "002de0928b6cc7494f3b598a75feec1504e5ea67dcdc8354efc1484ca3bff168",
+      "sha256": "49839049fc817ac33f2be076f8a241ddf33d6277630d1dd806163fd71e897857",
       "source_path": "src/miniproto/peers.py"
     },
     {
@@ -3500,7 +3509,7 @@
       "path": "python/miniproto/peers/input-peer-from-peer.md",
       "qualified_name": "miniproto.peers.input_peer_from_peer",
       "route": "/reference/python/miniproto/peers/input-peer-from-peer/",
-      "sha256": "9a73fc3b20cc336c31e3659f86f581bcb20bf6ed76240d6acee3447e8f20154a",
+      "sha256": "c2817be74b2737ef08a4ec0c68d19ba68fdceb2307c1bfd652e3d08341ed23d0",
       "source_path": "src/miniproto/peers.py"
     },
     {
@@ -3509,7 +3518,7 @@
       "path": "python/miniproto/peers/input-user-from-peer.md",
       "qualified_name": "miniproto.peers.input_user_from_peer",
       "route": "/reference/python/miniproto/peers/input-user-from-peer/",
-      "sha256": "88856b53f408516d659d7f8539af840cc957f197afb58aee4fcd2d59ed490749",
+      "sha256": "dc92ccc47a4559280065c62600cc7a6d48953c94a0efb59868d01b02ad9b24a9",
       "source_path": "src/miniproto/peers.py"
     },
     {
@@ -3518,7 +3527,7 @@
       "path": "python/miniproto/peers/peercache.md",
       "qualified_name": "miniproto.peers.PeerCache",
       "route": "/reference/python/miniproto/peers/peercache/",
-      "sha256": "c40b9c8d8d70f58515b5958840a8e3b16acc107ac365044782b99b14af22ee70",
+      "sha256": "8ee359c39e01ea0bcd324aaf5bec7b96deb789cef1531031e7fba68ac8aed5fe",
       "source_path": "src/miniproto/peers.py"
     },
     {
@@ -3527,7 +3536,7 @@
       "path": "python/miniproto/peers/peercache/get-me.md",
       "qualified_name": "miniproto.peers.PeerCache.get_me",
       "route": "/reference/python/miniproto/peers/peercache/get-me/",
-      "sha256": "ff1865bae760789cfe44b2f94f8175269ea76c8c955b7bad9e2d41b9149824c7",
+      "sha256": "1c712646db132d3f43379f54ddef2746fb47a959f2a52db42d4728f260ad2d6b",
       "source_path": "src/miniproto/peers.py"
     },
     {
@@ -3536,7 +3545,7 @@
       "path": "python/miniproto/peers/peercache/remember-raw-entities.md",
       "qualified_name": "miniproto.peers.PeerCache.remember_raw_entities",
       "route": "/reference/python/miniproto/peers/peercache/remember-raw-entities/",
-      "sha256": "a138885b3a0e2d69b7016c6b5a4133585b04efc7ed7e7f0057575ac5447b5682",
+      "sha256": "1ec4e2aaa824dbc511b69d72025abac64592ca36628d457d630c52c0b8777e7b",
       "source_path": "src/miniproto/peers.py"
     },
     {
@@ -3545,7 +3554,7 @@
       "path": "python/miniproto/peers/peercache/resolve-input-peer.md",
       "qualified_name": "miniproto.peers.PeerCache.resolve_input_peer",
       "route": "/reference/python/miniproto/peers/peercache/resolve-input-peer/",
-      "sha256": "f750293a551374a0f961932f173761e517a0b9e5399c02bb263c80e1ec4f3ad7",
+      "sha256": "f0fd2f3c95b7b6306f8ef55d292864f7ef53bb8355a8ca9f676dd8bb81fa8475",
       "source_path": "src/miniproto/peers.py"
     },
     {
@@ -3554,7 +3563,7 @@
       "path": "python/miniproto/peers/peercache/resolve-peer.md",
       "qualified_name": "miniproto.peers.PeerCache.resolve_peer",
       "route": "/reference/python/miniproto/peers/peercache/resolve-peer/",
-      "sha256": "a5b0b0bf07a0ba360430c9813513bb5188db9cd23e9c7b712c6b3d23a40ff859",
+      "sha256": "21902f17d02c8a528d3b7a30b9e299e76be5de508542f99b8322f33177ad3682",
       "source_path": "src/miniproto/peers.py"
     },
     {
@@ -3572,7 +3581,7 @@
       "path": "python/miniproto/security/redaction/is-sensitive-key.md",
       "qualified_name": "miniproto.security.redaction.is_sensitive_key",
       "route": "/reference/python/miniproto/security/redaction/is-sensitive-key/",
-      "sha256": "d9fa988d8481d99d2d4613910e075030d685f949b71c124e16a58a71c2e85f8e",
+      "sha256": "5427a7aa24bdec63f183835c209c1cbd820ed8d8c5ba62219a61cb6b47cd0432",
       "source_path": "src/miniproto/security/redaction.py"
     },
     {
@@ -3581,7 +3590,7 @@
       "path": "python/miniproto/security/redaction/redact-mapping.md",
       "qualified_name": "miniproto.security.redaction.redact_mapping",
       "route": "/reference/python/miniproto/security/redaction/redact-mapping/",
-      "sha256": "b9f5e8b85dfc3fc7e508b5a0484392eb5e6b2b800d0b1ae41653930b605f936e",
+      "sha256": "edf86acc001cf45db4847c051c8574bdceac6025b537ffc7457d8fc80af157dc",
       "source_path": "src/miniproto/security/redaction.py"
     },
     {
@@ -3590,7 +3599,7 @@
       "path": "python/miniproto/security/redaction/redact-text.md",
       "qualified_name": "miniproto.security.redaction.redact_text",
       "route": "/reference/python/miniproto/security/redaction/redact-text/",
-      "sha256": "0dcc274f7c510487603c64afecbd79b84f7526c85d7d966bae25da388fa87e12",
+      "sha256": "fcb0977aca49040cc473344246e46db9aae5308faf624a52f60e6c1fbc0be9dd",
       "source_path": "src/miniproto/security/redaction.py"
     },
     {
@@ -3599,7 +3608,7 @@
       "path": "python/miniproto/security/redaction/redact-value.md",
       "qualified_name": "miniproto.security.redaction.redact_value",
       "route": "/reference/python/miniproto/security/redaction/redact-value/",
-      "sha256": "c9ccb1ba0351ad4143daca6e993608c2ddcba77c7b55bd1d71984d9516fc87f5",
+      "sha256": "0baf666cf40c756d4c99debbfaaa52622b2b4b2533955b5aecc963f596d3ed0b",
       "source_path": "src/miniproto/security/redaction.py"
     },
     {
@@ -3608,7 +3617,7 @@
       "path": "python/miniproto/security/redaction/redacted.md",
       "qualified_name": "miniproto.security.redaction.REDACTED",
       "route": "/reference/python/miniproto/security/redaction/redacted/",
-      "sha256": "928dd78e5fb416d05adfc210f9b5cb65d63a98788112471bf385478b5733a8e8",
+      "sha256": "ff2ba63fd0a987e474ce4d676133f8d8fea1fcbf6fe7e4b2e8cdc322f54e8382",
       "source_path": "src/miniproto/security/redaction.py"
     },
     {
@@ -3617,7 +3626,7 @@
       "path": "python/miniproto/security/redaction/safe-repr.md",
       "qualified_name": "miniproto.security.redaction.safe_repr",
       "route": "/reference/python/miniproto/security/redaction/safe-repr/",
-      "sha256": "e4c84cc476689b7e00baca1e319d7168a0008b036fb407b310db7e7d3471f8ba",
+      "sha256": "fad72a7c65a6691c77fef72d6b3fe13d38ecbcdcd106d1f82ca5754e1e877778",
       "source_path": "src/miniproto/security/redaction.py"
     },
     {
@@ -3635,7 +3644,7 @@
       "path": "python/miniproto/session/models/authkey.md",
       "qualified_name": "miniproto.session.models.AuthKey",
       "route": "/reference/python/miniproto/session/models/authkey/",
-      "sha256": "4b13c532d560c04b9a878370b9839a7238be8de6d4c34bb7d5e604b96961abf2",
+      "sha256": "c605502fd37f0fc28b9c3e56673412e3903685b7e391a24ddeaa375f895a5fce",
       "source_path": "src/miniproto/session/models.py"
     },
     {
@@ -3644,7 +3653,7 @@
       "path": "python/miniproto/session/models/dcoption.md",
       "qualified_name": "miniproto.session.models.DCOption",
       "route": "/reference/python/miniproto/session/models/dcoption/",
-      "sha256": "9a0b62003a1b6cc69b5fc235b0e3e76f92f14598d51028842df73f4a7435b85d",
+      "sha256": "2cf1abc670c33f8198e5a76e05f85b6952657ecd536b544f69d929ee24dcebd1",
       "source_path": "src/miniproto/session/models.py"
     },
     {
@@ -3653,7 +3662,7 @@
       "path": "python/miniproto/session/models/peercacheentry.md",
       "qualified_name": "miniproto.session.models.PeerCacheEntry",
       "route": "/reference/python/miniproto/session/models/peercacheentry/",
-      "sha256": "6fa56688222899278b13d34628a505674421d6cc282737aae7206ed9c3bc56ff",
+      "sha256": "3866e39bdafd402e855499fd841adc939070b6a73a345e5f5e329660d04ff58b",
       "source_path": "src/miniproto/session/models.py"
     },
     {
@@ -3662,7 +3671,7 @@
       "path": "python/miniproto/session/models/session-record-from-mapping.md",
       "qualified_name": "miniproto.session.models.session_record_from_mapping",
       "route": "/reference/python/miniproto/session/models/session-record-from-mapping/",
-      "sha256": "c8f71f6ce913a892a40464ee0be887223f98e3eabb886c3b9705f1c7875b77a2",
+      "sha256": "15b44752d6511384831d8cd24d8c60cee80db3946367315cf593cfd2dd82d98a",
       "source_path": "src/miniproto/session/models.py"
     },
     {
@@ -3671,7 +3680,7 @@
       "path": "python/miniproto/session/models/session-record-to-mapping.md",
       "qualified_name": "miniproto.session.models.session_record_to_mapping",
       "route": "/reference/python/miniproto/session/models/session-record-to-mapping/",
-      "sha256": "a1146d8ba0752919ccf73c0b7f98becddf2d8ec47b5541aac25178ef2cb1cf45",
+      "sha256": "361e2ca9e49fade50663b23c303e903ce577954e4bb96c38e89745f68d7249bd",
       "source_path": "src/miniproto/session/models.py"
     },
     {
@@ -3680,7 +3689,7 @@
       "path": "python/miniproto/session/models/sessionrecord.md",
       "qualified_name": "miniproto.session.models.SessionRecord",
       "route": "/reference/python/miniproto/session/models/sessionrecord/",
-      "sha256": "08ca5eb1bf3d0024733617026c8b114e3f1186e5ee4cbb17d74fd2d90204eac7",
+      "sha256": "c18d85f09c93b0cc25d81a853e286b91fd253f62955e166d24eabe039c16be11",
       "source_path": "src/miniproto/session/models.py"
     },
     {
@@ -3689,7 +3698,7 @@
       "path": "python/miniproto/session/models/updatestate.md",
       "qualified_name": "miniproto.session.models.UpdateState",
       "route": "/reference/python/miniproto/session/models/updatestate/",
-      "sha256": "1f9ed2eb17ef195375fe176a0e3ec015e09146d361a8b2e9ee4d12e25017e2ce",
+      "sha256": "5b2a19177c34af70b1e68f035854593bced5c99b910d0a454500ce7c3ac0677a",
       "source_path": "src/miniproto/session/models.py"
     },
     {
@@ -3698,7 +3707,7 @@
       "path": "python/miniproto/session/models/useridentity.md",
       "qualified_name": "miniproto.session.models.UserIdentity",
       "route": "/reference/python/miniproto/session/models/useridentity/",
-      "sha256": "e41c5693756c826c048a01b26267d8e95b3b5171769b51f1ab36f347a044234c",
+      "sha256": "d84d263e4d105b32a03e215189ae2fba1117c1d8823b8f954cbc2caad9435002",
       "source_path": "src/miniproto/session/models.py"
     },
     {
@@ -3716,7 +3725,7 @@
       "path": "python/miniproto/session/peer_merge/merge-peer-entries.md",
       "qualified_name": "miniproto.session.peer_merge.merge_peer_entries",
       "route": "/reference/python/miniproto/session/peer_merge/merge-peer-entries/",
-      "sha256": "b3807c356072469b238d518a34b9d35efe08227bb1cbfff5919a0fa890573838",
+      "sha256": "eecf3129a7db23a47eedbc63abf216eebc73aa1aeae16c849409f02411294077",
       "source_path": "src/miniproto/session/peer_merge.py"
     },
     {
@@ -3725,7 +3734,7 @@
       "path": "python/miniproto/session/peer_merge/merge-peer-entry-map-with-metadata.md",
       "qualified_name": "miniproto.session.peer_merge.merge_peer_entry_map_with_metadata",
       "route": "/reference/python/miniproto/session/peer_merge/merge-peer-entry-map-with-metadata/",
-      "sha256": "b45ea794bb970c0c2d8640b54badd1dfb2c4117ec461851b43e38af3f91741d3",
+      "sha256": "fd066a2b5faca339f7d229544ef5e94d85384c1bc0f51e2d292a7d7265995a99",
       "source_path": "src/miniproto/session/peer_merge.py"
     },
     {
@@ -3734,7 +3743,7 @@
       "path": "python/miniproto/session/peer_merge/merge-peer-entry-map.md",
       "qualified_name": "miniproto.session.peer_merge.merge_peer_entry_map",
       "route": "/reference/python/miniproto/session/peer_merge/merge-peer-entry-map/",
-      "sha256": "37e35901641a2512ea6880f572571d194229702a7db20ed15bc78f431c4cb8fd",
+      "sha256": "30a5c1c784cfc02d8ca1915a47ea35464be45f829db9d75eeeddd3c30313f985",
       "source_path": "src/miniproto/session/peer_merge.py"
     },
     {
@@ -3743,7 +3752,7 @@
       "path": "python/miniproto/session/peer_merge/merge-peer-entry.md",
       "qualified_name": "miniproto.session.peer_merge.merge_peer_entry",
       "route": "/reference/python/miniproto/session/peer_merge/merge-peer-entry/",
-      "sha256": "887694071dce50ac04be593a7b41b26ecc60a7b036d88b537f594e2999e590a1",
+      "sha256": "9203e89178a47bb0f33530ea15b973d5421dde37dbdf848f4717396d376ad634",
       "source_path": "src/miniproto/session/peer_merge.py"
     },
     {
@@ -3752,7 +3761,7 @@
       "path": "python/miniproto/session/peer_merge/peerentrymapmerge.md",
       "qualified_name": "miniproto.session.peer_merge.PeerEntryMapMerge",
       "route": "/reference/python/miniproto/session/peer_merge/peerentrymapmerge/",
-      "sha256": "94f212afb4fbce13ae56d831fec18fc6bc36862595b5c7706ca8c62d3707bd87",
+      "sha256": "4dc578579ca43fce2e1b8d1f38d905204ac177e1a23a45bd85867d616d51736a",
       "source_path": "src/miniproto/session/peer_merge.py"
     },
     {
@@ -4157,7 +4166,7 @@
       "path": "python/miniproto/tl/codec/decode-object.md",
       "qualified_name": "miniproto.tl.codec.decode_object",
       "route": "/reference/python/miniproto/tl/codec/decode-object/",
-      "sha256": "b9385ab8a598888b14f2ca8c5c4fa33c9c2cded8765f60c7bc6d6eb24c736c67",
+      "sha256": "f2416c0d11ea51d8d448e80c99bfb70bd0251a96cfa718c0261fc4a09123a5ce",
       "source_path": "src/miniproto/tl/codec.py"
     },
     {
@@ -4184,7 +4193,7 @@
       "path": "python/miniproto/tl/codec/decode-vector.md",
       "qualified_name": "miniproto.tl.codec.decode_vector",
       "route": "/reference/python/miniproto/tl/codec/decode-vector/",
-      "sha256": "5f24b933a88f8a333bb427dbf01a14f05c8990dacef3bec466980bd20ac4b3f2",
+      "sha256": "f0200e52051221e3e2c701970074a54b86cde3f4f05f676bf8eb089dce56ad76",
       "source_path": "src/miniproto/tl/codec.py"
     },
     {
@@ -4193,7 +4202,7 @@
       "path": "python/miniproto/tl/codec/deserialize-object.md",
       "qualified_name": "miniproto.tl.codec.deserialize_object",
       "route": "/reference/python/miniproto/tl/codec/deserialize-object/",
-      "sha256": "ec08893c232b4fef0e4f9abf4004987a4cb956124b69b447de0f0d6e2d30a22c",
+      "sha256": "078892d175e6bb8a86a36898bdb326a85b47ec70c038c70ad6fb7830a69de1ca",
       "source_path": "src/miniproto/tl/codec.py"
     },
     {
@@ -4292,7 +4301,7 @@
       "path": "python/miniproto/tl/codec/encode-vector.md",
       "qualified_name": "miniproto.tl.codec.encode_vector",
       "route": "/reference/python/miniproto/tl/codec/encode-vector/",
-      "sha256": "430721b2d4ddb118d7d27857b3c9d259c0e55a0c1ed9da1f6a8e45942b0a699f",
+      "sha256": "622b289ab59b336c7c27af1708d7b0d61febc400c966cca36087183ecdc58ee6",
       "source_path": "src/miniproto/tl/codec.py"
     },
     {
@@ -4301,7 +4310,7 @@
       "path": "python/miniproto/tl/codec/serialize-object.md",
       "qualified_name": "miniproto.tl.codec.serialize_object",
       "route": "/reference/python/miniproto/tl/codec/serialize-object/",
-      "sha256": "758994019b7b11c6b67bb1394697ead01d8646827eeb9363985da6be8a62b5b6",
+      "sha256": "8ad418bf9c1fe5f54671d5b42103deef48723bb2607d5db83f41cd4760f00a48",
       "source_path": "src/miniproto/tl/codec.py"
     },
     {
@@ -4373,7 +4382,7 @@
       "path": "python/miniproto/tl/index.md",
       "qualified_name": "miniproto.tl",
       "route": "/reference/python/miniproto/tl/",
-      "sha256": "b34da0cf57b793490d1a28cbd01face07e1ad09924378eea79c72c2c6fc22d1a",
+      "sha256": "f3a03c5be30476ee99b7fd74e6af5a63d94dd4f829cd3c7147d1f134ac426dc7",
       "source_path": "src/miniproto/tl/__init__.py"
     },
     {
@@ -4463,7 +4472,7 @@
       "path": "python/miniproto/updates/manager/updatehandler.md",
       "qualified_name": "miniproto.updates.manager.UpdateHandler",
       "route": "/reference/python/miniproto/updates/manager/updatehandler/",
-      "sha256": "eb17f728c24d4bc5a983cfff0edf2c7140f6a16bf098de99a28d67aec2c7e793",
+      "sha256": "6d332f9fd245571abb0130f714a2bd24c758a2b0c16b93219e3b527b685283b1",
       "source_path": "src/miniproto/updates/manager.py"
     },
     {
@@ -4472,7 +4481,7 @@
       "path": "python/miniproto/updates/manager/updateinvoker.md",
       "qualified_name": "miniproto.updates.manager.UpdateInvoker",
       "route": "/reference/python/miniproto/updates/manager/updateinvoker/",
-      "sha256": "390754ef3f9008ccace4e20e77135ed6613379bf03536a8f2009a09a0d3fdae9",
+      "sha256": "847458768bf30181d34c9f47348bc141f904e2b8ac95f80c8fdaad12d3104c8b",
       "source_path": "src/miniproto/updates/manager.py"
     },
     {
@@ -4481,7 +4490,7 @@
       "path": "python/miniproto/updates/manager/updatemanager.md",
       "qualified_name": "miniproto.updates.manager.UpdateManager",
       "route": "/reference/python/miniproto/updates/manager/updatemanager/",
-      "sha256": "ed727d41f1f6bf74febbe85b3631e1ecf86ee3a057a9c2c007bd62ef4af52d90",
+      "sha256": "0e8fafacbfc24baf712426f7de6156077731344103ca23b40887b17234d224ae",
       "source_path": "src/miniproto/updates/manager.py"
     },
     {
@@ -4490,7 +4499,7 @@
       "path": "python/miniproto/updates/manager/updatemanager/emit-update.md",
       "qualified_name": "miniproto.updates.manager.UpdateManager.emit_update",
       "route": "/reference/python/miniproto/updates/manager/updatemanager/emit-update/",
-      "sha256": "e64cad95ea6b74ca879875c0d2e57f88d3aec5a328ee9312f342084697c4b3ea",
+      "sha256": "fee88543a6d20564f7e8a0bdd476fd4808b40b1d3154ffc637417959fe8cfe98",
       "source_path": "src/miniproto/updates/manager.py"
     },
     {
@@ -4499,7 +4508,7 @@
       "path": "python/miniproto/updates/manager/updatemanager/feed-raw-update.md",
       "qualified_name": "miniproto.updates.manager.UpdateManager.feed_raw_update",
       "route": "/reference/python/miniproto/updates/manager/updatemanager/feed-raw-update/",
-      "sha256": "9fa2fa2c3400414a2d6e81bc80b69e131cce36d5e3e6297b181efb0e08a49111",
+      "sha256": "bda2fd916d23d2f7fdaebe0739a30d5dd769ffbe7a7abdb229af567fecbd224b",
       "source_path": "src/miniproto/updates/manager.py"
     },
     {
@@ -4508,7 +4517,7 @@
       "path": "python/miniproto/updates/manager/updatemanager/handle-raw-update.md",
       "qualified_name": "miniproto.updates.manager.UpdateManager.handle_raw_update",
       "route": "/reference/python/miniproto/updates/manager/updatemanager/handle-raw-update/",
-      "sha256": "d2fd6100674728896452a8c283a15fd8103d14849162161f95931b733867950a",
+      "sha256": "20d2d705f7e98fd63a09e78e1c5c9da511757204d9e17f2f07c98481780e446a",
       "source_path": "src/miniproto/updates/manager.py"
     },
     {
@@ -4517,7 +4526,7 @@
       "path": "python/miniproto/updates/manager/updatemanager/iter-updates.md",
       "qualified_name": "miniproto.updates.manager.UpdateManager.iter_updates",
       "route": "/reference/python/miniproto/updates/manager/updatemanager/iter-updates/",
-      "sha256": "fe914b10bbee5f8d2f0f89c8fe1948164b99d0247e55688884d1074af1bed226",
+      "sha256": "e0804aa7ac4ce5318d401ed0a19720486739eaba115735f08e0dfb64e4b38327",
       "source_path": "src/miniproto/updates/manager.py"
     },
     {
@@ -4526,7 +4535,7 @@
       "path": "python/miniproto/updates/manager/updatemanager/on.md",
       "qualified_name": "miniproto.updates.manager.UpdateManager.on",
       "route": "/reference/python/miniproto/updates/manager/updatemanager/on/",
-      "sha256": "b1799b2117d58d5debf83a01394b56c4ceb93a91de4e165e030a38ed4cb3decb",
+      "sha256": "a5704a0642bb5e27dbe64d667ef1bf36fb7b8bb2178e3235b7cee2ea4aaec525",
       "source_path": "src/miniproto/updates/manager.py"
     },
     {
@@ -4535,7 +4544,7 @@
       "path": "python/miniproto/updates/manager/updatemanager/start.md",
       "qualified_name": "miniproto.updates.manager.UpdateManager.start",
       "route": "/reference/python/miniproto/updates/manager/updatemanager/start/",
-      "sha256": "b47e612964e2a1da74a030820f837ae7fd98d85edb8e0d65a9d4033f83e03858",
+      "sha256": "bda55fae48c41a92881ce161515feeedb8fc00ff18417159b58471de9f6f2e39",
       "source_path": "src/miniproto/updates/manager.py"
     },
     {
@@ -4544,7 +4553,7 @@
       "path": "python/miniproto/updates/manager/updatemanager/stop.md",
       "qualified_name": "miniproto.updates.manager.UpdateManager.stop",
       "route": "/reference/python/miniproto/updates/manager/updatemanager/stop/",
-      "sha256": "a50567dde51e3d039c54d4ec5e00dcc46e069030fa588bf75b14e20f541fcb12",
+      "sha256": "ac932a225bb46bbaca80f7f4bca2d120d9de92992a9bbd1216b204356f5b319c",
       "source_path": "src/miniproto/updates/manager.py"
     },
     {
@@ -4553,7 +4562,16 @@
       "path": "python/miniproto/updates/manager/updatemanager/sync-state.md",
       "qualified_name": "miniproto.updates.manager.UpdateManager.sync_state",
       "route": "/reference/python/miniproto/updates/manager/updatemanager/sync-state/",
-      "sha256": "db0bcfdf349299891afd355243e92419e48e87bde4ea20d78d5a19a155e7fb27",
+      "sha256": "49ab1621dd2614558ea388722be838704c5d42f6f0e6eaaa12d7bae4f56aa3b1",
+      "source_path": "src/miniproto/updates/manager.py"
+    },
+    {
+      "kind": "function",
+      "language": "python",
+      "path": "python/miniproto/updates/manager/updatemanager/wait-stopped.md",
+      "qualified_name": "miniproto.updates.manager.UpdateManager.wait_stopped",
+      "route": "/reference/python/miniproto/updates/manager/updatemanager/wait-stopped/",
+      "sha256": "3db4857fe087fe3a806d86f21b1c62ff1b4f41669662365d68519589f5d2f466",
       "source_path": "src/miniproto/updates/manager.py"
     },
     {
@@ -4562,7 +4580,7 @@
       "path": "python/miniproto/updates/manager/updatequeueoverflowpolicy.md",
       "qualified_name": "miniproto.updates.manager.UpdateQueueOverflowPolicy",
       "route": "/reference/python/miniproto/updates/manager/updatequeueoverflowpolicy/",
-      "sha256": "418b80693ce9a32acc277102d2357e75a0de1a086b23130ea53c7a6cc8bb76a7",
+      "sha256": "54a368bc4731604e29d54cb146e2b6009929126173c4f9b2b64fba6341834bde",
       "source_path": "src/miniproto/updates/manager.py"
     },
     {
@@ -4571,7 +4589,7 @@
       "path": "python/miniproto/updates/state/duplicatetracker.md",
       "qualified_name": "miniproto.updates.state.DuplicateTracker",
       "route": "/reference/python/miniproto/updates/state/duplicatetracker/",
-      "sha256": "b010af100ed579efb9265dfa7a81229cfd4ee0bf8c132b867243e37c49fec300",
+      "sha256": "8397018220d2d25acb42a4dd1095f96b38c7bf6c3719034de57c248768affc96",
       "source_path": "src/miniproto/updates/state.py"
     },
     {
@@ -4580,7 +4598,7 @@
       "path": "python/miniproto/updates/state/duplicatetracker/add.md",
       "qualified_name": "miniproto.updates.state.DuplicateTracker.add",
       "route": "/reference/python/miniproto/updates/state/duplicatetracker/add/",
-      "sha256": "c6cc0da5c6a5aa42c8314f6c9b9508e51c5c12f2733d471ca22be1f2278f0f91",
+      "sha256": "8c0bda34f2bcac402c791210b746b513b277c1027ae4171666e6d3c5b39a71f3",
       "source_path": "src/miniproto/updates/state.py"
     },
     {
@@ -4589,7 +4607,7 @@
       "path": "python/miniproto/updates/state/duplicatetracker/keys.md",
       "qualified_name": "miniproto.updates.state.DuplicateTracker.keys",
       "route": "/reference/python/miniproto/updates/state/duplicatetracker/keys/",
-      "sha256": "a5fd766e228f45cdec4b9c7ed9e4ada586c1b8750364e8aafabb176252207702",
+      "sha256": "6f2338813bc7229d366c342401f4799c577deba3c3b09a9a5e532f189e1180cc",
       "source_path": "src/miniproto/updates/state.py"
     },
     {
@@ -4598,7 +4616,7 @@
       "path": "python/miniproto/updates/state/entityreference.md",
       "qualified_name": "miniproto.updates.state.EntityReference",
       "route": "/reference/python/miniproto/updates/state/entityreference/",
-      "sha256": "db61e3fbde49bd17c3188e9df7b51e13e6c9dbedcab57864aed459cf1e10cc16",
+      "sha256": "b05a4cd65e1b7433018d5d887d9739bb2ef010cc6b47a5fd745c8b9ad82e9f25",
       "source_path": "src/miniproto/updates/state.py"
     },
     {
@@ -4607,7 +4625,7 @@
       "path": "python/miniproto/updates/state/entityreference/to-peer-cache-entry.md",
       "qualified_name": "miniproto.updates.state.EntityReference.to_peer_cache_entry",
       "route": "/reference/python/miniproto/updates/state/entityreference/to-peer-cache-entry/",
-      "sha256": "1296a0f114c4f4ab1c720490eb8d08b7fd0a9810e821df7ca2f6ff012010db74",
+      "sha256": "ca94fdd44cf69c8bd4987557dcd5a241239941805d13d8a2e2fc15512b1fdc87",
       "source_path": "src/miniproto/updates/state.py"
     },
     {
@@ -4616,7 +4634,7 @@
       "path": "python/miniproto/updates/state/updatecursor.md",
       "qualified_name": "miniproto.updates.state.UpdateCursor",
       "route": "/reference/python/miniproto/updates/state/updatecursor/",
-      "sha256": "916015660c9a72de2d2fdfd9f4ad0d78b2383b71020e30e46ce3d86c9e3cd611",
+      "sha256": "d19eeb3fa978b8c397fea16046b23811dbc355b72b8e6ac5b84333be66b58a32",
       "source_path": "src/miniproto/updates/state.py"
     },
     {
@@ -4625,7 +4643,7 @@
       "path": "python/miniproto/updates/state/updatecursor/channel-cursor.md",
       "qualified_name": "miniproto.updates.state.UpdateCursor.channel_cursor",
       "route": "/reference/python/miniproto/updates/state/updatecursor/channel-cursor/",
-      "sha256": "ecbfd8ee651cd2664daab86e2bb7d81efb671ecdde2298aeba1158a6835bed50",
+      "sha256": "adfee200397eaf8ce1453d395cbebeeddd110e733e43bd5072676b740a2305e6",
       "source_path": "src/miniproto/updates/state.py"
     },
     {
@@ -4634,7 +4652,7 @@
       "path": "python/miniproto/updates/state/updatecursor/from-record.md",
       "qualified_name": "miniproto.updates.state.UpdateCursor.from_record",
       "route": "/reference/python/miniproto/updates/state/updatecursor/from-record/",
-      "sha256": "8decd153e6c66e9576a7fff985f76d7799cf01c3cca7ff3db33aa211ab2f5824",
+      "sha256": "9e36480f44a82b8d459523d5cadda2250228ec0736ac733f20eb4b56bcc70d2d",
       "source_path": "src/miniproto/updates/state.py"
     },
     {
@@ -4643,7 +4661,7 @@
       "path": "python/miniproto/updates/state/updatecursor/to-update-state.md",
       "qualified_name": "miniproto.updates.state.UpdateCursor.to_update_state",
       "route": "/reference/python/miniproto/updates/state/updatecursor/to-update-state/",
-      "sha256": "c74f991482722ed87a150282905b9ba8f6f9e5b9b2403cf723893e7d70d41bee",
+      "sha256": "f29371f8e3876b8ac68ad32e20c83bea234c8a651d69e3f53fdaaccda54159ea",
       "source_path": "src/miniproto/updates/state.py"
     },
     {
@@ -4652,7 +4670,7 @@
       "path": "python/miniproto/updates/state/updatecursor/with-channel-state.md",
       "qualified_name": "miniproto.updates.state.UpdateCursor.with_channel_state",
       "route": "/reference/python/miniproto/updates/state/updatecursor/with-channel-state/",
-      "sha256": "6050c5b0f0af83d238c92010405c997f3da93ed6ad8f10ab338572733b9e0bc0",
+      "sha256": "8b5cff11513729886890cd7708a7f09e7790c9e017e3c4e31cbd05b105e73c68",
       "source_path": "src/miniproto/updates/state.py"
     },
     {
@@ -4661,7 +4679,7 @@
       "path": "python/miniproto/updates/state/updatecursor/with-duplicate-keys.md",
       "qualified_name": "miniproto.updates.state.UpdateCursor.with_duplicate_keys",
       "route": "/reference/python/miniproto/updates/state/updatecursor/with-duplicate-keys/",
-      "sha256": "104cc6e8abe7fa538bd1c8d8324f6f448ae49f5a778a5014a714805fc0b9f2ba",
+      "sha256": "24fee22ea3f0f920391104c846a79866eca56dc6734238a1af0dff613b42d96e",
       "source_path": "src/miniproto/updates/state.py"
     },
     {
@@ -4670,7 +4688,7 @@
       "path": "python/miniproto/updates/state/updatecursor/with-entities.md",
       "qualified_name": "miniproto.updates.state.UpdateCursor.with_entities",
       "route": "/reference/python/miniproto/updates/state/updatecursor/with-entities/",
-      "sha256": "b7a0519c410a2423d4caf387e303fd6e8eea9d1b4514e51489c9ce964a8c02e9",
+      "sha256": "bc027f7582b48b42890f705591b9921420976be86b389e0adacbceb037b51a93",
       "source_path": "src/miniproto/updates/state.py"
     },
     {
@@ -4679,7 +4697,7 @@
       "path": "python/miniproto/updates/state/updatecursor/with-state.md",
       "qualified_name": "miniproto.updates.state.UpdateCursor.with_state",
       "route": "/reference/python/miniproto/updates/state/updatecursor/with-state/",
-      "sha256": "84e56c48c14a4ce7b1040c5e1b78f165edc3f7c52c70766588baed8bed02aace",
+      "sha256": "5fc47e137b379859e79e87610839161f2351aaa3f698116c75f95447d5478e45",
       "source_path": "src/miniproto/updates/state.py"
     },
     {
@@ -4688,7 +4706,7 @@
       "path": "rust/miniproto-native/crypto/aes-256-cbc-decrypt.md",
       "qualified_name": "miniproto_native::crypto::aes_256_cbc_decrypt",
       "route": "/reference/rust/miniproto-native/crypto/aes-256-cbc-decrypt/",
-      "sha256": "68c595fa3b5cf68c1c4a8ae377ed61f00f3880584e6a10ea33f88651dd9ab1e0",
+      "sha256": "b7e3e5e93af8135e604aad31929a7d4ff04a8f2c352d4dfd4e1004134c8ed080",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4697,7 +4715,7 @@
       "path": "rust/miniproto-native/crypto/aes-256-cbc-encrypt.md",
       "qualified_name": "miniproto_native::crypto::aes_256_cbc_encrypt",
       "route": "/reference/rust/miniproto-native/crypto/aes-256-cbc-encrypt/",
-      "sha256": "c067e82091c176d2168f2b7dafd76de95b7c0e224b0bb26ac8180284b23a51d3",
+      "sha256": "d1ab7dfa757adf3e534db830c725bbff4788d44c8a83c99aa9081bddfa64ede9",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4706,7 +4724,7 @@
       "path": "rust/miniproto-native/crypto/aes-256-ctr-crypt.md",
       "qualified_name": "miniproto_native::crypto::aes_256_ctr_crypt",
       "route": "/reference/rust/miniproto-native/crypto/aes-256-ctr-crypt/",
-      "sha256": "7e8842de8965066f70c2ab81904fc6556d448159d8dab8e468d48c73507c5789",
+      "sha256": "61b2fd3d2f7793d31b9dc6c28559db42145f26d6f4cac8fe6cd2203a628f2d95",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4715,7 +4733,7 @@
       "path": "rust/miniproto-native/crypto/aes-256-gcm-decrypt.md",
       "qualified_name": "miniproto_native::crypto::aes_256_gcm_decrypt",
       "route": "/reference/rust/miniproto-native/crypto/aes-256-gcm-decrypt/",
-      "sha256": "e3600d92e8489ba18ff04154271412c1a388b0ff0d21f9027485c6d5b3b64714",
+      "sha256": "dec25b0496f53d10744a77b9694d887482dbe58e760e521c8256eb8ed76fcb15",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4724,7 +4742,7 @@
       "path": "rust/miniproto-native/crypto/aes-256-gcm-encrypt.md",
       "qualified_name": "miniproto_native::crypto::aes_256_gcm_encrypt",
       "route": "/reference/rust/miniproto-native/crypto/aes-256-gcm-encrypt/",
-      "sha256": "d2dc7770d25065c9a950c5abd0b28c66fc30e478f44a14889e79fe7346458cdb",
+      "sha256": "3a2c9cf5373175bfc857211458f9a1c5d9f9736cbaed656afdd8f0dacc9fa179",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4733,7 +4751,7 @@
       "path": "rust/miniproto-native/crypto/aes-256-ige-decrypt.md",
       "qualified_name": "miniproto_native::crypto::aes_256_ige_decrypt",
       "route": "/reference/rust/miniproto-native/crypto/aes-256-ige-decrypt/",
-      "sha256": "1af748319b0c4fcc909a70c5077da9eb1bb3786a4e6f97313320cecf3c90f1ab",
+      "sha256": "4d02654c0834c5949f9d617b81dfab8886176db31dc6e1de7a56d573f7ef2a21",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4742,7 +4760,7 @@
       "path": "rust/miniproto-native/crypto/aes-256-ige-encrypt.md",
       "qualified_name": "miniproto_native::crypto::aes_256_ige_encrypt",
       "route": "/reference/rust/miniproto-native/crypto/aes-256-ige-encrypt/",
-      "sha256": "574c1957924c25369b817fd80d81c1f16a7200c4ae96231bb4f4e8b890a088f0",
+      "sha256": "89a84a225ef16bf2880988e79eaa05bc432c043a9c31c20b1a85a6c74d2bebbb",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4751,7 +4769,7 @@
       "path": "rust/miniproto-native/crypto/index.md",
       "qualified_name": "miniproto_native::crypto",
       "route": "/reference/rust/miniproto-native/crypto/",
-      "sha256": "7fdb6856b135fb943fb82956f8e7c50d63cf8aeb2a5c49c31e2ed992acbd69dc",
+      "sha256": "1d88db4fe023e0f90ee6b7ebfa9af23b465a2bca5b582604a8a57673bf27acbb",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4760,7 +4778,7 @@
       "path": "rust/miniproto-native/crypto/mtproto-auth-key-id.md",
       "qualified_name": "miniproto_native::crypto::mtproto_auth_key_id",
       "route": "/reference/rust/miniproto-native/crypto/mtproto-auth-key-id/",
-      "sha256": "649aa8c7d9b5800df0cc92b0166a7e197e074e893921f79466eaf300e5ec509b",
+      "sha256": "57f831157a4d1987c6012ad4ec38977b3d972b336bbc66495cb718a611c5d3c9",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4769,7 +4787,7 @@
       "path": "rust/miniproto-native/crypto/mtproto-decrypt-payload.md",
       "qualified_name": "miniproto_native::crypto::mtproto_decrypt_payload",
       "route": "/reference/rust/miniproto-native/crypto/mtproto-decrypt-payload/",
-      "sha256": "4403bcc4428ae3f950f0c767088f18d2aecbaf40e7068ad4a3941b427511d83d",
+      "sha256": "2b0e47e6bd57a34046f3dad320c32c3e251dbf2c15eb93e2d1567156453e18df",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4778,7 +4796,7 @@
       "path": "rust/miniproto-native/crypto/mtproto-derive-aes-key-iv.md",
       "qualified_name": "miniproto_native::crypto::mtproto_derive_aes_key_iv",
       "route": "/reference/rust/miniproto-native/crypto/mtproto-derive-aes-key-iv/",
-      "sha256": "106e47eb7bab44efb9afb9c2a668626aaf00857d695be2af281c1eb293d76624",
+      "sha256": "6755264c9aec974331001cadb1f0e34672f5467ee7318b04f2b62acf26251315",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4787,7 +4805,7 @@
       "path": "rust/miniproto-native/crypto/mtproto-encrypt-payload.md",
       "qualified_name": "miniproto_native::crypto::mtproto_encrypt_payload",
       "route": "/reference/rust/miniproto-native/crypto/mtproto-encrypt-payload/",
-      "sha256": "4627797f840f6d5f35862bb7c5cf0dbf76f126376ec98ec535b8bde10e8d8603",
+      "sha256": "8a759114c7244a0640a6c425f179dbf408346a5d96bc73e62b617939aeea5a3e",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4796,7 +4814,7 @@
       "path": "rust/miniproto-native/crypto/mtproto-message-key.md",
       "qualified_name": "miniproto_native::crypto::mtproto_message_key",
       "route": "/reference/rust/miniproto-native/crypto/mtproto-message-key/",
-      "sha256": "c9e388bfc44235117b31ef0275562e4cab90c31deb71a3a72a6fbaa76594cab6",
+      "sha256": "95904092937d637dff22aeeff15dd3e1e35952aca123a16433676bdb2975b747",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4805,7 +4823,7 @@
       "path": "rust/miniproto-native/crypto/native-available.md",
       "qualified_name": "miniproto_native::crypto::native_available",
       "route": "/reference/rust/miniproto-native/crypto/native-available/",
-      "sha256": "42a78362651e716b565dc3912f6014fdb952987ac85e7f6981d9e612e13d70fe",
+      "sha256": "521a7d620ec6a3ac9853ff887d2fb33e27ac867ea75feddd517bef86d52b098b",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4814,7 +4832,7 @@
       "path": "rust/miniproto-native/crypto/pq-factorize.md",
       "qualified_name": "miniproto_native::crypto::pq_factorize",
       "route": "/reference/rust/miniproto-native/crypto/pq-factorize/",
-      "sha256": "b39a2d09c56f02e2da6351f74cf80438fbf3e51631927d7021808e16a5c9a9d3",
+      "sha256": "9b77c6b20c4f56cce1ba319bcabcd900c3cd2dd4a59fb885f79aa72871bc1d55",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4823,7 +4841,7 @@
       "path": "rust/miniproto-native/crypto/register.md",
       "qualified_name": "miniproto_native::crypto::register",
       "route": "/reference/rust/miniproto-native/crypto/register/",
-      "sha256": "0b3ae43336c97c59aafb6afbd4ef070a013c8a58b3fecd72a945a11c2ff35d33",
+      "sha256": "16dc64684586c7bd28f3b5728cd5dfa2c7b9ad22f871ebb938965f0007523339",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4832,7 +4850,7 @@
       "path": "rust/miniproto-native/crypto/scrypt-derive.md",
       "qualified_name": "miniproto_native::crypto::scrypt_derive",
       "route": "/reference/rust/miniproto-native/crypto/scrypt-derive/",
-      "sha256": "1385bf6f3f580e77c5be977a8e3aac930352c27314dfa52dfa7b4eb522642803",
+      "sha256": "34960f9e4b88376540844e5acb3ce23198c10c1930e935be6f4f4bef0454d60d",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4841,7 +4859,7 @@
       "path": "rust/miniproto-native/crypto/sha1-digest.md",
       "qualified_name": "miniproto_native::crypto::sha1_digest",
       "route": "/reference/rust/miniproto-native/crypto/sha1-digest/",
-      "sha256": "fff5700ecbce0ba169bb5ed30443da42cae9d7ec2613ba502b9c6cd18d4045a6",
+      "sha256": "6b622219c7ddca6ff37752c22de4ec7da2e7fb3f59263dbfcb02375d500a4c72",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4850,7 +4868,7 @@
       "path": "rust/miniproto-native/crypto/sha256-digest.md",
       "qualified_name": "miniproto_native::crypto::sha256_digest",
       "route": "/reference/rust/miniproto-native/crypto/sha256-digest/",
-      "sha256": "f2d263a4924e8d836ef1a512884ebf999d556100c87ad09dd125cdc75662d797",
+      "sha256": "73e355bfda5eba13a9a2d0fb64c18464674b1f3590174564f942310b71bd98f5",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4859,7 +4877,7 @@
       "path": "rust/miniproto-native/crypto/xor-bytes.md",
       "qualified_name": "miniproto_native::crypto::xor_bytes",
       "route": "/reference/rust/miniproto-native/crypto/xor-bytes/",
-      "sha256": "7cd677a8b5ef0c1fa7d42f3919be3a1b7c7fc7956f4f9c255cd3122dcaa8e09f",
+      "sha256": "637aa376d807b834d3e1f246eec5e4cb059417af4b1a3a881679bc2623366eb0",
       "source_path": "rust/miniproto/src/crypto.rs"
     },
     {
@@ -4958,7 +4976,7 @@
       "path": "rust/miniproto-native/tl/index.md",
       "qualified_name": "miniproto_native::tl",
       "route": "/reference/rust/miniproto-native/tl/",
-      "sha256": "2b617ee5bebce2022dbc2b2fcc81abc9906c9777c20e3725ac82189b26652f80",
+      "sha256": "0eb1feaa141816a787b79475ae6625804b487adc9475c9935db427a59587acec",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -4967,7 +4985,7 @@
       "path": "rust/miniproto-native/tl/register.md",
       "qualified_name": "miniproto_native::tl::register",
       "route": "/reference/rust/miniproto-native/tl/register/",
-      "sha256": "70a9642b5bc2ebea0d3852acd3b94fbbc1b82980e600b44667ac58a10773cdca",
+      "sha256": "8e5306ff9e38bdb222a208f384dbaa7677c2bf13fdb024b9d81f661678779639",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -4976,7 +4994,7 @@
       "path": "rust/miniproto-native/tl/tl-decode-bytes.md",
       "qualified_name": "miniproto_native::tl::tl_decode_bytes",
       "route": "/reference/rust/miniproto-native/tl/tl-decode-bytes/",
-      "sha256": "c855e17de1e0094e3e8e7fd006d2f90efd5727823b6a1d627238a565f5789791",
+      "sha256": "abb0269cdcbcd803ff3b50fa5ef8c943c6fe6435049f8bf3126f11415c73e700",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -4985,7 +5003,7 @@
       "path": "rust/miniproto-native/tl/tl-decode-double.md",
       "qualified_name": "miniproto_native::tl::tl_decode_double",
       "route": "/reference/rust/miniproto-native/tl/tl-decode-double/",
-      "sha256": "336cd7913c5cfe5e7af31d0e630a20775832f37ca35f7ddee22bf7a0a150ec39",
+      "sha256": "e03ad6ea4af7c16528a4ffa212d5accf32bbde01ca1bd3f615cb16f801f62f6e",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -4994,7 +5012,7 @@
       "path": "rust/miniproto-native/tl/tl-decode-int-vector.md",
       "qualified_name": "miniproto_native::tl::tl_decode_int_vector",
       "route": "/reference/rust/miniproto-native/tl/tl-decode-int-vector/",
-      "sha256": "189a743d3b698bde20c4327783794f58356cd8cc6d5c214988e5905322ee73a2",
+      "sha256": "6fff12e60110b342fb2b8b2deab7ddea5e62744d4d9a83db1c5d26e32f7c59fc",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5003,7 +5021,7 @@
       "path": "rust/miniproto-native/tl/tl-decode-int.md",
       "qualified_name": "miniproto_native::tl::tl_decode_int",
       "route": "/reference/rust/miniproto-native/tl/tl-decode-int/",
-      "sha256": "391e7cd225be7e65c9798aa2fdb33da827602b2827ca908f9383f821020980b4",
+      "sha256": "d2d2697695d82eef11d91c718bb66aec7d36c0aa7f6fc799e9c3676b8c617028",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5012,7 +5030,7 @@
       "path": "rust/miniproto-native/tl/tl-decode-int128.md",
       "qualified_name": "miniproto_native::tl::tl_decode_int128",
       "route": "/reference/rust/miniproto-native/tl/tl-decode-int128/",
-      "sha256": "b75a8602936aaf01d50a0541508c71a2bb39826130f0f44d2f307e938d0a02c4",
+      "sha256": "ab63d58098a0542825da67b989066d882669ffd7317d00e2b68c8f53da214821",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5021,7 +5039,7 @@
       "path": "rust/miniproto-native/tl/tl-decode-int256.md",
       "qualified_name": "miniproto_native::tl::tl_decode_int256",
       "route": "/reference/rust/miniproto-native/tl/tl-decode-int256/",
-      "sha256": "779c1035f458132e9ebd79f703baf329725ce585c7eda5536a0d002308318520",
+      "sha256": "54ada69f1321ec9c6c57450b7acf450c5feb212ee52efd44a08cce8a1e87e8c1",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5030,7 +5048,7 @@
       "path": "rust/miniproto-native/tl/tl-decode-long-vector.md",
       "qualified_name": "miniproto_native::tl::tl_decode_long_vector",
       "route": "/reference/rust/miniproto-native/tl/tl-decode-long-vector/",
-      "sha256": "0bb376c473679bed83af3ad1da3626727b68d700b70f2e2eef821efbd10b0250",
+      "sha256": "011c48ceb782dedd3aa66584670a7cd2eddd271edd18e759721eead06a1bd841",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5039,7 +5057,7 @@
       "path": "rust/miniproto-native/tl/tl-decode-long.md",
       "qualified_name": "miniproto_native::tl::tl_decode_long",
       "route": "/reference/rust/miniproto-native/tl/tl-decode-long/",
-      "sha256": "6d8c5cedc2f98123fdbcb51f000e0b093117e11f06b6107397c8b2146e97b323",
+      "sha256": "a2d46029507d93cc28829012bb5d61d5aa31ec98cc03592d61d18551b9edd33c",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5048,7 +5066,7 @@
       "path": "rust/miniproto-native/tl/tl-decode-string.md",
       "qualified_name": "miniproto_native::tl::tl_decode_string",
       "route": "/reference/rust/miniproto-native/tl/tl-decode-string/",
-      "sha256": "2b8b7e95bec867e80a6b67312fc5c188dc4b6c52f3068e689e29ff1707819b67",
+      "sha256": "39f897514b9f5100b432f4bbf4d81fe6c0f60cc9e1ab1ff28409da29aed0c0bf",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5057,7 +5075,7 @@
       "path": "rust/miniproto-native/tl/tl-decode-uint.md",
       "qualified_name": "miniproto_native::tl::tl_decode_uint",
       "route": "/reference/rust/miniproto-native/tl/tl-decode-uint/",
-      "sha256": "c498ddf6ba60a9eebfe83abce7544dd13109182df9c3472edc490ef8981b2b35",
+      "sha256": "18b70690e5e94e81f585e0ff40c4b458724ae030ecdac5e783c3f956eb624b68",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5066,7 +5084,7 @@
       "path": "rust/miniproto-native/tl/tl-encode-bytes.md",
       "qualified_name": "miniproto_native::tl::tl_encode_bytes",
       "route": "/reference/rust/miniproto-native/tl/tl-encode-bytes/",
-      "sha256": "5b3741d3219d01bcbc71bacf924d00bdbe40d7e7a5aeae5b21a1c9f4d4461d4f",
+      "sha256": "005bb459e3aac6e60e3621dbfdd84deddaf67eec0382e21d83e153d7c0978345",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5075,7 +5093,7 @@
       "path": "rust/miniproto-native/tl/tl-encode-double.md",
       "qualified_name": "miniproto_native::tl::tl_encode_double",
       "route": "/reference/rust/miniproto-native/tl/tl-encode-double/",
-      "sha256": "076279a6624a8aa62051feb3a665c489b92a0c21d3d8a67946858c886ba0c922",
+      "sha256": "cc898bdc8031fd224297a485d76827b4242facde919d4ce3c87b1f8532e29041",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5084,7 +5102,7 @@
       "path": "rust/miniproto-native/tl/tl-encode-int-vector.md",
       "qualified_name": "miniproto_native::tl::tl_encode_int_vector",
       "route": "/reference/rust/miniproto-native/tl/tl-encode-int-vector/",
-      "sha256": "204cd5ca2d189de257c8422e1c6c2633fd1591120c4259df21a1526121f1fdc4",
+      "sha256": "824704e8d708f4fb07403a904550ab95fb9188c4939ccf6bdb8b43110194e7ab",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5093,7 +5111,7 @@
       "path": "rust/miniproto-native/tl/tl-encode-int.md",
       "qualified_name": "miniproto_native::tl::tl_encode_int",
       "route": "/reference/rust/miniproto-native/tl/tl-encode-int/",
-      "sha256": "f59d7ae106e25017008e9646c5ed3a605444c5214403c0d045cceb1924fc55bc",
+      "sha256": "91668cb5007cc43bc6cc324587d36b933035af264090c39c5fd2ffcd409557c1",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5102,7 +5120,7 @@
       "path": "rust/miniproto-native/tl/tl-encode-int128.md",
       "qualified_name": "miniproto_native::tl::tl_encode_int128",
       "route": "/reference/rust/miniproto-native/tl/tl-encode-int128/",
-      "sha256": "fadf9bca44d630158e60c1f77f8ff0380d6ee1edf3019cd91922a71f08148796",
+      "sha256": "99116f97debb81bae8b9aa2008f538ead58bee15e54b0bb8cb94027238cd30e1",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5111,7 +5129,7 @@
       "path": "rust/miniproto-native/tl/tl-encode-int256.md",
       "qualified_name": "miniproto_native::tl::tl_encode_int256",
       "route": "/reference/rust/miniproto-native/tl/tl-encode-int256/",
-      "sha256": "2256676855a2f45863f1c9dba76a0c7eb96648d147b40b8ac2ede1f883774fdc",
+      "sha256": "17067e5940f8fab1ae871ea0b64e1270ba6d1fab81d59bdd6c4577826e214020",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5120,7 +5138,7 @@
       "path": "rust/miniproto-native/tl/tl-encode-long-vector.md",
       "qualified_name": "miniproto_native::tl::tl_encode_long_vector",
       "route": "/reference/rust/miniproto-native/tl/tl-encode-long-vector/",
-      "sha256": "b629307fd623711a6ab9e2bfedee555dfc1f288d9c2a0357b83610dfb99b6ad0",
+      "sha256": "6a518b6ee1de3b6a0c1e89543adefcb37fd8e82baf6719d2414182343bd09e91",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5129,7 +5147,7 @@
       "path": "rust/miniproto-native/tl/tl-encode-long.md",
       "qualified_name": "miniproto_native::tl::tl_encode_long",
       "route": "/reference/rust/miniproto-native/tl/tl-encode-long/",
-      "sha256": "87c6d47efeca1507b36a1497c00b9c91692f8b2dbd3344ae329eef3285784a79",
+      "sha256": "f67ec5173e84b51ff1e045a1915c6bfce190d8ad60ec4205e0b1eb05425eec34",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5138,7 +5156,7 @@
       "path": "rust/miniproto-native/tl/tl-encode-string.md",
       "qualified_name": "miniproto_native::tl::tl_encode_string",
       "route": "/reference/rust/miniproto-native/tl/tl-encode-string/",
-      "sha256": "18cf0544cbe8c9d038821e98e85bfa2d15a4d3571082e48ed4492ef6bca8cb2d",
+      "sha256": "ced17adb64b8c76e0c68538fa9be5962d4a152bd2fb7c7dbd29fb374a4c50e33",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5147,7 +5165,7 @@
       "path": "rust/miniproto-native/tl/tl-encode-uint.md",
       "qualified_name": "miniproto_native::tl::tl_encode_uint",
       "route": "/reference/rust/miniproto-native/tl/tl-encode-uint/",
-      "sha256": "10cadeac22b3dcf261186b6aefc0b36ca7a58dff15348ac3821d50b1b2bd0680",
+      "sha256": "84d7282eb6a1140e2584c63c226ba8beab33417d6052b8cfd24251473f619df5",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5156,7 +5174,7 @@
       "path": "rust/miniproto-native/tl/tl-fast-decode.md",
       "qualified_name": "miniproto_native::tl::tl_fast_decode",
       "route": "/reference/rust/miniproto-native/tl/tl-fast-decode/",
-      "sha256": "73ead9fcff12c1688484cd2dec6e44a3a0825cde2c2a56203ef5fb6cc7644fde",
+      "sha256": "2ff5555b4c9aeafafeacb06b3dbdb4b6d8ef39e2f696d83ca7c6066ab82564ca",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -5165,7 +5183,7 @@
       "path": "rust/miniproto-native/tl/tl-fast-encode.md",
       "qualified_name": "miniproto_native::tl::tl_fast_encode",
       "route": "/reference/rust/miniproto-native/tl/tl-fast-encode/",
-      "sha256": "019f5f3dfe209f2b65f483864f68fc61d29a0d10c9226d31b56d7ae8faf8246a",
+      "sha256": "8006451b156e98d895ba106dcc6b8a703ee2d5b211945d57111ea0459a0279d9",
       "source_path": "rust/miniproto/src/tl.rs"
     },
     {
@@ -42099,64 +42117,65 @@
   "schema_version": 1,
   "sources": {
     "docs/reference-surface.toml": "c809a172b7fed0696d7fa454f4cc502034f4d326f5f1b18c771ac7fb5753cc85",
-    "rust/miniproto/src/crypto.rs": "bd6308626eb3946bdf0bbc199ffd2e73c0179f195d945c87330cd942d58cc5af",
+    "rust/miniproto/src/crypto.rs": "b767f96079dd7482a269b5de52d219d989188c348c717fb83cd8c6baf38f7699",
     "rust/miniproto/src/lib.rs": "e922fd39918e0cf91e9e67f3eb70ba3cae538d6a41af57efce76c7e37b10599d",
     "rust/miniproto/src/mtproto.rs": "e13fe1e21e53ec930c7a20130cd7430cb8a20433c4d0249ed7acd97df8e48fc5",
-    "rust/miniproto/src/tl.rs": "3d975bb9fc52871255ca091a2e22bc7b15896e7f9c3a61b18b7d6f81e7f8bb6b",
+    "rust/miniproto/src/tl.rs": "f24a9c8820aa39f81856a81c95b919f84013cbf5713ad0a09d09a7d78b50e451",
     "rust/miniproto/src/transport.rs": "4a1336302dcbc76e379439060d421723a8b69d161142a1b9de86b87925f5b56e",
     "src/miniproto/__init__.py": "c0eb831aca219c8c94cd1ae55eea58e8e90e2c055b39f3090f5571532d20a52a",
     "src/miniproto/_cli.py": "dabce8f0cc5f5ec9660805d6309344ae199aec1baedfe3aa9d483f2cd0898808",
-    "src/miniproto/_native_fallback.py": "5ef1cf41f52c96eeb7016b27fe91326031e8ee612d3bd291b31909facd5d4e6e",
+    "src/miniproto/_native_fallback.py": "1bdb3e7d3ccce9427cec72b1c275ad5d8210997812e47ca7b5f38c1d624ccc68",
     "src/miniproto/auth/__init__.py": "51c2d61b75b64bd9bb8722ec040f04d0dfadc33a0fa57bb24b4d6d28c54f3983",
     "src/miniproto/auth/bootstrap.py": "c9511248336139959fe5a3262e865846d1c48bc6c9858c958439b53aac548d5d",
     "src/miniproto/auth/dc.py": "bd53a060c60a47004b7ebb84c8fe516a474823fc06edef393eb945b4518fdfcd",
     "src/miniproto/auth/dh_validation.py": "3f94b05169c2674204e802d9c29249386c6ff6432503f1c2bdf6231229af6d60",
-    "src/miniproto/auth/key_exchange.py": "12459c68b48f010e65eef38a35bab8a0a7348527ef3617ed4f240ab2cf9fa987",
+    "src/miniproto/auth/key_exchange.py": "37222e18db153f77c4a57e69105bffc43cc86108558de3cae78133e16a8aa8ca",
     "src/miniproto/auth/password.py": "70587004f5b4e2f9f90ea8522d1605fa3827bea83fafbb205ad89e3a3425dfb6",
-    "src/miniproto/auth/service.py": "e128623b4d7199e404da39f24ca953f5c14a699602afc8ae2933f262ef4b7784",
-    "src/miniproto/client.py": "fba6d4f32db474755c0cd88c210772be794b2e063aaeeb90baa932fc96a2edcd",
+    "src/miniproto/auth/service.py": "527c7d1ae14f0fd729f4ea1e16c40f7ca614158ce3d393fceb3541911f2bdd94",
+    "src/miniproto/client.py": "95fab00ccaa6bd8bb0f223c4d6bee4011168a9c51f57edc00a510d3673e48ba8",
     "src/miniproto/config.py": "992b0ea826524dcca1bd542130c2eb56f4f6a5b9b20bb89c51595bfa513148b7",
     "src/miniproto/connection/__init__.py": "0c50ff1009abf8e945c7b4d80dc3fce60674a2a10dfd111255c53f14ab6cb262",
     "src/miniproto/connection/framing.py": "eb26bb1a4506445f67472a570d54e4af1c5d12e5e06aaabc49d96041b21414b1",
-    "src/miniproto/connection/sender.py": "0ba5be25000aaaa38e6ad3554a2f97ae5606b020af999332841db0149c1b1372",
+    "src/miniproto/connection/sender.py": "4e7609142acf07a5237b6f7e236f0ad9f62beb678594c56d24c6a6288e4dee77",
     "src/miniproto/connection/tcp_abridged.py": "95bdf31beb99965adb09c34620d7f4d7291b4ae186a14c30705847c2739066bb",
     "src/miniproto/connection/tcp_intermediate.py": "5ae446cb3b53af24d746d3c9ccbe0e4608bdc06270ee5a62a1b80021cfa76a70",
-    "src/miniproto/connection/transport.py": "a5f0bcfd9d73c50f03dc177a00da525e08b367276f6e0e15f9e5977d3c668a00",
+    "src/miniproto/connection/transport.py": "72a7f09a3a65f5acf8d85d59f9767bec30fb1528a31d2a039a829978268a3eb7",
     "src/miniproto/crypto/__init__.py": "9ff1c80765bb7fe6f2c4043ea3bbe131d01ad8abc00e8603ceaacb61945689b8",
     "src/miniproto/crypto/mtproto.py": "10fd950544761b39ad2e2e8f926a53760b280c1f861d0963b60feffe9adaf05b",
-    "src/miniproto/crypto/native.py": "a270b67fed02f023808c277d4b12ea4b2bc5d89f1bb5d5e899a99ed681f4f1d5",
+    "src/miniproto/crypto/native.py": "d04b8493c457fd3909ad357b666e50933bf2fc8fc53da52f9e727b8b1e1cbdc9",
     "src/miniproto/errors.py": "f18a41b22f4e0e8dc44ebbeaaffce555d2c02f7f4ec453367b93c8c6037bd2c0",
     "src/miniproto/event_loop.py": "975656a98a852ab4291f0bcf30b60f359b1456ca112014607c96036c5ecafb86",
     "src/miniproto/file_id.py": "5ae1d43f6a986f73132a088efcf7c5d9a7b640a47fdd396abf604d7303da3570",
-    "src/miniproto/invoke.py": "effe9dc331901bf066ecc7dd95a047bf5e2bf9e3db049581e4a691f679e7b291",
+    "src/miniproto/invoke.py": "5016a0a2f6d652f9963fe514fced3478ea775bf4cc1568fb0f9fe61ea974f94f",
     "src/miniproto/media/__init__.py": "202ebc31adaf6a9438c4aa1588ccfb76d67ca92ba1dafb4192a050ef5122c4a0",
     "src/miniproto/media/cdn.py": "3ce93acbb25b29af2e586529c2c3ce5f2154155d040c3c817e8f42bd64cff64d",
-    "src/miniproto/media/download.py": "257f64c38f2d839bd34a8188b10253da6a473fbc075452e4ab281a3ab05f4a1b",
+    "src/miniproto/media/download.py": "eae4ce10300d8ccd04ed9a19660857673455d5a4fa24916ee5a5eac318d49b9e",
     "src/miniproto/media/multi_session.py": "063ce91db4bb4bce769e45209afe069adb1040adb3a545d44fe12c231ecb81ab",
     "src/miniproto/media/retry.py": "6beaf0342c831a7e37336dc7dacdc2f47fead31f5cf2b5e46eb349b4d10fcd81",
     "src/miniproto/media/scheduler.py": "1769c624c7e64aa40b001a3efe1a966e78daced95b71e2fd819a9da2a8f623fc",
-    "src/miniproto/media/upload.py": "42884ea6db4c21e99e4f830ac745821608f32444118ca3117f8d0731c8756d06",
-    "src/miniproto/messages.py": "714b69182148ed512d649ef6d36c01a9d6e6940cc6eb6ba3608205ad99e4bbf2",
+    "src/miniproto/media/upload.py": "9716d6f3dad8dd936de363217d3e86c65a33f11b1167e385282472e294175f63",
+    "src/miniproto/messages.py": "8814781feadfec69702d3293a14d3a5ca087c556e9c4dd7d0a9b72b78a271ae8",
     "src/miniproto/mtproto/__init__.py": "1b6451d4fb1f5e1bddc2dd889f283a7708d1b18f8f710c2176a21283187ad838",
-    "src/miniproto/mtproto/codec.py": "36c61c8a6002d440b5ecd166c276f9324318c8229f1bc201ae02223f4a3af1e8",
+    "src/miniproto/mtproto/codec.py": "58c7237af9ed5bcd278dd19dc7cd6d652eaf45bd6a6a831031e8aa40f44ab566",
     "src/miniproto/mtproto/quick_ack.py": "f8d88ba4cd657f662cf5bcc1f9238e5f75ff7ce1ce41526679f7671b18c49b08",
-    "src/miniproto/mtproto/state.py": "a806011d4a2bdffa5c58985ab7d406cc9e3ebf2ddc16e02e93a1f0bc9c5b84c8",
+    "src/miniproto/mtproto/state.py": "cce72540ef301363e29f5bdb33be78c4acd8c1297c6487befc5cf1a71d4e0703",
     "src/miniproto/observability.py": "94c1fd97c465e1c4a7710d8ca3b5a5a84560513b904e9d78ea36551420ae3d42",
-    "src/miniproto/peers.py": "8558cfa7b2947b73fab3e3b03e54af1a1fa725f50e7213874900974f60378915",
+    "src/miniproto/peers.py": "35e2b8fcfe4c7af251a58ca6c75e28bc2da603c8c5d0c5a6d0a7f2fc0f1a1f65",
     "src/miniproto/security/__init__.py": "ca21a61a97c33af47110e20f7c64eb46a44337bce56eb26d5d4355af13165976",
-    "src/miniproto/security/redaction.py": "a3c2473018a2446d56000e8cffb76a6f093bea8550d8bf5cf889717196d13c74",
+    "src/miniproto/security/redaction.py": "e67273cf38de5bf81dbfe6b8defa2abbb1f04688b0ec4a35ca33927cf2a130fe",
     "src/miniproto/session/__init__.py": "23e9aeab951555b851cb306bd32ea2e334a78f97d120130d49f2023077a24d90",
-    "src/miniproto/session/models.py": "fbc61e9146906585242996f0976e03b4232061c459fd0543d9f24ebf182f38a4",
-    "src/miniproto/session/peer_merge.py": "dbff9cdbef8c231a42038b05f73af9072e9278315d49ce3aa78ca2ec0c78aeae",
+    "src/miniproto/session/models.py": "cf02d3471414113e25d4c1ecd4070ddcaa5b7cd4bdb5aefd40c2adb1f8549af8",
+    "src/miniproto/session/peer_aliases.py": "5dbdc76cb077bc56a25a6cab3d9d11b53e29ec26979a03b9ecf328f2e7e32b3e",
+    "src/miniproto/session/peer_merge.py": "930d8a56896cfb97039ccff30877d82179842f8f783549bb8b1accca493838b8",
     "src/miniproto/session/storage.py": "2e8695b8165bd56c5f6192f408a48742ad974bd9451499321996373fb3d6e527",
     "src/miniproto/session/strings.py": "6deab2ed53d0b996b503e9f0cf39e8fae799ca4eb716586fcc087ff4194af90a",
     "src/miniproto/tl/__init__.py": "b49669c841735a755df123eb6284fc2df546a85e7be4033af250ac334cd38f04",
-    "src/miniproto/tl/codec.py": "70940b3ed36123cdd3837aa94e7b467b09004fa0156d430321941bf1a48e72d9",
+    "src/miniproto/tl/codec.py": "09f942e0c503a29353d0fb163356afcf4b5cc7c9bd50b476bf34dfde83e69437",
     "src/miniproto/tl/fast.py": "6ca636bc0f6a3e12cba40c97be36944af225fd258afd85be3b33b715eda5b7e4",
     "src/miniproto/types.py": "d70cdb5aca9c7d01f50d4f349fc8ca923b980281fd3d5e3729def6859d172b7f",
     "src/miniproto/updates/__init__.py": "35fd2beca5c77663c0ebe244e241954c48b0622318db575e43eb03a9a95b7d9d",
-    "src/miniproto/updates/manager.py": "1988bbbfe3012c03781d48c69631ea6b284c724b7ba1a63039fc7fa6da63210a",
-    "src/miniproto/updates/state.py": "8e8756bbd7a0edbc95d0ee24b90a47c3bc9069a51f74547b745daf2e4903aba5",
+    "src/miniproto/updates/manager.py": "fe657f43989e858baf2915303353be11b8dd3200b7bc6a801abea00a11f3ce67",
+    "src/miniproto/updates/state.py": "02161bdac5eab4714464497a2d92cef5703ae907502dc3806d414a408b277579",
     "tools/docs/__init__.py": "7669646d766c8f6217eb78231e4daabe221cf89f38434cbcdd9f394e1953b9b9",
     "tools/docs/__main__.py": "e76e4f1db85f1487e5f5119e48e69ec114fb5165cbe36975e3305629b2d43da3",
     "tools/docs/audit.py": "b4d468c3845a4c314ea3114f21232b4f8161878d9020f9c754945c2b763f4d8f",

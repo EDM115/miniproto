@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.auth.key_exchange.ServerDHParamsOk.deserialize_from"
 source_path: "src/miniproto/auth/key_exchange.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/auth/key_exchange.py#L229"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/auth/key_exchange.py#L232"
 aliases: ["miniproto.auth.ServerDHParamsOk.deserialize_from"]
 module: "miniproto.auth.key_exchange"
 ---

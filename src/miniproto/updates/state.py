@@ -59,6 +59,8 @@ class EntityReference:
         title: Optional display title or user full name.
         complete: Whether the source was a full entity allowed to clear absent aliases.
         updated_at: Observation timestamp, passed through until ``to_peer_cache_entry`` applies session-model timezone handling.
+        usernames: Active secondary usernames retained through cursor and storage projection.
+        username_observed_at: Per-alias observation times preserved through cursor projection, ``None`` denotes a newly observed entity.
     """
 
     id: int
@@ -69,12 +71,16 @@ class EntityReference:
     title: str | None = None
     complete: bool = False
     updated_at: datetime = field(default_factory=utc_now)
+    usernames: tuple[str, ...] = ()
+    username_observed_at: Mapping[str, datetime] | None = field(default=None, repr=False)
 
     def to_peer_cache_entry(self) -> PeerCacheEntry:
         """Convert this reference to the session peer-cache representation."""
         raw: dict[str, object] = {"title": self.title} if self.title else {}
         if self.complete:
             raw["_miniproto_complete"] = True
+        if self.complete or self.usernames:
+            raw["usernames"] = list(self.usernames)
         return PeerCacheEntry(
             id=self.id,
             kind=self.kind,
@@ -83,6 +89,7 @@ class EntityReference:
             phone=self.phone,
             updated_at=self.updated_at,
             raw=raw or None,
+            username_observed_at=self.username_observed_at,
         )
 
 
@@ -400,9 +407,15 @@ def entity_reference_from_peer(peer: PeerCacheEntry) -> EntityReference:
         peer: Persisted session peer-cache entry to project.
     """
     title = None
+    complete = False
+    usernames: tuple[str, ...] = ()
     if isinstance(peer.raw, Mapping):
         raw_title = peer.raw.get("title")
         title = None if raw_title is None else str(raw_title)
+        complete = peer.raw.get("_miniproto_complete") is True
+        raw_usernames = peer.raw.get("usernames", ())
+        if isinstance(raw_usernames, Iterable) and not isinstance(raw_usernames, str | bytes):
+            usernames = tuple(username for username in raw_usernames if isinstance(username, str))
     return EntityReference(
         id=peer.id,
         kind=peer.kind,
@@ -410,5 +423,8 @@ def entity_reference_from_peer(peer: PeerCacheEntry) -> EntityReference:
         username=peer.username,
         phone=peer.phone,
         title=title,
+        complete=complete,
         updated_at=peer.updated_at,
+        usernames=usernames,
+        username_observed_at=peer.username_observed_at,
     )

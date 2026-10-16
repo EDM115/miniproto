@@ -18,7 +18,10 @@
 💥⚙️ config : `session_storage` takes precedence over `session_path`, pending RPC capacity is a positive bounded client setting and each account or deployment must use its own durable session path  
 💥📦️ package : Python 3.13+ is required; normal CPython 3.13/3.14 and free-threaded 3.14t are supported, while CPython 3.13t and ARMv7 are intentionally outside this line  
 💥🏗️ architecture : `miniproto` owns the protocol SDK while routers, filters, middleware, plugins, conversations, commands and broad application-framework ergonomics belong to the future `mpgram` package  
-💥🧩 schema : Layer 230 removes `InputPasskeyCredentialFirebasePNV` and changes verification descriptions in `BotVerification`, `BotVerifierSettings` and `BotsSetCustomVerification` from strings to `TextWithEntities`
+💥🧩 schema : Layer 230 removes `InputPasskeyCredentialFirebasePNV` and changes verification descriptions in `BotVerification`, `BotVerifierSettings` and `BotsSetCustomVerification` from strings to `TextWithEntities`  
+💥🛡️ validation : reject zero-width `Vector<true>` elements, malformed schema names and optional flag indexes outside 0–31, while supporting valid bit-31 flags  
+💥📨 updates : callback-only delivery no longer retains iterator history, start an iterator before events that must reach both consumers and close it explicitly when finished  
+💥🗃️ peers : persist per-username observation times, older records re-resolve username aliases once without changing numeric-ID or access-hash lookup
 
 ### Features
 
@@ -36,7 +39,8 @@
 ✨ feat : request transport quick acknowledgements per call and deliver bounded `QuickAckReceipt` callbacks without confusing packet acceptance with RPC completion  
 ✨ feat : export/import native, Telethon v1 and Pyrogram session strings with strict format validation, explicit replacement/mismatch controls and update-state bootstrap metadata for lossy foreign formats  
 ✨ feat : support abridged, intermediate and padded-intermediate TCP transports, HTTP CONNECT and SOCKS5 proxies, socket tuning, bounded frame reads, reconnect, salts, acknowledgements, containers, gzip and keepalive  
-✨ feat : expose local observability events, metrics, memory/loop-lag probes, secret-safe representations, structured benchmark reports and stable failure context without payload disclosure
+✨ feat : expose local observability events, metrics, memory/loop-lag probes, secret-safe representations, structured benchmark reports and stable failure context without payload disclosure  
+✨ feat : expose `Client.wait_for_updates()` to observe the current update drainer's failure or normal shutdown without cancelling processing when its waiter is cancelled
 
 ### Performance improvements
 
@@ -46,7 +50,10 @@
 ⚡️ perf : keep peer resolution warm through revision-aware indexes and incremental reconciliation rather than rescanning or copying the canonical peer collection on every lookup  
 ⚡️ perf : provide nine non-live benchmark families covering imports, runtime acceptance, media scheduling, native/fallback crypto, protected sessions, runtime paths, TL fast paths, transport framing and lazy raw-codec behavior  
 ⚡️ perf : provide resumable benchmark matrices, loop-lag and resource probes and separately guarded live media measurements without turning host-specific speedups into universal gates  
-⚡️ perf : reuse prevalidated container and gzip bodies instead of decoding them twice and release the GIL while hashing large quick-ack packets
+⚡️ perf : reuse prevalidated container and gzip bodies instead of decoding them twice and release the GIL while hashing large quick-ack packets  
+⚡️ perf : decode native primitive vectors without copying the whole message per vector, validate container replay floors incrementally and batch numeric-lowest receive-history eviction  
+⚡️ perf : measure Markdown entity offsets from each newly rendered fragment instead of repeatedly encoding the full prefix  
+⚡️ perf : validate bounded hash batches against sorted neighboring intervals, retain fixed-size range-cache key digests and cap completed cache entries separately from payload bytes
 
 ### Security fixes
 
@@ -56,7 +63,12 @@
 🔒️ security : keep live Telegram tests, session provisioning, large transfer benchmarks and credentialed release extensions behind explicit environment gates and separate automation  
 🔒️ security : preserve ambiguous non-idempotent RPC outcomes as `AmbiguousRpcResult` instead of silently replaying writes that may already have executed  
 🔒️ security : validate authorization-handshake nonce echoes and DH confirmation hashes, retry valid `dh_gen_retry` responses with fresh private exponents and bound gzip expansion and wrapper nesting before TL decoding  
-🔒️ security : bind encrypted session rows to their logical domains, create durable SQLite session files with private POSIX permissions, redact token-suffixed fields and keep CDN tokens and encryption material out of ordinary representations
+🔒️ security : bind encrypted session rows to their logical domains, create durable SQLite session files with private POSIX permissions, redact token-suffixed fields and keep CDN tokens and encryption material out of ordinary representations  
+🔒️ security : bound handshake `pq` width and factorization work, select trusted RSA keys before factoring and move the factor search off the event loop  
+🔒️ security : verify TLS to HTTPS proxies before CONNECT credentials, share a cumulative gzip expansion allowance across each receive tree and bound compressed bytes, members and container descendants before allocation  
+🔒️ security : validate custom schema identifiers and alias collisions before writing Python output, constrain optional flags and encode reviewed manifest names as Rust literals  
+🔒️ security : confine benchmark-derived download paths, hide terminal login codes and 2FA passwords, fail closed when hidden input is unavailable and redact recovery/email codes plus configured benchmark peers  
+🔒️ security : require one bounded decimal HTTP prompt body length, reject ambiguous transfer framing and enforce an absolute read deadline with active-body cleanup
 
 ### Bug fixes
 
@@ -80,19 +92,26 @@
 🐛 fix : close owned upload spools on setup failure or cancellation, fill parts across short reads and reject premature EOF instead of reporting unsent bytes as uploaded  
 🐛 fix : settle download writers, part tasks, multi-session workers and running assembly before destination rollback or temporary-file cleanup, preserve the original failure through secondary progress errors and repeated cancellation  
 🐛 fix : select all guarded live integration tests in the release check and verify the built pytest command through offline collection  
+🐛 fix : invalidate only the rejected DC/domain authorization key, preserve concurrent replacement credentials, activate migrated DC/key/salt state atomically after target authorization and reject mismatched stored DC/key reconstruction  
+🐛 fix : drain old account senders, cached keys, delayed salts and update state before session replacement, preserve subscriber objects and reject disconnected media setup  
+🐛 fix : pin attachment identity through reference renewal and multi-session assembly, derive automatic cache keys from the effective raw location and grow destination files only as chunks arrive  
+🐛 fix : bound unknown-length upload spooling before disk writes, reject unknown DCs before pool allocation and charge CDN wire attempts to the actual destination's shared scheduler  
+🐛 fix : preserve full-entity alias removal and active secondary usernames through update persistence, prevent stale cursor snapshots from undoing fresh RPC corrections and age each username independently of unrelated metadata
 
 ### Documentation
 
 📝 docs : ship an Astro Starlight documentation site with a bespoke Packet Loom theme, secure onboarding, task guides, concepts, recipes, FAQ, project operations and portable static deployment instructions  
 📝 docs : generate and commit searchable Python reference pages with Griffe/griffe2md, Rust pages from nightly rustdoc JSON/cargo-docs-md and an in-house categorized Telegram raw reference  
 📝 docs : document every maintained Python and Rust declaration and every explicit argument, including lifecycle, ownership, cancellation, security, side effects, errors and native/fallback boundaries where relevant  
-📝 docs : expose Pagefind full-text search and facets for language, kind, namespace, module/crate, layer, aliases and Python-visible Rust bindings without requiring a hosted search service
+📝 docs : expose Pagefind full-text search and facets for language, kind, namespace, module/crate, layer, aliases and Python-visible Rust bindings without requiring a hosted search service  
+📝 docs : specify separate cache ownership for account isolation, local decoder/hash/cache limits, callback/iterator lifetime, session replacement and trusted documentation/workflow input boundaries
 
 ### Testing
 
 ✅ tests : cover protocol vectors, auth, sessions, storage concurrency, RPC behavior, transports, updates, peers, messages, media, native/fallback parity, generated schemas, benchmarks, docs generation and static-site behavior  
 ✅ tests : keep live Telegram, stress and large compatibility workloads explicitly opt-in while deterministic fake-server tests exercise reconnect, migration, flood, update and transfer behavior offline  
-✅ tests : verify maintained documentation completeness statically without importing `miniproto` and reject stale, duplicated, malformed or nondeterministic generated reference pages
+✅ tests : verify maintained documentation completeness statically without importing `miniproto` and reject stale, duplicated, malformed or nondeterministic generated reference pages  
+✅ tests : add offline security regressions with bounded operation/allocation checks, authenticated synthetic packets, socket framing tests and cancellation barriers, retain legacy portable-session import vectors and compare reconnect deadlines without elapsed-time rounding
 
 ### Tooling & Other changes
 

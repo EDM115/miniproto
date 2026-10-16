@@ -9,6 +9,7 @@ from miniproto.session.models import PeerCacheEntry
 from miniproto.types import PeerKind
 
 PeerKey = tuple[PeerKind, int]
+_FULL_OBSERVATION_REVISION_KEY = "_miniproto_full_observation_revision"
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,10 +29,20 @@ class PeerEntryMapMerge:
     appended_keys: tuple[PeerKey, ...]
 
 
+def _full_observation_revision(peer: PeerCacheEntry) -> int:
+    """Read internal full-observation authority, treating untagged entries as revision zero
+
+    Args:
+        peer: Canonical peer entry whose full-observation revision is inspected.
+    """
+    revision = (peer.raw or {}).get(_FULL_OBSERVATION_REVISION_KEY, 0)
+    return revision if type(revision) is int and revision > 0 else 0
+
+
 def merge_peer_entry(current: PeerCacheEntry, incoming: PeerCacheEntry) -> PeerCacheEntry:
     """Apply incoming peer metadata while preserving a missing access hash.
 
-    A full entry marked ``_miniproto_complete`` replaces raw metadata and may clear username or phone values. Partial entries retain existing values where incoming aliases are empty.
+    A full entry marked ``_miniproto_complete`` replaces raw metadata and may clear username or phone values. Partial entries retain existing values where incoming aliases are empty, including their original alias observation times. An internal full-observation revision advances on full merges and survives partial merges, preserving knowledge of absent aliases.
 
     Args:
         current: Existing canonical peer cache entry.
@@ -41,6 +52,12 @@ def merge_peer_entry(current: PeerCacheEntry, incoming: PeerCacheEntry) -> PeerC
     complete = incoming_raw.get("_miniproto_complete") is True
     raw = {} if complete else dict(current.raw or {})
     raw.update(incoming_raw)
+    revision = _full_observation_revision(current) + int(complete)
+    raw.pop(_FULL_OBSERVATION_REVISION_KEY, None)
+    if revision:
+        raw[_FULL_OBSERVATION_REVISION_KEY] = revision
+    observed = {} if complete else dict(current.username_observed_at or {})
+    observed.update(incoming.username_observed_at or {})
     return PeerCacheEntry(
         id=incoming.id,
         kind=incoming.kind,
@@ -49,6 +66,7 @@ def merge_peer_entry(current: PeerCacheEntry, incoming: PeerCacheEntry) -> PeerC
         phone=incoming.phone if complete else incoming.phone or current.phone,
         updated_at=incoming.updated_at,
         raw=raw or None,
+        username_observed_at=observed,
     )
 
 

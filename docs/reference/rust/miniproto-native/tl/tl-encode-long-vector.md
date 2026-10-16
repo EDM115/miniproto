@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::tl::tl_encode_long_vector"
 source_path: "rust/miniproto/src/tl.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L725"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L731"
 aliases: ["miniproto._native.tl_encode_long_vector"]
 python_visible: true
 ---
@@ -15,7 +15,7 @@ python_visible: true
 ## Provenance
 
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L725)
+- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L731)
 - Python exposure: `miniproto._native.tl_encode_long_vector` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -37,7 +37,7 @@ fn tl_encode_long_vector(py: _, values: _) -> _
 fn tl_encode_long_vector(py: Python<'_>, values: Vec<i64>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:725-728`*
+*Defined in `rust/miniproto/src/tl.rs:731-734`*
 
 Encodes Python `tl_encode_long_vector(values)` as a generic TL vector of 64-bit integers.
 

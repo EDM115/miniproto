@@ -1,11 +1,18 @@
 from __future__ import annotations
 
+import asyncio
 import inspect
+import threading
 from collections.abc import Awaitable, Callable
+from importlib import import_module
+from types import SimpleNamespace
 
 import pytest
 
+import miniproto._native_fallback as fallback
+import miniproto.auth.key_exchange as exchange_module
 import miniproto.auth.key_exchange as key_exchange_module
+import miniproto.crypto.native as crypto_module
 from miniproto import (
     AuthKey,
     Client,
@@ -637,7 +644,7 @@ def test_dc_options_env_and_migration_export_authorization() -> None:
         assert result == exported
         loaded = await storage.load()
         assert loaded is not None
-        assert session_record_from_mapping(loaded).dc_id == 4
+        assert session_record_from_mapping(loaded).dc_id == 2
 
     run(scenario())
 
@@ -671,3 +678,144 @@ def test_auth_key_not_found_recovery_clears_key_and_user_identity() -> None:
         assert record.user is None
 
     run(scenario())
+
+
+class _PQTransport:
+    def __init__(self, pq: bytes, *, known_key: bool = True) -> None:
+        self.key = RSAKey(modulus=(1 << 2048) - 159, exponent=1)
+        self.pq = pq
+        self.known_key = known_key
+        self.calls = 0
+
+    async def send_unencrypted(self, body: bytes) -> bytes:
+        self.calls += 1
+        assert self.calls == 1
+        return ResPQ(
+            nonce=int.from_bytes(body[4:20], "little"),
+            server_nonce=2,
+            pq=self.pq,
+            server_public_key_fingerprints=(self.key.fingerprint,) if self.known_key else (),
+        ).serialize()
+
+    def exchange(self) -> AuthKeyExchange:
+        return AuthKeyExchange(self, dc_id=2, rsa_keys=(self.key,))
+
+
+@pytest.mark.parametrize("pq", [b"", b"\x00" * 8 + b"\x0f", b"\x01" + b"\x00" * 8])
+def test_handshake_rejects_pq_width_before_factorization(pq: bytes, monkeypatch: pytest.MonkeyPatch) -> None:
+    def forbidden_factorize(value: int) -> tuple[int, int]:
+        pytest.fail(f"invalid wire pq reached factorization: {value}")
+
+    monkeypatch.setattr(exchange_module, "factorize_pq", forbidden_factorize)
+    transport = _PQTransport(pq)
+    with pytest.raises(ValueError, match="between one and eight bytes"):
+        asyncio.run(transport.exchange().create_auth_key())
+    assert transport.calls == 1
+
+
+def test_handshake_rejects_unknown_key_before_factorization(monkeypatch: pytest.MonkeyPatch) -> None:
+    def forbidden_factorize(value: int) -> tuple[int, int]:
+        pytest.fail(f"unknown key reached factorization: {value}")
+
+    monkeypatch.setattr(exchange_module, "factorize_pq", forbidden_factorize)
+    with pytest.raises(ValueError, match="known Telegram RSA key"):
+        asyncio.run(_PQTransport(b"\x01\x87", known_key=False).exchange().create_auth_key())
+
+
+@pytest.mark.parametrize("pq", [b"\x00" * 6 + b"\x01\x87", b"\xff" * 8])
+def test_handshake_preserves_supported_eight_byte_values(pq: bytes, monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[int] = []
+
+    def record_factorize(value: int) -> tuple[int, int]:
+        seen.append(value)
+        raise ValueError("factorization reached")
+
+    monkeypatch.setattr(exchange_module, "factorize_pq", record_factorize)
+    with pytest.raises(ValueError, match="factorization reached"):
+        asyncio.run(_PQTransport(pq).exchange().create_auth_key())
+    assert seen == [391 if pq[0] == 0 else 18_446_744_073_709_551_615]
+
+
+@pytest.mark.parametrize("pq", [-1, 3, 1 << 64, (1 << 128) + 15])
+def test_factorizers_reject_out_of_range_before_backend_work(pq: int, monkeypatch: pytest.MonkeyPatch) -> None:
+    def forbidden_factor(value: int) -> int:
+        pytest.fail(f"out-of-range pq reached arithmetic: {value}")
+
+    monkeypatch.setattr(fallback, "_factor", forbidden_factor)
+    monkeypatch.setattr(crypto_module, "_native_impl", SimpleNamespace(pq_factorize=forbidden_factor))
+    for factorize in (fallback.pq_factorize, crypto_module.pq_factorize):
+        with pytest.raises(ValueError, match="range"):
+            factorize(pq)
+
+
+@pytest.mark.parametrize("backend_name", ["miniproto._native_fallback", "miniproto._native"])
+def test_factorizer_domain_and_telegram_vector(backend_name: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    backend = pytest.importorskip(backend_name) if backend_name.endswith("._native") else import_module(backend_name)
+    monkeypatch.setattr(crypto_module, "_native_impl", backend)
+    # Telegram's published auth-key sample supplies these independent factors
+    vectors = [(4, (2, 2)), (3_358_800_871_349_344_843, (1_786_331_737, 1_880_278_339)), (18_446_744_073_709_551_615, (3, 6_148_914_691_236_517_205))]  # fmt: skip
+    for pq, expected in vectors:
+        assert crypto_module.pq_factorize(pq) == expected
+    with pytest.raises(ValueError, match="composite"):
+        crypto_module.pq_factorize(18_446_744_073_709_551_557)
+    with pytest.raises(ValueError, match="range"):
+        crypto_module.pq_factorize(1 << 64)
+    with pytest.raises((ValueError, OverflowError)):
+        backend.pq_factorize(1 << 64)
+
+
+@pytest.mark.parametrize("gcd_result, expected_calls", [(1, 6), (91, 2)])
+def test_fallback_budget_covers_full_and_degenerate_retries(gcd_result: int, expected_calls: int, monkeypatch: pytest.MonkeyPatch) -> None:  # fmt: skip
+    calls = 0
+
+    def controlled_gcd(left: int, right: int) -> int:
+        nonlocal calls
+        assert right == 91
+        calls += 1
+        assert calls <= expected_calls
+        return gcd_result
+
+    monkeypatch.setattr(fallback, "_PQ_FACTOR_ATTEMPTS", 2)
+    monkeypatch.setattr(fallback, "_PQ_FACTOR_ITERATIONS", 3)
+    monkeypatch.setattr(fallback.math, "gcd", controlled_gcd)
+    with pytest.raises(ValueError, match="work budget exhausted"):
+        fallback.pq_factorize(91)
+    assert calls == expected_calls
+
+
+def test_handshake_factorization_allows_loop_progress_and_cancellation(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def scenario() -> None:
+        loop = asyncio.get_running_loop()
+        loop_thread = threading.get_ident()
+        started = asyncio.Event()
+        release = threading.Event()
+        completed = threading.Event()
+        transport = _PQTransport(b"\x01\x87")
+
+        def controlled_factorize(pq: int) -> tuple[int, int]:
+            assert pq == 391
+            assert threading.get_ident() != loop_thread
+            loop.call_soon_threadsafe(started.set)
+            try:
+                assert release.wait(5)
+                return 17, 23
+            finally:
+                completed.set()
+
+        monkeypatch.setattr(exchange_module, "factorize_pq", controlled_factorize)
+        task = asyncio.create_task(transport.exchange().create_auth_key())
+        try:
+            await asyncio.wait_for(started.wait(), timeout=2)
+            assert not completed.is_set()
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await asyncio.wait_for(task, timeout=2)
+            assert not completed.is_set()
+            assert transport.calls == 1
+        finally:
+            release.set()
+            if not task.done():
+                task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
+
+    asyncio.run(scenario())

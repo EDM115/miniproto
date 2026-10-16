@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.connection.transport.Transport.recv"
 source_path: "src/miniproto/connection/transport.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/transport.py#L86"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/transport.py#L87"
 aliases: ["miniproto.connection.Transport.recv"]
 module: "miniproto.connection.transport"
 ---

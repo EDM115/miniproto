@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.auth.key_exchange.PQInnerDataDC"
 source_path: "src/miniproto/auth/key_exchange.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/auth/key_exchange.py#L152"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/auth/key_exchange.py#L155"
 aliases: ["miniproto.auth.PQInnerDataDC"]
 module: "miniproto.auth.key_exchange"
 ---

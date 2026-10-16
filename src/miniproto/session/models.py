@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, cast
 
+from miniproto.session.peer_aliases import normalize_username, peer_usernames
 from miniproto.types import PeerKind
 
 SESSION_RECORD_VERSION = 1
@@ -188,6 +189,7 @@ class PeerCacheEntry:
         phone: Optional private phone number, hidden from ``repr``.
         updated_at: Last-known peer metadata timestamp; aware input retains its timezone.
         raw: Optional shallow-copied extra raw fields; nested values remain mutable.
+        username_observed_at: Last observation time per normalized username, independent of general metadata freshness. ``None`` derives times for aliases supplied to this constructor, an empty mapping leaves every alias unverified.
 
     Raises:
         ValueError: If the peer ID is not positive.
@@ -200,6 +202,7 @@ class PeerCacheEntry:
     phone: str | None = field(default=None, repr=False)
     updated_at: datetime = field(default_factory=_utc_now)
     raw: Mapping[str, Any] | None = field(default=None, repr=False)
+    username_observed_at: Mapping[str, datetime] | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
         """Require a positive ID and shallow-copy raw data from callers."""
@@ -208,6 +211,17 @@ class PeerCacheEntry:
         object.__setattr__(self, "updated_at", _coerce_datetime(self.updated_at, default=_utc_now()))
         if self.raw is not None:
             object.__setattr__(self, "raw", dict(self.raw))
+        aliases = peer_usernames(self.username, self.raw)
+        if self.username_observed_at is None:
+            observed = dict.fromkeys(aliases, self.updated_at)
+        else:
+            observed = {}
+            for username, observed_at in self.username_observed_at.items():
+                normalized = normalize_username(username)
+                timestamp = _coerce_datetime(observed_at)
+                if normalized is not None and normalized in aliases and timestamp is not None:
+                    observed[normalized] = timestamp
+        object.__setattr__(self, "username_observed_at", observed)
 
 
 @dataclass(slots=True, frozen=True)
@@ -370,6 +384,7 @@ def _peer_cache_entry_to_mapping(peer: PeerCacheEntry) -> dict[str, Any]:
         "phone": peer.phone,
         "updated_at": peer.updated_at,
         "raw": dict(peer.raw) if peer.raw is not None else None,
+        "username_observed_at": dict(peer.username_observed_at or {}),
     }
 
 
@@ -482,6 +497,7 @@ def _peer_cache_entry_from_mapping(data: object) -> PeerCacheEntry:
         phone=_optional_str(mapping.get("phone")),
         updated_at=_coerce_datetime(mapping.get("updated_at"), default=_utc_now()) or _utc_now(),
         raw=None if mapping.get("raw") is None else _require_mapping(mapping["raw"], "peer.raw"),
+        username_observed_at=_mapping_or_empty(mapping.get("username_observed_at")),
     )
 
 

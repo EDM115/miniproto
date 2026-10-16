@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.mtproto.state.MTProtoState.correct_time_offset_from_msg_id"
 source_path: "src/miniproto/mtproto/state.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/mtproto/state.py#L284"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/mtproto/state.py#L354"
 aliases: ["miniproto.mtproto.MTProtoState.correct_time_offset_from_msg_id"]
 module: "miniproto.mtproto.state"
 ---

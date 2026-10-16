@@ -10,15 +10,17 @@ import logging
 import os
 import random
 import time
+from bisect import bisect_left, bisect_right
 from collections import OrderedDict, deque
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import suppress
 from dataclasses import dataclass
+from heapq import merge
 from pathlib import Path
 from typing import Any, BinaryIO, cast
 
 from miniproto.errors import ClientDisconnected, FloodWait, InternalServerError, RequestTimeout, RpcError, RpcTimeout
-from miniproto.file_id import is_file_id, media_from_file_id
+from miniproto.file_id import is_file_id, media_from_file_id, try_encode_file_id
 from miniproto.media.cdn import cdn_redirect_from_raw, get_cdn_file_part
 from miniproto.media.retry import backoff_delay
 from miniproto.media.upload import ProgressCallback
@@ -189,28 +191,45 @@ class DownloadRangeCache:
 
     Args:
         max_bytes: Maximum completed payload bytes retained by the LRU, defaults to :data:`DEFAULT_RANGE_CACHE_BYTES`. Pending fetches have a separate lifetime and do not count against this capacity.
+        max_entries: Maximum completed ranges retained by the LRU, defaults to 4096, independently limiting entry metadata.
 
     Resource Semantics:
-        Entries use ``(key, offset, limit)``. Cancelling a waiter leaves the shared fetch running. Downloads borrow this cache and do not clear it when they finish or close. Keep the fetch's invoker available until its work finishes or ``clear()`` cancels and joins it. Cached payloads are not zeroized.
+        Entries use ``(SHA-256(key), offset, limit)``, keeping identity metadata fixed at 32 bytes per key. Pending fetches use the same bounded identities, their count follows caller concurrency. Cancelling a waiter leaves the shared fetch running. Downloads borrow this cache and do not clear it when they finish or close. Keep the fetch's invoker available until its work finishes or ``clear()`` cancels and joins it. Cached payloads are not zeroized.
     """
 
-    def __init__(self, *, max_bytes: int = DEFAULT_RANGE_CACHE_BYTES) -> None:
+    def __init__(self, *, max_bytes: int = DEFAULT_RANGE_CACHE_BYTES, max_entries: int = 4096) -> None:
         """Initialize an empty bounded cache.
 
         Args:
             max_bytes: Positive aggregate byte capacity for cached payloads.
+            max_entries: Positive count limit for completed ranges, independent of payload capacity.
 
         Raises:
-            ValueError: ``max_bytes`` is not positive.
+            ValueError: ``max_bytes`` or ``max_entries`` is not positive.
         """
         if max_bytes <= 0:
             raise ValueError("range cache max_bytes must be positive")
+        max_entries = int(max_entries)
+        if max_entries <= 0:
+            raise ValueError("range cache max_entries must be positive")
         self.max_bytes = int(max_bytes)
-        self._entries: OrderedDict[tuple[str, int, int], bytes] = OrderedDict()
-        self._pending: dict[tuple[str, int, int], asyncio.Task[bytes]] = {}
+        self.max_entries = max_entries
+        self._entries: OrderedDict[tuple[bytes, int, int], bytes] = OrderedDict()
+        self._pending: dict[tuple[bytes, int, int], asyncio.Task[bytes]] = {}
         self._background: set[asyncio.Task[None]] = set()
         self._size = 0
         self._lock = asyncio.Lock()
+
+    @staticmethod
+    def _cache_key(key: str, offset: int, limit: int) -> tuple[bytes, int, int]:
+        """Hash the full caller identity without retaining its original text.
+
+        Args:
+            key: Complete caller-supplied media identity.
+            offset: Exact starting byte offset partitioning cached ranges.
+            limit: Exact requested byte length partitioning cached ranges.
+        """
+        return hashlib.sha256(key.encode("utf-8", errors="surrogatepass")).digest(), offset, limit
 
     async def get(self, key: str, offset: int, limit: int) -> bytes | None:
         """Return and refresh an exact cached range or ``None`` on a cache miss.
@@ -220,7 +239,14 @@ class DownloadRangeCache:
             offset: Exact starting byte offset of the desired range.
             limit: Exact requested byte length.
         """
-        cache_key = (key, offset, limit)
+        return await self._get(self._cache_key(key, offset, limit))
+
+    async def _get(self, cache_key: tuple[bytes, int, int]) -> bytes | None:
+        """Look up an already bounded identity and refresh its LRU position.
+
+        Args:
+            cache_key: Normalized digest, offset and length tuple.
+        """
         async with self._lock:
             payload = self._entries.get(cache_key)
             if payload is None:
@@ -241,14 +267,24 @@ class DownloadRangeCache:
         """
         if not payload or len(payload) > self.max_bytes:
             return
-        cache_key = (key, offset, limit)
+        await self._put(self._cache_key(key, offset, limit), payload)
+
+    async def _put(self, cache_key: tuple[bytes, int, int], payload: bytes) -> None:
+        """Retain a fitting range under the payload and completed-entry limits.
+
+        Args:
+            cache_key: Normalized digest, offset and length tuple.
+            payload: Nonempty response bytes admitted under the payload budget.
+        """
+        if not payload or len(payload) > self.max_bytes:
+            return
         async with self._lock:
             previous = self._entries.pop(cache_key, None)
             if previous is not None:
                 self._size -= len(previous)
             self._entries[cache_key] = payload
             self._size += len(payload)
-            while self._size > self.max_bytes and self._entries:
+            while (self._size > self.max_bytes or len(self._entries) > self.max_entries) and self._entries:
                 _old_key, old_payload = self._entries.popitem(last=False)
                 self._size -= len(old_payload)
             record_metric("media.download.range_cache_bytes", self._size, unit="bytes")
@@ -267,16 +303,26 @@ class DownloadRangeCache:
             does not cancel the producer or other waiters. Explicit cache
             clearing still cancels pending producers.
         """
-        cached = await self.get(key, offset, limit)
+        cache_key = self._cache_key(key, offset, limit)
+        del key
+        return await self._get_or_fetch(cache_key, fetch)
+
+    async def _get_or_fetch(self, cache_key: tuple[bytes, int, int], fetch: Callable[[], Awaitable[bytes]]) -> bytes:
+        """Deduplicate a fetch while retaining only its bounded identity.
+
+        Args:
+            cache_key: Normalized digest, offset and length tuple.
+            fetch: Shared producer used when no completed or pending range exists.
+        """
+        cached = await self._get(cache_key)
         if cached is not None:
             return cached
-        cache_key = (key, offset, limit)
 
         async def run_fetch() -> bytes:
             """Populate the cache and retire this key's shared owner task."""
             try:
                 payload = await fetch()
-                await self.put(key, offset, limit, payload)
+                await self._put(cache_key, payload)
                 return payload
             finally:
                 current = asyncio.current_task()
@@ -307,11 +353,12 @@ class DownloadRangeCache:
             # Skip excess speculation to keep background task count bounded
             record_metric("media.download.range_cache_prefetch_skipped", 1)
             return
+        cache_key = self._cache_key(key, offset, limit)
 
         async def run() -> None:
             """Populate the cache and convert prefetch failures into telemetry only."""
             try:
-                await self.get_or_fetch(key, offset, limit, fetch)
+                await self._get_or_fetch(cache_key, fetch)
             except Exception:
                 record_metric("media.download.range_cache_prefetch_errors", 1)
 
@@ -339,6 +386,9 @@ class _PlainFileHashVerifier:
 
     _MAX_HASH_REQUESTS = 32
     _MAX_HASH_INTERVAL = MAX_DOWNLOAD_CHUNK_SIZE
+    # Local resource limits, independent of Telegram's hash interval sizes and the plaintext cache
+    _MAX_HASH_RESPONSE_ITEMS = 4096
+    _MAX_RETAINED_HASHES = 65536
 
     def __init__(
         self,
@@ -380,6 +430,7 @@ class _PlainFileHashVerifier:
         self._max_cached_bytes = max(MAX_DOWNLOAD_CHUNK_SIZE, max_cached_bytes)
         self._identity: tuple[object, ...] | None = None
         self._hashes: dict[tuple[int, int], bytes] = {}
+        self._hash_keys: list[tuple[int, int]] = []
         self._validated: OrderedDict[tuple[tuple[object, ...], int, int, bytes], bytes] = OrderedDict()
         self._validated_bytes = 0
         self._validation_tasks: dict[tuple[tuple[object, ...], int, int, bytes], asyncio.Task[bytes]] = {}
@@ -439,6 +490,7 @@ class _PlainFileHashVerifier:
                 return
             self._identity = identity
             self._hashes.clear()
+            self._hash_keys.clear()
             self._validated.clear()
             self._validated_bytes = 0
             self._validation_tasks.clear()
@@ -477,42 +529,81 @@ class _PlainFileHashVerifier:
                 if not isinstance(result, tuple | list) or not result:
                     raise MediaIntegrityError("hash coverage gap", offset=cursor, limit=end - cursor)
                 before = len(self._hashes)
-                for item in result:
-                    self._remember_hash(item)
+                self._remember_hashes(result, offset=cursor, limit=end - cursor)
                 if len(self._hashes) == before:
                     raise MediaIntegrityError("hash response loop", offset=cursor, limit=end - cursor)
             cursor = self._first_uncovered_offset(start, end)
             raise MediaIntegrityError("hash response limit exceeded", offset=cursor, limit=end - cursor)
 
-    def _remember_hash(self, item: object) -> None:
-        """Validate and retain one non-overlapping raw Telegram file hash.
+    def _remember_hashes(self, items: tuple[object, ...] | list[object], *, offset: int, limit: int) -> None:
+        """Validate a bounded batch against neighboring intervals before retaining it.
 
         Args:
-            item: Candidate raw ``FileHash`` metadata object.
+            items: Unordered candidate raw ``FileHash`` metadata objects.
+            offset: First uncovered byte reported for resource-limit failures.
+            limit: Uncovered range length reported for resource-limit failures.
         """
-        if not isinstance(item, types.FileHash):
-            raise MediaIntegrityError("invalid hash metadata", offset=0, limit=0)
-        offset = int(item.offset)
-        limit = int(item.limit)
-        digest = bytes(item.hash)
-        if offset < 0 or limit <= 0 or limit > self._MAX_HASH_INTERVAL or len(digest) != hashlib.sha256().digest_size:
-            raise MediaIntegrityError("invalid hash metadata", offset=max(0, offset), limit=max(0, limit))
-        key = (offset, limit)
-        existing = self._hashes.get(key)
-        if existing is not None:
-            if existing != digest:
-                raise MediaIntegrityError("contradictory hash metadata", offset=offset, limit=limit)
+        if len(items) > self._MAX_HASH_RESPONSE_ITEMS:
+            raise MediaIntegrityError("hash response item limit exceeded", offset=offset, limit=limit)
+        pending: dict[tuple[int, int], bytes] = {}
+        for item in items:
+            if not isinstance(item, types.FileHash):
+                raise MediaIntegrityError("invalid hash metadata", offset=0, limit=0)
+            hash_offset = int(item.offset)
+            hash_limit = int(item.limit)
+            digest = bytes(item.hash)
+            if (
+                hash_offset < 0
+                or hash_limit <= 0
+                or hash_limit > self._MAX_HASH_INTERVAL
+                or len(digest) != hashlib.sha256().digest_size
+            ):
+                raise MediaIntegrityError("invalid hash metadata", offset=max(0, hash_offset), limit=max(0, hash_limit))
+            key = (hash_offset, hash_limit)
+            existing = self._hashes.get(key, pending.get(key))
+            if existing is not None:
+                if existing != digest:
+                    raise MediaIntegrityError("contradictory hash metadata", offset=hash_offset, limit=hash_limit)
+                continue
+            if len(self._hashes) + len(pending) >= self._MAX_RETAINED_HASHES:
+                raise MediaIntegrityError("hash metadata limit exceeded", offset=offset, limit=limit)
+            pending[key] = digest
+        new_keys = sorted(pending)
+        previous: tuple[int, int] | None = None
+        for key in new_keys:
+            if previous is not None:
+                self._check_hash_overlap(previous, key)
+            index = bisect_left(self._hash_keys, key)
+            if index:
+                self._check_hash_overlap(self._hash_keys[index - 1], key)
+            if index < len(self._hash_keys):
+                self._check_hash_overlap(key, self._hash_keys[index])
+            previous = key
+        if not new_keys:
             return
-        end = offset + limit
-        for (known_offset, known_limit), _known_hash in self._hashes.items():
-            known_end = known_offset + known_limit
-            if offset < known_end and known_offset < end:
-                raise MediaIntegrityError(
-                    "contradictory overlapping hash metadata",
-                    offset=max(offset, known_offset),
-                    limit=min(end, known_end) - max(offset, known_offset),
-                )
-        self._hashes[key] = digest
+        if not self._hash_keys or self._hash_keys[-1] < new_keys[0]:
+            self._hash_keys.extend(new_keys)
+        else:
+            self._hash_keys = list(merge(self._hash_keys, new_keys))
+        self._hashes.update(pending)
+
+    @staticmethod
+    def _check_hash_overlap(left: tuple[int, int], right: tuple[int, int]) -> None:
+        """Reject overlap between two distinct intervals ordered by starting offset.
+
+        Args:
+            left: Earlier interval's offset and byte length.
+            right: Later interval's offset and byte length.
+        """
+        left_offset, left_limit = left
+        right_offset, right_limit = right
+        left_end = left_offset + left_limit
+        if right_offset < left_end:
+            raise MediaIntegrityError(
+                "contradictory overlapping hash metadata",
+                offset=right_offset,
+                limit=min(left_end, right_offset + right_limit) - right_offset,
+            )
 
     def _covering_intervals(self, start: int, end: int) -> tuple[tuple[int, int, bytes], ...] | None:
         """Return contiguous cached hash intervals spanning the target, if available.
@@ -523,13 +614,15 @@ class _PlainFileHashVerifier:
         """
         cursor = start
         result: list[tuple[int, int, bytes]] = []
-        for (offset, limit), digest in sorted(self._hashes.items()):
+        index = max(0, bisect_right(self._hash_keys, (start, self._MAX_HASH_INTERVAL)) - 1)
+        for position in range(index, len(self._hash_keys)):
+            offset, limit = self._hash_keys[position]
             interval_end = offset + limit
             if interval_end <= cursor:
                 continue
             if offset > cursor:
                 return None
-            result.append((offset, limit, digest))
+            result.append((offset, limit, self._hashes[(offset, limit)]))
             cursor = interval_end
             if cursor >= end:
                 return tuple(result)
@@ -543,7 +636,9 @@ class _PlainFileHashVerifier:
             end: Exclusive range end.
         """
         cursor = start
-        for (offset, limit), _digest in sorted(self._hashes.items()):
+        index = max(0, bisect_right(self._hash_keys, (start, self._MAX_HASH_INTERVAL)) - 1)
+        for position in range(index, len(self._hash_keys)):
+            offset, limit = self._hash_keys[position]
             interval_end = offset + limit
             if interval_end <= cursor:
                 continue
@@ -1014,7 +1109,7 @@ async def iter_download(
         range_cache_max_bytes: Capacity for an implicitly created shared cache.
         read_ahead_bytes: Speculative cache-fill distance ahead of the consumer. Disabled for open-ended requests or finite ranges reaching the known EOF.
         verify_plain_hashes: Validate non-CDN chunks against complete Telegram hash intervals, fetching any missing bytes before yielding the requested slice.
-        file_reference_refresher: Optional sync/async callback to renew an expired file reference once per part.
+        file_reference_refresher: Optional sync/async callback to renew an expired file reference once per part. The returned location must preserve its concrete type and every field except ``file_reference``.
 
     Yields:
         Contiguous ``bytes`` in increasing offset order. Progress advances when the consumer resumes after a yield. :func:`download_file` reports acknowledged writes and includes any retained resume prefix.
@@ -1404,7 +1499,7 @@ async def download_file(
         range_cache_max_bytes: Capacity used by an implicit shared cache.
         read_ahead_bytes: Speculative cache-fill distance ahead of consumed parts. Disabled for open-ended requests or finite ranges reaching the known EOF.
         verify_plain_hashes: Verify non-CDN data against complete SHA-256 hash intervals, fetching missing interval bytes before writing the requested slice. Retained resume bytes are not checked.
-        file_reference_refresher: Optional sync/async callback for one stale-reference refresh per part.
+        file_reference_refresher: Optional sync/async callback for one stale-reference refresh per part. The returned location must preserve its concrete type and every field except ``file_reference``.
 
     Returns:
         Metadata including the output path or stream. With ``destination=None``, ``data`` contains the downloaded bytes and ``destination`` holds the internal ``BytesIO``. Caller-provided streams remain open.
@@ -1489,14 +1584,7 @@ async def download_file(
 
     started = time.perf_counter()
     try:
-        writer = _ConcurrentDestinationWriter(
-            destination_handle,
-            queue_size=max(1, concurrency),
-            preallocate_size=limit
-            if destination_handle.path is not None and limit is not None and concurrency > 1
-            else None,
-            sequential=True,
-        )
+        writer = _ConcurrentDestinationWriter(destination_handle, queue_size=max(1, concurrency), sequential=True)
         parts = _iter_download_parts(
             invoke,
             location_state=location_state,
@@ -1647,9 +1735,9 @@ async def iter_download_media(invoke: RawInvoker, media: object, **kwargs: Any) 
         MediaDownloadError: ``media`` cannot be resolved to an input file location.
         asyncio.CancelledError: The active stream is cancelled, transfer-owned part tasks are cancelled and joined.
     """
-    if "range_cache_key" not in kwargs or kwargs.get("range_cache_key") is None:
-        kwargs["range_cache_key"] = _range_cache_key_from_media(media)
     location = download_location_from_media(media)
+    if "range_cache_key" not in kwargs or kwargs.get("range_cache_key") is None:
+        kwargs["range_cache_key"] = try_encode_file_id(location)
     total_size = kwargs.pop("total_size", None)
     if total_size is None:
         resolved = (
@@ -1689,9 +1777,9 @@ async def download_media(
         CdnIntegrityError: CDN hash coverage or digest verification fails.
         asyncio.CancelledError: The transfer is cancelled, with the cleanup conditions described by :func:`download_file`.
     """
-    if "range_cache_key" not in kwargs or kwargs.get("range_cache_key") is None:
-        kwargs["range_cache_key"] = _range_cache_key_from_media(media)
     location = download_location_from_media(media)
+    if "range_cache_key" not in kwargs or kwargs.get("range_cache_key") is None:
+        kwargs["range_cache_key"] = try_encode_file_id(location)
     total_size = kwargs.pop("total_size", None)
     if total_size is None:
         # Infer supported media sizes to enable concurrent requests when the caller omits limit
@@ -1777,7 +1865,7 @@ def media_from_raw(raw: object) -> Media | None:
 
 
 class _DownloadLocationState:
-    """Concurrency-safe mutable location holder for expired file-reference recovery."""
+    """Renew references concurrently while retaining the transfer's original file identity."""
 
     def __init__(self, location: object) -> None:
         """Initialize the state with the location used by the first request.
@@ -1786,6 +1874,7 @@ class _DownloadLocationState:
             location: Initial raw location whose file reference can later be replaced.
         """
         self._location = location
+        self._identity = _download_location_identity(location)
         self._lock = asyncio.Lock()
 
     @property
@@ -1804,6 +1893,8 @@ class _DownloadLocationState:
         """
         old_location = self._location
         new_location = await reference_deduper.refresh(old_location, refresher)
+        if _download_location_identity(new_location) != self._identity:
+            raise MediaDownloadError("file identity changed during reference refresh")
         async with self._lock:
             if _file_reference_bytes(self._location) == _file_reference_bytes(old_location):
                 self._location = new_location
@@ -2206,20 +2297,6 @@ def _is_input_file_location(value: object) -> bool:
     return getattr(type(value), "RESULT_TYPE", None) == "InputFileLocation"
 
 
-def _range_cache_key_from_media(media: object) -> str | None:
-    """Derive a stable cache identity from encoded, normalized or raw media.
-
-    Args:
-        media: Encoded file ID, normalized media or supported raw Telegram media.
-    """
-    if is_file_id(media):
-        return str(media)
-    if isinstance(media, Media):
-        return media.file_id
-    resolved = media_from_raw(media)
-    return resolved.file_id if resolved is not None else None
-
-
 def _resolve_range_cache(
     range_cache: DownloadRangeCache | bool | None, *, max_bytes: int, read_ahead_bytes: int
 ) -> DownloadRangeCache | None:
@@ -2363,6 +2440,18 @@ def _file_reference_bytes(location: object) -> bytes:
     return b""
 
 
+def _download_location_identity(location: object) -> tuple[object, ...]:
+    """Capture the concrete file kind and all TL fields except its renewable reference.
+
+    Args:
+        location: Raw file location whose identity is pinned for the complete transfer.
+    """
+    fields = getattr(type(location), "TL_FIELDS", None)
+    if fields is None:
+        return type(location), location
+    return (type(location), *(getattr(location, field.python_name) for field in fields if field.python_name != "file_reference"))  # fmt: skip
+
+
 def _plain_location_identity(location: object) -> tuple[object, ...]:
     """Build the location fields that must remain stable during plain-hash verification.
 
@@ -2465,20 +2554,12 @@ def _validate_download_options(
 class _ConcurrentDestinationWriter:
     """Serialize asynchronous writes and surface destination failure to every submitter."""
 
-    def __init__(
-        self,
-        destination: _DestinationHandle,
-        *,
-        queue_size: int,
-        preallocate_size: int | None,
-        sequential: bool = False,
-    ) -> None:
-        """Start the writer worker and optionally preallocate a path-backed output.
+    def __init__(self, destination: _DestinationHandle, *, queue_size: int, sequential: bool = False) -> None:
+        """Start the writer worker without extending the output ahead of received bytes.
 
         Args:
             destination: Handle ownership and rollback policy for the output.
             queue_size: Maximum queued writes admitted before submitters wait.
-            preallocate_size: Optional byte length applied to a path-backed file before writes.
             sequential: Append in submitted order instead of seeking each write offset.
         """
         self._destination = destination
@@ -2493,8 +2574,6 @@ class _ConcurrentDestinationWriter:
         self._acknowledgements: set[asyncio.Future[None]] = set()
         # Sequential output preserves a caller stream's chosen position and supports streams without seek
         self._sequential = sequential
-        if destination.path is not None and preallocate_size is not None:
-            destination.handle.truncate(preallocate_size)
         self._worker = asyncio.create_task(self._run())
 
     async def submit(self, offset: int, payload: bytes, *, wait_for_completion: bool = True) -> asyncio.Future[None]:

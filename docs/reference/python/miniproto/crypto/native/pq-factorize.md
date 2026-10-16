@@ -22,7 +22,7 @@ Factor the composite integer used by the MTProto handshake.
 
 **Parameters:**
 
-- **pq** (<code>[int](#int)</code>) – A composite integer greater than or equal to four.
+- **pq** (<code>[int](#int)</code>) – A composite integer in the inclusive range four through ``2**64 - 1``.
 
 **Returns:**
 
@@ -30,8 +30,6 @@ Factor the composite integer used by the MTProto handshake.
 
 **Raises:**
 
-- <code>[ValueError](#ValueError)</code> – If ``pq`` is too small or prime.
+- <code>[ValueError](#ValueError)</code> – If ``pq`` is outside the supported range, prime or exceeds the factorization work budget.
 
-Uses the selected backend's Pollard-rho-style implementation.  It is a
-protocol helper, not a general-purpose factorization service; runtime grows
-with the input and no fixed latency guarantee is made.
+Both backends limit Pollard-rho to sixteen attempts of at most 100,000 iterations each. This synchronous protocol helper has a finite work budget, not a fixed latency guarantee.

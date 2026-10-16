@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::crypto::aes_256_cbc_decrypt"
 source_path: "rust/miniproto/src/crypto.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L335"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L339"
 aliases: ["miniproto._native.aes_256_cbc_decrypt"]
 python_visible: true
 ---
@@ -15,7 +15,7 @@ python_visible: true
 ## Provenance
 
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L335)
+- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L339)
 - Python exposure: `miniproto._native.aes_256_cbc_decrypt` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -39,7 +39,7 @@ fn aes_256_cbc_decrypt(py: _, ciphertext: _, key: _, iv: _) -> _
 fn aes_256_cbc_decrypt(py: Python<'_>, ciphertext: Vec<u8>, key: Vec<u8>, iv: Vec<u8>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:335-345`*
+*Defined in `rust/miniproto/src/crypto.rs:339-349`*
 
 Decrypts block-aligned bytes with Python `aes_256_cbc_decrypt` without padding.
 

@@ -15,7 +15,7 @@ module: "miniproto.updates.state"
 ## `miniproto.updates.state.EntityReference`
 
 ```python
-EntityReference(id: int, kind: PeerKind, access_hash: int | None = None, username: str | None = None, phone: str | None = None, title: str | None = None, complete: bool = False, updated_at: datetime = utc_now()) -> None
+EntityReference(id: int, kind: PeerKind, access_hash: int | None = None, username: str | None = None, phone: str | None = None, title: str | None = None, complete: bool = False, updated_at: datetime = utc_now(), usernames: tuple[str, ...] = (), username_observed_at: Mapping[str, datetime] | None = None) -> None
 ```
 
 Persistent, normalized peer data learned while processing updates.
@@ -30,3 +30,5 @@ Persistent, normalized peer data learned while processing updates.
 - [**title**](#miniproto.updates.state.EntityReference.title) (<code>[str](#str) | None</code>) – Optional display title or user full name.
 - [**complete**](#miniproto.updates.state.EntityReference.complete) (<code>[bool](#bool)</code>) – Whether the source was a full entity allowed to clear absent aliases.
 - [**updated_at**](#miniproto.updates.state.EntityReference.updated_at) (<code>[datetime](#datetime.datetime)</code>) – Observation timestamp, passed through until ``to_peer_cache_entry`` applies session-model timezone handling.
+- [**usernames**](#miniproto.updates.state.EntityReference.usernames) (<code>[tuple](#tuple)[[str](#str), ...]</code>) – Active secondary usernames retained through cursor and storage projection.
+- [**username_observed_at**](#miniproto.updates.state.EntityReference.username_observed_at) (<code>[Mapping](#collections.abc.Mapping)[[str](#str), [datetime](#datetime.datetime)] | None</code>) – Per-alias observation times preserved through cursor projection, ``None`` denotes a newly observed entity.

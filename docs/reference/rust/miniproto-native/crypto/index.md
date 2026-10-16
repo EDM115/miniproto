@@ -19,6 +19,7 @@ python_visible: false
 
 ## Documented items
 
+- [`miniproto_native::crypto::aes_256_ctr_crypt`](./aes-256-ctr-crypt/)
 - [`miniproto_native::crypto::aes_256_gcm_encrypt`](./aes-256-gcm-encrypt/)
 - [`miniproto_native::crypto::aes_256_gcm_decrypt`](./aes-256-gcm-decrypt/)
 - [`miniproto_native::crypto::scrypt_derive`](./scrypt-derive/)
@@ -37,7 +38,6 @@ python_visible: false
 - [`miniproto_native::crypto::aes_256_ige_decrypt`](./aes-256-ige-decrypt/)
 - [`miniproto_native::crypto::aes_256_cbc_encrypt`](./aes-256-cbc-encrypt/)
 - [`miniproto_native::crypto::aes_256_cbc_decrypt`](./aes-256-cbc-decrypt/)
-- [`miniproto_native::crypto::aes_256_ctr_crypt`](./aes-256-ctr-crypt/)
 
 ## cargo-docs-md rendering
 
@@ -132,6 +132,8 @@ Each `#[pyfunction]` is exported under its Rust name in `miniproto._native`. Sel
   - [`GIL_RELEASE_THRESHOLD_BYTES`](#gil-release-threshold-bytes)
   - [`SCRYPT_MAX_MEMORY_BYTES`](#scrypt-max-memory-bytes)
   - [`SCRYPT_MAX_WORK_BYTES`](#scrypt-max-work-bytes)
+  - [`PQ_FACTOR_ATTEMPTS`](#pq-factor-attempts)
+  - [`PQ_FACTOR_ITERATIONS`](#pq-factor-iterations)
 
 ## Quick Reference
 
@@ -206,13 +208,15 @@ Each `#[pyfunction]` is exported under its Rust name in `miniproto._native`. Sel
 | [`mul_mod`](#mul-mod) | fn | Multiplies modulo `modulus` with a widened intermediate to avoid `u64` overflow. |
 | [`pow_mod`](#pow-mod) | fn | Computes modular exponentiation for deterministic Miller-Rabin witnesses. |
 | [`is_prime_u64`](#is-prime-u64) | fn | Deterministically tests whether a `u64` is prime using fixed Miller-Rabin witnesses. |
-| [`factor_u64`](#factor-u64) | fn | Returns one factor of a composite `u64` using trial division and Pollard-rho iteration. |
+| [`factor_u64`](#factor-u64) | fn | Returns one factor using bounded Pollard-rho iteration, the input when prime or `None` when exhausted |
 | [`AES_BLOCK_SIZE`](#aes-block-size) | const | AES's fixed block size in bytes. |
 | [`MT_PROTO_AUTH_KEY_SIZE`](#mt-proto-auth-key-size) | const | Required byte length of an MTProto authorization key. |
 | [`MT_PROTO_MSG_KEY_SIZE`](#mt-proto-msg-key-size) | const | Required byte length of an MTProto 2.0 message key. |
 | [`GIL_RELEASE_THRESHOLD_BYTES`](#gil-release-threshold-bytes) | const | Work-size threshold above which native wrappers detach from the Python GIL. |
 | [`SCRYPT_MAX_MEMORY_BYTES`](#scrypt-max-memory-bytes) | const | Maximum memory estimate accepted by the public scrypt primitive. |
 | [`SCRYPT_MAX_WORK_BYTES`](#scrypt-max-work-bytes) | const | Maximum CPU-work estimate accepted by the public scrypt primitive. |
+| [`PQ_FACTOR_ATTEMPTS`](#pq-factor-attempts) | const | Maximum Pollard-rho retries, matching the Python fallback |
+| [`PQ_FACTOR_ITERATIONS`](#pq-factor-iterations) | const | Maximum Pollard-rho iterations per retry, matching the Python fallback |
 
 ## Functions
 
@@ -225,7 +229,7 @@ where
     F: Ungil + FnOnce() -> T
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:44-54`*
+*Defined in `rust/miniproto/src/crypto.rs:48-58`*
 
 Runs `f` without the GIL when its input work estimate exceeds the native threshold.
 
@@ -245,7 +249,7 @@ Runs `f` without the GIL when its input work estimate exceeds the native thresho
 fn register(m: &Bound<'_, pyo3::types::PyModule>) -> PyResult<()>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:63-83`*
+*Defined in `rust/miniproto/src/crypto.rs:67-87`*
 
 Registers this module's fallback-compatible Python callables on `miniproto._native`.
 
@@ -261,7 +265,7 @@ Returns a PyO3 exception if a callable cannot be added to `m`.
 fn native_available() -> bool
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:88-90`*
+*Defined in `rust/miniproto/src/crypto.rs:92-94`*
 
 Implements Python `native_available`, which always returns `true` while this compiled callable
 is importable. Python fallback selection happens before this function can be called.
@@ -272,7 +276,7 @@ is importable. Python fallback selection happens before this function can be cal
 unsafe fn __pyfunction_native_available<'py>(py: ::pyo3::Python<'py>, _slf: *mut ::pyo3::ffi::PyObject) -> ::pyo3::PyResult<*mut ::pyo3::ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:87`*
+*Defined in `rust/miniproto/src/crypto.rs:91`*
 
 ### `sha1_digest`
 
@@ -280,7 +284,7 @@ unsafe fn __pyfunction_native_available<'py>(py: ::pyo3::Python<'py>, _slf: *mut
 fn sha1_digest(py: Python<'_>, data: Vec<u8>) -> Vec<u8>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:101-103`*
+*Defined in `rust/miniproto/src/crypto.rs:105-107`*
 
 Computes Python `sha1_digest(data)` and returns the 20-byte SHA-1 digest.
 
@@ -297,7 +301,7 @@ Large inputs are hashed with the GIL released.
 unsafe fn __pyfunction_sha1_digest<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:100`*
+*Defined in `rust/miniproto/src/crypto.rs:104`*
 
 ### `sha256_digest`
 
@@ -305,7 +309,7 @@ unsafe fn __pyfunction_sha1_digest<'py>(py: Python<'py>, _slf: *mut ffi::PyObjec
 fn sha256_digest(py: Python<'_>, data: Vec<u8>) -> Vec<u8>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:114-116`*
+*Defined in `rust/miniproto/src/crypto.rs:118-120`*
 
 Computes Python `sha256_digest(data)` and returns the 32-byte SHA-256 digest.
 
@@ -322,7 +326,7 @@ Large inputs are hashed with the GIL released.
 unsafe fn __pyfunction_sha256_digest<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:113`*
+*Defined in `rust/miniproto/src/crypto.rs:117`*
 
 ### `mtproto_auth_key_id`
 
@@ -330,7 +334,7 @@ unsafe fn __pyfunction_sha256_digest<'py>(py: Python<'py>, _slf: *mut ffi::PyObj
 fn mtproto_auth_key_id(auth_key: &[u8]) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:126-128`*
+*Defined in `rust/miniproto/src/crypto.rs:130-132`*
 
 Computes Python `mtproto_auth_key_id(auth_key)` from a validated 256-byte key.
 
@@ -346,7 +350,7 @@ Returns `ValueError` when `auth_key` has the wrong length.
 unsafe fn __pyfunction_mtproto_auth_key_id<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:125`*
+*Defined in `rust/miniproto/src/crypto.rs:129`*
 
 ### `mtproto_message_key`
 
@@ -354,7 +358,7 @@ unsafe fn __pyfunction_mtproto_auth_key_id<'py>(py: Python<'py>, _slf: *mut ffi:
 fn mtproto_message_key(py: Python<'_>, auth_key: Vec<u8>, plaintext_with_padding: Vec<u8>, client_to_server: bool) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:142-157`*
+*Defined in `rust/miniproto/src/crypto.rs:146-161`*
 
 Computes Python `mtproto_message_key` for padded plaintext and one MTProto direction.
 
@@ -374,7 +378,7 @@ large inputs.
 unsafe fn __pyfunction_mtproto_message_key<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:141`*
+*Defined in `rust/miniproto/src/crypto.rs:145`*
 
 ### `mtproto_derive_aes_key_iv`
 
@@ -382,7 +386,7 @@ unsafe fn __pyfunction_mtproto_message_key<'py>(py: Python<'py>, _slf: *mut ffi:
 fn mtproto_derive_aes_key_iv(py: Python<'_>, auth_key: Vec<u8>, msg_key: Vec<u8>, client_to_server: bool) -> PyResult<(Vec<u8>, Vec<u8>)>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:170-186`*
+*Defined in `rust/miniproto/src/crypto.rs:174-190`*
 
 Derives the AES-256 key and IV used by Python `mtproto_derive_aes_key_iv`.
 
@@ -401,7 +405,7 @@ Returns `(key, iv)` after validating both inputs. Valid inputs total 272 bytes (
 unsafe fn __pyfunction_mtproto_derive_aes_key_iv<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:169`*
+*Defined in `rust/miniproto/src/crypto.rs:173`*
 
 ### `mtproto_encrypt_payload`
 
@@ -409,7 +413,7 @@ unsafe fn __pyfunction_mtproto_derive_aes_key_iv<'py>(py: Python<'py>, _slf: *mu
 fn mtproto_encrypt_payload(py: Python<'_>, auth_key: Vec<u8>, plaintext_with_padding: Vec<u8>, client_to_server: bool) -> PyResult<(Vec<u8>, Vec<u8>, Vec<u8>)>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:200-210`*
+*Defined in `rust/miniproto/src/crypto.rs:204-214`*
 
 Encrypts padded MTProto plaintext for Python `mtproto_encrypt_payload`.
 
@@ -429,7 +433,7 @@ large work runs without the GIL.
 unsafe fn __pyfunction_mtproto_encrypt_payload<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:199`*
+*Defined in `rust/miniproto/src/crypto.rs:203`*
 
 ### `mtproto_decrypt_payload`
 
@@ -437,7 +441,7 @@ unsafe fn __pyfunction_mtproto_encrypt_payload<'py>(py: Python<'py>, _slf: *mut 
 fn mtproto_decrypt_payload(py: Python<'_>, auth_key: Vec<u8>, msg_key: Vec<u8>, ciphertext: Vec<u8>, client_to_server: bool) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:225-236`*
+*Defined in `rust/miniproto/src/crypto.rs:229-240`*
 
 Decrypts and verifies Python `mtproto_decrypt_payload` ciphertext.
 
@@ -458,7 +462,7 @@ verification; large work runs without the GIL.
 unsafe fn __pyfunction_mtproto_decrypt_payload<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:224`*
+*Defined in `rust/miniproto/src/crypto.rs:228`*
 
 ### `xor_bytes`
 
@@ -466,7 +470,7 @@ unsafe fn __pyfunction_mtproto_decrypt_payload<'py>(py: Python<'py>, _slf: *mut 
 fn xor_bytes(left: &[u8], right: &[u8]) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:247-249`*
+*Defined in `rust/miniproto/src/crypto.rs:251-253`*
 
 Returns the bytewise exclusive-or of Python `xor_bytes(left, right)` inputs.
 
@@ -483,7 +487,7 @@ Returns `ValueError` unless both inputs have equal length.
 unsafe fn __pyfunction_xor_bytes<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:246`*
+*Defined in `rust/miniproto/src/crypto.rs:250`*
 
 ### `aes_256_ige_encrypt`
 
@@ -491,7 +495,7 @@ unsafe fn __pyfunction_xor_bytes<'py>(py: Python<'py>, _slf: *mut ffi::PyObject,
 fn aes_256_ige_encrypt(py: Python<'_>, plaintext: Vec<u8>, key: Vec<u8>, iv: Vec<u8>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:263-273`*
+*Defined in `rust/miniproto/src/crypto.rs:267-277`*
 
 Encrypts block-aligned bytes with Python `aes_256_ige_encrypt`.
 
@@ -511,7 +515,7 @@ for large plaintexts.
 unsafe fn __pyfunction_aes_256_ige_encrypt<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:262`*
+*Defined in `rust/miniproto/src/crypto.rs:266`*
 
 ### `aes_256_ige_decrypt`
 
@@ -519,7 +523,7 @@ unsafe fn __pyfunction_aes_256_ige_encrypt<'py>(py: Python<'py>, _slf: *mut ffi:
 fn aes_256_ige_decrypt(py: Python<'_>, ciphertext: Vec<u8>, key: Vec<u8>, iv: Vec<u8>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:287-297`*
+*Defined in `rust/miniproto/src/crypto.rs:291-301`*
 
 Decrypts block-aligned bytes with Python `aes_256_ige_decrypt`.
 
@@ -539,7 +543,7 @@ for large ciphertexts.
 unsafe fn __pyfunction_aes_256_ige_decrypt<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:286`*
+*Defined in `rust/miniproto/src/crypto.rs:290`*
 
 ### `aes_256_cbc_encrypt`
 
@@ -547,7 +551,7 @@ unsafe fn __pyfunction_aes_256_ige_decrypt<'py>(py: Python<'py>, _slf: *mut ffi:
 fn aes_256_cbc_encrypt(py: Python<'_>, plaintext: Vec<u8>, key: Vec<u8>, iv: Vec<u8>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:311-321`*
+*Defined in `rust/miniproto/src/crypto.rs:315-325`*
 
 Encrypts block-aligned bytes with Python `aes_256_cbc_encrypt` without padding.
 
@@ -567,7 +571,7 @@ plaintexts release the GIL.
 unsafe fn __pyfunction_aes_256_cbc_encrypt<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:310`*
+*Defined in `rust/miniproto/src/crypto.rs:314`*
 
 ### `aes_256_cbc_decrypt`
 
@@ -575,7 +579,7 @@ unsafe fn __pyfunction_aes_256_cbc_encrypt<'py>(py: Python<'py>, _slf: *mut ffi:
 fn aes_256_cbc_decrypt(py: Python<'_>, ciphertext: Vec<u8>, key: Vec<u8>, iv: Vec<u8>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:335-345`*
+*Defined in `rust/miniproto/src/crypto.rs:339-349`*
 
 Decrypts block-aligned bytes with Python `aes_256_cbc_decrypt` without padding.
 
@@ -595,7 +599,7 @@ ciphertexts release the GIL.
 unsafe fn __pyfunction_aes_256_cbc_decrypt<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:334`*
+*Defined in `rust/miniproto/src/crypto.rs:338`*
 
 ### `aes_256_ctr_crypt`
 
@@ -603,7 +607,7 @@ unsafe fn __pyfunction_aes_256_cbc_decrypt<'py>(py: Python<'py>, _slf: *mut ffi:
 fn aes_256_ctr_crypt(py: Python<'_>, data: Vec<u8>, key: Vec<u8>, iv: Vec<u8>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:359-369`*
+*Defined in `rust/miniproto/src/crypto.rs:363-373`*
 
 Applies Python `aes_256_ctr_crypt` to data using AES-CTR keystream XOR.
 
@@ -623,7 +627,7 @@ and releases the GIL for large data.
 unsafe fn __pyfunction_aes_256_ctr_crypt<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:358`*
+*Defined in `rust/miniproto/src/crypto.rs:362`*
 
 ### `aes_256_gcm_encrypt`
 
@@ -631,7 +635,7 @@ unsafe fn __pyfunction_aes_256_ctr_crypt<'py>(py: Python<'py>, _slf: *mut ffi::P
 fn aes_256_gcm_encrypt(py: Python<'_>, plaintext: Vec<u8>, key: Vec<u8>, nonce: Vec<u8>, associated_data: Vec<u8>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:384-395`*
+*Defined in `rust/miniproto/src/crypto.rs:388-399`*
 
 Authenticated-encrypts Python `aes_256_gcm_encrypt` plaintext and associated data.
 
@@ -652,7 +656,7 @@ nonce or encryption failure; large work releases the GIL.
 unsafe fn __pyfunction_aes_256_gcm_encrypt<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:383`*
+*Defined in `rust/miniproto/src/crypto.rs:387`*
 
 ### `aes_256_gcm_decrypt`
 
@@ -660,7 +664,7 @@ unsafe fn __pyfunction_aes_256_gcm_encrypt<'py>(py: Python<'py>, _slf: *mut ffi:
 fn aes_256_gcm_decrypt(py: Python<'_>, ciphertext_and_tag: Vec<u8>, key: Vec<u8>, nonce: Vec<u8>, associated_data: Vec<u8>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:410-421`*
+*Defined in `rust/miniproto/src/crypto.rs:414-425`*
 
 Authenticated-decrypts Python `aes_256_gcm_decrypt` ciphertext-and-tag bytes.
 
@@ -681,7 +685,7 @@ large work releases the GIL.
 unsafe fn __pyfunction_aes_256_gcm_decrypt<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:409`*
+*Defined in `rust/miniproto/src/crypto.rs:413`*
 
 ### `scrypt_derive`
 
@@ -689,7 +693,7 @@ unsafe fn __pyfunction_aes_256_gcm_decrypt<'py>(py: Python<'py>, _slf: *mut ffi:
 fn scrypt_derive(py: Python<'_>, password: Vec<u8>, salt: Vec<u8>, n: u32, r: u32, p: u32, length: usize) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:439-456`*
+*Defined in `rust/miniproto/src/crypto.rs:443-460`*
 
 Derives Python `scrypt_derive` bytes from password, salt and scrypt cost parameters.
 
@@ -713,7 +717,7 @@ GIL is released when the `128 * n * r * p` work estimate exceeds 4 KiB.
 unsafe fn __pyfunction_scrypt_derive<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:438`*
+*Defined in `rust/miniproto/src/crypto.rs:442`*
 
 ### `pq_factorize`
 
@@ -721,7 +725,7 @@ unsafe fn __pyfunction_scrypt_derive<'py>(py: Python<'py>, _slf: *mut ffi::PyObj
 fn pq_factorize(py: Python<'_>, pq: u64) -> PyResult<(u64, u64)>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:468-470`*
+*Defined in `rust/miniproto/src/crypto.rs:472-474`*
 
 Factorizes Python `pq_factorize(pq)` into ordered nontrivial `u64` factors.
 
@@ -739,7 +743,7 @@ the GIL released.
 unsafe fn __pyfunction_pq_factorize<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:467`*
+*Defined in `rust/miniproto/src/crypto.rs:471`*
 
 ### `sha1_digest_raw`
 
@@ -747,7 +751,7 @@ unsafe fn __pyfunction_pq_factorize<'py>(py: Python<'py>, _slf: *mut ffi::PyObje
 fn sha1_digest_raw(data: &[u8]) -> Vec<u8>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:477-479`*
+*Defined in `rust/miniproto/src/crypto.rs:481-483`*
 
 Computes SHA-1 for Rust callers without Python or GIL interaction.
 
@@ -761,7 +765,7 @@ Computes SHA-1 for Rust callers without Python or GIL interaction.
 fn sha256_digest_raw(data: &[u8]) -> Vec<u8>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:486-488`*
+*Defined in `rust/miniproto/src/crypto.rs:490-492`*
 
 Computes SHA-256 for Rust callers without Python or GIL interaction.
 
@@ -775,7 +779,7 @@ Computes SHA-256 for Rust callers without Python or GIL interaction.
 fn mtproto_auth_key_id_raw(auth_key: &[u8]) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:497-501`*
+*Defined in `rust/miniproto/src/crypto.rs:501-505`*
 
 Derives the trailing eight SHA-1 bytes that identify a validated MTProto authorization key.
 
@@ -791,7 +795,7 @@ Returns `ValueError` if the key is not exactly 256 bytes; does not acquire the G
 fn mtproto_message_key_raw(auth_key: &[u8], plaintext_with_padding: &[u8], client_to_server: bool) -> Vec<u8>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:513-524`*
+*Defined in `rust/miniproto/src/crypto.rs:517-528`*
 
 Derives an MTProto 2.0 message key from a validated authorization key and padded plaintext.
 
@@ -810,7 +814,7 @@ slices its fixed protocol ranges directly.
 fn mtproto_derive_aes_key_iv_raw(auth_key: &[u8], msg_key: &[u8], client_to_server: bool) -> (Vec<u8>, Vec<u8>)
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:535-561`*
+*Defined in `rust/miniproto/src/crypto.rs:539-565`*
 
 Derives the MTProto 2.0 AES-IGE key and IV from validated fixed-width key material.
 
@@ -828,7 +832,7 @@ Callers must validate `auth_key` and `msg_key` before calling; the function has 
 fn mtproto_encrypt_payload_raw(auth_key: &[u8], plaintext_with_padding: &[u8], client_to_server: bool) -> PyResult<(Vec<u8>, Vec<u8>, Vec<u8>)>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:572-584`*
+*Defined in `rust/miniproto/src/crypto.rs:576-588`*
 
 Produces the auth-key identifier, message key and AES-IGE ciphertext for padded plaintext.
 
@@ -846,7 +850,7 @@ Returns `ValueError` for malformed keys or non-block-aligned plaintext; no GIL i
 fn mtproto_decrypt_payload_raw(auth_key: &[u8], msg_key: &[u8], ciphertext: &[u8], client_to_server: bool) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:596-613`*
+*Defined in `rust/miniproto/src/crypto.rs:600-617`*
 
 Decrypts and authenticates an MTProto payload using validated directional key derivation.
 
@@ -865,7 +869,7 @@ Returns `ValueError` for malformed inputs or a message-key mismatch; no GIL inte
 fn xor_bytes_raw(left: &[u8], right: &[u8]) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:623-630`*
+*Defined in `rust/miniproto/src/crypto.rs:627-634`*
 
 Computes bytewise XOR for equal-length Rust byte slices.
 
@@ -882,7 +886,7 @@ Returns `ValueError` for unequal lengths and does not use the GIL.
 fn aes_256_ige_encrypt_raw(plaintext: &[u8], key: &[u8], iv: &[u8]) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:641-667`*
+*Defined in `rust/miniproto/src/crypto.rs:645-671`*
 
 Encrypts a block-aligned byte slice using AES-256 IGE for Rust callers.
 
@@ -900,7 +904,7 @@ Returns `ValueError` unless the key, IV and plaintext lengths meet AES-IGE requi
 fn aes_256_ige_decrypt_raw(ciphertext: &[u8], key: &[u8], iv: &[u8]) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:678-704`*
+*Defined in `rust/miniproto/src/crypto.rs:682-708`*
 
 Decrypts a block-aligned AES-256 IGE ciphertext for Rust callers.
 
@@ -918,7 +922,7 @@ Returns `ValueError` unless the key, IV and ciphertext lengths meet AES-IGE requ
 fn aes_256_cbc_encrypt_raw(plaintext: &[u8], key: &[u8], iv: &[u8]) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:715-734`*
+*Defined in `rust/miniproto/src/crypto.rs:719-738`*
 
 Encrypts a block-aligned byte slice with unpadded AES-256 CBC.
 
@@ -936,7 +940,7 @@ Returns `ValueError` unless the key, IV and plaintext lengths are valid.
 fn aes_256_cbc_decrypt_raw(ciphertext: &[u8], key: &[u8], iv: &[u8]) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:745-765`*
+*Defined in `rust/miniproto/src/crypto.rs:749-769`*
 
 Decrypts a block-aligned unpadded AES-256 CBC ciphertext.
 
@@ -954,7 +958,7 @@ Returns `ValueError` unless the key, IV and ciphertext lengths are valid.
 fn aes_256_ctr_crypt_raw(data: &[u8], key: &[u8], iv: &[u8]) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:776-790`*
+*Defined in `rust/miniproto/src/crypto.rs:780-794`*
 
 XORs bytes with an AES-256 CTR keystream; the same operation encrypts and decrypts.
 
@@ -972,7 +976,7 @@ Returns `ValueError` unless `key` is 32 bytes and `iv` is one AES block.
 fn aes_256_gcm_encrypt_raw(plaintext: &[u8], key: &[u8], nonce: &[u8], associated_data: &[u8]) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:802-823`*
+*Defined in `rust/miniproto/src/crypto.rs:806-827`*
 
 Authenticated-encrypts plaintext with AES-256 GCM and returns ciphertext plus tag.
 
@@ -991,7 +995,7 @@ Returns `ValueError` for an invalid key or nonce or if the cipher rejects the op
 fn aes_256_gcm_decrypt_raw(ciphertext_and_tag: &[u8], key: &[u8], nonce: &[u8], associated_data: &[u8]) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:835-856`*
+*Defined in `rust/miniproto/src/crypto.rs:839-860`*
 
 Authenticated-decrypts AES-256 GCM ciphertext-and-tag data.
 
@@ -1010,7 +1014,7 @@ Returns `ValueError` for invalid key/nonce material or a failed authentication c
 fn scrypt_derive_raw(password: &[u8], salt: &[u8], n: u32, r: u32, p: u32, length: usize) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:871-907`*
+*Defined in `rust/miniproto/src/crypto.rs:875-911`*
 
 Runs scrypt with the library's output and resource limits for Rust callers
 
@@ -1032,11 +1036,11 @@ failure.  This is a synchronous, GIL-free primitive.
 fn pq_factorize_raw(pq: u64) -> PyResult<(u64, u64)>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:916-930`*
+*Defined in `rust/miniproto/src/crypto.rs:920-935`*
 
 Finds and orders the two nontrivial factors of an MTProto `pq` value.
 
-Returns `ValueError` for values below four or values that are not composite.
+Returns `ValueError` for values below four, primes or an exhausted factorization budget
 
 # Arguments
 
@@ -1048,7 +1052,7 @@ Returns `ValueError` for values below four or values that are not composite.
 fn validate_auth_key(auth_key: &[u8]) -> PyResult<()>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:939-944`*
+*Defined in `rust/miniproto/src/crypto.rs:944-949`*
 
 Validates the fixed 256-byte MTProto authorization-key width.
 
@@ -1064,7 +1068,7 @@ Returns `ValueError` rather than allowing fixed-offset protocol code to panic.
 fn validate_msg_key(msg_key: &[u8]) -> PyResult<()>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:953-958`*
+*Defined in `rust/miniproto/src/crypto.rs:958-963`*
 
 Validates the fixed 16-byte MTProto message-key width.
 
@@ -1080,7 +1084,7 @@ Returns `ValueError` on a malformed input slice.
 fn validate_block_multiple(data: &[u8]) -> PyResult<()>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:967-974`*
+*Defined in `rust/miniproto/src/crypto.rs:972-979`*
 
 Validates that AES block-mode input has a whole-number count of AES blocks.
 
@@ -1096,7 +1100,7 @@ Returns `ValueError` when the byte length is not divisible by 16.
 fn validate_aes_key(key: &[u8]) -> PyResult<()>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:981-986`*
+*Defined in `rust/miniproto/src/crypto.rs:986-991`*
 
 Validates a 32-byte AES-256 key and returns `ValueError` otherwise.
 
@@ -1110,7 +1114,7 @@ Validates a 32-byte AES-256 key and returns `ValueError` otherwise.
 fn validate_ige_iv(iv: &[u8]) -> PyResult<()>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:993-998`*
+*Defined in `rust/miniproto/src/crypto.rs:998-1003`*
 
 Validates the two-block, 32-byte IV required by AES-IGE.
 
@@ -1124,7 +1128,7 @@ Validates the two-block, 32-byte IV required by AES-IGE.
 fn validate_cbc_ctr_iv(iv: &[u8]) -> PyResult<()>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:1005-1010`*
+*Defined in `rust/miniproto/src/crypto.rs:1010-1015`*
 
 Validates the one-block IV or counter used by CBC and CTR modes.
 
@@ -1138,7 +1142,7 @@ Validates the one-block IV or counter used by CBC and CTR modes.
 fn validate_gcm_nonce(nonce: &[u8]) -> PyResult<()>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:1017-1022`*
+*Defined in `rust/miniproto/src/crypto.rs:1022-1027`*
 
 Validates the 12-byte nonce mandated by this AES-GCM interface.
 
@@ -1152,7 +1156,7 @@ Validates the 12-byte nonce mandated by this AES-GCM interface.
 fn direction_offset(client_to_server: bool) -> usize
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:1029-1031`*
+*Defined in `rust/miniproto/src/crypto.rs:1034-1036`*
 
 Returns the MTProto key-schedule offset for the requested packet direction.
 
@@ -1166,7 +1170,7 @@ Returns the MTProto key-schedule offset for the requested packet direction.
 fn xor_block(left: &[u8; 16], right: &[u8; 16]) -> [u8; 16]
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:1039-1045`*
+*Defined in `rust/miniproto/src/crypto.rs:1044-1050`*
 
 Computes a fixed-width XOR block used by the AES block-mode loops.
 
@@ -1181,7 +1185,7 @@ Computes a fixed-width XOR block used by the AES block-mode loops.
 fn increment_counter(counter: &mut [u8; 16])
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:1052-1060`*
+*Defined in `rust/miniproto/src/crypto.rs:1057-1065`*
 
 Advances a big-endian AES-CTR counter in place, wrapping at the full block width.
 
@@ -1195,7 +1199,7 @@ Advances a big-endian AES-CTR counter in place, wrapping at the full block width
 fn gcd(left: u64, right: u64) -> u64
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:1068-1075`*
+*Defined in `rust/miniproto/src/crypto.rs:1073-1080`*
 
 Computes the greatest common divisor used by Pollard-rho factorization.
 
@@ -1210,7 +1214,7 @@ Computes the greatest common divisor used by Pollard-rho factorization.
 fn mul_mod(left: u64, right: u64, modulus: u64) -> u64
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:1088-1090`*
+*Defined in `rust/miniproto/src/crypto.rs:1093-1095`*
 
 Multiplies modulo `modulus` with a widened intermediate to avoid `u64` overflow.
 
@@ -1230,7 +1234,7 @@ A zero `modulus` panics at the remainder operation. Widening the product to `u12
 fn pow_mod(base: u64, exponent: u64, modulus: u64) -> u64
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:1103-1113`*
+*Defined in `rust/miniproto/src/crypto.rs:1108-1118`*
 
 Computes modular exponentiation for deterministic Miller-Rabin witnesses.
 
@@ -1250,7 +1254,7 @@ A zero `modulus` panics when `exponent` is nonzero. Products use `mul_mod` and i
 fn is_prime_u64(value: u64) -> bool
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:1120-1159`*
+*Defined in `rust/miniproto/src/crypto.rs:1125-1164`*
 
 Deterministically tests whether a `u64` is prime using fixed Miller-Rabin witnesses.
 
@@ -1261,16 +1265,18 @@ Deterministically tests whether a `u64` is prime using fixed Miller-Rabin witnes
 ### `factor_u64`
 
 ```rust
-fn factor_u64(value: u64) -> u64
+fn factor_u64(value: u64, attempts: usize, iterations: usize) -> Option<u64>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:1166-1194`*
+*Defined in `rust/miniproto/src/crypto.rs:1173-1200`*
 
-Returns one factor of a composite `u64` using trial division and Pollard-rho iteration.
+Returns one factor using bounded Pollard-rho iteration, the input when prime or `None` when exhausted
 
 # Arguments
 
 - `value`: Composite unsigned integer whose nontrivial factor is requested.
+- `attempts`: Maximum number of polynomial constants to try
+- `iterations`: Maximum sequence iterations for each constant
 
 ## Constants
 
@@ -1327,3 +1333,21 @@ const SCRYPT_MAX_WORK_BYTES: usize = 1_073_741_824usize;
 *Defined in `rust/miniproto/src/crypto.rs:31`*
 
 Maximum CPU-work estimate accepted by the public scrypt primitive.
+
+### `PQ_FACTOR_ATTEMPTS`
+```rust
+const PQ_FACTOR_ATTEMPTS: usize = 16usize;
+```
+
+*Defined in `rust/miniproto/src/crypto.rs:33`*
+
+Maximum Pollard-rho retries, matching the Python fallback
+
+### `PQ_FACTOR_ITERATIONS`
+```rust
+const PQ_FACTOR_ITERATIONS: usize = 100_000usize;
+```
+
+*Defined in `rust/miniproto/src/crypto.rs:35`*
+
+Maximum Pollard-rho iterations per retry, matching the Python fallback

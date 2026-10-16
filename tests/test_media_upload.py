@@ -3,8 +3,9 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import io
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Callable, Iterator
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, BinaryIO, cast
 
 import pytest
@@ -816,3 +817,254 @@ def test_client_send_file_rejects_unknown_options() -> None:
             await client.send_file("@alice", b"hello", unsupported=True)
 
     run(scenario())
+
+
+MAX_PART_BYTES = 512 * 1024
+
+
+SOURCE_KINDS = ("reader", "async_reader", "iterable", "async_iterable")
+
+
+class RecordingSpool(io.BytesIO):
+    def __init__(self) -> None:
+        super().__init__()
+        self.written = 0
+        self.writes = 0
+
+    def write(self, buffer: Any, /) -> int:
+        self.written += len(buffer)
+        self.writes += 1
+        return super().write(buffer)
+
+
+@pytest.fixture
+def spool(monkeypatch: pytest.MonkeyPatch) -> Iterator[RecordingSpool]:
+    temporary = RecordingSpool()
+    monkeypatch.setattr(media_upload.tempfile, "TemporaryFile", lambda *args, **kwargs: temporary)
+    try:
+        yield temporary
+    finally:
+        io.BytesIO.close(temporary)
+
+
+@dataclass
+class SourceProbe:
+    chunks: Iterator[bytes]
+    consumed: int = 0
+    calls: int = 0
+    closed: bool = False
+    pending: bytes = b""
+    on_chunk: Callable[[], None] | None = None
+    read_sizes: list[int] = field(default_factory=list)
+
+    def observe(self, payload: bytes) -> bytes:
+        self.consumed += len(payload)
+        self.calls += 1
+        if self.on_chunk is not None:
+            self.on_chunk()
+        return payload
+
+    def read(self, size: int) -> bytes:
+        self.read_sizes.append(size)
+        if not self.pending:
+            self.pending = next(self.chunks, b"")
+        payload, self.pending = self.pending[:size], self.pending[size:]
+        return self.observe(payload)
+
+    def iterate(self) -> Iterator[bytes]:
+        for chunk in self.chunks:
+            yield self.observe(chunk)
+
+    def close(self) -> None:
+        self.closed = True
+
+    def source(self, kind: str) -> Any:
+        if kind == "reader":
+            return self
+        if kind == "async_reader":
+            probe = self
+
+            class AsyncReader:
+                async def read(self, size: int) -> bytes:
+                    return probe.read(size)
+
+                def close(self) -> None:
+                    probe.close()
+
+            return AsyncReader()
+        if kind == "async_iterable":
+
+            async def chunks() -> AsyncIterator[bytes]:
+                for chunk in self.iterate():
+                    yield chunk
+
+            return chunks()
+        return self.iterate()
+
+
+@dataclass
+class InvokerProbe:
+    registered: list[int] = field(default_factory=list)
+    parts: dict[int, bytes] = field(default_factory=dict)
+
+    def register_transfer(self, size: int) -> None:
+        self.registered.append(size)
+
+    async def __call__(self, request: object, **kwargs: object) -> bool:
+        assert isinstance(request, functions.UploadSaveFilePart)
+        self.parts[request.file_part] = request.bytes
+        return True
+
+
+@pytest.mark.parametrize("kind", SOURCE_KINDS)
+@pytest.mark.parametrize("max_parts", (1, 2))
+def test_unknown_upload_stops_before_crossing_write(spool: RecordingSpool, kind: str, max_parts: int) -> None:
+    async def scenario() -> None:
+        limit = max_parts * MAX_PART_BYTES
+        probe = SourceProbe(iter([b"a" * (64 * 1024)] * (8 * max_parts) + [b"!", b"unconsumed-tail"]))
+        invoker = InvokerProbe()
+        with pytest.raises(MediaUploadError):
+            await upload_file(invoker, probe.source(kind), part_size=64 * 1024, max_file_parts=max_parts)
+        assert probe.consumed == limit + 1
+        assert spool.written == limit
+        assert spool.closed
+        assert not probe.closed
+        assert invoker.registered == []
+        assert invoker.parts == {}
+        if kind in {"reader", "async_reader"}:
+            assert probe.read_sizes[-1] == 1
+
+    event_loop.run(scenario())
+
+
+@pytest.mark.parametrize("kind", SOURCE_KINDS)
+@pytest.mark.parametrize("size", (MAX_PART_BYTES - 1, MAX_PART_BYTES))
+def test_unknown_upload_accepts_boundary_after_part_growth(spool: RecordingSpool, kind: str, size: int) -> None:
+    async def scenario() -> None:
+        payload = b"a" * 1023 + b"b" * (size - 1024) + b"z"
+        probe = SourceProbe(iter((payload[:1023], payload[1023:-1], payload[-1:])))
+        invoker = InvokerProbe()
+        result = await upload_file(invoker, probe.source(kind), part_size=1024, max_file_parts=1)
+        assert result.size == size
+        assert result.part_size == MAX_PART_BYTES
+        assert result.parts == 1
+        assert invoker.parts == {0: payload}
+        assert invoker.registered == [size]
+        assert spool.written == size
+        assert spool.closed
+        assert not probe.closed
+
+    event_loop.run(scenario())
+
+
+@pytest.mark.parametrize("kind", ("iterable", "async_iterable"))
+def test_unknown_upload_rejects_oversized_first_chunk_without_writing(spool: RecordingSpool, kind: str) -> None:
+    async def scenario() -> None:
+        probe = SourceProbe(iter((b"x" * (MAX_PART_BYTES + 1), b"unconsumed")))
+        invoker = InvokerProbe()
+        with pytest.raises(MediaUploadError):
+            await upload_file(invoker, probe.source(kind), max_file_parts=1)
+        assert probe.calls == 1
+        assert spool.writes == 0
+        assert spool.closed
+        assert invoker.registered == []
+        assert invoker.parts == {}
+
+    event_loop.run(scenario())
+
+
+@pytest.mark.parametrize("kind", SOURCE_KINDS)
+def test_unknown_upload_preserves_explicit_unlimited_parts(spool: RecordingSpool, kind: str) -> None:
+    async def scenario() -> None:
+        payload = b"a" * MAX_PART_BYTES + b"z"
+        probe = SourceProbe(iter((payload[:MAX_PART_BYTES], payload[-1:])))
+        invoker = InvokerProbe()
+        result = await upload_file(invoker, probe.source(kind), max_file_parts=None)
+        assert result.size == MAX_PART_BYTES + 1
+        assert result.parts == 2
+        assert invoker.parts == {0: payload[:-1], 1: b"z"}
+        assert spool.written == len(payload)
+        assert spool.closed
+
+    event_loop.run(scenario())
+
+
+@pytest.mark.parametrize("kind,payload", [(kind, b"x") for kind in SOURCE_KINDS] + [("iterable", b""), ("async_iterable", b"")])  # fmt: skip
+def test_immediate_upload_producers_allow_preparation_cancellation(spool: RecordingSpool, kind: str, payload: bytes) -> None:  # fmt: skip
+    async def scenario() -> None:
+        probe = SourceProbe(iter([payload] * 256))
+        invoker = InvokerProbe()
+
+        def cancel_after_first_chunk() -> None:
+            if probe.calls == 1:
+                asyncio.get_running_loop().call_soon(task.cancel)
+
+        probe.on_chunk = cancel_after_first_chunk
+        task = asyncio.create_task(upload_file(invoker, probe.source(kind), max_file_parts=None))
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        assert 0 < probe.calls < 256
+        assert spool.written == probe.consumed
+        assert spool.closed
+        assert not probe.closed
+        assert invoker.registered == []
+        assert invoker.parts == {}
+
+    event_loop.run(scenario())
+
+
+def test_early_limit_failure_survives_spool_close_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    class CloseFailingSpool(RecordingSpool):
+        def close(self) -> None:
+            super().close()
+            raise OSError("spool close failed")
+
+    async def scenario() -> None:
+        temporary = CloseFailingSpool()
+        monkeypatch.setattr(media_upload.tempfile, "TemporaryFile", lambda *args, **kwargs: temporary)
+        try:
+            with pytest.raises(MediaUploadError):
+                await upload_file(InvokerProbe(), iter((b"x" * (MAX_PART_BYTES + 1),)), max_file_parts=1)
+            assert temporary.closed
+            assert temporary.writes == 0
+        finally:
+            io.BytesIO.close(temporary)
+
+    event_loop.run(scenario())
+
+
+@pytest.mark.parametrize("kind", ("bytes", "seekable", "path"))
+@pytest.mark.parametrize("size", (MAX_PART_BYTES, MAX_PART_BYTES + 1))
+def test_known_length_uploads_keep_part_ceiling_without_spooling(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, kind: str, size: int) -> None:  # fmt: skip
+    def reject_spool(*args: object, **kwargs: object) -> None:
+        raise AssertionError("known-size sources must not be spooled")
+
+    monkeypatch.setattr(media_upload.tempfile, "TemporaryFile", reject_spool)
+
+    async def scenario() -> None:
+        payload = b"x" * size
+        source: Any = payload
+        reader = io.BytesIO(b"prefix" + payload)
+        reader.seek(6)
+        if kind == "seekable":
+            source = reader
+        elif kind == "path":
+            source = tmp_path / "known-size.bin"
+            source.write_bytes(payload)
+        invoker = InvokerProbe()
+        try:
+            if size > MAX_PART_BYTES:
+                with pytest.raises(MediaUploadError):
+                    await upload_file(invoker, source, part_size=1024, max_file_parts=1)
+                assert invoker.registered == []
+                assert invoker.parts == {}
+            else:
+                result = await upload_file(invoker, source, part_size=1024, max_file_parts=1)
+                assert result.parts == 1
+                assert result.part_size == MAX_PART_BYTES
+                assert invoker.parts == {0: payload}
+            assert not reader.closed
+        finally:
+            reader.close()
+
+    event_loop.run(scenario())

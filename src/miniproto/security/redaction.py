@@ -7,8 +7,17 @@ from collections.abc import Mapping, Sequence
 from dataclasses import fields, is_dataclass
 from typing import Any
 
+from miniproto.raw.base import TLObject
+
 REDACTED = "[redacted]"
 
+# Bare code fields are credentials only for these Telegram constructors and requests
+_SENSITIVE_TL_FIELDS = {
+    "auth.recoverPassword": frozenset({"code"}),
+    "auth.checkRecoveryPassword": frozenset({"code"}),
+    "account.confirmPasswordEmail": frozenset({"code"}),
+    "emailVerificationCode": frozenset({"code"}),
+}
 _SENSITIVE_KEY_TOKENS = frozenset(
     {
         "api_hash",
@@ -142,9 +151,12 @@ def _redact_nested(value: object) -> object:
     if isinstance(value, Mapping):
         return redact_mapping(value)
     if is_dataclass(value) and not isinstance(value, type):
+        sensitive_fields = (
+            _SENSITIVE_TL_FIELDS.get(getattr(type(value), "QUALNAME", ""), ()) if isinstance(value, TLObject) else ()
+        )
         return {
             field.name: redact_value(getattr(value, field.name))
-            if is_sensitive_key(field.name)
+            if field.name in sensitive_fields or is_sensitive_key(field.name)
             else _redact_nested(getattr(value, field.name))
             for field in fields(value)
         }

@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.invoke.decode_result_payload"
 source_path: "src/miniproto/invoke.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L236"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L239"
 module: "miniproto.invoke"
 ---
 

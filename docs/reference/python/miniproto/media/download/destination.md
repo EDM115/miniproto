@@ -7,7 +7,7 @@ language: "python"
 kind: "type"
 qualified_name: "miniproto.media.download.Destination"
 source_path: "src/miniproto/media/download.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L29"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L31"
 aliases: ["miniproto.media.Destination"]
 module: "miniproto.media.download"
 ---

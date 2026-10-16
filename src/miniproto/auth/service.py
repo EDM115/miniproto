@@ -224,11 +224,9 @@ class AuthService:
         return select_dc_option(record.dc_options, dc_id)
 
     async def handle_dc_migration(self, error: DatacenterMigration) -> types.AuthExportedAuthorization | None:
-        """Persist Telegram's requested DC migration and export user authorization when needed.
+        """Prepare Telegram's requested DC migration without changing the active session.
 
-        An unauthenticated session only changes its target DC. An authenticated session also
-        obtains an exported authorization, which the caller must import through a sender for
-        the target DC.
+        Authenticated sessions export authorization through the source DC. The caller must prepare the target key, import the authorization when present and atomically activate the target DC, key and salt only after preparation succeeds.
 
         Args:
             error: Classified Telegram migration response with the target ``dc_id``.
@@ -244,16 +242,10 @@ class AuthService:
         if record.dc_id == error.dc_id:
             raise InvalidDatacenter(f"already on migrated dc_id={error.dc_id}")
         if record.user is None:
-            await self.storage.mutate(
-                lambda payload: replace(_session_record_from_payload(payload, self.config.dc_id), dc_id=error.dc_id)
-            )
-            _emit_auth_event("auth.dc_migration", started, outcome="success", target_dc_id=error.dc_id, exported=False)
+            _emit_auth_event("auth.dc_migration_prepared", started, outcome="success", target_dc_id=error.dc_id, exported=False)  # fmt: skip
             return None
         exported = await self.export_authorization(error.dc_id)
-        await self.storage.mutate(
-            lambda payload: replace(_session_record_from_payload(payload, self.config.dc_id), dc_id=error.dc_id)
-        )
-        _emit_auth_event("auth.dc_migration", started, outcome="success", target_dc_id=error.dc_id, exported=True)
+        _emit_auth_event("auth.dc_migration_prepared", started, outcome="success", target_dc_id=error.dc_id, exported=True)  # fmt: skip
         return exported
 
     async def _sign_in_password(self, password_callback: Callback0 | None) -> object:

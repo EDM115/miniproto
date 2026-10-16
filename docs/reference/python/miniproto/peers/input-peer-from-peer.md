@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.peers.input_peer_from_peer"
 source_path: "src/miniproto/peers.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/peers.py#L579"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/peers.py#L570"
 module: "miniproto.peers"
 ---
 

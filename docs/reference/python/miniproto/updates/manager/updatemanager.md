@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.updates.manager.UpdateManager"
 source_path: "src/miniproto/updates/manager.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/updates/manager.py#L53"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/updates/manager.py#L54"
 aliases: ["miniproto.updates.UpdateManager"]
 module: "miniproto.updates.manager"
 ---

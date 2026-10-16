@@ -17,7 +17,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from tools.schema.parser import TLParameter, TLSchema, iter_public_params, parse_schema_file
+from tools.schema.parser import (
+    TLParameter,
+    TLSchema,
+    iter_public_params,
+    parse_schema_file,
+    python_class_name,
+    validate_flag_index,
+    validate_flag_parameters,
+)
 from tools.schema.rust_fast import (
     fast_api_directions,
     load_fast_entries,
@@ -252,6 +260,9 @@ def write_outputs(outputs: GeneratedOutputs) -> None:
     Args:
         outputs: Expected content and owned directories from :func:`render_outputs`.
     """
+    for path, content in outputs.files.items():
+        if path.suffix in {".py", ".pyi"}:
+            compile(content, str(path), "exec", dont_inherit=True)
     for path in _unexpected_owned_outputs(outputs):
         path.unlink()
     for path, content in outputs.files.items():
@@ -682,7 +693,7 @@ def _registry_namespaces(entries: Sequence[Any]) -> dict[str, dict[str, str]]:
     for entry in sorted(entries, key=lambda item: (item.namespace or "", item.short_name)):
         if entry.namespace is None:
             continue
-        namespaces.setdefault(entry.namespace, {})[_short_class_name(entry.short_name)] = entry.python_class_name
+        namespaces.setdefault(entry.namespace, {})[python_class_name(entry.short_name)] = entry.python_class_name
     return namespaces
 
 
@@ -935,6 +946,8 @@ def _render_entries_module(
         "    encode_vector,",
         ")",
     ]
+    if any(param.is_optional and param.flag_index == 31 for entry in entries for param in entry.params):
+        lines.append("from miniproto.tl.codec import encode_uint")
     if any(entry.constructor_id in fast_directions for entry in entries):
         lines.extend(["from miniproto.tl.fast import decode_fast, encode_fast, materialize_empty_object"])
     lines.extend(["", ""])
@@ -1100,6 +1113,11 @@ def _codec_methods(
         fields: Public fields derived from ``params`` for generated serialization.
         fast_directions: Reviewed native directions for this class's constructor.
     """
+    validate_flag_parameters(params)
+    for field in fields:
+        if field.is_optional:
+            validate_flag_index(field.flag_index, field_name=field.name)
+    unsigned_flags = {field.flag for field in fields if field.is_optional and field.flag_index == 31}
     lines: list[str] = [
         "    def serialize(self) -> bytes:",
         "        return self._serialize(boxed=True)",
@@ -1143,8 +1161,9 @@ def _codec_methods(
             )
     groups_by_index = _flag_groups_by_index(flag_groups)
     for index, field in enumerate(fields):
-        for _name, python_name, _before_field_index in groups_by_index.get(index, ()):
-            lines.append(f"        output.extend(encode_int({python_name}))")
+        for name, python_name, _before_field_index in groups_by_index.get(index, ()):
+            encoder = "encode_uint" if name in unsigned_flags else "encode_int"
+            lines.append(f"        output.extend({encoder}({python_name}))")
         if field.is_optional:
             if field.is_true_flag:
                 continue
@@ -1156,8 +1175,9 @@ def _codec_methods(
             )
         else:
             lines.append(f"        output.extend({_encode_expr(field, f'self.{field.python_name}')})")
-    for _name, python_name, _before_field_index in groups_by_index.get(len(fields), ()):
-        lines.append(f"        output.extend(encode_int({python_name}))")
+    for name, python_name, _before_field_index in groups_by_index.get(len(fields), ()):
+        encoder = "encode_uint" if name in unsigned_flags else "encode_int"
+        lines.append(f"        output.extend({encoder}({python_name}))")
     lines.extend(
         [
             "        return bytes(output)",
@@ -1393,21 +1413,9 @@ def _namespace_classes(entries: Sequence[Any]) -> tuple[list[str], list[str]]:
         namespace_names.append(class_name)
         lines.append(f"class {class_name}:")
         for entry in sorted(namespaces[namespace], key=lambda item: item.short_name):
-            lines.append(f"    {_short_class_name(entry.short_name)} = {entry.python_class_name}")
+            lines.append(f"    {python_class_name(entry.short_name)} = {entry.python_class_name}")
         lines.extend(["", ""])
     return lines, namespace_names
-
-
-def _short_class_name(short_name: str) -> str:
-    """Convert a schema short name into the exported PascalCase alias.
-
-    Args:
-        short_name: Schema-local constructor or method name.
-    """
-    import re
-
-    parts = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", short_name).replace("_", " ").split()
-    return "".join(part[:1].upper() + part[1:] for part in parts)
 
 
 def _render_errors(database: Mapping[str, Any]) -> str:

@@ -18,6 +18,7 @@ import json
 import math
 import os
 import secrets
+import socket
 import statistics
 import sys
 import threading
@@ -25,7 +26,6 @@ import time
 from collections.abc import Callable, Mapping
 from contextlib import suppress
 from dataclasses import asdict, dataclass
-from getpass import getpass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from queue import Empty, Full, Queue
@@ -51,8 +51,10 @@ from miniproto.media import DEFAULT_CHUNK_SIZE, MAX_DOWNLOAD_CHUNK_SIZE
 
 if __package__:
     from tools.bench.reporting import LoopLagProbe
+    from tools.bench.secret_prompt import prompt_secret
 else:
     LoopLagProbe = importlib.import_module("reporting").LoopLagProbe
+    prompt_secret = importlib.import_module("secret_prompt").prompt_secret
 
 TELEGRAM_DEFAULT_UPLOAD_PARTS = 4000
 TELEGRAM_DEFAULT_LIMIT_BYTES = TELEGRAM_DEFAULT_UPLOAD_PARTS * DEFAULT_CHUNK_SIZE
@@ -64,6 +66,7 @@ DEFAULT_UPLOAD_MEDIA_LANES = 2
 # Match the runtime's six-request download window and two media lanes
 DEFAULT_DOWNLOAD_CONCURRENCY = 6
 DEFAULT_DOWNLOAD_MEDIA_LANES = 2
+HTTP_CODE_BODY_TIMEOUT_SECONDS = 5.0
 
 Actor = Literal["user", "bot"]
 Operation = Literal["both", "upload", "download"]
@@ -192,7 +195,7 @@ class TransferSummary:
         transfer_mib_s: Bytes divided by transfer duration in binary MiB/s.
         samples: Windowed observed transfer-rate statistics.
         counters: Local request, pacing and writer observations.
-        peer: Non-secret target peer representation.
+        peer: Self alias or actor-scoped label that omits the configured peer
         message_id: Sent message identifier when upload produced one.
         path: Local source or materialized destination path when applicable.
         file_id: Remote media identifier, not an authorization credential.
@@ -1078,6 +1081,7 @@ async def benchmark_actor(
 
     Raises:
         RuntimeError: If media cannot be recovered, sizes/digests mismatch or download-only input is absent.
+        ValueError: If the derived file target resolves outside the selected download directory.
 
     Notes:
         The function restores the previous metrics sink and stops its heartbeat tasks
@@ -1089,11 +1093,12 @@ async def benchmark_actor(
     media = None
     message_id: int | None = None
     active_file_id = file_id
+    report_peer = benchmark_peer_label(actor, peer)
     size = benchmark_size
     if operation in {"both", "upload"}:
         size = await asyncio.to_thread(lambda: source.stat().st_size)
         print(
-            f"{actor}.upload: starting peer={peer} bytes={size} upload_concurrency={upload_concurrency} "
+            f"{actor}.upload: starting peer={report_peer} bytes={size} upload_concurrency={upload_concurrency} "
             f"upload_media_lanes={format_media_lanes(upload_media_lanes, upload_concurrency)} "
             f"upload_request_timeout={upload_request_timeout:g}s retries={upload_part_retries}"
         )
@@ -1143,7 +1148,7 @@ async def benchmark_actor(
             transfer_mib_s=_mib(size) / upload_transfer_duration,
             samples=upload_stats,
             counters=upload_counters,
-            peer=peer,
+            peer=report_peer,
             message_id=message_id,
             path=str(source),
             file_id=active_file_id,
@@ -1163,10 +1168,14 @@ async def benchmark_actor(
 
     if media is None:
         raise RuntimeError(f"{actor} download has no media to download")
-    target_name = media.file_name or source.name
-    target = download_dir / f"{actor}-dc{dc_id}-{target_name}" if download_destination == "file" else None
+    target_name = safe_file_name(media.file_name or source.name)
+    target = (
+        confined_download_target(download_dir, f"{actor}-dc{dc_id}-{target_name}")
+        if download_destination == "file"
+        else None
+    )
     if target is not None:
-        await asyncio.to_thread(download_dir.mkdir, parents=True, exist_ok=True)
+        await asyncio.to_thread(target.parent.mkdir, parents=True, exist_ok=True)
         await asyncio.to_thread(target.unlink, missing_ok=True)
     print(
         f"{actor}.download: starting media_dc={media.dc_id} target={target} "
@@ -1243,7 +1252,7 @@ async def benchmark_actor(
         transfer_mib_s=_mib(downloaded.bytes_downloaded) / download_transfer_duration,
         samples=download_stats,
         counters=download_counters,
-        peer=peer,
+        peer=report_peer,
         message_id=message_id,
         path=str(target) if target is not None else None,
         file_id=active_file_id,
@@ -1401,16 +1410,53 @@ def benchmark_peer_for_actor(actor: Actor, env: Mapping[str, str]) -> str:
     return (configured or "self").strip()
 
 
+def benchmark_peer_label(actor: Actor, peer: str) -> str:
+    """Return a public report label without retaining confidential peer configuration
+
+    Args:
+        actor: Session role used to distinguish configured targets in reports
+        peer: Execution-only target, including private usernames, numeric IDs or phone references
+    """
+    return "self" if _is_self_peer(peer) else f"{actor}:configured-peer"
+
+
 def _is_self_peer(peer: str | None) -> bool:
     """Return whether a normalized peer setting requests the authenticated account itself.
 
     Args:
-        peer: Optional configured non-secret peer representation to normalize.
+        peer: Optional configured peer reference to normalize
     """
     if peer is None:
         return True
     normalized = peer.strip().casefold().replace("_", " ")
     return normalized in {"", "self", "me", "saved messages"}
+
+
+def safe_file_name(value: str) -> str:
+    """Replace unsafe filename characters with underscores, retaining a nonempty fallback
+
+    Args:
+        value: Remote-provided or fallback filename component to make path-safe
+    """
+    cleaned = "".join(ch if ch.isalnum() or ch in {"-", "_", "."} else "_" for ch in value).rstrip(".")
+    return cleaned or "telegram-file.bin"
+
+
+def confined_download_target(download_dir: Path, file_name: str) -> Path:
+    """Resolve the selected output root and reject a derived target that escapes it
+
+    Args:
+        download_dir: Caller-selected directory for benchmark output
+        file_name: Sanitized actor/DC-prefixed filename component
+
+    Raises:
+        ValueError: If an existing symlink resolves outside the download directory
+    """
+    root = download_dir.resolve()
+    target = root / file_name
+    if not target.resolve().is_relative_to(root):
+        raise ValueError("benchmark target escapes the download directory")
+    return target
 
 
 async def find_recent_media(client: Client, peer: str, caption: str) -> Any:
@@ -2010,6 +2056,7 @@ def prompt_code(env: Mapping[str, str]) -> str:
 
     Raises:
         SystemExit: If no permitted prompt mode is available.
+        RuntimeError: If the terminal prompt cannot hide the input.
 
     Args:
         env: Environment-only prompt mode, token and credential configuration.
@@ -2020,7 +2067,7 @@ def prompt_code(env: Mapping[str, str]) -> str:
         raise SystemExit(
             "no stored user session; set MINIPROTO_LIVE_PROMPT_CODE=1 and run interactively to enter the current Telegram code or set MINIPROTO_LIVE_BENCH_CODE_PROMPT=http for the temporary HTTP prompt"
         )
-    return input("Telegram login code: ").strip()
+    return prompt_secret("Telegram login code: ").strip()
 
 
 def should_use_http_code_prompt(env: Mapping[str, str]) -> bool:
@@ -2060,6 +2107,10 @@ def prompt_code_http(env: Mapping[str, str]) -> str:
     token = env_value(env, "MINIPROTO_LIVE_BENCH_HTTP_CODE_TOKEN") or secrets.token_urlsafe(24)
     code_queue: Queue[str] = Queue(maxsize=1)
     prompt_path = f"/{token}"
+    prompt_deadline = time.monotonic() + timeout_s
+    body_connections: set[socket.socket] = set()
+    body_lock = threading.Lock()
+    prompt_closed = False
     server: ThreadingHTTPServer
 
     class CodeHandler(BaseHTTPRequestHandler):
@@ -2077,11 +2128,22 @@ def prompt_code_http(env: Mapping[str, str]) -> str:
             if not self._authorized_path():
                 self._send(404, "not found")
                 return
-            length = int(self.headers.get("Content-Length", "0") or "0")
-            if length > 256:
+            lengths = self.headers.get_all("Content-Length", [])
+            if len(lengths) != 1 or self.headers.get_all("Transfer-Encoding"):
+                self._send(400, "invalid request framing")
+                return
+            declared_length = lengths[0].strip(" \t")
+            if not declared_length.isascii() or not declared_length.isdecimal():
+                self._send(400, "invalid content length")
+                return
+            bounded_length = declared_length.lstrip("0") or "0"
+            if len(bounded_length) > 3 or int(bounded_length) > 256:
                 self._send(413, "request too large")
                 return
-            values = parse_qs(self.rfile.read(length).decode("utf-8", "replace"))
+            body = self._read_body(int(bounded_length))
+            if body is None:
+                return
+            values = parse_qs(body.decode("utf-8", "replace"))
             code = (values.get("code", [""])[0] or "").strip().replace(" ", "")
             if not code:
                 self._send(
@@ -2098,6 +2160,40 @@ def prompt_code_http(env: Mapping[str, str]) -> str:
                 content_type="text/html; charset=utf-8",
             )
             threading.Thread(target=server.shutdown, daemon=True).start()
+
+        def _read_body(self, length: int) -> bytes | None:
+            """Read a validated body within its byte budget and absolute deadline
+
+            Args:
+                length: Validated number of request body bytes, at most 256
+            """
+            deadline = min(time.monotonic() + HTTP_CODE_BODY_TIMEOUT_SECONDS, prompt_deadline)
+            body = bytearray()
+            with body_lock:
+                if prompt_closed:
+                    return None
+                body_connections.add(self.connection)
+            try:
+                while len(body) < length:
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        raise TimeoutError
+                    self.connection.settimeout(remaining)
+                    chunk = self.rfile.read1(length - len(body))
+                    if not chunk:
+                        self._send(400, "incomplete request body")
+                        return None
+                    body.extend(chunk)
+                return bytes(body)
+            except TimeoutError:
+                with suppress(OSError):
+                    self._send(408, "request body timed out")
+                return None
+            except OSError:
+                return None
+            finally:
+                with body_lock:
+                    body_connections.discard(self.connection)
 
         def log_message(self, format: str, *args: object) -> None:
             """Suppress HTTP access logs so submitted login codes cannot reach stdout/stderr.
@@ -2145,6 +2241,11 @@ def prompt_code_http(env: Mapping[str, str]) -> str:
     except Empty as exc:
         raise SystemExit("timed out waiting for Telegram login code over HTTP") from exc
     finally:
+        with body_lock:
+            prompt_closed = True
+            for connection in body_connections:
+                with suppress(OSError):
+                    connection.shutdown(socket.SHUT_RDWR)
         server.shutdown()
         server.server_close()
         thread.join(timeout=2)
@@ -2165,7 +2266,7 @@ def _code_prompt_html(*, error: str | None) -> str:
         "<p>Enter the current login code for this benchmark run.</p>"
         f"{error_html}"
         "<form method='post'>"
-        "<input name='code' inputmode='numeric' autocomplete='one-time-code' autofocus "
+        "<input type='password' name='code' inputmode='numeric' autocomplete='one-time-code' autofocus "
         "style='font-size:1.2rem;padding:.5rem;width:12rem'> "
         "<button style='font-size:1.2rem;padding:.55rem 1rem'>Submit</button>"
         "</form>"
@@ -2181,12 +2282,15 @@ def prompt_password(env: Mapping[str, str]) -> str:
 
     Args:
         env: Environment-only password/prompt settings; returned password is never printed.
+
+    Raises:
+        RuntimeError: If the terminal prompt cannot hide the input.
     """
     password = env_value(env, "MINIPROTO_REAL_PASSWORD")
     if password:
         return password
     if env_value(env, "MINIPROTO_LIVE_PROMPT_CODE") == "1" and sys.stdin.isatty():
-        return getpass("Telegram 2FA password, if requested: ")
+        return prompt_secret("Telegram 2FA password, if requested: ")
     return ""
 
 

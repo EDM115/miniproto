@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.session.peer_merge.merge_peer_entry"
 source_path: "src/miniproto/session/peer_merge.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/peer_merge.py#L31"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/peer_merge.py#L42"
 module: "miniproto.session.peer_merge"
 ---
 
@@ -19,7 +19,7 @@ merge_peer_entry(current: PeerCacheEntry, incoming: PeerCacheEntry) -> PeerCache
 
 Apply incoming peer metadata while preserving a missing access hash.
 
-A full entry marked ``_miniproto_complete`` replaces raw metadata and may clear username or phone values. Partial entries retain existing values where incoming aliases are empty.
+A full entry marked ``_miniproto_complete`` replaces raw metadata and may clear username or phone values. Partial entries retain existing values where incoming aliases are empty, including their original alias observation times. An internal full-observation revision advances on full merges and survives partial merges, preserving knowledge of absent aliases.
 
 **Parameters:**
 

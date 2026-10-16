@@ -122,9 +122,10 @@ Primitive `tl_*` exports share the Python fallback's calling conventions. Option
   - [`py_int_to_le_bytes`](#py-int-to-le-bytes)
   - [`py_int_from_le_bytes`](#py-int-from-le-bytes)
   - [`encode_i32_vector`](#encode-i32-vector)
-  - [`decode_i32_vector`](#decode-i32-vector)
+  - [`decode_i32_vector_payload`](#decode-i32-vector-payload)
   - [`encode_i64_vector`](#encode-i64-vector)
   - [`decode_i64_vector`](#decode-i64-vector)
+  - [`decode_i64_vector_payload`](#decode-i64-vector-payload)
   - [`decode_vector_layout`](#decode-vector-layout)
   - [`normalize_vector_offset`](#normalize-vector-offset)
   - [`validate_vector_allocation`](#validate-vector-allocation)
@@ -197,9 +198,10 @@ Primitive `tl_*` exports share the Python fallback's calling conventions. Option
 | [`py_int_to_le_bytes`](#py-int-to-le-bytes) | fn | Calls Python `int.to_bytes(width, "little")` for fixed-width unsigned TL integer fields. |
 | [`py_int_from_le_bytes`](#py-int-from-le-bytes) | fn | Calls Python `int.from_bytes(bytes, "little")` while holding the supplied GIL token. |
 | [`encode_i32_vector`](#encode-i32-vector) | fn | Serializes signed 32-bit values as a generic boxed TL vector. |
-| [`decode_i32_vector`](#decode-i32-vector) | fn | Decodes a generic TL vector of signed 32-bit values at `offset`. |
+| [`decode_i32_vector_payload`](#decode-i32-vector-payload) | fn | Decodes the validated payload of a signed 32-bit vector without copying its input |
 | [`encode_i64_vector`](#encode-i64-vector) | fn | Serializes signed 64-bit values as a generic boxed TL vector. |
 | [`decode_i64_vector`](#decode-i64-vector) | fn | Decodes a generic TL vector of signed 64-bit values at `offset`. |
+| [`decode_i64_vector_payload`](#decode-i64-vector-payload) | fn | Decodes the validated payload of a signed 64-bit vector without copying its input |
 | [`decode_vector_layout`](#decode-vector-layout) | fn | Validates a generic vector header and returns its count, payload start and next offset. |
 | [`normalize_vector_offset`](#normalize-vector-offset) | fn | Converts the Python-facing signed offset to a safe Rust index. |
 | [`validate_vector_allocation`](#validate-vector-allocation) | fn | Checks that a decoded vector's requested allocation fits the platform's `isize` limit. |
@@ -222,7 +224,7 @@ struct FastConstructorSpec {
 }
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:72-85`*
+*Defined in `rust/miniproto/src/tl.rs:74-87`*
 
 Generated metadata for one selected TL constructor fast path.
 
@@ -279,7 +281,7 @@ enum FastWireType {
 }
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:22-43`*
+*Defined in `rust/miniproto/src/tl.rs:24-45`*
 
 Wire representation supported by the generated fast-constructor codec.
 
@@ -358,7 +360,7 @@ enum FastFieldSpec {
 }
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:47-69`*
+*Defined in `rust/miniproto/src/tl.rs:49-71`*
 
 One generated field action used to encode or decode a fast TL constructor.
 
@@ -398,7 +400,7 @@ One generated field action used to encode or decode a fast TL constructor.
 fn register(m: &Bound<'_, pyo3::types::PyModule>) -> PyResult<()>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:94-118`*
+*Defined in `rust/miniproto/src/tl.rs:96-120`*
 
 Registers the fallback-compatible `tl_*` Python functions on `miniproto._native`.
 
@@ -414,7 +416,7 @@ Returns a PyO3 error if any function cannot be exported.
 fn tl_fast_encode(constructor_id: u32, values: &Bound<'_, pyo3::types::PyTuple>, boxed: bool) -> PyResult<Option<Vec<u8>>>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:135-183`*
+*Defined in `rust/miniproto/src/tl.rs:137-185`*
 
 Attempts Python `tl_fast_encode` for a generated constructor.
 
@@ -436,7 +438,7 @@ Python exception; algorithm and descriptor validation failures intentionally use
 unsafe fn __pyfunction_tl_fast_encode<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:133`*
+*Defined in `rust/miniproto/src/tl.rs:135`*
 
 ### `tl_fast_decode`
 
@@ -444,7 +446,7 @@ unsafe fn __pyfunction_tl_fast_encode<'py>(py: Python<'py>, _slf: *mut ffi::PyOb
 fn tl_fast_decode(py: Python<'_>, constructor_id: u32, data: &[u8], offset: usize, boxed: bool) -> PyResult<Option<(Py<pyo3::types::PyTuple>, usize)>>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:202-258`*
+*Defined in `rust/miniproto/src/tl.rs:204-260`*
 
 Attempts Python `tl_fast_decode` for a generated constructor at `offset`.
 
@@ -468,7 +470,7 @@ bits come from trusted generated metadata and are not revalidated on every hot-p
 unsafe fn __pyfunction_tl_fast_decode<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:200`*
+*Defined in `rust/miniproto/src/tl.rs:202`*
 
 ### `encode_fast_value`
 
@@ -476,7 +478,7 @@ unsafe fn __pyfunction_tl_fast_decode<'py>(py: Python<'py>, _slf: *mut ffi::PyOb
 fn encode_fast_value(output: &mut Vec<u8>, value: &Bound<'_, PyAny>, wire_type: FastWireType) -> PyResult<()>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:270-304`*
+*Defined in `rust/miniproto/src/tl.rs:272-306`*
 
 Appends one generated field value to a fast-path TL output buffer.
 
@@ -495,7 +497,7 @@ encode-only generated object mismatch.
 fn decode_fast_value(py: Python<'_>, data: &[u8], cursor: &mut usize, wire_type: FastWireType) -> PyResult<Py<PyAny>>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:317-372`*
+*Defined in `rust/miniproto/src/tl.rs:319-374`*
 
 Decodes one generated field from `data`, advancing `cursor` and creating a Python value.
 
@@ -515,7 +517,7 @@ the GIL through `py` because the result is a Python object.
 fn decode_message_container(py: Python<'_>, data: &[u8], cursor: &mut usize) -> PyResult<Py<PyAny>>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:384-434`*
+*Defined in `rust/miniproto/src/tl.rs:386-436`*
 
 Decodes an MTProto message-container field into a Python tuple of `(id, seq_no, body)` tuples.
 
@@ -534,7 +536,7 @@ unallocatable container contents.
 fn append_tl_bytes(output: &mut Vec<u8>, value: &[u8]) -> PyResult<()>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:444-456`*
+*Defined in `rust/miniproto/src/tl.rs:446-458`*
 
 Encodes a bounded TL bytes value, then reserves space before appending it
 
@@ -551,7 +553,7 @@ Returns `ValueError` above TL's 24-bit limit or `MemoryError` if the destination
 fn decode_tl_bytes_slice(data: &[u8], offset: usize) -> PyResult<(&[u8], usize)>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:466-488`*
+*Defined in `rust/miniproto/src/tl.rs:468-490`*
 
 Borrows one padded TL bytes payload and returns it with its next aligned offset.
 
@@ -568,7 +570,7 @@ Returns `ValueError` for an unavailable prefix, truncated payload or padding, or
 fn tl_encode_int(value: i32) -> Vec<u8>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:496-498`*
+*Defined in `rust/miniproto/src/tl.rs:498-500`*
 
 Encodes Python `tl_encode_int(value)` as a four-byte little-endian signed integer.
 
@@ -582,7 +584,7 @@ Encodes Python `tl_encode_int(value)` as a four-byte little-endian signed intege
 unsafe fn __pyfunction_tl_encode_int<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:495`*
+*Defined in `rust/miniproto/src/tl.rs:497`*
 
 ### `tl_decode_int`
 
@@ -590,7 +592,7 @@ unsafe fn __pyfunction_tl_encode_int<'py>(py: Python<'py>, _slf: *mut ffi::PyObj
 fn tl_decode_int(data: &[u8], offset: usize) -> PyResult<(i32, usize)>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:507-510`*
+*Defined in `rust/miniproto/src/tl.rs:509-512`*
 
 Decodes Python `tl_decode_int(data, offset)` and returns `(value, next_offset)` or `ValueError`.
 
@@ -605,7 +607,7 @@ Decodes Python `tl_decode_int(data, offset)` and returns `(value, next_offset)` 
 unsafe fn __pyfunction_tl_decode_int<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:506`*
+*Defined in `rust/miniproto/src/tl.rs:508`*
 
 ### `tl_encode_uint`
 
@@ -613,7 +615,7 @@ unsafe fn __pyfunction_tl_decode_int<'py>(py: Python<'py>, _slf: *mut ffi::PyObj
 fn tl_encode_uint(value: u32) -> Vec<u8>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:518-520`*
+*Defined in `rust/miniproto/src/tl.rs:520-522`*
 
 Encodes Python `tl_encode_uint(value)` as a four-byte little-endian unsigned integer.
 
@@ -627,7 +629,7 @@ Encodes Python `tl_encode_uint(value)` as a four-byte little-endian unsigned int
 unsafe fn __pyfunction_tl_encode_uint<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:517`*
+*Defined in `rust/miniproto/src/tl.rs:519`*
 
 ### `tl_decode_uint`
 
@@ -635,7 +637,7 @@ unsafe fn __pyfunction_tl_encode_uint<'py>(py: Python<'py>, _slf: *mut ffi::PyOb
 fn tl_decode_uint(data: &[u8], offset: usize) -> PyResult<(u32, usize)>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:529-532`*
+*Defined in `rust/miniproto/src/tl.rs:531-534`*
 
 Decodes Python `tl_decode_uint(data, offset)` and returns `(value, next_offset)` or `ValueError`.
 
@@ -650,7 +652,7 @@ Decodes Python `tl_decode_uint(data, offset)` and returns `(value, next_offset)`
 unsafe fn __pyfunction_tl_decode_uint<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:528`*
+*Defined in `rust/miniproto/src/tl.rs:530`*
 
 ### `tl_encode_long`
 
@@ -658,7 +660,7 @@ unsafe fn __pyfunction_tl_decode_uint<'py>(py: Python<'py>, _slf: *mut ffi::PyOb
 fn tl_encode_long(value: i64) -> Vec<u8>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:540-542`*
+*Defined in `rust/miniproto/src/tl.rs:542-544`*
 
 Encodes Python `tl_encode_long(value)` as an eight-byte little-endian signed integer.
 
@@ -672,7 +674,7 @@ Encodes Python `tl_encode_long(value)` as an eight-byte little-endian signed int
 unsafe fn __pyfunction_tl_encode_long<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:539`*
+*Defined in `rust/miniproto/src/tl.rs:541`*
 
 ### `tl_decode_long`
 
@@ -680,7 +682,7 @@ unsafe fn __pyfunction_tl_encode_long<'py>(py: Python<'py>, _slf: *mut ffi::PyOb
 fn tl_decode_long(data: &[u8], offset: usize) -> PyResult<(i64, usize)>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:551-554`*
+*Defined in `rust/miniproto/src/tl.rs:553-556`*
 
 Decodes Python `tl_decode_long(data, offset)` and returns `(value, next_offset)` or `ValueError`.
 
@@ -695,7 +697,7 @@ Decodes Python `tl_decode_long(data, offset)` and returns `(value, next_offset)`
 unsafe fn __pyfunction_tl_decode_long<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:550`*
+*Defined in `rust/miniproto/src/tl.rs:552`*
 
 ### `tl_encode_int128`
 
@@ -703,7 +705,7 @@ unsafe fn __pyfunction_tl_decode_long<'py>(py: Python<'py>, _slf: *mut ffi::PyOb
 fn tl_encode_int128(value: &Bound<'_, PyAny>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:564-566`*
+*Defined in `rust/miniproto/src/tl.rs:566-568`*
 
 Encodes Python `tl_encode_int128(value)` to 16 little-endian bytes via `int.to_bytes`.
 
@@ -719,7 +721,7 @@ Python raises if `value` cannot fit the requested unsigned representation.
 unsafe fn __pyfunction_tl_encode_int128<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:563`*
+*Defined in `rust/miniproto/src/tl.rs:565`*
 
 ### `tl_decode_int128`
 
@@ -727,7 +729,7 @@ unsafe fn __pyfunction_tl_encode_int128<'py>(py: Python<'py>, _slf: *mut ffi::Py
 fn tl_decode_int128(py: Python<'_>, data: &[u8], offset: usize) -> PyResult<(Py<PyAny>, usize)>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:578-581`*
+*Defined in `rust/miniproto/src/tl.rs:580-583`*
 
 Decodes Python `tl_decode_int128(data, offset)` to a Python integer and next offset.
 
@@ -745,7 +747,7 @@ Returns `ValueError` for truncated input and holds the GIL to construct the Pyth
 unsafe fn __pyfunction_tl_decode_int128<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:577`*
+*Defined in `rust/miniproto/src/tl.rs:579`*
 
 ### `tl_encode_int256`
 
@@ -753,7 +755,7 @@ unsafe fn __pyfunction_tl_decode_int128<'py>(py: Python<'py>, _slf: *mut ffi::Py
 fn tl_encode_int256(value: &Bound<'_, PyAny>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:591-593`*
+*Defined in `rust/miniproto/src/tl.rs:593-595`*
 
 Encodes Python `tl_encode_int256(value)` to 32 little-endian bytes via `int.to_bytes`.
 
@@ -769,7 +771,7 @@ Python raises if `value` cannot fit the requested unsigned representation.
 unsafe fn __pyfunction_tl_encode_int256<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:590`*
+*Defined in `rust/miniproto/src/tl.rs:592`*
 
 ### `tl_decode_int256`
 
@@ -777,7 +779,7 @@ unsafe fn __pyfunction_tl_encode_int256<'py>(py: Python<'py>, _slf: *mut ffi::Py
 fn tl_decode_int256(py: Python<'_>, data: &[u8], offset: usize) -> PyResult<(Py<PyAny>, usize)>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:605-608`*
+*Defined in `rust/miniproto/src/tl.rs:607-610`*
 
 Decodes Python `tl_decode_int256(data, offset)` to a Python integer and next offset.
 
@@ -795,7 +797,7 @@ Returns `ValueError` for truncated input and holds the GIL to construct the Pyth
 unsafe fn __pyfunction_tl_decode_int256<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:604`*
+*Defined in `rust/miniproto/src/tl.rs:606`*
 
 ### `tl_encode_double`
 
@@ -803,7 +805,7 @@ unsafe fn __pyfunction_tl_decode_int256<'py>(py: Python<'py>, _slf: *mut ffi::Py
 fn tl_encode_double(value: f64) -> Vec<u8>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:616-618`*
+*Defined in `rust/miniproto/src/tl.rs:618-620`*
 
 Encodes Python `tl_encode_double(value)` as eight IEEE-754 little-endian bytes.
 
@@ -817,7 +819,7 @@ Encodes Python `tl_encode_double(value)` as eight IEEE-754 little-endian bytes.
 unsafe fn __pyfunction_tl_encode_double<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:615`*
+*Defined in `rust/miniproto/src/tl.rs:617`*
 
 ### `tl_decode_double`
 
@@ -825,7 +827,7 @@ unsafe fn __pyfunction_tl_encode_double<'py>(py: Python<'py>, _slf: *mut ffi::Py
 fn tl_decode_double(data: &[u8], offset: usize) -> PyResult<(f64, usize)>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:627-630`*
+*Defined in `rust/miniproto/src/tl.rs:629-632`*
 
 Decodes Python `tl_decode_double(data, offset)` and returns `(value, next_offset)` or `ValueError`.
 
@@ -840,7 +842,7 @@ Decodes Python `tl_decode_double(data, offset)` and returns `(value, next_offset
 unsafe fn __pyfunction_tl_decode_double<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:626`*
+*Defined in `rust/miniproto/src/tl.rs:628`*
 
 ### `tl_encode_bytes`
 
@@ -848,7 +850,7 @@ unsafe fn __pyfunction_tl_decode_double<'py>(py: Python<'py>, _slf: *mut ffi::Py
 fn tl_encode_bytes(value: &[u8]) -> Vec<u8>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:638-640`*
+*Defined in `rust/miniproto/src/tl.rs:640-642`*
 
 Encodes Python `tl_encode_bytes(value)` with TL's short/long length prefix and zero padding.
 
@@ -862,7 +864,7 @@ Encodes Python `tl_encode_bytes(value)` with TL's short/long length prefix and z
 unsafe fn __pyfunction_tl_encode_bytes<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:637`*
+*Defined in `rust/miniproto/src/tl.rs:639`*
 
 ### `tl_decode_bytes`
 
@@ -870,7 +872,7 @@ unsafe fn __pyfunction_tl_encode_bytes<'py>(py: Python<'py>, _slf: *mut ffi::PyO
 fn tl_decode_bytes(data: &[u8], offset: usize) -> PyResult<(Vec<u8>, usize)>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:651-653`*
+*Defined in `rust/miniproto/src/tl.rs:653-655`*
 
 Decodes Python `tl_decode_bytes(data, offset)` and returns bytes plus the next aligned offset.
 
@@ -887,7 +889,7 @@ Returns `ValueError` for malformed or truncated TL data.
 unsafe fn __pyfunction_tl_decode_bytes<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:650`*
+*Defined in `rust/miniproto/src/tl.rs:652`*
 
 ### `tl_encode_string`
 
@@ -895,7 +897,7 @@ unsafe fn __pyfunction_tl_decode_bytes<'py>(py: Python<'py>, _slf: *mut ffi::PyO
 fn tl_encode_string(value: &str) -> Vec<u8>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:661-663`*
+*Defined in `rust/miniproto/src/tl.rs:663-665`*
 
 Encodes Python `tl_encode_string(value)` as UTF-8 TL bytes.
 
@@ -909,7 +911,7 @@ Encodes Python `tl_encode_string(value)` as UTF-8 TL bytes.
 unsafe fn __pyfunction_tl_encode_string<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:660`*
+*Defined in `rust/miniproto/src/tl.rs:662`*
 
 ### `tl_decode_string`
 
@@ -917,7 +919,7 @@ unsafe fn __pyfunction_tl_encode_string<'py>(py: Python<'py>, _slf: *mut ffi::Py
 fn tl_decode_string(data: &[u8], offset: usize) -> PyResult<(String, usize)>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:674-679`*
+*Defined in `rust/miniproto/src/tl.rs:676-681`*
 
 Decodes Python `tl_decode_string(data, offset)` as UTF-8 and returns it with the next offset.
 
@@ -934,7 +936,7 @@ Returns `ValueError` for malformed TL data or non-UTF-8 payload bytes.
 unsafe fn __pyfunction_tl_decode_string<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:673`*
+*Defined in `rust/miniproto/src/tl.rs:675`*
 
 ### `tl_encode_int_vector`
 
@@ -942,7 +944,7 @@ unsafe fn __pyfunction_tl_decode_string<'py>(py: Python<'py>, _slf: *mut ffi::Py
 fn tl_encode_int_vector(py: Python<'_>, values: Vec<i32>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:690-693`*
+*Defined in `rust/miniproto/src/tl.rs:692-695`*
 
 Encodes Python `tl_encode_int_vector(values)` as a generic TL vector of 32-bit integers.
 
@@ -959,15 +961,15 @@ Large vector encoding releases the GIL; invalid size or allocation raises a Pyth
 unsafe fn __pyfunction_tl_encode_int_vector<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:689`*
+*Defined in `rust/miniproto/src/tl.rs:691`*
 
 ### `tl_decode_int_vector`
 
 ```rust
-fn tl_decode_int_vector(py: Python<'_>, data: Vec<u8>, offset: i128) -> PyResult<(Vec<i32>, usize)>
+fn tl_decode_int_vector(py: Python<'_>, data: std::borrow::Cow<'_, [u8]>, offset: i128) -> PyResult<(Vec<i32>, usize)>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:706-714`*
+*Defined in `rust/miniproto/src/tl.rs:708-720`*
 
 Decodes Python `tl_decode_int_vector(data, offset)` into values and a next offset.
 
@@ -986,7 +988,7 @@ returns a Python exception.
 unsafe fn __pyfunction_tl_decode_int_vector<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:705`*
+*Defined in `rust/miniproto/src/tl.rs:707`*
 
 ### `tl_encode_long_vector`
 
@@ -994,7 +996,7 @@ unsafe fn __pyfunction_tl_decode_int_vector<'py>(py: Python<'py>, _slf: *mut ffi
 fn tl_encode_long_vector(py: Python<'_>, values: Vec<i64>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:725-728`*
+*Defined in `rust/miniproto/src/tl.rs:731-734`*
 
 Encodes Python `tl_encode_long_vector(values)` as a generic TL vector of 64-bit integers.
 
@@ -1011,15 +1013,15 @@ Large vector encoding releases the GIL; invalid size or allocation raises a Pyth
 unsafe fn __pyfunction_tl_encode_long_vector<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:724`*
+*Defined in `rust/miniproto/src/tl.rs:730`*
 
 ### `tl_decode_long_vector`
 
 ```rust
-fn tl_decode_long_vector(py: Python<'_>, data: Vec<u8>, offset: i128) -> PyResult<(Vec<i64>, usize)>
+fn tl_decode_long_vector(py: Python<'_>, data: std::borrow::Cow<'_, [u8]>, offset: i128) -> PyResult<(Vec<i64>, usize)>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:741-749`*
+*Defined in `rust/miniproto/src/tl.rs:747-759`*
 
 Decodes Python `tl_decode_long_vector(data, offset)` into values and a next offset.
 
@@ -1038,7 +1040,7 @@ returns a Python exception.
 unsafe fn __pyfunction_tl_decode_long_vector<'py>(py: Python<'py>, _slf: *mut ffi::PyObject, _args: *const *mut ffi::PyObject, _nargs: ffi::Py_ssize_t, _kwargs: *mut ffi::PyObject) -> PyResult<*mut ffi::PyObject>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:740`*
+*Defined in `rust/miniproto/src/tl.rs:746`*
 
 ### `read_slice`
 
@@ -1046,7 +1048,7 @@ unsafe fn __pyfunction_tl_decode_long_vector<'py>(py: Python<'py>, _slf: *mut ff
 fn read_slice(data: &[u8], offset: usize, length: usize) -> PyResult<&[u8]>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:760-765`*
+*Defined in `rust/miniproto/src/tl.rs:770-775`*
 
 Borrows `length` bytes at `offset` from a TL buffer.
 
@@ -1064,7 +1066,7 @@ Returns `ValueError` rather than panicking if the requested range is not present
 fn read_fixed<const N: usize>(data: &[u8], offset: usize) -> PyResult<[u8; N]>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:777-779`*
+*Defined in `rust/miniproto/src/tl.rs:787-789`*
 
 Reads an exactly `N`-byte TL field at `offset`.
 
@@ -1083,7 +1085,7 @@ the length.
 fn encode_tl_bytes(value: &[u8]) -> Vec<u8>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:788-802`*
+*Defined in `rust/miniproto/src/tl.rs:798-812`*
 
 Serializes bytes with the TL short/long length prefix and zero alignment padding.
 
@@ -1099,7 +1101,7 @@ This internal helper assumes the caller has enforced TL's 24-bit long-length max
 fn decode_tl_bytes(data: &[u8], offset: usize) -> PyResult<(Vec<u8>, usize)>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:812-833`*
+*Defined in `rust/miniproto/src/tl.rs:822-843`*
 
 Parses and copies one padded TL bytes value, returning it and its next aligned offset.
 
@@ -1116,7 +1118,7 @@ Returns `ValueError` for missing length, payload or padding bytes.
 fn py_int_to_le_bytes(value: &Bound<'_, PyAny>, width: usize) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:843-851`*
+*Defined in `rust/miniproto/src/tl.rs:853-861`*
 
 Calls Python `int.to_bytes(width, "little")` for fixed-width unsigned TL integer fields.
 
@@ -1133,7 +1135,7 @@ Propagates Python conversion exceptions and returns `ValueError` for an unexpect
 fn py_int_from_le_bytes(py: Python<'_>, bytes: &[u8]) -> PyResult<Py<PyAny>>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:861-868`*
+*Defined in `rust/miniproto/src/tl.rs:871-878`*
 
 Calls Python `int.from_bytes(bytes, "little")` while holding the supplied GIL token.
 
@@ -1150,7 +1152,7 @@ Returns any exception raised while importing or invoking Python builtins.
 fn encode_i32_vector(values: &[i32]) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:877-889`*
+*Defined in `rust/miniproto/src/tl.rs:887-899`*
 
 Serializes signed 32-bit values as a generic boxed TL vector.
 
@@ -1160,22 +1162,19 @@ Returns `ValueError` for an unrepresentable count or `MemoryError` on allocation
 
 - `values`: Signed 32-bit vector elements to serialize.
 
-### `decode_i32_vector`
+### `decode_i32_vector_payload`
 
 ```rust
-fn decode_i32_vector(data: &[u8], offset: usize) -> PyResult<(Vec<i32>, usize)>
+fn decode_i32_vector_payload(payload: &[u8]) -> PyResult<Vec<i32>>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:899-910`*
+*Defined in `rust/miniproto/src/tl.rs:923-934`*
 
-Decodes a generic TL vector of signed 32-bit values at `offset`.
-
-Returns values with the next offset or Python errors for malformed sizes or allocation failure.
+Decodes the validated payload of a signed 32-bit vector without copying its input
 
 # Arguments
 
-- `data`: Complete TL input buffer.
-- `offset`: Byte offset at which the generic vector begins.
+- `payload`: Validated vector element bytes with a length divisible by four
 
 ### `encode_i64_vector`
 
@@ -1183,7 +1182,7 @@ Returns values with the next offset or Python errors for malformed sizes or allo
 fn encode_i64_vector(values: &[i64]) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:919-931`*
+*Defined in `rust/miniproto/src/tl.rs:943-955`*
 
 Serializes signed 64-bit values as a generic boxed TL vector.
 
@@ -1199,7 +1198,7 @@ Returns `ValueError` for an unrepresentable count or `MemoryError` on allocation
 fn decode_i64_vector(data: &[u8], offset: usize) -> PyResult<(Vec<i64>, usize)>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:941-952`*
+*Defined in `rust/miniproto/src/tl.rs:965-971`*
 
 Decodes a generic TL vector of signed 64-bit values at `offset`.
 
@@ -1210,13 +1209,27 @@ Returns values with the next offset or Python errors for malformed sizes or allo
 - `data`: Complete TL input buffer.
 - `offset`: Byte offset at which the generic vector begins.
 
+### `decode_i64_vector_payload`
+
+```rust
+fn decode_i64_vector_payload(payload: &[u8]) -> PyResult<Vec<i64>>
+```
+
+*Defined in `rust/miniproto/src/tl.rs:978-989`*
+
+Decodes the validated payload of a signed 64-bit vector without copying its input
+
+# Arguments
+
+- `payload`: Validated vector element bytes with a length divisible by eight
+
 ### `decode_vector_layout`
 
 ```rust
 fn decode_vector_layout(data: &[u8], offset: usize, element_width: usize) -> PyResult<(usize, usize, usize)>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:967-1002`*
+*Defined in `rust/miniproto/src/tl.rs:1004-1039`*
 
 Validates a generic vector header and returns its count, payload start and next offset.
 
@@ -1238,7 +1251,7 @@ for externally supplied `data`; its `expect` calls follow exact-width checked sl
 fn normalize_vector_offset(offset: i128) -> PyResult<usize>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:1011-1015`*
+*Defined in `rust/miniproto/src/tl.rs:1048-1052`*
 
 Converts the Python-facing signed offset to a safe Rust index.
 
@@ -1254,7 +1267,7 @@ Returns `ValueError` for negative or unrepresentable offsets.
 fn validate_vector_allocation(count: usize, element_width: usize) -> PyResult<()>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:1025-1033`*
+*Defined in `rust/miniproto/src/tl.rs:1062-1070`*
 
 Checks that a decoded vector's requested allocation fits the platform's `isize` limit.
 
@@ -1271,7 +1284,7 @@ Returns `ValueError` before allocation on overflow or an excessive capacity.
 fn checked_vector_capacity(count: usize, element_width: usize) -> PyResult<usize>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:1043-1055`*
+*Defined in `rust/miniproto/src/tl.rs:1080-1092`*
 
 Computes encoder capacity including the eight-byte TL vector header.
 
@@ -1289,7 +1302,7 @@ Returns `ValueError` when the count cannot fit signed TL `int` or the capacity i
 const TL_VECTOR_CONSTRUCTOR_ID: u32 = 481_674_261u32;
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:16`*
+*Defined in `rust/miniproto/src/tl.rs:18`*
 
 Constructor identifier serialized before every generic TL `Vector`.
 
@@ -1298,6 +1311,6 @@ Constructor identifier serialized before every generic TL `Vector`.
 const MAX_TL_BYTES_LENGTH: usize = 16_777_215usize;
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:18`*
+*Defined in `rust/miniproto/src/tl.rs:20`*
 
 Largest byte-string payload representable by TL's three-byte long length prefix.

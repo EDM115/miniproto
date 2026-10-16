@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.peers.PeerCache"
 source_path: "src/miniproto/peers.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/peers.py#L68"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/peers.py#L70"
 module: "miniproto.peers"
 ---
 

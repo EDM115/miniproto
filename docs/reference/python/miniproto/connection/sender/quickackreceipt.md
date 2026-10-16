@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.connection.sender.QuickAckReceipt"
 source_path: "src/miniproto/connection/sender.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/sender.py#L69"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/sender.py#L72"
 aliases: ["miniproto.QuickAckReceipt","miniproto.connection.QuickAckReceipt"]
 module: "miniproto.connection.sender"
 ---

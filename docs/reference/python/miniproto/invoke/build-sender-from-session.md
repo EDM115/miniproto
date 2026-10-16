@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.invoke.build_sender_from_session"
 source_path: "src/miniproto/invoke.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L490"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L493"
 module: "miniproto.invoke"
 ---
 
@@ -43,5 +43,5 @@ target DC) without ever touching the main session's DC or key.
 **Raises:**
 
 - <code>[AuthKeyNotFound](#miniproto.errors.AuthKeyNotFound)</code> – If the persisted session has no key and no override is supplied.
-- <code>[InvalidDatacenter](#miniproto.errors.InvalidDatacenter)</code> – If the session has no saved DC options.
+- <code>[InvalidDatacenter](#miniproto.errors.InvalidDatacenter)</code> – If the session has no saved DC options or its stored key belongs to a different selected DC.
 - <code>[ValueError](#ValueError)</code> – If the saved options do not match the target DC and optional CDN requirement.

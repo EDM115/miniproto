@@ -41,7 +41,7 @@ from miniproto.mtproto.codec import (
 from miniproto.mtproto.state import MTProtoState
 from miniproto.raw import functions, types
 from miniproto.raw.base import RAW_API_LAYER
-from miniproto.session.models import SessionRecord, session_record_from_mapping
+from miniproto.session.models import AuthKey, SessionRecord, session_record_from_mapping
 from miniproto.session.storage import SessionStorage
 from miniproto.tl.codec import TLCodecError, decode_object, decode_value
 
@@ -90,7 +90,10 @@ _SAFE_RETRY_PREFIXES = (
 
 @runtime_checkable
 class RawSender(Protocol):
-    """Minimal connected sender capability required by the RPC invocation layer."""
+    """Minimal connected sender capability required by the RPC invocation layer.
+
+    Credential invalidation additionally requires ``auth_key_dc_id`` and ``state.auth_key`` provenance. Custom senders without these optional attributes are disconnected on invalid-key errors without mutating stored credentials.
+    """
 
     @property
     def is_connected(self) -> bool:
@@ -523,7 +526,7 @@ async def build_sender_from_session(
 
     Raises:
         AuthKeyNotFound: If the persisted session has no key and no override is supplied.
-        InvalidDatacenter: If the session has no saved DC options.
+        InvalidDatacenter: If the session has no saved DC options or its stored key belongs to a different selected DC.
         ValueError: If the saved options do not match the target DC and optional CDN requirement.
     """
     payload = await storage.load()
@@ -542,6 +545,8 @@ async def build_sender_from_session(
             raise AuthKeyNotFound("raw invocation requires an MTProto auth key")
         auth_key_bytes = auth_key.key
         dc_id = record.dc_id or auth_key.dc_id or config.dc_id
+        if dc_id != auth_key.dc_id:
+            raise InvalidDatacenter("selected DC does not match the stored auth key DC")
     if not record.dc_options:
         raise InvalidDatacenter(f"no DC options stored for dc_id={dc_id}")
     option = select_dc_option(record.dc_options, dc_id, allow_media_only=allow_media_only, require_cdn=require_cdn)
@@ -558,7 +563,7 @@ async def build_sender_from_session(
     reconnect_attempts = (
         config.max_reconnect_attempts if config.max_reconnect_attempts is not None else config.max_request_retries + 1
     )
-    return MTProtoSender(
+    sender = MTProtoSender(
         ConnectionEndpoint(option.ip_address, option.port),
         config.transport,
         MTProtoState(auth_key=auth_key_bytes, server_salt=server_salt, session_id=session_id),
@@ -566,14 +571,19 @@ async def build_sender_from_session(
         max_pending_rpcs=config.max_pending_rpcs,
         on_salt_change=on_salt_change,
     )
+    cast(Any, sender).auth_key_dc_id = dc_id
+    return sender
 
 
-async def clear_invalid_auth_key(storage: SessionStorage, config: ClientConfig) -> None:
-    """Atomically clear an unusable persisted authorization key and user identity.
+async def clear_invalid_auth_key(
+    storage: SessionStorage, config: ClientConfig, *, expected_auth_key: AuthKey | None = None
+) -> None:
+    """Atomically clear rejected origin credentials, preserving replacements and unrelated DCs.
 
     Args:
         storage: Session storage to mutate.
         config: Supplies the fallback DC when parsing a legacy session mapping.
+        expected_auth_key: Rejected key and owning DC to compare atomically. Omission explicitly clears the current primary key and user without comparing provenance.
     """
 
     def clear_auth(payload: Mapping[str, Any] | None) -> SessionRecord:
@@ -583,6 +593,23 @@ async def clear_invalid_auth_key(storage: SessionStorage, config: ClientConfig) 
             payload: Latest stored session mapping supplied by ``storage.mutate``.
         """
         record = load_session_record(payload, config.dc_id)
+        if expected_auth_key is not None:
+            metadata = record.metadata
+            dc_auth = metadata.get("dc_auth")
+            if isinstance(dc_auth, Mapping):
+                dc_entry = dc_auth.get(str(expected_auth_key.dc_id))
+                if isinstance(dc_entry, Mapping) and dc_entry.get("key") == expected_auth_key.key:
+                    retained_dc_auth = dict(dc_auth)
+                    retained_dc_auth.pop(str(expected_auth_key.dc_id))
+                    metadata = {**metadata, "dc_auth": retained_dc_auth}
+            if (
+                record.dc_id != expected_auth_key.dc_id
+                or record.auth_key is None
+                or record.auth_key.dc_id != expected_auth_key.dc_id
+                or record.auth_key.key != expected_auth_key.key
+            ):
+                return replace(record, metadata=metadata) if metadata is not record.metadata else record
+            return replace(record, auth_key=None, user=None, metadata=metadata)
         if record.auth_key is None and record.user is None:
             return record
         return replace(record, auth_key=None, user=None)

@@ -29,6 +29,10 @@ pub(crate) const GIL_RELEASE_THRESHOLD_BYTES: usize = 4 * 1024;
 const SCRYPT_MAX_MEMORY_BYTES: usize = 256 * 1024 * 1024;
 /// Maximum CPU-work estimate accepted by the public scrypt primitive.
 const SCRYPT_MAX_WORK_BYTES: usize = 1024 * 1024 * 1024;
+/// Maximum Pollard-rho retries, matching the Python fallback
+const PQ_FACTOR_ATTEMPTS: usize = 16;
+/// Maximum Pollard-rho iterations per retry, matching the Python fallback
+const PQ_FACTOR_ITERATIONS: usize = 100_000;
 
 /// Runs `f` without the GIL when its input work estimate exceeds the native threshold.
 ///
@@ -908,7 +912,7 @@ pub(crate) fn scrypt_derive_raw(
 
 /// Finds and orders the two nontrivial factors of an MTProto `pq` value.
 ///
-/// Returns `ValueError` for values below four or values that are not composite.
+/// Returns `ValueError` for values below four, primes or an exhausted factorization budget
 ///
 /// # Arguments
 ///
@@ -917,7 +921,8 @@ fn pq_factorize_raw(pq: u64) -> PyResult<(u64, u64)> {
     if pq < 4 {
         return Err(PyValueError::new_err("pq must be a composite integer >= 4"));
     }
-    let factor = factor_u64(pq);
+    let factor = factor_u64(pq, PQ_FACTOR_ATTEMPTS, PQ_FACTOR_ITERATIONS)
+        .ok_or_else(|| PyValueError::new_err("pq factorization work budget exhausted"))?;
     if factor == 1 || factor == pq {
         return Err(PyValueError::new_err("pq must be composite"));
     }
@@ -1158,27 +1163,28 @@ fn is_prime_u64(value: u64) -> bool {
     true
 }
 
-/// Returns one factor of a composite `u64` using trial division and Pollard-rho iteration.
+/// Returns one factor using bounded Pollard-rho iteration, the input when prime or `None` when exhausted
 ///
 /// # Arguments
 ///
 /// - `value`: Composite unsigned integer whose nontrivial factor is requested.
-fn factor_u64(value: u64) -> u64 {
+/// - `attempts`: Maximum number of polynomial constants to try
+/// - `iterations`: Maximum sequence iterations for each constant
+fn factor_u64(value: u64, attempts: usize, iterations: usize) -> Option<u64> {
     if value.is_multiple_of(2) {
-        return 2;
+        return Some(2);
     }
     if is_prime_u64(value) {
-        return value;
+        return Some(value);
     }
-    let mut c = 1_u64;
-    loop {
+    for c in 1..=attempts as u64 {
         let mut x = 2_u64;
         let mut y = 2_u64;
         let mut d = 1_u64;
         let step = |input: u64, constant: u64| -> u64 {
-            (mul_mod(input, input, value) + constant) % value
+            ((mul_mod(input, input, value) as u128 + constant as u128) % value as u128) as u64
         };
-        for _ in 0..100_000 {
+        for _ in 0..iterations {
             x = step(x, c);
             y = step(step(y, c), c);
             d = gcd(x.abs_diff(y), value);
@@ -1187,10 +1193,10 @@ fn factor_u64(value: u64) -> u64 {
             }
         }
         if d > 1 && d < value {
-            return d;
+            return Some(d);
         }
-        c = c.wrapping_add(1);
     }
+    None
 }
 
 /// Unit tests for native crypto primitives and stable interoperability vectors.
@@ -1299,6 +1305,20 @@ mod tests {
         assert_eq!(
             pq_factorize_raw(1_000_003 * 1_000_033).unwrap(),
             (1_000_003, 1_000_033)
+        );
+    }
+
+    #[test]
+    /// Checks finite factor search budgets against independent composite factors
+    fn pq_factorization_respects_search_limits() {
+        assert_eq!(factor_u64(91, 0, 1), None);
+        assert_eq!(factor_u64(91, 1, 0), None);
+        assert_eq!(factor_u64(91, 1, 1), Some(7));
+        assert_eq!(pq_factorize_raw(4).unwrap(), (2, 2));
+        assert_eq!(pq_factorize_raw(u64::MAX).unwrap(), (3, u64::MAX / 3));
+        assert_eq!(
+            pq_factorize_raw(3_358_800_871_349_344_843).unwrap(),
+            (1_786_331_737, 1_880_278_339)
         );
     }
 

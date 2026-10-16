@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.session.models.PeerCacheEntry"
 source_path: "src/miniproto/session/models.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/models.py#L175"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/models.py#L176"
 aliases: ["miniproto.PeerCacheEntry","miniproto.session.PeerCacheEntry"]
 module: "miniproto.session.models"
 ---
@@ -15,7 +15,7 @@ module: "miniproto.session.models"
 ## `miniproto.session.models.PeerCacheEntry`
 
 ```python
-PeerCacheEntry(id: int, kind: PeerKind, access_hash: int | None = None, username: str | None = None, phone: str | None = None, updated_at: datetime = _utc_now(), raw: Mapping[str, Any] | None = None) -> None
+PeerCacheEntry(id: int, kind: PeerKind, access_hash: int | None = None, username: str | None = None, phone: str | None = None, updated_at: datetime = _utc_now(), raw: Mapping[str, Any] | None = None, username_observed_at: Mapping[str, datetime] | None = None) -> None
 ```
 
 Durable peer lookup metadata with a shallow-copied optional raw-field mapping.
@@ -33,6 +33,7 @@ absent for minimal Telegram peers.
 - [**phone**](#miniproto.session.models.PeerCacheEntry.phone) (<code>[str](#str) | None</code>) – Optional private phone number, hidden from ``repr``.
 - [**updated_at**](#miniproto.session.models.PeerCacheEntry.updated_at) (<code>[datetime](#datetime.datetime)</code>) – Last-known peer metadata timestamp; aware input retains its timezone.
 - [**raw**](#miniproto.session.models.PeerCacheEntry.raw) (<code>[Mapping](#collections.abc.Mapping)[[str](#str), [Any](#typing.Any)] | None</code>) – Optional shallow-copied extra raw fields; nested values remain mutable.
+- [**username_observed_at**](#miniproto.session.models.PeerCacheEntry.username_observed_at) (<code>[Mapping](#collections.abc.Mapping)[[str](#str), [datetime](#datetime.datetime)] | None</code>) – Last observation time per normalized username, independent of general metadata freshness. ``None`` derives times for aliases supplied to this constructor, an empty mapping leaves every alias unverified.
 
 **Raises:**
 

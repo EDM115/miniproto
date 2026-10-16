@@ -7,7 +7,7 @@ language: "python"
 kind: "attribute"
 qualified_name: "miniproto.security.redaction.REDACTED"
 source_path: "src/miniproto/security/redaction.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/security/redaction.py#L10"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/security/redaction.py#L12"
 aliases: ["miniproto.security.REDACTED"]
 module: "miniproto.security.redaction"
 ---

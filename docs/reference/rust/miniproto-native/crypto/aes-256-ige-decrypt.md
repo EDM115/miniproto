@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::crypto::aes_256_ige_decrypt"
 source_path: "rust/miniproto/src/crypto.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L287"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L291"
 aliases: ["miniproto._native.aes_256_ige_decrypt"]
 python_visible: true
 ---
@@ -15,7 +15,7 @@ python_visible: true
 ## Provenance
 
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L287)
+- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L291)
 - Python exposure: `miniproto._native.aes_256_ige_decrypt` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -39,7 +39,7 @@ fn aes_256_ige_decrypt(py: _, ciphertext: _, key: _, iv: _) -> _
 fn aes_256_ige_decrypt(py: Python<'_>, ciphertext: Vec<u8>, key: Vec<u8>, iv: Vec<u8>) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:287-297`*
+*Defined in `rust/miniproto/src/crypto.rs:291-301`*
 
 Decrypts block-aligned bytes with Python `aes_256_ige_decrypt`.
 

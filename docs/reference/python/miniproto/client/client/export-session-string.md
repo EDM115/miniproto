@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.client.Client.export_session_string"
 source_path: "src/miniproto/client.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L359"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L390"
 aliases: ["miniproto.Client.export_session_string"]
 module: "miniproto.client"
 ---

@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::crypto::mtproto_decrypt_payload"
 source_path: "rust/miniproto/src/crypto.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L225"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L229"
 aliases: ["miniproto._native.mtproto_decrypt_payload"]
 python_visible: true
 ---
@@ -15,7 +15,7 @@ python_visible: true
 ## Provenance
 
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L225)
+- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L229)
 - Python exposure: `miniproto._native.mtproto_decrypt_payload` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -40,7 +40,7 @@ fn mtproto_decrypt_payload(py: _, auth_key: _, msg_key: _, ciphertext: _, client
 fn mtproto_decrypt_payload(py: Python<'_>, auth_key: Vec<u8>, msg_key: Vec<u8>, ciphertext: Vec<u8>, client_to_server: bool) -> PyResult<Vec<u8>>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:225-236`*
+*Defined in `rust/miniproto/src/crypto.rs:229-240`*
 
 Decrypts and verifies Python `mtproto_decrypt_payload` ciphertext.
 

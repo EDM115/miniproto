@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.invoke.wrap_transport_failure"
 source_path: "src/miniproto/invoke.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L593"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L620"
 module: "miniproto.invoke"
 ---
 

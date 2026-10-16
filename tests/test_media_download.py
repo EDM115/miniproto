@@ -1,16 +1,21 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import hashlib
 import io
+import json
 import logging
 import random
+import sys
 import threading
 import time
-from collections.abc import Mapping
+import weakref
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Any, cast
+from types import FrameType
+from typing import Any, BinaryIO, cast
 
 import pytest
 
@@ -48,6 +53,7 @@ from miniproto.media import (
     download_file,
     download_media,
 )
+from miniproto.media.download import iter_download_media
 from miniproto.observability import InMemoryMetrics, get_metrics_sink, set_metrics_sink
 from miniproto.raw import functions, types
 
@@ -674,7 +680,7 @@ def test_plain_integrity_rejects_interval_completion_after_location_refresh() ->
         old_payload = b"a" * 2048
         new_payload = b"b" * 2048
         old_location = document_location()
-        new_location = types.InputDocumentFileLocation(id=11, access_hash=21, file_reference=b"new-ref", thumb_size="")
+        new_location = types.InputDocumentFileLocation(id=old_location.id, access_hash=old_location.access_hash, file_reference=b"new-ref", thumb_size=old_location.thumb_size)  # fmt: skip
         interval_started = asyncio.Event()
         release_interval = asyncio.Event()
 
@@ -683,11 +689,11 @@ def test_plain_integrity_rejects_interval_completion_after_location_refresh() ->
             async def __call__(self, request: object, **kwargs: object) -> object:
                 del kwargs
                 if isinstance(request, functions.UploadGetFileHashes):
-                    payload = old_payload if request.location.id == old_location.id else new_payload
+                    payload = old_payload if request.location.file_reference == old_location.file_reference else new_payload  # fmt: skip
                     return (types.FileHash(offset=0, limit=2048, hash=hashlib.sha256(payload).digest()),)
                 assert isinstance(request, functions.UploadGetFile)
-                payload = old_payload if request.location.id == old_location.id else new_payload
-                if request.location.id == old_location.id:
+                payload = old_payload if request.location.file_reference == old_location.file_reference else new_payload
+                if request.location.file_reference == old_location.file_reference:
                     interval_started.set()
                     await release_interval.wait()
                 return upload_file_part(payload[request.offset : request.offset + request.limit])
@@ -1603,7 +1609,7 @@ def test_download_file_cleanup_error_closes_owned_file_and_preserves_failure(tmp
                 await download_file(invoke, document_location(), target, limit=3072, part_size=1024, concurrency=2, launch_stagger=False, adaptive_part_size=False, resume=True)  # fmt: skip
             assert raised.value is primary
             assert opened[0].closed
-            assert target.stat().st_size == 3072
+            assert target.read_bytes() == b"r" * 1024
             assert any(record.getMessage() == "media.download.cleanup_failed" for record in caplog.records)
         finally:
             for handle in opened:
@@ -1677,7 +1683,7 @@ def test_download_file_cancelled_rollback_failure_has_no_unhandled_loop_error(tm
             else:
                 assert outcome is primary
             assert opened[0].closed
-            assert target.stat().st_size == 3072
+            assert target.read_bytes() == b"r" * 1024
             assert any(record.getMessage() == "media.download.cleanup_failed" for record in caplog.records)
             barrier = loop.create_future()
             loop.call_soon(barrier.set_result, None)
@@ -1941,7 +1947,7 @@ def test_concurrent_destination_writer_fails_all_queued_acknowledgements(tmp_pat
             original_write(writer, offset, payload)
 
         monkeypatch.setattr(media_download._ConcurrentDestinationWriter, "_write", fail_first_write)
-        writer = media_download._ConcurrentDestinationWriter(destination, queue_size=1, preallocate_size=3072)
+        writer = media_download._ConcurrentDestinationWriter(destination, queue_size=1)
         submissions = [
             asyncio.create_task(writer.submit(offset, bytes([offset // 1024 + 1]) * 1024)) for offset in (0, 1024, 2048)
         ]
@@ -1968,7 +1974,7 @@ def test_concurrent_destination_writer_abort_waits_for_active_threaded_write(tmp
             finished.set()
 
         monkeypatch.setattr(media_download._ConcurrentDestinationWriter, "_write", delayed_write)
-        writer = media_download._ConcurrentDestinationWriter(destination, queue_size=1, preallocate_size=1024)
+        writer = media_download._ConcurrentDestinationWriter(destination, queue_size=1)
         submission = asyncio.create_task(writer.submit(0, b"x" * 1024))
         assert await asyncio.to_thread(started.wait, 1.0)
         await asyncio.wait_for(writer.abort(), timeout=1.0)
@@ -1993,7 +1999,7 @@ def test_concurrent_destination_writer_preserves_bounded_queue_backpressure(tmp_
             original_write(writer, offset, payload)
 
         monkeypatch.setattr(media_download._ConcurrentDestinationWriter, "_write", blocked_write)
-        writer = media_download._ConcurrentDestinationWriter(destination, queue_size=1, preallocate_size=3072)
+        writer = media_download._ConcurrentDestinationWriter(destination, queue_size=1)
         await writer.submit(0, b"a" * 1024, wait_for_completion=False)
         assert await asyncio.to_thread(started.wait, 1.0)
         await writer.submit(1024, b"b" * 1024, wait_for_completion=False)
@@ -2040,7 +2046,7 @@ def test_download_file_concurrent_rejects_short_destination_write() -> None:
     run(scenario())
 
 
-def test_download_file_concurrent_cleans_new_path_when_preallocation_fails(tmp_path, monkeypatch) -> None:
+def test_download_file_concurrent_writes_path_without_preallocation(tmp_path, monkeypatch) -> None:
     class FailingTruncate:
         def __init__(self, handle) -> None:
             self.handle = handle
@@ -2060,7 +2066,7 @@ def test_download_file_concurrent_cleans_new_path_when_preallocation_fails(tmp_p
             return getattr(self.handle, name)
 
     async def scenario() -> None:
-        target = tmp_path / "preallocation-error.bin"
+        target = tmp_path / "no-preallocation.bin"
         raw_handle = target.open("w+b")
         failing_handle = FailingTruncate(raw_handle)
 
@@ -2077,18 +2083,18 @@ def test_download_file_concurrent_cleans_new_path_when_preallocation_fails(tmp_p
             )
 
         monkeypatch.setattr(media_download, "_open_destination", failing_destination)
-        with pytest.raises(OSError, match="preallocation failed"):
-            await download_file(
-                OffsetInvoker(b"x" * 1024),
-                document_location(),
-                target,
-                limit=1024,
-                part_size=1024,
-                adaptive_part_size=False,
-                concurrency=2,
-            )
+        result = await download_file(
+            OffsetInvoker(b"x" * 1024),
+            document_location(),
+            target,
+            limit=1024,
+            part_size=1024,
+            adaptive_part_size=False,
+            concurrency=2,
+        )
+        assert result.bytes_downloaded == 1024
         assert failing_handle.closed
-        assert not target.exists()
+        assert target.read_bytes() == b"x" * 1024
 
     run(scenario())
 
@@ -3907,13 +3913,13 @@ def test_client_multi_session_download_splits_and_assembles_ranges(tmp_path, mon
         async def fake_single(
             worker: Client, media: object, destination: object, options: dict[str, object]
         ) -> MediaDownloadResult:
-            del worker, media
+            del worker
             offset = cast(int, options["offset"])
             limit = cast(int, options["limit"])
             payload = bytes([offset // (1024 * 1024)]) * limit
             assert isinstance(destination, Path)
             destination.write_bytes(payload)
-            return MediaDownloadResult(bytes_downloaded=limit, offset=offset, destination=destination)
+            return MediaDownloadResult(bytes_downloaded=limit, offset=offset, destination=destination, raw_location=media_download.download_location_from_media(media))  # fmt: skip
 
         monkeypatch.setattr(primary, "_ensure_auxiliary_download_clients", fake_auxiliaries)
         monkeypatch.setattr(Client, "_download_media_single", fake_single)
@@ -3933,3 +3939,1146 @@ def test_client_multi_session_download_splits_and_assembles_ranges(tmp_path, mon
         assert not auxiliary.is_connected
 
     run(scenario())
+
+
+def _refresh_document_location(*, document_id: int = 100, access_hash: int = 200, reference: bytes = b"expired", thumb_size: str = "") -> types.InputDocumentFileLocation:  # fmt: skip
+    return types.InputDocumentFileLocation(id=document_id, access_hash=access_hash, file_reference=reference, thumb_size=thumb_size)  # fmt: skip
+
+
+def _refresh_message(*, document_id: int = 100, reference: bytes = b"expired", size: int = 2048) -> types.Message:
+    document = types.Document(id=document_id, access_hash=200, file_reference=reference, date=1700000000, mime_type="application/octet-stream", size=size, dc_id=2, attributes=())  # fmt: skip
+    return types.Message(id=55, peer_id=types.PeerUser(user_id=7), date=1700000000, message="file", media=types.MessageMediaDocument(document=document))  # fmt: skip
+
+
+def _refresh_file_part(payload: bytes) -> types.UploadFile:
+    return types.UploadFile(type=types.StorageFileUnknown(), mtime=0, bytes=payload)
+
+
+@pytest.mark.parametrize("streaming", [False, True])
+@pytest.mark.parametrize("failure_offset", [0, 1024])
+@pytest.mark.parametrize("verify", [False, True])
+@pytest.mark.parametrize("wrapped", [False, True])
+def test_edited_same_size_message_cannot_replace_selected_file(monkeypatch: pytest.MonkeyPatch, streaming: bool, failure_offset: int, verify: bool, wrapped: bool) -> None:  # fmt: skip
+    async def scenario() -> None:
+        client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=InMemorySessionStorage()))
+        client._connected = True
+        selected = _refresh_message()
+        source = Media(id=100, size=2048, raw=selected) if wrapped else selected
+        original = b"a" * 1024 + b"c" * 1024
+        replacement = b"b" * 1024 + b"d" * 1024
+        requests: list[Any] = []
+        refreshes: list[object] = []
+        cache = DownloadRangeCache(max_bytes=4096)
+
+        async def invoke(request: Any, **_kwargs: object) -> object:
+            if isinstance(request, functions.MessagesGetMessages):
+                refreshes.append(request)
+                return types.MessagesMessages(messages=(_refresh_message(document_id=101, reference=b"renewed"),), topics=(), chats=(), users=())  # fmt: skip
+            requests.append(request)
+            payload = original if request.location.id == 100 else replacement
+            if isinstance(request, functions.UploadGetFileHashes):
+                return tuple(types.FileHash(offset=offset, limit=1024, hash=hashlib.sha256(payload[offset : offset + 1024]).digest()) for offset in (0, 1024))  # fmt: skip
+            assert isinstance(request, functions.UploadGetFile)
+            if request.location.file_reference == b"expired" and request.offset == failure_offset:
+                raise BadRequest("FILE_REFERENCE_EXPIRED")
+            return _refresh_file_part(payload[request.offset : request.offset + request.limit])
+
+        monkeypatch.setattr(client, "invoke", invoke)
+        options: dict[str, Any] = {"part_size": 1024, "concurrency": 1, "adaptive_part_size": False, "media_lanes": 0, "verify_plain_hashes": verify, "range_cache": cache, "range_cache_key": "selected-A"}  # fmt: skip
+        yielded: list[bytes] = []
+        destination = io.BytesIO(b"retained")
+        try:
+            with pytest.raises(MediaDownloadError, match="file identity changed"):
+                if streaming:
+                    async for part in client.iter_download(source, **options):
+                        yielded.append(part)
+                else:
+                    await client.download_media(source, destination, **options)
+            assert len(refreshes) == 1
+            assert all(request.location.id == 100 for request in requests)
+            assert yielded == ([original[:1024]] if streaming and failure_offset else [])
+            assert destination.getvalue() == b"retained"
+            assert await cache.get("selected-A", failure_offset, 1024) is None
+            if failure_offset:
+                assert await cache.get("selected-A", 0, 1024) == original[:1024]
+        finally:
+            await cache.clear()
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize(
+    "replacement",
+    [
+        _refresh_document_location(document_id=101),
+        _refresh_document_location(access_hash=201),
+        _refresh_document_location(thumb_size="m"),
+        types.InputPhotoFileLocation(id=100, access_hash=200, file_reference=b"renewed", thumb_size=""),
+    ],
+)
+def test_raw_refresh_rejects_changed_resource_fields(replacement: object) -> None:
+    async def scenario() -> None:
+        requests: list[object] = []
+
+        async def invoke(request: object, **_kwargs: object) -> object:
+            requests.append(request)
+            raise BadRequest("FILE_REFERENCE_EXPIRED")
+
+        with pytest.raises(MediaDownloadError, match="file identity changed"):
+            await download_file(invoke, _refresh_document_location(), total_size=1024, part_size=1024, concurrency=1, file_reference_refresher=lambda _old: replacement)  # fmt: skip
+        assert len(requests) == 1
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize(
+    ("original", "replacement"),
+    [
+        (
+            types.InputPhotoFileLocation(id=100, access_hash=200, file_reference=b"expired", thumb_size="m"),
+            types.InputPhotoFileLocation(id=100, access_hash=200, file_reference=b"renewed", thumb_size="x"),
+        ),
+        (
+            types.InputFileLocation(volume_id=1, local_id=2, secret=3, file_reference=b"expired"),
+            types.InputFileLocation(volume_id=1, local_id=4, secret=3, file_reference=b"renewed"),
+        ),
+        (
+            types.InputPeerPhotoFileLocation(peer=types.InputPeerSelf(), photo_id=100),
+            types.InputPeerPhotoFileLocation(peer=types.InputPeerSelf(), photo_id=101),
+        ),
+        (
+            types.InputStickerSetThumb(stickerset=types.InputStickerSetID(id=1, access_hash=2), thumb_version=3),
+            types.InputStickerSetThumb(stickerset=types.InputStickerSetID(id=1, access_hash=2), thumb_version=4),
+        ),
+    ],
+)
+def test_refresh_pins_non_document_location_fields(original: object, replacement: object) -> None:
+    async def scenario() -> None:
+        state = media_download._DownloadLocationState(original)
+        with pytest.raises(MediaDownloadError, match="file identity changed"):
+            await state.refresh(reference_deduper=media_download._FileReferenceRefreshDeduper(), refresher=lambda _old: replacement)  # fmt: skip
+        assert state.current is original
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("replace_id", [False, True])
+def test_hash_request_refresh_preserves_selected_identity(replace_id: bool) -> None:
+    async def scenario() -> None:
+        original = _refresh_document_location()
+        renewed = _refresh_document_location(document_id=101 if replace_id else 100, reference=b"renewed")
+        payload = b"a" * 1024
+        requests: list[Any] = []
+
+        async def invoke(request: Any, **_kwargs: object) -> object:
+            requests.append(request)
+            if isinstance(request, functions.UploadGetFileHashes):
+                if request.location.file_reference == b"expired":
+                    raise BadRequest("FILE_REFERENCE_EXPIRED")
+                return (types.FileHash(offset=0, limit=1024, hash=hashlib.sha256(payload).digest()),)
+            return _refresh_file_part(payload[request.offset : request.offset + request.limit])
+
+        operation = download_file(invoke, original, total_size=1024, part_size=1024, concurrency=1, verify_plain_hashes=True, file_reference_refresher=lambda _old: renewed)  # fmt: skip
+        if replace_id:
+            with pytest.raises(MediaDownloadError, match="file identity changed"):
+                await operation
+            assert len(requests) == 2
+        else:
+            result = await operation
+            assert result.data == payload
+            assert result.raw_location == renewed
+        assert all(request.location.id == 100 for request in requests)
+
+    asyncio.run(scenario())
+
+
+def test_concurrent_ranges_cannot_publish_replacement() -> None:
+    async def scenario() -> None:
+        requested: list[Any] = []
+        both_started = asyncio.Event()
+        refreshes = 0
+
+        async def invoke(request: Any, **_kwargs: object) -> object:
+            requested.append(request)
+            if len(requested) == 2:
+                both_started.set()
+            await both_started.wait()
+            raise BadRequest("FILE_REFERENCE_EXPIRED")
+
+        async def refresh(_old: object) -> object:
+            nonlocal refreshes
+            refreshes += 1
+            await asyncio.sleep(0)
+            return _refresh_document_location(document_id=101, reference=b"renewed")
+
+        with pytest.raises(MediaDownloadError, match="file identity changed"):
+            await download_file(invoke, _refresh_document_location(), total_size=2048, part_size=1024, concurrency=2, launch_stagger=False, file_reference_refresher=refresh)  # fmt: skip
+        assert refreshes == 1
+        assert {request.offset for request in requested} == {0, 1024}
+        assert all(request.location.id == 100 for request in requested)
+
+    asyncio.run(scenario())
+
+
+def test_read_ahead_cannot_cache_replacement_bytes() -> None:
+    async def scenario() -> None:
+        cache = DownloadRangeCache(max_bytes=4096)
+        requests: list[Any] = []
+
+        async def invoke(request: Any, **_kwargs: object) -> object:
+            requests.append(request)
+            if request.offset:
+                raise BadRequest("FILE_REFERENCE_EXPIRED")
+            return _refresh_file_part(b"a" * 1024)
+
+        try:
+            parts = [part async for part in iter_download(invoke, _refresh_document_location(), limit=1024, total_size=3072, part_size=1024, concurrency=1, range_cache=cache, range_cache_key="selected-A", read_ahead_bytes=2048, file_reference_refresher=lambda _old: _refresh_document_location(document_id=101))]  # fmt: skip
+            await asyncio.gather(*tuple(cache._background))
+            assert parts == [b"a" * 1024]
+            assert {request.offset for request in requests} == {0, 1024, 2048}
+            assert all(request.location.id == 100 for request in requests)
+            assert await cache.get("selected-A", 1024, 1024) is None
+            assert await cache.get("selected-A", 2048, 1024) is None
+        finally:
+            await cache.clear()
+
+    asyncio.run(scenario())
+
+
+_LARGE_SIZE = (1 << 63) - 1
+
+
+class GuardedPathFile:
+    def __init__(self, handle: BinaryIO, size: int) -> None:
+        self.handle = handle
+        self.size = size
+        self.writes: list[tuple[int, bytes]] = []
+        self.truncations: list[int] = []
+
+    def write(self, payload: bytes) -> int:
+        offset = self.handle.tell()
+        written = self.handle.write(payload)
+        self.writes.append((offset, payload))
+        self.size = max(self.size, offset + written)
+        return written
+
+    def truncate(self, size: int | None = None) -> int:
+        size = self.handle.tell() if size is None else size
+        self.truncations.append(size)
+        # Intercept growth before it can allocate disk space, including when this regression fails
+        assert size <= self.size, "destination grew before receiving the corresponding bytes"
+        result = self.handle.truncate(size)
+        self.size = size
+        return result
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self.handle, name)
+
+
+def guard_path_files(monkeypatch: pytest.MonkeyPatch) -> list[GuardedPathFile]:
+    opened: list[GuardedPathFile] = []
+    original_open = media_download._open_destination
+
+    def open_destination(destination: Any, *, resume: bool) -> media_download._DestinationHandle:
+        resolved = original_open(destination, resume=resume)
+        assert resolved.path is not None
+        guarded = GuardedPathFile(resolved.handle, resolved.path.stat().st_size)
+        opened.append(guarded)
+        resolved.handle = cast(BinaryIO, guarded)
+        return resolved
+
+    monkeypatch.setattr(media_download, "_open_destination", open_destination)
+    return opened
+
+
+def _large_download_file_id(size: int) -> str:
+    return encode_file_id(
+        types.Document(
+            id=11,
+            access_hash=22,
+            file_reference=b"reference",
+            date=1_700_000_000,
+            mime_type="application/octet-stream",
+            size=size,
+            dc_id=2,
+            attributes=(),
+        )
+    )
+
+
+def download_client() -> Client:
+    client = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=InMemorySessionStorage()))
+    client._connected = True
+    return client
+
+
+@pytest.mark.parametrize("size_source", ["file_id", "total_size", "limit"])
+def test_large_download_size_does_not_allocate_before_rpc_rejection(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, size_source: str) -> None:  # fmt: skip
+    async def scenario() -> None:
+        target = tmp_path / "rejected.bin"
+        opened = guard_path_files(monkeypatch)
+        client = download_client()
+        rejection = MediaDownloadError("media was rejected")
+        requests: list[functions.UploadGetFile] = []
+
+        async def invoke(request: object, **_kwargs: Any) -> object:
+            assert isinstance(request, functions.UploadGetFile)
+            requests.append(request)
+            assert target.stat().st_size == 0
+            raise rejection
+
+        monkeypatch.setattr(client, "invoke", invoke)
+        options = {} if size_source == "file_id" else {size_source: _LARGE_SIZE}
+        media = _large_download_file_id(_LARGE_SIZE if size_source == "file_id" else 2048)
+        with pytest.raises(MediaDownloadError) as failure:
+            await client.download_media(
+                media,
+                target,
+                media_lanes=0,
+                concurrency=2,
+                part_size=1024,
+                adaptive_part_size=False,
+                launch_stagger=False,
+                **options,
+            )
+        assert failure.value is rejection
+        assert requests
+        assert len(opened) == 1
+        assert opened[0].writes == []
+        assert opened[0].truncations == []
+        assert opened[0].closed
+        assert not target.exists()
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("resume", [False, True])
+def test_large_file_id_waits_without_growing_destination_and_cancels_cleanly(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, resume: bool) -> None:  # fmt: skip
+    async def scenario() -> None:
+        target = tmp_path / "cancelled.bin"
+        prefix = b"p" * 1024 if resume else b""
+        if resume:
+            target.write_bytes(prefix)
+        opened = guard_path_files(monkeypatch)
+        client = download_client()
+        entered = asyncio.Event()
+        release = asyncio.Event()
+
+        async def invoke(request: object, **_kwargs: Any) -> object:
+            assert isinstance(request, functions.UploadGetFile)
+            assert request.offset >= len(prefix)
+            entered.set()
+            await release.wait()
+            raise AssertionError("the pending request should be cancelled")
+
+        monkeypatch.setattr(client, "invoke", invoke)
+        operation = asyncio.create_task(
+            client.download_media(
+                _large_download_file_id(_LARGE_SIZE),
+                target,
+                media_lanes=0,
+                concurrency=2,
+                part_size=1024,
+                adaptive_part_size=False,
+                launch_stagger=False,
+                resume=resume,
+            )
+        )
+        entry = asyncio.create_task(entered.wait())
+        try:
+            async with asyncio.timeout(5):
+                await asyncio.wait((operation, entry), return_when=asyncio.FIRST_COMPLETED)
+                if operation.done():
+                    await operation
+                assert entered.is_set()
+                assert target.read_bytes() == prefix
+                assert opened[0].writes == []
+                assert opened[0].truncations == []
+                operation.cancel()
+                with pytest.raises(asyncio.CancelledError):
+                    await operation
+            assert opened[0].closed
+            if resume:
+                assert target.read_bytes() == prefix
+                assert opened[0].truncations == [len(prefix)]
+            else:
+                assert not target.exists()
+        finally:
+            operation.cancel()
+            entry.cancel()
+            await asyncio.gather(operation, entry, return_exceptions=True)
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("size_override", ["limit", "total_size"])
+@pytest.mark.parametrize("resume", [False, True])
+def test_small_override_of_large_file_id_grows_only_by_written_bytes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, size_override: str, resume: bool) -> None:  # fmt: skip
+    async def scenario() -> None:
+        target = tmp_path / "accepted.bin"
+        payload = b"a" * 1024 + b"b" * 513
+        if resume:
+            target.write_bytes(payload[:1024])
+        opened = guard_path_files(monkeypatch)
+        client = download_client()
+
+        async def invoke(request: object, **_kwargs: Any) -> object:
+            assert isinstance(request, functions.UploadGetFile)
+            return types.UploadFile(
+                type=types.StorageFileUnknown(),
+                mtime=1_700_000_000,
+                bytes=payload[request.offset : request.offset + request.limit],
+            )
+
+        monkeypatch.setattr(client, "invoke", invoke)
+        result = await client.download_media(
+            _large_download_file_id(_LARGE_SIZE),
+            target,
+            media_lanes=0,
+            concurrency=2,
+            part_size=1024,
+            adaptive_part_size=False,
+            launch_stagger=False,
+            resume=resume,
+            **{size_override: len(payload)},
+        )
+        assert result.bytes_downloaded == len(payload)
+        assert target.read_bytes() == payload
+        assert len(opened) == 1
+        expected_writes = [(1024, b"b" * 513)] if resume else [(0, b"a" * 1024), (1024, b"b" * 513)]
+        assert opened[0].writes == expected_writes
+        assert opened[0].truncations == []
+        assert opened[0].closed
+
+    asyncio.run(scenario())
+
+
+class TrackedKey(str):
+    pass
+
+
+def test_range_cache_large_keys_preserve_identity_and_range_boundaries() -> None:
+    async def scenario() -> None:
+        cache = DownloadRangeCache(max_bytes=32)
+        first = "x" * 65535 + "a"
+        second = "x" * 65535 + "b"
+        digest_text = hashlib.sha256(first.encode()).hexdigest()
+        cases = (
+            (first, 0, 1024, b"a"),
+            (second, 0, 1024, b"b"),
+            (digest_text, 0, 1024, b"c"),
+            (first, 1024, 1024, b"d"),
+            (first, 0, 2048, b"e"),
+            ("\ud800", 0, 1024, b"f"),
+        )
+        for key, offset, limit, payload in cases:
+            await cache.put(key, offset, limit, payload)
+        for key, offset, limit, payload in cases:
+            assert await cache.get(key, offset, limit) == payload
+        assert len(cache._entries) == len(cases)
+        assert all(isinstance(identity, bytes) and len(identity) == 32 for identity, _, _ in cache._entries)
+        assert cache._size == 6
+
+    asyncio.run(scenario())
+
+
+def test_range_cache_entry_cap_evicts_lru_without_charging_key_bytes_to_payloads() -> None:
+    async def scenario() -> None:
+        cache = DownloadRangeCache(max_bytes=6, max_entries=3)
+        keys = ["k" * 65536 + str(index) for index in range(4)]
+        for key, payload in zip(keys[:3], (b"a", b"b", b"c"), strict=True):
+            await cache.put(key, 0, 1024, payload)
+        assert len(cache._entries) == 3
+        assert await cache.get(keys[0], 0, 1024) == b"a"
+        await cache.put(keys[3], 0, 1024, b"d")
+        assert len(cache._entries) == 3
+        assert cache._size == 3
+        assert await cache.get(keys[1], 0, 1024) is None
+        assert await cache.get(keys[2], 0, 1024) == b"c"
+        await cache.put(keys[0], 0, 1024, b"AAA")
+        assert len(cache._entries) == 3
+        assert cache._size == 5
+        await cache.put(keys[2], 0, 1024, b"CCC")
+        assert len(cache._entries) == 2
+        assert cache._size == 6
+        assert await cache.get(keys[3], 0, 1024) is None
+        assert await cache.get(keys[0], 0, 1024) == b"AAA"
+        assert await cache.get(keys[2], 0, 1024) == b"CCC"
+        await cache.put(keys[3], 0, 1024, b"")
+        await cache.put(keys[3], 0, 1024, b"oversize")
+        assert len(cache._entries) == 2
+        await cache.clear()
+        assert cache._size == 0
+        assert not cache._entries
+
+    asyncio.run(scenario())
+
+
+def test_range_cache_default_entry_cap_bounds_tiny_ranges() -> None:
+    async def scenario() -> None:
+        cache = DownloadRangeCache()
+        for index in range(4097):
+            await cache.put("shared", index, 1, b"x")
+        assert len(cache._entries) == 4096
+        assert cache._size == 4096
+        assert await cache.get("shared", 0, 1) is None
+        assert await cache.get("shared", 1, 1) == b"x"
+        assert await cache.get("shared", 4096, 1) == b"x"
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("max_entries", [0, -1])
+def test_range_cache_rejects_nonpositive_entry_cap(max_entries: int) -> None:
+    with pytest.raises(ValueError, match="max_entries must be positive"):
+        DownloadRangeCache(max_entries=max_entries)
+
+
+def test_range_cache_pending_fetch_releases_original_key_and_deduplicates() -> None:
+    async def scenario() -> None:
+        cache = DownloadRangeCache(max_bytes=8)
+        key = TrackedKey("pending" * 10000)
+        key_ref = weakref.ref(key)
+        started = asyncio.Event()
+        release = asyncio.Event()
+        calls = 0
+
+        async def fetch() -> bytes:
+            nonlocal calls
+            calls += 1
+            started.set()
+            await release.wait()
+            return b"result"
+
+        waiter = asyncio.create_task(cache.get_or_fetch(key, 0, 1024, fetch))
+        del key
+        await started.wait()
+        waiter.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await waiter
+        assert key_ref() is None
+        assert len(cache._pending) == 1
+        assert all(isinstance(identity, bytes) and len(identity) == 32 for identity, _, _ in cache._pending)
+        survivor = asyncio.create_task(cache.get_or_fetch("pending" * 10000, 0, 1024, fetch))
+        await asyncio.sleep(0)
+        release.set()
+        assert await survivor == b"result"
+        assert calls == 1
+        assert not cache._pending
+        assert await cache.get("pending" * 10000, 0, 1024) == b"result"
+
+    asyncio.run(scenario())
+
+
+def test_range_cache_prefetch_releases_original_key_and_clear_joins_fetch() -> None:
+    async def scenario() -> None:
+        cache = DownloadRangeCache(max_bytes=8)
+        key = TrackedKey("prefetch" * 10000)
+        key_ref = weakref.ref(key)
+        started = asyncio.Event()
+        cancelled = asyncio.Event()
+
+        async def fetch() -> bytes:
+            started.set()
+            try:
+                await asyncio.Event().wait()
+            finally:
+                cancelled.set()
+            return b"unreachable"
+
+        cache.prefetch(key, 0, 1024, fetch)
+        del key
+        assert key_ref() is None
+        await started.wait()
+        assert all(isinstance(identity, bytes) and len(identity) == 32 for identity, _, _ in cache._pending)
+        await cache.clear()
+        assert cancelled.is_set()
+        assert not cache._pending
+        assert not cache._background
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("streaming", [False, True])
+def test_noncanonical_file_ids_keep_cache_identity_bounded(streaming: bool) -> None:
+    async def scenario() -> None:
+        cache = DownloadRangeCache(max_bytes=2, max_entries=2)
+        requests = []
+
+        async def invoke(request: object, **_kwargs: object) -> object:
+            assert isinstance(request, functions.UploadGetFile)
+            assert request.location == types.InputDocumentFileLocation(
+                id=17, access_hash=29, file_reference=b"ref", thumb_size=""
+            )
+            requests.append(request)
+            return types.UploadFile(type=types.StorageFileUnknown(), mtime=0, bytes=b"z")
+
+        file_ids = []
+        for index in range(4):
+            payload = {"k": "d", "id": 17, "ah": 29, "fr": "cmVm", "n": str(index), "unused": "x" * 48000}
+            encoded = base64.urlsafe_b64encode(json.dumps(payload, indent=index).encode()).decode().rstrip("=")
+            file_id = "mpf1_" + encoded
+            assert 64000 < len(file_id) <= 65536
+            file_ids.append(file_id)
+            if streaming:
+                chunks = iter_download_media(invoke, file_id, limit=1, part_size=1024, range_cache=cache)
+                assert b"".join([part async for part in chunks]) == b"z"
+            else:
+                assert (await download_media(invoke, file_id, limit=1, part_size=1024, range_cache=cache)).data == b"z"
+            assert len(cache._entries) <= 2
+            assert all(isinstance(identity, bytes) and len(identity) == 32 for identity, _, _ in cache._entries)
+        prior_requests = len(requests)
+        assert (await download_media(invoke, file_ids[-1], limit=1, part_size=1024, range_cache=cache)).data == b"z"
+        assert len(requests) == prior_requests
+
+    asyncio.run(scenario())
+
+
+def _unknown_dc_file_id(dc_id: int, size: int) -> str:
+    return encode_file_id(Media(id=17, size=size, dc_id=dc_id, location=types.InputDocumentFileLocation(id=17, access_hash=23, file_reference=b"synthetic", thumb_size="")))  # fmt: skip
+
+
+def client_with_options(*, idle_close: float | None = 120.0) -> Client:
+    storage = InMemorySessionStorage(
+        SessionRecord(
+            dc_id=2,
+            auth_key=AuthKey(dc_id=2, key=b"s" * 256),
+            dc_options=(
+                DCOption(id=2, ip_address="127.0.0.2", port=443),
+                DCOption(id=5, ip_address="127.0.0.5", port=443, media_only=True),
+            ),
+        )
+    )
+    return Client(ClientConfig(api_id=1, api_hash="synthetic", session_storage=storage, media_idle_close=idle_close))
+
+
+async def _download_unknown_dc_file(client: Client, source: str, api: str) -> bytes:
+    if api == "stream":
+        return b"".join([chunk async for chunk in client.iter_download(source)])
+    result = await client.download_media(source)
+    assert result.data is not None
+    return result.data
+
+
+@pytest.mark.parametrize("api", ["materialized", "stream"])
+@pytest.mark.parametrize("size", [0, 1024])
+@pytest.mark.parametrize("idle_close", [120.0, None])
+def test_unknown_file_id_dcs_do_not_create_pools_or_tasks(monkeypatch: pytest.MonkeyPatch, api: str, size: int, idle_close: float | None) -> None:  # fmt: skip
+    async def scenario() -> None:
+        client = client_with_options(idle_close=idle_close)
+        builds: list[int] = []
+
+        async def build_sender(dc_id: int) -> None:
+            builds.append(dc_id)
+            raise AssertionError("unknown DC reached sender construction")
+
+        monkeypatch.setattr(client, "_build_media_sender", build_sender)
+        await client.connect()
+        baseline_tasks = asyncio.all_tasks()
+        try:
+            for dc_id in (*range(100, 116), (1 << 31) - 1):
+                with pytest.raises(ValueError, match=f"no DC option for dc_id={dc_id}"):
+                    await _download_unknown_dc_file(client, _unknown_dc_file_id(dc_id, size), api)
+                assert not client._media_pools
+                assert asyncio.all_tasks() == baseline_tasks
+            assert not builds
+        finally:
+            await client.disconnect()
+
+    asyncio.run(scenario())
+
+
+@dataclass
+class MediaSender:
+    payload: bytes = bytes(range(251)) * 5
+    requests: list[object] = field(default_factory=list)
+    is_connected: bool = True
+
+    async def request(self, body: object, *, content_related: bool = True, retry_safe: bool, request_timeout: float | None = None) -> object:  # fmt: skip
+        del content_related, retry_safe, request_timeout
+        while isinstance(body, functions.InvokeWithoutUpdates | functions.InvokeWithLayer | functions.InitConnection):
+            body = body.query
+        self.requests.append(body)
+        if isinstance(body, functions.AuthExportAuthorization):
+            return types.AuthExportedAuthorization(id=29, bytes=b"synthetic")
+        if isinstance(body, functions.AuthImportAuthorization):
+            return types.AuthAuthorization(user=types.UserEmpty(id=31))
+        assert isinstance(body, functions.UploadGetFile)
+        return types.UploadFile(type=types.StorageFileUnknown(), mtime=0, bytes=self.payload[body.offset : body.offset + body.limit])  # fmt: skip
+
+    async def disconnect(self) -> None:
+        self.is_connected = False
+
+
+@pytest.mark.parametrize("dc_id", [2, 5], ids=["home", "foreign-media-only"])
+def test_configured_file_id_dc_reuses_pool_after_unknown_dc_rejection(dc_id: int) -> None:
+    async def scenario() -> None:
+        client = client_with_options()
+        senders: list[MediaSender] = []
+
+        def sender_factory(record: SessionRecord) -> MediaSender:
+            assert record.dc_id in {2, 5}
+            sender = MediaSender()
+            senders.append(sender)
+            return sender
+
+        client._sender_factory = sender_factory
+        await client.connect()
+        try:
+            expected = bytes(range(251)) * 5
+            source = _unknown_dc_file_id(dc_id, len(expected))
+            assert await _download_unknown_dc_file(client, source, "materialized") == expected
+            pool = client._media_pools[("download", dc_id)]
+            reaper = pool._idle_reaper
+            assert reaper is not None and not reaper.done()
+            built = tuple(senders)
+            for size in (0, 1024):
+                for api in ("materialized", "stream"):
+                    with pytest.raises(ValueError, match="no DC option for dc_id=999"):
+                        await _download_unknown_dc_file(client, _unknown_dc_file_id(999, size), api)
+            assert await _download_unknown_dc_file(client, source, "stream") == expected
+            assert client._media_pools == {("download", dc_id): pool}
+            assert pool._idle_reaper is reaper and not reaper.done()
+            assert tuple(senders) == built
+            assert all(sender.is_connected for sender in senders)
+        finally:
+            await client.disconnect()
+        assert reaper.done()
+        assert not any(sender.is_connected for sender in senders)
+
+    asyncio.run(scenario())
+
+
+type TraceFunction = Callable[[FrameType, str, object], TraceFunction | None]
+
+
+def _location() -> types.InputDocumentFileLocation:
+    return types.InputDocumentFileLocation(id=35, access_hash=71, file_reference=b"test-reference", thumb_size="")
+
+
+def _hash(offset: int, limit: int, digest: bytes = b"h" * 32) -> types.FileHash:
+    return types.FileHash(offset=offset, limit=limit, hash=digest)
+
+
+def _verifier(invoke: Callable[..., Awaitable[object]]) -> media_download._PlainFileHashVerifier:
+    return media_download._PlainFileHashVerifier(
+        invoke,
+        location_state=media_download._DownloadLocationState(_location()),
+        precise=True,
+        cdn_supported=False,
+        request_timeout=None,
+        max_retries=0,
+        flood_sleep_threshold=None,
+        reference_deduper=media_download._FileReferenceRefreshDeduper(),
+        file_reference_refresher=None,
+        max_cached_bytes=1024,
+    )
+
+
+async def _unused_invoke(*args: object, **kwargs: object) -> object:
+    raise AssertionError("Unexpected network request")
+
+
+def _count_verifier_lines(action: Callable[[], None]) -> int:
+    events = 0
+
+    def trace(frame: FrameType, event: str, arg: object) -> TraceFunction | None:
+        nonlocal events
+        if frame.f_code.co_filename != media_download.__file__ or not frame.f_code.co_qualname.startswith(
+            "_PlainFileHashVerifier."
+        ):
+            return None
+        if event == "line":
+            events += 1
+        return trace
+
+    previous = sys.gettrace()
+    try:
+        sys.settrace(trace)
+        action()
+    finally:
+        sys.settrace(previous)
+    return events
+
+
+def test_plain_hash_response_limit_rejects_before_iterating(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(media_download._PlainFileHashVerifier, "_MAX_HASH_RESPONSE_ITEMS", 4)
+
+    class UnreadableBatch(tuple):
+        def __iter__(self):
+            raise AssertionError("Oversized response must be rejected before item validation")
+
+    requests = []
+
+    async def invoke(request: object, **kwargs: object) -> object:
+        requests.append(request)
+        return UnreadableBatch(_hash(offset, 1) for offset in range(5))
+
+    verifier = _verifier(invoke)
+    with pytest.raises(media_download.MediaIntegrityError, match="hash response item limit exceeded"):
+        asyncio.run(verifier._ensure_hash_coverage(_location(), 0, 1))
+    assert len(requests) == 1
+    assert not verifier._hashes
+    assert not verifier._hash_keys
+
+
+def test_plain_hash_retention_budget_counts_unique_intervals_across_responses(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(media_download._PlainFileHashVerifier, "_MAX_HASH_RESPONSE_ITEMS", 3)
+    monkeypatch.setattr(media_download._PlainFileHashVerifier, "_MAX_RETAINED_HASHES", 3)
+    batches = iter(((_hash(2, 2), _hash(0, 2), _hash(0, 2)), (_hash(2, 2), _hash(4, 2)), (_hash(4, 2), _hash(6, 2))))
+    offsets = []
+
+    async def invoke(request: object, **kwargs: object) -> object:
+        assert isinstance(request, functions.UploadGetFileHashes)
+        offsets.append(request.offset)
+        return next(batches)
+
+    verifier = _verifier(invoke)
+
+    async def scenario() -> None:
+        assert await verifier._ensure_hash_coverage(_location(), 0, 4) == ((0, 2, b"h" * 32), (2, 2, b"h" * 32))
+        assert await verifier._ensure_hash_coverage(_location(), 4, 6) == ((4, 2, b"h" * 32),)
+        before = verifier._hashes.copy()
+        with pytest.raises(media_download.MediaIntegrityError, match="hash metadata limit exceeded"):
+            await verifier._ensure_hash_coverage(_location(), 6, 8)
+        assert verifier._hashes == before
+        assert verifier._hash_keys == [(0, 2), (2, 2), (4, 2)]
+        assert not verifier._validated
+
+    asyncio.run(scenario())
+    assert offsets == [0, 4, 6]
+
+
+@pytest.mark.parametrize(
+    ("batch", "reason", "offset", "limit"),
+    [
+        ((_hash(13, 3), _hash(0, 2)), "contradictory overlapping hash metadata", 13, 1),
+        ((_hash(0, 2), _hash(8, 3)), "contradictory overlapping hash metadata", 10, 1),
+        ((_hash(10, 2),), "contradictory overlapping hash metadata", 10, 2),
+        ((_hash(10, 4, b"z" * 32),), "contradictory hash metadata", 10, 4),
+        ((_hash(3, 4), _hash(0, 4)), "contradictory overlapping hash metadata", 3, 1),
+        ((_hash(0, 2), _hash(0, 2, b"z" * 32)), "contradictory hash metadata", 0, 2),
+        ((_hash(0, 2), _hash(5, 1, b"short")), "invalid hash metadata", 5, 1),
+        ((_hash(0, 2), _hash(5, 0)), "invalid hash metadata", 5, 0),
+    ],
+)
+def test_plain_hash_batch_rejection_keeps_previous_metadata(
+    batch: tuple[types.FileHash, ...], reason: str, offset: int, limit: int
+) -> None:
+    verifier = _verifier(_unused_invoke)
+    verifier._remember_hashes((_hash(10, 4),), offset=10, limit=4)
+    with pytest.raises(media_download.MediaIntegrityError) as failure:
+        verifier._remember_hashes(batch, offset=0, limit=20)
+    assert (failure.value.reason, failure.value.offset, failure.value.limit) == (reason, offset, limit)
+    assert verifier._hashes == {(10, 4): b"h" * 32}
+    assert verifier._hash_keys == [(10, 4)]
+
+
+def test_plain_hash_unordered_batches_preserve_adjacency_partial_coverage_and_refresh() -> None:
+    verifier = _verifier(_unused_invoke)
+
+    async def scenario() -> None:
+        await verifier._ensure_identity(("old",))
+        verifier._remember_hashes((_hash(10, 4), _hash(0, 3)), offset=0, limit=14)
+        verifier._remember_hashes((_hash(14, 2), _hash(3, 7), _hash(0, 3)), offset=3, limit=13)
+        assert verifier._covering_intervals(2, 15) == (
+            (0, 3, b"h" * 32),
+            (3, 7, b"h" * 32),
+            (10, 4, b"h" * 32),
+            (14, 2, b"h" * 32),
+        )
+        assert verifier._covering_intervals(10, 14) == ((10, 4, b"h" * 32),)
+        assert verifier._first_uncovered_offset(2, 17) == 16
+        assert verifier._covering_intervals(16, 17) is None
+        await verifier._ensure_identity(("new",))
+        assert not verifier._hashes
+        assert not verifier._hash_keys
+        assert verifier._covering_intervals(0, 1) is None
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("repeat", [False, True])
+def test_plain_hash_gap_and_no_progress_fail_at_first_missing_byte(repeat: bool) -> None:
+    batch = (_hash(3, 3), _hash(0, 2))
+    offsets = []
+
+    async def invoke(request: object, **kwargs: object) -> object:
+        assert isinstance(request, functions.UploadGetFileHashes)
+        offsets.append(request.offset)
+        return batch if len(offsets) == 1 or repeat else ()
+
+    verifier = _verifier(invoke)
+    with pytest.raises(media_download.MediaIntegrityError) as failure:
+        asyncio.run(verifier._ensure_hash_coverage(_location(), 0, 6))
+    assert failure.value.reason == ("hash response loop" if repeat else "hash coverage gap")
+    assert (failure.value.offset, failure.value.limit) == (2, 4)
+    assert offsets == [0, 2]
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+def test_plain_hash_large_batch_validation_has_bounded_work(reverse: bool) -> None:
+    count = 512
+    batch = tuple(_hash(offset, 1) for offset in sorted(range(count), reverse=reverse))
+
+    async def invoke(request: object, **kwargs: object) -> object:
+        return batch
+
+    verifier = _verifier(invoke)
+
+    def action() -> None:
+        intervals = asyncio.run(verifier._ensure_hash_coverage(_location(), 0, count))
+        assert intervals == tuple((offset, 1, b"h" * 32) for offset in range(count))
+
+    # Counting executed validator lines catches all-prior scans without wall-clock thresholds
+    assert _count_verifier_lines(action) < 80 * count
+
+
+def test_plain_hash_successive_requests_do_not_rescan_retained_prefix() -> None:
+    count = 4096
+
+    async def invoke(request: object, **kwargs: object) -> object:
+        assert isinstance(request, functions.UploadGetFileHashes)
+        return (_hash(request.offset, 1),)
+
+    verifier = _verifier(invoke)
+    verifier._remember_hashes(tuple(_hash(offset, 1) for offset in range(count)), offset=0, limit=count)
+
+    async def scenario() -> None:
+        for offset in range(count, count + 4):
+            assert await verifier._ensure_hash_coverage(_location(), offset, offset + 1) == ((offset, 1, b"h" * 32),)
+
+    assert _count_verifier_lines(lambda: asyncio.run(scenario())) < 1000
+    assert len(verifier._hashes) == count + 4
+
+
+@pytest.mark.parametrize("corrupt_unrequested_byte", [False, True])
+def test_plain_hash_unordered_metadata_verifies_whole_interval_before_partial_output(
+    corrupt_unrequested_byte: bool,
+) -> None:
+    payload = b"a" * 1024 + b"b" * 1024 + b"c" * 1024 + b"d" * 1024
+    intervals = ((3072, 1024), (0, 1024), (1024, 2048))
+    hashes = tuple(
+        _hash(offset, limit, hashlib.sha256(payload[offset : offset + limit]).digest()) for offset, limit in intervals
+    )
+    fetched = []
+
+    async def invoke(request: object, **kwargs: object) -> object:
+        if isinstance(request, functions.UploadGetFileHashes):
+            return hashes
+        assert isinstance(request, functions.UploadGetFile)
+        fetched.append((request.offset, request.limit))
+        part = payload[request.offset : request.offset + request.limit]
+        if corrupt_unrequested_byte and request.offset == 1024 and request.limit == 2048:
+            part = part[:-1] + b"z"
+        return types.UploadFile(type=types.StorageFileUnknown(), mtime=0, bytes=part)
+
+    verifier = _verifier(invoke)
+    verification = verifier.verify(_location(), offset=1024, payload=payload[1024:2048])
+    if corrupt_unrequested_byte:
+        with pytest.raises(media_download.MediaIntegrityError, match="hash mismatch"):
+            asyncio.run(verification)
+    else:
+        asyncio.run(verification)
+    assert fetched == [(1024, 2048)]
+
+
+def _cache_document(*, document_id: int = 11, size: int = 1024) -> types.Document:
+    return types.Document(id=document_id, access_hash=22, file_reference=b"reference", date=1700000000, mime_type="application/octet-stream", size=size, dc_id=2, attributes=())  # fmt: skip
+
+
+def _cache_wrapper(*, raw: object | None = None, size: int = 1024) -> Media:
+    return Media(id=11, access_hash=22, file_reference=b"reference", mime_type="application/octet-stream", size=size, dc_id=2, raw=raw)  # fmt: skip
+
+
+def _cached_file_part(payload: bytes) -> types.UploadFile:
+    return types.UploadFile(type=types.StorageFileUnknown(), mtime=0, bytes=payload)
+
+
+async def _download_cached_media(streaming: bool, invoke: Any, media: object, **options: Any) -> bytes:
+    if streaming:
+        return b"".join([part async for part in iter_download_media(invoke, media, **options)])
+    result = await download_media(invoke, media, **options)
+    assert result.data is not None
+    return result.data
+
+
+@pytest.mark.parametrize("streaming", [False, True])
+@pytest.mark.parametrize(
+    "raw",
+    [
+        _cache_document(document_id=12),
+        types.Photo(
+            id=11,
+            access_hash=22,
+            file_reference=b"reference",
+            date=1700000000,
+            sizes=(types.PhotoSize(type="x", w=100, h=100, size=1024),),
+            dc_id=2,
+        ),
+        types.InputDocumentFileLocation(id=11, access_hash=22, file_reference=b"reference", thumb_size="m"),
+    ],
+)
+def test_conflicting_wrapper_caches_only_effective_raw_location(streaming: bool, raw: object) -> None:
+    async def scenario() -> None:
+        cache = DownloadRangeCache(max_bytes=4096)
+        requests: list[Any] = []
+        target = encode_file_id(_cache_wrapper())
+        conflicting = _cache_wrapper(raw=raw)
+        assert conflicting.file_id == target
+
+        async def invoke(request: Any, **_kwargs: object) -> object:
+            assert isinstance(request, functions.UploadGetFile)
+            requests.append(request)
+            is_target = (
+                isinstance(request.location, types.InputDocumentFileLocation)
+                and request.location.id == 11
+                and request.location.thumb_size == ""
+            )
+            return _cached_file_part((b"a" if is_target else b"b") * 1024)
+
+        options = {"limit": 1024, "part_size": 1024, "range_cache": cache}
+        try:
+            assert await _download_cached_media(streaming, invoke, conflicting, **options) == b"b" * 1024
+            assert await _download_cached_media(streaming, invoke, target, **options) == b"a" * 1024
+            assert len(requests) == 2
+            assert await _download_cached_media(streaming, invoke, encode_file_id(raw), **options) == b"b" * 1024
+            assert await _download_cached_media(streaming, invoke, target, **options) == b"a" * 1024
+            assert len(requests) == 2
+        finally:
+            await cache.clear()
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("streaming", [False, True])
+@pytest.mark.parametrize("location_type", [types.InputDocumentFileLocation, types.InputPhotoFileLocation])
+def test_effective_location_preserves_thumbnail_identity(streaming: bool, location_type: Any) -> None:
+    async def scenario() -> None:
+        cache = DownloadRangeCache(max_bytes=4096)
+        requests: list[Any] = []
+        small = location_type(id=11, access_hash=22, file_reference=b"reference", thumb_size="m")
+        large = replace(small, thumb_size="x")
+
+        async def invoke(request: Any, **_kwargs: object) -> object:
+            assert isinstance(request, functions.UploadGetFile)
+            requests.append(request)
+            return _cached_file_part((b"s" if request.location.thumb_size == "m" else b"l") * 1024)
+
+        options = {"limit": 1024, "part_size": 1024, "range_cache": cache}
+        try:
+            assert await _download_cached_media(streaming, invoke, _cache_wrapper(raw=small), **options) == b"s" * 1024
+            assert await _download_cached_media(streaming, invoke, _cache_wrapper(raw=large), **options) == b"l" * 1024
+            assert await _download_cached_media(streaming, invoke, encode_file_id(small), **options) == b"s" * 1024
+            assert await _download_cached_media(streaming, invoke, encode_file_id(large), **options) == b"l" * 1024
+            assert [request.location.thumb_size for request in requests] == ["m", "x"]
+        finally:
+            await cache.clear()
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("streaming", [False, True])
+def test_read_ahead_uses_effective_location_key(streaming: bool) -> None:
+    async def scenario() -> None:
+        cache = DownloadRangeCache(max_bytes=8192)
+        requests: list[Any] = []
+        raw = _cache_document(document_id=12, size=3072)
+        target = encode_file_id(_cache_wrapper(size=3072))
+        payloads = {11: b"a" * 1024 + b"c" * 1024 + b"e" * 1024, 12: b"b" * 1024 + b"d" * 1024 + b"f" * 1024}
+
+        async def invoke(request: Any, **_kwargs: object) -> object:
+            assert isinstance(request, functions.UploadGetFile)
+            requests.append(request)
+            return _cached_file_part(payloads[request.location.id][request.offset : request.offset + request.limit])
+
+        options = {"limit": 1024, "part_size": 1024, "concurrency": 1, "range_cache": cache}
+        try:
+            assert (
+                await _download_cached_media(
+                    streaming, invoke, _cache_wrapper(raw=raw, size=3072), read_ahead_bytes=1024, **options
+                )
+                == b"b" * 1024
+            )
+            await asyncio.gather(*tuple(cache._background))
+            assert [(request.location.id, request.offset) for request in requests] == [(12, 0), (12, 1024)]
+            assert await _download_cached_media(streaming, invoke, target, offset=1024, **options) == b"c" * 1024
+            assert (
+                await _download_cached_media(streaming, invoke, encode_file_id(raw), offset=1024, **options)
+                == b"d" * 1024
+            )
+            assert [(request.location.id, request.offset) for request in requests] == [(12, 0), (12, 1024), (11, 1024)]
+        finally:
+            await cache.clear()
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("streaming", [False, True])
+@pytest.mark.parametrize("replace_resource", [False, True])
+def test_automatic_cache_key_remains_bound_during_reference_refresh(streaming: bool, replace_resource: bool) -> None:
+    async def scenario() -> None:
+        cache = DownloadRangeCache(max_bytes=4096)
+        requests: list[Any] = []
+        target = encode_file_id(_cache_document())
+
+        async def invoke(request: Any, **_kwargs: object) -> object:
+            assert isinstance(request, functions.UploadGetFile)
+            requests.append(request)
+            if len(requests) == 1:
+                raise BadRequest("FILE_REFERENCE_EXPIRED")
+            return _cached_file_part((b"a" if request.location.id == 11 else b"b") * 1024)
+
+        def refresh(location: object) -> object:
+            assert isinstance(location, types.InputDocumentFileLocation)
+            return types.InputDocumentFileLocation(
+                id=12 if replace_resource else 11,
+                access_hash=location.access_hash,
+                file_reference=b"renewed",
+                thumb_size=location.thumb_size,
+            )
+
+        options = {"limit": 1024, "part_size": 1024, "range_cache": cache}
+        try:
+            operation = _download_cached_media(streaming, invoke, target, file_reference_refresher=refresh, **options)
+            if replace_resource:
+                with pytest.raises(MediaDownloadError, match="file identity changed"):
+                    await operation
+                assert len(requests) == 1
+            else:
+                assert await operation == b"a" * 1024
+                assert requests[-1].location.file_reference == b"renewed"
+            assert await _download_cached_media(streaming, invoke, target, **options) == b"a" * 1024
+            assert len(requests) == 2
+            assert all(request.location.id == 11 for request in requests)
+        finally:
+            await cache.clear()
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("streaming", [False, True])
+def test_legacy_location_has_no_automatic_file_id_cache_key(streaming: bool) -> None:
+    async def scenario() -> None:
+        cache = DownloadRangeCache(max_bytes=4096)
+        requests: list[object] = []
+        raw = types.InputFileLocation(volume_id=1, local_id=2, secret=3, file_reference=b"reference")
+
+        async def invoke(request: object, **_kwargs: object) -> object:
+            requests.append(request)
+            return _cached_file_part(b"legacy")
+
+        try:
+            for _ in range(2):
+                assert (
+                    await _download_cached_media(
+                        streaming, invoke, _cache_wrapper(raw=raw), limit=6, part_size=1024, range_cache=cache
+                    )
+                    == b"legacy"
+                )
+            assert len(requests) == 2
+            assert not cache._entries
+        finally:
+            await cache.clear()
+
+    asyncio.run(scenario())

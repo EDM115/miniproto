@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.messages.message_from_raw"
 source_path: "src/miniproto/messages.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/messages.py#L101"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/messages.py#L104"
 module: "miniproto.messages"
 ---
 

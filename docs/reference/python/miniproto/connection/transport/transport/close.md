@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.connection.transport.Transport.close"
 source_path: "src/miniproto/connection/transport.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/transport.py#L95"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/transport.py#L96"
 aliases: ["miniproto.connection.Transport.close"]
 module: "miniproto.connection.transport"
 ---

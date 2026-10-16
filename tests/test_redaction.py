@@ -1,11 +1,21 @@
 from __future__ import annotations
 
-from typing import cast
+import io
+import json
+import traceback
+from dataclasses import dataclass
+from typing import ClassVar, cast
+
+import pytest
 
 from miniproto.auth.key_exchange import AuthKeyExchangeResult
 from miniproto.config import ClientConfig, TransportConfig
-from miniproto.errors import AmbiguousRpcResult, ProtocolValidationError, RpcError
-from miniproto.raw import functions
+from miniproto.errors import AmbiguousRpcResult, ClientDisconnected, ProtocolValidationError, RequestTimeout, RpcError
+from miniproto.invoke import decode_rpc_response, wrap_transport_failure
+from miniproto.mtproto.codec import RpcErrorBody
+from miniproto.observability import LogFormat, configure_logging, get_logger
+from miniproto.raw import functions, types
+from miniproto.raw.base import TLRequest
 from miniproto.security.redaction import REDACTED, is_sensitive_key, redact_mapping, redact_text, safe_repr
 from miniproto.session.models import (
     AuthKey,
@@ -256,3 +266,137 @@ def test_protocol_validation_error_redacts_sensitive_context() -> None:
     assert "key-secret" not in rendered
     assert "key-secret" not in debug
     assert "msg_id" in rendered
+
+
+@pytest.mark.parametrize(
+    ("raw_request", "credential"),
+    [
+        pytest.param(
+            functions.AuthCheckRecoveryPassword(code="synthetic-check-18"), "synthetic-check-18", id="check-recovery"
+        ),
+        pytest.param(functions.AuthRecoverPassword(code="synthetic-recover-18"), "synthetic-recover-18", id="recover"),
+        pytest.param(
+            functions.AccountConfirmPasswordEmail(code="synthetic-confirm-18"),
+            "synthetic-confirm-18",
+            id="confirm-email",
+        ),
+        pytest.param(
+            functions.AuthSignIn(
+                phone_number="synthetic-phone-18",
+                phone_code_hash="synthetic-hash-18",
+                email_verification=types.EmailVerificationCode(code="synthetic-signin-18"),
+            ),
+            "synthetic-signin-18",
+            id="signin-email",
+        ),
+        pytest.param(
+            functions.AccountVerifyEmail(
+                purpose=types.EmailVerifyPurposeLoginChange(),
+                verification=types.EmailVerificationCode(code="synthetic-verify-18"),
+            ),
+            "synthetic-verify-18",
+            id="verify-email",
+        ),
+    ],
+)
+def test_authentication_codes_are_redacted_in_rpc_and_timeout_diagnostics(
+    raw_request: TLRequest, credential: str
+) -> None:
+    wire_before = raw_request.serialize()
+    assert credential.encode() in wire_before
+    with pytest.raises(RpcError) as caught:
+        decode_rpc_response(RpcErrorBody(error_code=400, error_message="EMAIL_CODE_INVALID"), raw_request)
+    timeout = wrap_transport_failure(TimeoutError("synthetic deadline"), raw_request, connected=True)
+
+    assert isinstance(timeout, RequestTimeout)
+    for error in (caught.value, timeout):
+        assert error.request is raw_request
+        for rendered in (str(error), repr(error), "".join(traceback.format_exception(error))):
+            assert credential not in rendered
+            assert REDACTED in rendered
+            assert "synthetic-phone-18" not in rendered
+            assert "synthetic-hash-18" not in rendered
+    assert "[400] EMAIL_CODE_INVALID" in str(caught.value)
+    assert "code=400" in repr(caught.value)
+    assert raw_request.serialize() == wire_before
+
+
+@pytest.mark.parametrize("connected", [True, False])
+def test_connection_failure_wrappers_redact_recovery_codes(connected: bool) -> None:
+    raw_request = functions.AuthRecoverPassword(code="synthetic-connection-18")
+    error = wrap_transport_failure(ConnectionError("synthetic disconnect"), raw_request, connected=connected)
+
+    assert type(error) is (RpcError if connected else ClientDisconnected)
+    assert error.request is raw_request
+    assert "synthetic-connection-18" not in str(error)
+    assert "synthetic-connection-18" not in repr(error)
+    assert "synthetic disconnect" in str(error)
+
+
+@pytest.mark.parametrize("log_format", ["text", "json"])
+def test_configured_exception_logging_redacts_nested_email_codes(
+    log_format: LogFormat, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    stream = io.StringIO()
+    logger = get_logger()
+    monkeypatch.setattr(logger, "handlers", [])
+    monkeypatch.setattr(logger, "level", logger.level)
+    monkeypatch.setattr(logger, "propagate", logger.propagate)
+    configure_logging("ERROR", format=log_format, stream=stream)
+    raw_request = functions.AccountVerifyEmail(
+        purpose=types.EmailVerifyPurposeLoginChange(),
+        verification=types.EmailVerificationCode(code="synthetic-logged-18"),
+    )
+    try:
+        raise wrap_transport_failure(TimeoutError("synthetic deadline"), raw_request, connected=True)
+    except RpcError:
+        logger.exception(
+            "verification failed",
+            extra={
+                "miniproto_event": {"event": "verification.failed", "request": raw_request, "code": "visible-status-18"}
+            },
+        )
+
+    rendered = stream.getvalue()
+    assert "synthetic-logged-18" not in rendered
+    assert REDACTED in rendered
+    assert "visible-status-18" in rendered
+    assert "RequestTimeout" in rendered
+    if log_format == "json":
+        payload = json.loads(rendered)
+        assert payload["request"]["verification"] == {"code": REDACTED}
+        assert payload["code"] == "visible-status-18"
+
+
+def test_semantic_redaction_keeps_ordinary_code_fields_and_existing_secret_controls() -> None:
+    @dataclass
+    class OrdinaryCode:
+        code: str
+        QUALNAME: ClassVar[str] = "emailVerificationCode"
+
+    verification = types.EmailVerificationCode(code="synthetic-context-18")
+    data = {
+        "nested": [({"verification": verification},)],
+        "ordinary": OrdinaryCode(code="visible-dataclass-18"),
+        "code": "visible-mapping-18",
+        "status": types.Error(code=503, text="visible status"),
+        "phone_code": "synthetic-phone-code-18",
+        "bot_token": "synthetic-bot-18",
+        "payload": b"synthetic-binary-18",
+    }
+
+    assert redact_mapping(data) == {
+        "nested": [({"verification": {"code": REDACTED}},)],
+        "ordinary": {"code": "visible-dataclass-18"},
+        "code": "visible-mapping-18",
+        "status": {"code": 503, "text": "visible status"},
+        "phone_code": REDACTED,
+        "bot_token": REDACTED,
+        "payload": "<bytes len=19>",
+    }
+    error = RpcError("synthetic failure", code=503, context=data)
+    assert "synthetic-context-18" not in str(error)
+    assert "synthetic-context-18" not in repr(error)
+    assert "code=503" in repr(error)
+    assert safe_repr(verification) == "{'code': '[redacted]'}"
+    assert verification.code == "synthetic-context-18"

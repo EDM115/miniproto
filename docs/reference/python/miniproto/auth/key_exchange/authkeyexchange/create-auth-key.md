@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.auth.key_exchange.AuthKeyExchange.create_auth_key"
 source_path: "src/miniproto/auth/key_exchange.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/auth/key_exchange.py#L514"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/auth/key_exchange.py#L517"
 aliases: ["miniproto.AuthKeyExchange.create_auth_key","miniproto.auth.AuthKeyExchange.create_auth_key"]
 module: "miniproto.auth.key_exchange"
 ---

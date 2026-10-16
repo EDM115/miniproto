@@ -4,6 +4,7 @@ import hashlib
 import json
 import subprocess
 import sys
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -139,6 +140,32 @@ assert len(record.peers) == 1
             capture_output=True,
             check=True,
         )
+
+
+@pytest.mark.parametrize("protected", [False, True])
+def test_legacy_native_vectors_preserve_credentials_and_require_alias_reverification(
+    monkeypatch: pytest.MonkeyPatch, protected: bool
+) -> None:
+    original = rich_record()
+    document = json.loads(session_strings.serialize_session_data(original))
+    for peer in document["payload"]["peers"]:
+        peer.pop("username_observed_at")
+    payload = json.dumps(document, sort_keys=True, separators=(",", ":")).encode()
+    monkeypatch.setattr(session_strings, "serialize_session_data", lambda _record: payload)
+    native_fixture = FIXTURES["miniproto"]
+    passphrase = native_fixture["protected"]["passphrase"] if protected else None
+    if protected:
+        random_values = [
+            bytes.fromhex(native_fixture["protected"]["salt"]),
+            bytes.fromhex(native_fixture["protected"]["nonce"]),
+        ]
+        monkeypatch.setattr(session_strings.os, "urandom", lambda _size: random_values.pop(0))
+    value = export_session_string(original, passphrase=passphrase)
+    expected_vector = native_fixture["legacy"]["protected" if protected else "plain"]
+    assert len(value) == expected_vector["length"]
+    assert hashlib.sha256(value.encode()).hexdigest() == expected_vector["sha256"]
+    restored = import_session_string(value, passphrase=passphrase)
+    assert restored == replace(original, peers=(replace(original.peers[0], username_observed_at={}),))
 
 
 def test_native_session_string_fails_closed_for_wrong_passphrase_and_tampering() -> None:

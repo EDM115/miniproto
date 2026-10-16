@@ -1,13 +1,13 @@
 ---
 title: "miniproto.tl.codec.decode_vector"
-description: "Decode a boxed TL vector."
+description: "Decode a boxed TL vector whose elements consume wire bytes."
 generated: true
 editUrl: false
 language: "python"
 kind: "function"
 qualified_name: "miniproto.tl.codec.decode_vector"
 source_path: "src/miniproto/tl/codec.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/tl/codec.py#L307"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/tl/codec.py#L312"
 aliases: ["miniproto.tl.decode_vector"]
 module: "miniproto.tl.codec"
 ---
@@ -18,7 +18,7 @@ module: "miniproto.tl.codec"
 decode_vector(data: bytes | memoryview, offset: int, item_type: str) -> tuple[tuple[Any, ...], int]
 ```
 
-Decode a boxed TL vector.
+Decode a boxed TL vector whose elements consume wire bytes.
 
 **Parameters:**
 
@@ -32,4 +32,5 @@ Decode a boxed TL vector.
 
 **Raises:**
 
+- <code>[TLCodecError](#miniproto.tl.codec.TLCodecError)</code> – If the element type is zero-width ``true``, including an empty vector.
 - <code>[ValueError](#ValueError)</code> – If the constructor, count or element bytes are invalid, including ``TLCodecError`` from the generic path.

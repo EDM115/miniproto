@@ -7,7 +7,7 @@ language: "python"
 kind: "attribute"
 qualified_name: "miniproto.updates.manager.UpdateQueueOverflowPolicy"
 source_path: "src/miniproto/updates/manager.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/updates/manager.py#L30"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/updates/manager.py#L31"
 aliases: ["miniproto.updates.UpdateQueueOverflowPolicy"]
 module: "miniproto.updates.manager"
 ---

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 import secrets
 import time
@@ -129,6 +130,8 @@ class ResPQ:
         nonce, offset = decode_int128(data, offset)
         server_nonce, offset = decode_int128(data, offset)
         pq, offset = decode_bytes(data, offset)
+        if not 1 <= len(pq) <= 8:
+            raise TLCodecError("resPQ pq must contain between one and eight bytes")
         fingerprints, offset = decode_vector(data, offset, "long")
         _require_consumed(data, offset)
         return cls(
@@ -527,10 +530,11 @@ class AuthKeyExchange:
         res_pq = ResPQ.deserialize(await self.transport.send_unencrypted(ReqPQMulti(nonce).serialize()))
         if res_pq.nonce != nonce:
             raise ValueError("resPQ nonce does not match request nonce")
-        p, q = factorize_pq(int.from_bytes(res_pq.pq, "big", signed=False))
+        rsa_key = select_rsa_key(res_pq.server_public_key_fingerprints, self.rsa_keys)
+        # Cancellation releases the caller while any started worker finishes its finite work budget
+        p, q = await asyncio.to_thread(factorize_pq, int.from_bytes(res_pq.pq, "big", signed=False))
         p_bytes = _minimal_be(p)
         q_bytes = _minimal_be(q)
-        rsa_key = select_rsa_key(res_pq.server_public_key_fingerprints, self.rsa_keys)
         new_nonce = _random_int(32, self._random_bytes)
         inner = PQInnerDataDC(
             pq=res_pq.pq,

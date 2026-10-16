@@ -33,7 +33,7 @@ Upload a source as MTProto file parts and return its input-file handle.
 - **max_buffer_size** (<code>[int](#int) | None</code>) – Optional validation threshold for the initial ``part_size * concurrency``. It does not cap queued payloads or account for later part-size growth.
 - **request_timeout** (<code>[float](#float) | None</code>) – Per-part timeout in seconds, ``None`` selects 45 seconds.
 - **flood_sleep_threshold** (<code>[int](#int) | None</code>) – Largest retryable server flood wait in seconds, defaults to 30, ``None`` disables flood retries. Each part allows up to 16 eligible flood retries outside ``max_retries``.
-- **max_file_parts** (<code>[int](#int) | None</code>) – Maximum part count, defaults to 4000, ``None`` disables the cap. Parts grow to the next supported size up to 512 KiB when needed.
+- **max_file_parts** (<code>[int](#int) | None</code>) – Maximum part count, defaults to 4000, ``None`` disables the cap. Parts grow to the next supported size up to 512 KiB when needed. Unknown-length sources cannot spool more than this count times 512 KiB.
 
 **Returns:**
 

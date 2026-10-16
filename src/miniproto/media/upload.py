@@ -126,7 +126,7 @@ async def upload_file(
         max_buffer_size: Optional validation threshold for the initial ``part_size * concurrency``. It does not cap queued payloads or account for later part-size growth.
         request_timeout: Per-part timeout in seconds, ``None`` selects 45 seconds.
         flood_sleep_threshold: Largest retryable server flood wait in seconds, defaults to 30, ``None`` disables flood retries. Each part allows up to 16 eligible flood retries outside ``max_retries``.
-        max_file_parts: Maximum part count, defaults to 4000, ``None`` disables the cap. Parts grow to the next supported size up to 512 KiB when needed.
+        max_file_parts: Maximum part count, defaults to 4000, ``None`` disables the cap. Parts grow to the next supported size up to 512 KiB when needed. Unknown-length sources cannot spool more than this count times 512 KiB.
 
     Returns:
         The completed file metadata and a matching ``InputFile`` or ``InputFileBig``.
@@ -145,7 +145,7 @@ async def upload_file(
     if request_timeout is None:
         request_timeout = DEFAULT_UPLOAD_PART_TIMEOUT
     started = time.perf_counter()
-    prepared = await _prepare_upload_source(source, file_name=file_name, chunk_size=part_size)
+    prepared = await _prepare_upload_source(source, file_name=file_name, chunk_size=part_size, max_file_parts=max_file_parts)  # fmt: skip
     cleanup_pending = True
     try:
         if prepared.size <= 0:
@@ -397,13 +397,14 @@ def _part_size_for_part_limit(size: int, part_size: int, max_file_parts: int | N
     return adjusted
 
 
-async def _prepare_upload_source(source: FileSource, *, file_name: str | None, chunk_size: int) -> _PreparedUpload:
+async def _prepare_upload_source(source: FileSource, *, file_name: str | None, chunk_size: int, max_file_parts: int | None) -> _PreparedUpload:  # fmt: skip
     """Normalize replayable sources directly and materialize one-shot sources.
 
     Args:
         source: Input path, bytes, stream or iterable.
         file_name: Optional file-name override.
         chunk_size: Spool/read chunk size in bytes.
+        max_file_parts: Optional part cap limiting the total size of one-shot sources.
     """
     if isinstance(source, str | os.PathLike):
         path = Path(cast(str | os.PathLike[str], source))
@@ -448,38 +449,58 @@ async def _prepare_upload_source(source: FileSource, *, file_name: str | None, c
             open_reader=open_existing_reader,
             cleanup=lambda: None,
         )
-    return await _materialize_unknown_source(source, file_name=file_name, chunk_size=chunk_size)
+    return await _materialize_unknown_source(source, file_name=file_name, chunk_size=chunk_size, max_file_parts=max_file_parts)  # fmt: skip
 
 
-async def _materialize_unknown_source(source: object, *, file_name: str | None, chunk_size: int) -> _PreparedUpload:
+async def _materialize_unknown_source(source: object, *, file_name: str | None, chunk_size: int, max_file_parts: int | None) -> _PreparedUpload:  # fmt: skip
     """Spool an unknown-length source to a temporary replayable binary reader.
 
     Args:
         source: Non-seekable reader or synchronous/asynchronous chunk iterable.
         file_name: Optional file-name override.
         chunk_size: Requested read size in bytes for reader sources.
+        max_file_parts: Optional part cap checked before each temporary-file write.
     """
     temporary = tempfile.TemporaryFile("w+b")  # noqa: SIM115 - cleanup is returned with the prepared source
     size = 0
+    max_source_size = None if max_file_parts is None else max_file_parts * DEFAULT_CHUNK_SIZE
+    chunks_since_checkpoint = 0
+
+    async def write_chunk(payload: bytes) -> None:
+        """Reject impossible source sizes before writing and periodically allow cancellation.
+
+        Args:
+            payload: Next source chunk to admit to the owned upload spool.
+        """
+        nonlocal size, chunks_since_checkpoint
+        next_size = size + len(payload)
+        if max_source_size is not None and next_size > max_source_size:
+            raise MediaUploadError(f"file requires more than {max_file_parts} upload parts at the maximum part size")
+        temporary.write(payload)
+        size = next_size
+        chunks_since_checkpoint += 1
+        if chunks_since_checkpoint >= 64:
+            # Count empty iterable chunks too so immediate producers cannot starve cancellation
+            chunks_since_checkpoint = 0
+            await asyncio.sleep(0)
+
     try:
         if _has_read(source):
             while True:
-                chunk = await _maybe_await(cast(Any, source).read(chunk_size))
+                read_size = chunk_size if max_source_size is None else min(chunk_size, max_source_size - size + 1)
+                chunk = await _maybe_await(cast(Any, source).read(read_size))
                 payload = _coerce_chunk(chunk)
                 if not payload:
                     break
-                temporary.write(payload)
-                size += len(payload)
+                await write_chunk(payload)
         elif hasattr(source, "__aiter__"):
             async for chunk in cast(AsyncIterable[bytes], source):
                 payload = _coerce_chunk(chunk)
-                temporary.write(payload)
-                size += len(payload)
+                await write_chunk(payload)
         else:
             for chunk in cast(Iterable[bytes], source):
                 payload = _coerce_chunk(chunk)
-                temporary.write(payload)
-                size += len(payload)
+                await write_chunk(payload)
         temporary.flush()
 
         @contextmanager

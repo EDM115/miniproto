@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.auth.key_exchange.AuthKeyExchange"
 source_path: "src/miniproto/auth/key_exchange.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/auth/key_exchange.py#L470"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/auth/key_exchange.py#L473"
 aliases: ["miniproto.AuthKeyExchange","miniproto.auth.AuthKeyExchange"]
 module: "miniproto.auth.key_exchange"
 ---

@@ -1,6 +1,6 @@
 ---
 title: "miniproto.auth.service.AuthService.handle_dc_migration"
-description: "Persist Telegram's requested DC migration and export user authorization when needed."
+description: "Prepare Telegram's requested DC migration without changing the active session."
 generated: true
 editUrl: false
 language: "python"
@@ -18,11 +18,9 @@ module: "miniproto.auth.service"
 handle_dc_migration(error: DatacenterMigration) -> types.AuthExportedAuthorization | None
 ```
 
-Persist Telegram's requested DC migration and export user authorization when needed.
+Prepare Telegram's requested DC migration without changing the active session.
 
-An unauthenticated session only changes its target DC. An authenticated session also
-obtains an exported authorization, which the caller must import through a sender for
-the target DC.
+Authenticated sessions export authorization through the source DC. The caller must prepare the target key, import the authorization when present and atomically activate the target DC, key and salt only after preparation succeeds.
 
 **Parameters:**
 

@@ -1,18 +1,32 @@
 from __future__ import annotations
 
 import asyncio
+import importlib.util
+import io
 import json
 import socket
+import sys
+import threading
 import time
-from collections.abc import Mapping
-from concurrent.futures import ThreadPoolExecutor
+import warnings
+from collections.abc import Generator, Mapping
+from concurrent.futures import Future, ThreadPoolExecutor
+from contextlib import contextmanager, suppress
+from dataclasses import dataclass
+from html.parser import HTMLParser
+from http.client import HTTPResponse
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from queue import Queue
+from types import ModuleType, SimpleNamespace
+from unittest.mock import AsyncMock
 from urllib.error import URLError
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
 import pytest
 import tools.bench.benchmark_live_media_limit as benchmark
+from tools.bench import secret_prompt
 from tools.bench.benchmark_live_media_limit import (
     DEFAULT_CHUNK_SIZE,
     MAX_DOWNLOAD_CHUNK_SIZE,
@@ -505,3 +519,364 @@ def wait_for_http_prompt(url: str) -> None:
             last_error = exc
             time.sleep(0.05)
     raise AssertionError(f"HTTP prompt did not start: {last_error}")
+
+
+@pytest.fixture
+def live_helpers(monkeypatch: pytest.MonkeyPatch) -> ModuleType:
+    path = Path(__file__).parent / "integration" / "live_helpers.py"
+    spec = importlib.util.spec_from_file_location("security_prompt_live_helpers", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    vars(module).update(_LOADED_DOTENV=True, _DOTENV_VALUES={})
+    monkeypatch.delenv("MINIPROTO_REAL_PASSWORD", raising=False)
+    monkeypatch.delenv("MINIPROTO_LIVE_PROMPT_CODE", raising=False)
+    return module
+
+
+def unexpected_prompt(*args: object, **kwargs: object) -> str:
+    pytest.fail("credential input was not permitted on this path")
+
+
+@pytest.mark.parametrize("source", ["integration", "benchmark"])
+def test_terminal_credentials_use_hidden_input_and_preserve_password_whitespace(
+    source: str, live_helpers: ModuleType, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("MINIPROTO_LIVE_PROMPT_CODE", "1")
+    monkeypatch.setattr(benchmark.sys, "stdin", SimpleNamespace(isatty=lambda: True))
+    monkeypatch.setattr("builtins.input", unexpected_prompt)
+    entered = iter([" 482761 ", "  synthetic 2FA value\t "])
+    prompts: list[str] = []
+
+    def hidden_input(prompt: str) -> str:
+        prompts.append(prompt)
+        return next(entered)
+
+    monkeypatch.setattr(secret_prompt.getpass, "getpass", hidden_input)
+    if source == "integration":
+        code_reader = live_helpers.code_callback()
+        password_reader = live_helpers.password_callback()
+        assert password_reader is not None
+        assert prompts == []
+        assert code_reader() == "482761"
+        assert password_reader() == "  synthetic 2FA value\t "
+    else:
+        env = {"MINIPROTO_LIVE_PROMPT_CODE": "1"}
+        assert benchmark.prompt_code(env) == "482761"
+        assert benchmark.prompt_password(env) == "  synthetic 2FA value\t "
+    assert len(prompts) == 2
+    captured = capsys.readouterr()
+    assert "482761" not in captured.out + captured.err
+    assert "synthetic 2FA value" not in captured.out + captured.err
+
+
+@pytest.mark.parametrize("flag,is_tty", [(None, True), ("0", True), ("1", False)])
+def test_terminal_prompt_gates_still_block_both_credentials(
+    flag: str | None, is_tty: bool, live_helpers: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    env: dict[str, str] = {}
+    if flag is not None:
+        monkeypatch.setenv("MINIPROTO_LIVE_PROMPT_CODE", flag)
+        env["MINIPROTO_LIVE_PROMPT_CODE"] = flag
+    monkeypatch.setattr(benchmark.sys, "stdin", SimpleNamespace(isatty=lambda: is_tty))
+    monkeypatch.setattr(secret_prompt.getpass, "getpass", unexpected_prompt)
+    monkeypatch.setattr("builtins.input", unexpected_prompt)
+    with pytest.raises(pytest.skip.Exception):
+        live_helpers.code_callback()
+    assert live_helpers.password_callback() is None
+    with pytest.raises(SystemExit):
+        benchmark.prompt_code(env)
+    assert benchmark.prompt_password(env) == ""
+
+
+@pytest.mark.parametrize("is_tty", [True, False])
+def test_configured_password_wins_without_a_prompt(
+    is_tty: bool, live_helpers: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("MINIPROTO_LIVE_PROMPT_CODE", "1")
+    monkeypatch.setenv("MINIPROTO_REAL_PASSWORD", "  environment value\t ")
+    live_helpers._DOTENV_VALUES["MINIPROTO_REAL_PASSWORD"] = "different dotenv value"  # noqa: S105 - synthetic prompt fixture
+    monkeypatch.setattr(benchmark.sys, "stdin", SimpleNamespace(isatty=lambda: is_tty))
+    monkeypatch.setattr(secret_prompt.getpass, "getpass", unexpected_prompt)
+    monkeypatch.setattr("builtins.input", unexpected_prompt)
+    callback = live_helpers.password_callback()
+    assert callback is not None
+    assert callback() == "  environment value\t "
+    assert benchmark.prompt_password({"MINIPROTO_REAL_PASSWORD": "  environment value\t "}) == "  environment value\t "
+    monkeypatch.delenv("MINIPROTO_REAL_PASSWORD")
+    dotenv_callback = live_helpers.password_callback()
+    assert dotenv_callback is not None
+    assert dotenv_callback() == "different dotenv value"
+
+
+def test_hidden_input_failure_stops_before_fallback_reads(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    terminal = io.StringIO("synthetic fallback value\n")
+    monkeypatch.setattr(sys, "stdin", terminal)
+    monkeypatch.setattr(secret_prompt.getpass, "getpass", vars(secret_prompt.getpass)["fallback_getpass"])
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", secret_prompt.getpass.GetPassWarning)
+        original_filters = list(warnings.filters)
+        with pytest.raises(RuntimeError, match="Cannot hide terminal input"):
+            secret_prompt.prompt_secret("Synthetic credential: ")
+        assert warnings.filters == original_filters
+    assert terminal.tell() == 0
+    captured = capsys.readouterr()
+    assert "synthetic fallback value" not in captured.out + captured.err
+
+
+@pytest.mark.parametrize("failure", [EOFError, KeyboardInterrupt])
+def test_hidden_input_interruption_propagates_without_retry(
+    failure: type[BaseException], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls = 0
+
+    def interrupted_input(prompt: str) -> str:
+        nonlocal calls
+        calls += 1
+        raise failure
+
+    monkeypatch.setattr(secret_prompt.getpass, "getpass", interrupted_input)
+    monkeypatch.setattr("builtins.input", unexpected_prompt)
+    with pytest.raises(failure):
+        secret_prompt.prompt_secret("Synthetic credential: ")
+    assert calls == 1
+
+
+def test_stored_user_session_skips_credential_callbacks(
+    live_helpers: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client = SimpleNamespace(connect=AsyncMock(), sign_in_phone=AsyncMock())
+    monkeypatch.setattr(live_helpers, "live_client", lambda name: client)
+    monkeypatch.setattr(live_helpers, "stored_user", AsyncMock(return_value=SimpleNamespace(is_bot=False)))
+    monkeypatch.setattr(live_helpers, "code_callback", unexpected_prompt)
+    monkeypatch.setattr(live_helpers, "password_callback", unexpected_prompt)
+    assert asyncio.run(live_helpers.authorized_user_client()) is client
+    client.connect.assert_awaited_once()
+    client.sign_in_phone.assert_not_called()
+
+
+def test_http_mode_still_bypasses_terminal_prompt_gates(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(benchmark.sys, "stdin", SimpleNamespace(isatty=lambda: False))
+    monkeypatch.setattr(secret_prompt.getpass, "getpass", unexpected_prompt)
+    monkeypatch.setattr("builtins.input", unexpected_prompt)
+    monkeypatch.setattr(benchmark, "prompt_code_http", lambda env: "639281")
+    assert benchmark.prompt_code({"MINIPROTO_LIVE_BENCH_CODE_PROMPT": "http"}) == "639281"
+
+
+def test_http_login_code_field_is_masked_and_keeps_submission_controls() -> None:
+    class FormParser(HTMLParser):
+        def __init__(self) -> None:
+            super().__init__()
+            self.fields: list[dict[str, str | None]] = []
+            self.forms: list[dict[str, str | None]] = []
+
+        def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+            if tag == "input":
+                self.fields.append(dict(attrs))
+            if tag == "form":
+                self.forms.append(dict(attrs))
+
+    parser = FormParser()
+    parser.feed(benchmark._code_prompt_html(error=None))
+    code_fields = [field for field in parser.fields if field.get("name") == "code"]
+    assert len(code_fields) == 1
+    assert code_fields[0]["type"] == "password"
+    assert code_fields[0]["inputmode"] == "numeric"
+    assert code_fields[0]["autocomplete"] == "one-time-code"
+    assert "autofocus" in code_fields[0]
+    assert [form.get("method") for form in parser.forms] == ["post"]
+
+
+@dataclass
+class Prompt:
+    address: tuple[str, int]
+    result: Future[str]
+    reading_body: threading.Event
+
+    def connect(self) -> socket.socket:
+        return socket.create_connection(self.address, timeout=2)
+
+    def submit(self, body: bytes) -> tuple[int, bytes, dict[str, str]]:
+        with self.connect() as connection:
+            send_headers(connection, [f"Content-Length: {len(body)}".encode("ascii")])
+            connection.sendall(body)
+            return receive_response(connection)
+
+
+def send_headers(connection: socket.socket, headers: list[bytes], *, path: bytes = b"/local-test-route") -> None:
+    connection.sendall(b"POST " + path + b" HTTP/1.1\r\nHost: localhost\r\n" + b"\r\n".join(headers) + b"\r\n\r\n")
+
+
+def receive_response(connection: socket.socket) -> tuple[int, bytes, dict[str, str]]:
+    with HTTPResponse(connection) as response:
+        response.begin()
+        return response.status, response.read(), dict(response.getheaders())
+
+
+@contextmanager
+def running_prompt(monkeypatch: pytest.MonkeyPatch, *, timeout: float = 5) -> Generator[Prompt]:
+    servers: Queue[ThreadingHTTPServer] = Queue()
+    reading_body = threading.Event()
+
+    def create_server(address: tuple[str, int], handler: type[BaseHTTPRequestHandler]) -> ThreadingHTTPServer:
+        original_read_body = vars(handler)["_read_body"]
+
+        def read_body(self: BaseHTTPRequestHandler, length: int) -> bytes | None:
+            reading_body.set()
+            return original_read_body(self, length)
+
+        monkeypatch.setattr(handler, "_read_body", read_body)
+        server = ThreadingHTTPServer(address, handler)
+        servers.put(server)
+        return server
+
+    monkeypatch.setattr(benchmark, "ThreadingHTTPServer", create_server)
+    env = {
+        "MINIPROTO_LIVE_BENCH_HTTP_CODE_HOST": "127.0.0.1",
+        "MINIPROTO_LIVE_BENCH_HTTP_CODE_PORT": "0",
+        "MINIPROTO_LIVE_BENCH_HTTP_CODE_TIMEOUT": str(timeout),
+        "MINIPROTO_LIVE_BENCH_HTTP_CODE_TOKEN": "local-test-route",
+    }
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        result = pool.submit(benchmark.prompt_code_http, env)
+        server = servers.get(timeout=3)
+        prompt = Prompt(("127.0.0.1", int(server.server_address[1])), result, reading_body)
+        try:
+            yield prompt
+        finally:
+            if not result.done():
+                with suppress(OSError):
+                    prompt.submit(b"code=cleanup")
+            with suppress(SystemExit):
+                result.result(timeout=3)
+
+
+@pytest.mark.parametrize(
+    "headers,status",
+    [
+        ([], 400),
+        ([b"Content-Length:"], 400),
+        ([b"Content-Length: -1"], 400),
+        ([b"Content-Length: +12"], 400),
+        ([b"Content-Length: 1_2"], 400),
+        ([b"Content-Length: invalid"], 400),
+        ([b"Content-Length: 12, 12"], 400),
+        ([b"Content-Length: 12", b"Content-Length: 12"], 400),
+        ([b"Content-Length: 12", b"Content-Length: 256"], 400),
+        ([b"Transfer-Encoding: chunked"], 400),
+        ([b"Content-Length: 12", b"Transfer-Encoding: chunked"], 400),
+        ([b"Content-Length: 12", b"Transfer-Encoding:"], 400),
+        ([b"Content-Length: 257"], 413),
+        ([b"Content-Length: " + b"9" * 5000], 413),
+    ],
+)
+def test_invalid_framing_is_rejected_without_waiting_for_body(
+    headers: list[bytes], status: int, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    with running_prompt(monkeypatch) as prompt:
+        with prompt.connect() as connection:
+            send_headers(connection, headers)
+            actual, _, response_headers = receive_response(connection)
+            assert actual == status
+            assert response_headers["Cache-Control"] == "no-store"
+            assert connection.recv(1) == b""
+        assert not prompt.reading_body.is_set()
+        assert not prompt.result.done()
+        assert prompt.submit(b"code=482761")[0] == 200
+        assert prompt.result.result(timeout=2) == "482761"
+
+
+def test_unknown_capability_is_rejected_before_length_or_body_handling(monkeypatch: pytest.MonkeyPatch) -> None:
+    with running_prompt(monkeypatch) as prompt:
+        with prompt.connect() as connection:
+            send_headers(connection, [b"Content-Length: -1"], path=b"/wrong-route")
+            assert receive_response(connection)[0] == 404
+        assert not prompt.reading_body.is_set()
+        assert not prompt.result.done()
+
+
+def test_empty_body_does_not_complete_prompt(monkeypatch: pytest.MonkeyPatch) -> None:
+    with running_prompt(monkeypatch) as prompt:
+        assert prompt.submit(b"")[0] == 400
+        assert not prompt.result.done()
+        assert prompt.submit(b"code=582619")[0] == 200
+        assert prompt.result.result(timeout=2) == "582619"
+
+
+def test_exactly_256_bytes_and_leading_zero_length_preserve_form_submission(monkeypatch: pytest.MonkeyPatch) -> None:
+    body = b"padding=" + b"x" * 235 + b"&code=48+2761"
+    assert len(body) == 256
+    with running_prompt(monkeypatch) as prompt:
+        with prompt.connect() as connection:
+            send_headers(connection, [b"Content-Length: " + b"0" * 5000 + b"256"])
+            connection.sendall(body + b"unframed-extra")
+            status, response_body, response_headers = receive_response(connection)
+            assert status == 200
+            assert b"482761" not in response_body
+            assert response_headers["Cache-Control"] == "no-store"
+        assert prompt.result.result(timeout=2) == "482761"
+
+
+def test_short_body_is_rejected_before_parsing_partial_code(monkeypatch: pytest.MonkeyPatch) -> None:
+    with running_prompt(monkeypatch) as prompt:
+        with prompt.connect() as connection:
+            send_headers(connection, [b"Content-Length: 20"])
+            connection.sendall(b"code=12345")
+            connection.shutdown(socket.SHUT_WR)
+            assert receive_response(connection)[0] == 400
+        assert not prompt.result.done()
+        assert prompt.submit(b"code=693815")[0] == 200
+        assert prompt.result.result(timeout=2) == "693815"
+
+
+def test_body_deadline_expires_despite_regular_small_writes(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(benchmark, "HTTP_CODE_BODY_TIMEOUT_SECONDS", 0.25)
+    with running_prompt(monkeypatch) as prompt:
+        with prompt.connect() as connection:
+            send_headers(connection, [b"Content-Length: 256"])
+            assert prompt.reading_body.wait(timeout=1)
+            stopped = threading.Event()
+
+            def drip_body() -> None:
+                while not stopped.wait(0.03):
+                    try:
+                        connection.sendall(b"x")
+                    except OSError:
+                        return
+
+            thread = threading.Thread(target=drip_body, daemon=True)
+            thread.start()
+            started = time.monotonic()
+            try:
+                assert receive_response(connection)[0] == 408
+                assert time.monotonic() - started < 1
+                assert connection.recv(1) == b""
+            finally:
+                stopped.set()
+                thread.join(timeout=1)
+        assert not prompt.result.done()
+
+
+def test_success_closes_another_active_body_reader(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(benchmark, "HTTP_CODE_BODY_TIMEOUT_SECONDS", 30)
+    with running_prompt(monkeypatch, timeout=10) as prompt, prompt.connect() as stalled:
+        send_headers(stalled, [b"Content-Length: 256"])
+        assert prompt.reading_body.wait(timeout=1)
+        assert prompt.submit(b"code=267951")[0] == 200
+        assert prompt.result.result(timeout=2) == "267951"
+        assert stalled.recv(1) == b""
+
+
+def test_prompt_expiry_closes_an_active_body_reader(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(benchmark, "HTTP_CODE_BODY_TIMEOUT_SECONDS", 30)
+    with running_prompt(monkeypatch, timeout=0.3) as prompt, prompt.connect() as stalled:
+        send_headers(stalled, [b"Content-Length: 256"])
+        assert prompt.reading_body.wait(timeout=1)
+        with pytest.raises(SystemExit, match="timed out waiting"):
+            prompt.result.result(timeout=2)
+        response = bytearray()
+        while chunk := stalled.recv(1024):
+            response.extend(chunk)
+        assert not response or bytes(response).startswith(b"HTTP/1.0 408 ")

@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.connection.transport.Transport.send"
 source_path: "src/miniproto/connection/transport.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/transport.py#L77"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/transport.py#L78"
 aliases: ["miniproto.connection.Transport.send"]
 module: "miniproto.connection.transport"
 ---

@@ -14,7 +14,8 @@ import pytest
 
 import miniproto.client as client_module
 from miniproto import Client, ClientConfig, InMemorySessionStorage
-from miniproto.media import MediaDownloadResult
+from miniproto.errors import BadRequest
+from miniproto.media import MediaDownloadError, MediaDownloadResult
 from miniproto.media import download as media_download
 from miniproto.media.multi_session import MIB, assemble_download_parts, download_session_count, plan_download_ranges
 from miniproto.raw import functions, types
@@ -379,7 +380,7 @@ def test_multi_session_cancellation_waits_for_auxiliary_disconnect(tmp_path: Pat
         async def single(_worker: Client, _media: object, destination: object, options: Mapping[str, Any]) -> MediaDownloadResult:  # fmt: skip
             assert isinstance(destination, Path)
             destination.write_bytes(b"x" * options["limit"])
-            return MediaDownloadResult(bytes_downloaded=options["limit"], offset=options["offset"], destination=destination)  # fmt: skip
+            return MediaDownloadResult(bytes_downloaded=options["limit"], offset=options["offset"], destination=destination, raw_location=_media)  # fmt: skip
 
         async def disconnect() -> None:
             disconnect_started.set()
@@ -437,7 +438,7 @@ def test_multi_session_success_assembles_range_order_after_reverse_completion(tm
             completion_order.append(offset)
             if worker is auxiliary:
                 auxiliary_finished.set()
-            return MediaDownloadResult(bytes_downloaded=size, offset=offset, destination=destination)
+            return MediaDownloadResult(bytes_downloaded=size, offset=offset, destination=destination, raw_location=_media)  # fmt: skip
 
         async def disconnect() -> None:
             assert completion_order == [MIB, 0]
@@ -492,7 +493,7 @@ def test_multi_session_temporary_cleanup_preserves_the_first_error(tmp_path: Pat
             destination.write_bytes(b"x" * options["limit"])
             if worker_failure:
                 raise primary_error
-            return MediaDownloadResult(bytes_downloaded=options["limit"], offset=options["offset"], destination=destination)  # fmt: skip
+            return MediaDownloadResult(bytes_downloaded=options["limit"], offset=options["offset"], destination=destination, raw_location=_media)  # fmt: skip
 
         monkeypatch.setattr(Client, "_download_media_single", single)
         monkeypatch.setattr(client_module.tempfile, "TemporaryDirectory", FailingCleanup)
@@ -527,7 +528,7 @@ def test_multi_session_cancellation_joins_assembly_before_removing_parts(tmp_pat
         async def single(_worker: Client, _media: object, destination: object, options: Mapping[str, Any]) -> MediaDownloadResult:  # fmt: skip
             assert isinstance(destination, Path)
             destination.write_bytes(b"x" * options["limit"])
-            return MediaDownloadResult(bytes_downloaded=options["limit"], offset=options["offset"], destination=destination)  # fmt: skip
+            return MediaDownloadResult(bytes_downloaded=options["limit"], offset=options["offset"], destination=destination, raw_location=_media)  # fmt: skip
 
         def assemble(parts: tuple[Path, ...], destination: Path, *, expected_size: int) -> tuple[Path | BinaryIO | None, bytes | None]:  # fmt: skip
             loop.call_soon_threadsafe(assembly_started.set)
@@ -569,5 +570,108 @@ def test_multi_session_cancellation_joins_assembly_before_removing_parts(tmp_pat
             await assembly_finished.wait()
             await primary.disconnect()
             loop.set_exception_handler(previous_handler)
+
+    asyncio.run(scenario())
+
+
+def _refresh_document_location(*, document_id: int = 100, access_hash: int = 200, reference: bytes = b"expired", thumb_size: str = "") -> types.InputDocumentFileLocation:  # fmt: skip
+    return types.InputDocumentFileLocation(id=document_id, access_hash=access_hash, file_reference=reference, thumb_size=thumb_size)  # fmt: skip
+
+
+def _refresh_message(*, document_id: int = 100, reference: bytes = b"expired", size: int = 2048) -> types.Message:
+    document = types.Document(id=document_id, access_hash=200, file_reference=reference, date=1700000000, mime_type="application/octet-stream", size=size, dc_id=2, attributes=())  # fmt: skip
+    return types.Message(id=55, peer_id=types.PeerUser(user_id=7), date=1700000000, message="file", media=types.MessageMediaDocument(document=document))  # fmt: skip
+
+
+def _refresh_file_part(payload: bytes) -> types.UploadFile:
+    return types.UploadFile(type=types.StorageFileUnknown(), mtime=0, bytes=payload)
+
+
+@pytest.mark.parametrize("replacement_id", [100, 101])
+def test_multi_session_workers_keep_one_original_identity(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, replacement_id: int) -> None:  # fmt: skip
+    async def scenario() -> None:
+        mib = 1024 * 1024
+        primary = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=InMemorySessionStorage()))
+        auxiliary = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=InMemorySessionStorage()))
+        requests: list[Any] = []
+        first_range = asyncio.Event()
+
+        async def invoke(request: Any, **_kwargs: object) -> object:
+            if isinstance(request, functions.MessagesGetMessages):
+                return types.MessagesMessages(messages=(_refresh_message(document_id=replacement_id, reference=b"renewed", size=2 * mib),), topics=(), chats=(), users=())  # fmt: skip
+            assert isinstance(request, functions.UploadGetFile)
+            requests.append(request)
+            if request.offset == 0:
+                first_range.set()
+                return _refresh_file_part(b"a" * mib)
+            await first_range.wait()
+            if request.location.file_reference == b"expired":
+                raise BadRequest("FILE_REFERENCE_EXPIRED")
+            return _refresh_file_part(b"c" * mib if request.location.id == 100 else b"b" * mib)
+
+        class Pool:
+            async def prewarm(self) -> None:
+                pass
+
+            async def invoke(self, request: Any, **kwargs: object) -> object:
+                return await invoke(request, **kwargs)
+
+        async def pool(**_kwargs: object) -> Any:
+            return Pool()
+
+        async def auxiliaries(_count: int) -> tuple[Client, ...]:
+            return (auxiliary,)
+
+        async def disconnect(_clients: object) -> None:
+            pass
+
+        monkeypatch.setattr(primary, "_ensure_auxiliary_download_clients", auxiliaries)
+        monkeypatch.setattr(primary, "_disconnect_auxiliary_download_clients", disconnect)
+        for client in (primary, auxiliary):
+            client._connected = True
+            monkeypatch.setattr(client, "invoke", invoke)
+            monkeypatch.setattr(client, "_get_media_pool", pool)
+        target = tmp_path / "assembled.bin"
+        options = {"file_reference_refresher": None}
+        operation = primary._download_media_multi_session(_refresh_message(size=2 * mib), target, options, total_size=2 * mib, session_count=2)  # fmt: skip
+        if replacement_id == 101:
+            with pytest.raises(MediaDownloadError, match="file identity changed"):
+                await operation
+            assert not target.exists()
+        else:
+            result = await operation
+            assert result.bytes_downloaded == 2 * mib
+            assert target.read_bytes() == b"a" * mib + b"c" * mib
+        assert all(request.location.id == 100 for request in requests)
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("reported_location", [None, _refresh_document_location(document_id=101)])
+def test_multi_session_assembly_rejects_unbound_worker_result(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, reported_location: object) -> None:  # fmt: skip
+    async def scenario() -> None:
+        primary = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=InMemorySessionStorage()))
+        auxiliary = Client(ClientConfig(api_id=1, api_hash="hash", session_storage=InMemorySessionStorage()))
+
+        async def auxiliaries(_count: int) -> tuple[Client, ...]:
+            return (auxiliary,)
+
+        async def single(
+            worker: Client, _media: object, destination: Path, options: dict[str, Any]
+        ) -> MediaDownloadResult:
+            await asyncio.to_thread(destination.write_bytes, b"x" * options["limit"])
+            location = _refresh_document_location() if worker is primary else reported_location
+            return MediaDownloadResult(bytes_downloaded=options["limit"], offset=options["offset"], destination=destination, raw_location=location)  # fmt: skip
+
+        async def disconnect(_clients: object) -> None:
+            pass
+
+        monkeypatch.setattr(primary, "_ensure_auxiliary_download_clients", auxiliaries)
+        monkeypatch.setattr(primary, "_disconnect_auxiliary_download_clients", disconnect)
+        monkeypatch.setattr(Client, "_download_media_single", single)
+        target = tmp_path / "assembled.bin"
+        with pytest.raises(MediaDownloadError, match="worker 1 file identity changed"):
+            await primary._download_media_multi_session(_refresh_document_location(), target, {}, total_size=2 * 1024 * 1024, session_count=2)  # fmt: skip
+        assert not target.exists()
 
     asyncio.run(scenario())

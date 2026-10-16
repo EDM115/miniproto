@@ -26,6 +26,7 @@ from miniproto.connection.transport import (
 from miniproto.errors import AmbiguousRpcResult, PendingRpcLimitExceeded, ProtocolValidationError
 from miniproto.mtproto.codec import (
     _GZIP_PACKED_ID,
+    _MSG_CONTAINER_ID,
     MAX_GZIP_WRAPPER_DEPTH,
     BadMsgNotification,
     BadServerSalt,
@@ -59,6 +60,8 @@ DEFAULT_RECONNECT_COOLDOWN = 1.0
 RECONNECT_FLAP_WINDOW = 10.0
 _GZIP_THREAD_THRESHOLD_BYTES = 64 * 1024
 _MAX_GZIP_WRAPPER_DEPTH = MAX_GZIP_WRAPPER_DEPTH
+_MAX_INCOMING_CONTAINER_MESSAGES = 1024
+_MAX_INCOMING_CONTAINER_DEPTH = 16
 _ACK_HISTORY_LIMIT = 4096
 _UNDECODED_BODY = object()
 
@@ -826,23 +829,25 @@ class MTProtoSender:
                 await self._close_transport()
                 return
 
-    async def _prevalidate_and_commit_incoming(
+    async def _collect_incoming(
         self, message: DecodedEncryptedMessage
-    ) -> tuple[tuple[DecodedEncryptedMessage, object], ...]:
-        """Decode nested bodies, validate all IDs, then atomically commit receipt state.
+    ) -> list[tuple[DecodedEncryptedMessage, object, int | None]]:
+        """Decode one receive tree under shared output, entry and nesting limits.
 
         Args:
-            message: Outer encrypted message whose containers and gzip wrappers
-                are fully decoded before any incoming-state mutation commits.
+            message: Outer encrypted message whose nested bodies share one budget.
 
         Returns:
-            Decoded non-container messages ready for routing without another TL
-            decode or gzip decompression pass.
+            Ordered messages, decoded bodies and immediate parent container IDs.
         """
         messages: list[tuple[DecodedEncryptedMessage, object, int | None]] = []
+        budget = _IncomingBudget(self.transport_config.max_payload_size)
 
         async def collect(
-            candidate: DecodedEncryptedMessage, parent_container_msg_id: int | None = None, gzip_depth: int = 0
+            candidate: DecodedEncryptedMessage,
+            parent_container_msg_id: int | None = None,
+            gzip_depth: int = 0,
+            container_depth: int = 0,
         ) -> None:
             """Recursively unpack gzip/container bodies into a validation batch.
 
@@ -852,19 +857,16 @@ class MTProtoSender:
                 parent_container_msg_id: Immediate enclosing container message
                     ID or ``None`` for the outer encrypted message.
                 gzip_depth: Gzip wrappers already traversed along this container branch.
+                container_depth: Containers already traversed along this branch.
             """
-            body = decode_message_body(candidate.body)
+            body = budget.decode_body(candidate.body, container_depth=container_depth)
             while isinstance(body, GzipPacked):
                 gzip_depth += 1
                 if gzip_depth > _MAX_GZIP_WRAPPER_DEPTH:
                     raise ProtocolValidationError("gzip_wrapper_depth", context={"maximum": _MAX_GZIP_WRAPPER_DEPTH})
-                body = decode_message_body(
-                    await _unpack_gzip(body, max_output_size=self.transport_config.max_payload_size)
-                )
+                body = budget.decode_body(await budget.unpack(body), container_depth=container_depth)
             if isinstance(body, RpcResult):
-                body = await _unpack_rpc_result(
-                    body, max_output_size=self.transport_config.max_payload_size, gzip_depth=gzip_depth
-                )
+                body = await _unpack_rpc_result(body, budget=budget, gzip_depth=gzip_depth)
             messages.append((candidate, body, parent_container_msg_id))
             if isinstance(body, MessageContainer):
                 for item in body.messages:
@@ -880,11 +882,26 @@ class MTProtoSender:
                         ),
                         candidate.msg_id,
                         gzip_depth,
+                        container_depth + 1,
                     )
 
         await collect(message)
+        return messages
+
+    async def _prevalidate_and_commit_incoming(
+        self, message: DecodedEncryptedMessage
+    ) -> tuple[tuple[DecodedEncryptedMessage, object], ...]:
+        """Decode nested bodies, validate all IDs, then atomically commit receipt state.
+
+        Args:
+            message: Outer encrypted message whose containers and gzip wrappers are fully decoded before any incoming-state mutation commits.
+
+        Returns:
+            Decoded non-container messages ready for routing without another TL decode or gzip decompression pass.
+        """
+        messages = await self._collect_incoming(message)
         now = time.time()
-        seen: set[int] = set()
+        seen = self.state._incoming_replay_window()
         fresh_ids: set[int] = set()
         suppressed_ids: set[int] = set()
         repeated_content_ids: list[int] = []
@@ -914,9 +931,14 @@ class MTProtoSender:
                 if not fresh and candidate.seq_no % 2 == 1:
                     repeated_content_ids.append(candidate.msg_id)
             seen.add(candidate.msg_id)
-        for candidate, _body, _parent_container_msg_id in messages:
-            if candidate.msg_id in fresh_ids:
-                self.state.commit_incoming(candidate.msg_id, content_related=candidate.seq_no % 2 == 1, now=now)
+        self.state._commit_incoming_batch(
+            (
+                (candidate.msg_id, candidate.seq_no % 2 == 1)
+                for candidate, _body, _parent in messages
+                if candidate.msg_id in fresh_ids
+            ),
+            now=now,
+        )
         for msg_id in repeated_content_ids:
             self.state.queue_ack(msg_id)
         return tuple(
@@ -952,32 +974,10 @@ class MTProtoSender:
                 pass or the internal sentinel when this method owns decoding.
         """
         body = decoded_body
-        if body is _UNDECODED_BODY:
-            body = decode_message_body(message.body)
-            gzip_depth = 0
-            while isinstance(body, GzipPacked):
-                gzip_depth += 1
-                if gzip_depth > _MAX_GZIP_WRAPPER_DEPTH:
-                    raise ProtocolValidationError("gzip_wrapper_depth", context={"maximum": _MAX_GZIP_WRAPPER_DEPTH})
-                body = decode_message_body(
-                    await _unpack_gzip(body, max_output_size=self.transport_config.max_payload_size)
-                )
-            if isinstance(body, RpcResult):
-                body = await _unpack_rpc_result(
-                    body, max_output_size=self.transport_config.max_payload_size, gzip_depth=gzip_depth
-                )
-        if isinstance(body, MessageContainer):
-            for item in body.messages:
-                nested = DecodedEncryptedMessage(
-                    auth_key_id=message.auth_key_id,
-                    server_salt=message.server_salt,
-                    session_id=message.session_id,
-                    msg_id=item.msg_id,
-                    seq_no=item.seq_no,
-                    body=_message_body_bytes(item.body),
-                    padding=b"",
-                )
-                await self._handle_incoming(nested, committed=True)
+        if body is _UNDECODED_BODY or isinstance(body, MessageContainer):
+            for candidate, decoded, _parent in await self._collect_incoming(message):
+                if not isinstance(decoded, MessageContainer):
+                    await self._handle_incoming(candidate, committed=committed, decoded_body=decoded)
             return
         if isinstance(body, MsgsAck):
             for msg_id in body.msg_ids:
@@ -1512,12 +1512,56 @@ def _unpack_gzip_bounded(packed_data: bytes, *, max_output_size: int) -> bytes:
     return GzipPacked(packed_data).unpack(max_output_size=max_output_size)
 
 
-async def _unpack_rpc_result(body: RpcResult, *, max_output_size: int, gzip_depth: int = 0) -> RpcResult:
+@dataclass(slots=True)
+class _IncomingBudget:
+    """Bound cumulative gzip output and decoded container entries for one receive tree.
+
+    Attributes:
+        remaining_output_size: Unspent gzip output allowance, separate from bounded wire bytes.
+        remaining_messages: Unreserved container entries across all nested branches.
+    """
+
+    remaining_output_size: int
+    remaining_messages: int = _MAX_INCOMING_CONTAINER_MESSAGES
+
+    def decode_body(self, data: bytes | memoryview, *, container_depth: int) -> object:
+        """Reserve declared container entries before the decoder materializes them.
+
+        Args:
+            data: Encoded service or application message body.
+            container_depth: Number of enclosing containers on this branch.
+        """
+        if len(data) >= 8 and int.from_bytes(data[:4], "little") == _MSG_CONTAINER_ID:
+            if container_depth >= _MAX_INCOMING_CONTAINER_DEPTH:
+                raise ProtocolValidationError("container_depth", context={"maximum": _MAX_INCOMING_CONTAINER_DEPTH})
+            count = int.from_bytes(data[4:8], "little", signed=True)
+            if count > self.remaining_messages:
+                raise ProtocolValidationError(
+                    "container_message_limit", context={"maximum": _MAX_INCOMING_CONTAINER_MESSAGES}
+                )
+            if count > 0:
+                self.remaining_messages -= count
+        return decode_message_body(data)
+
+    async def unpack(self, body: GzipPacked) -> bytes:
+        """Limit expansion to the remaining allowance and charge all intermediate output.
+
+        Args:
+            body: Gzip wrapper from a service body or RPC result.
+        """
+        if self.remaining_output_size <= 0:
+            raise ProtocolValidationError("gzip_payload_too_large", context={"maximum": self.remaining_output_size})
+        result = await _unpack_gzip(body, max_output_size=self.remaining_output_size)
+        self.remaining_output_size -= len(result)
+        return result
+
+
+async def _unpack_rpc_result(body: RpcResult, *, budget: _IncomingBudget, gzip_depth: int = 0) -> RpcResult:
     """Validate and unpack result-level gzip before committing any receive-batch effects.
 
     Args:
         body: RPC result whose encoded value may begin with a gzip wrapper.
-        max_output_size: Maximum decompressed bytes per wrapper.
+        budget: Shared receive-tree output and container-entry allowance.
         gzip_depth: Wrappers already traversed in the enclosing message or container.
     """
     result = body.result
@@ -1528,7 +1572,7 @@ async def _unpack_rpc_result(body: RpcResult, *, max_output_size: int, gzip_dept
         if gzip_depth > _MAX_GZIP_WRAPPER_DEPTH:
             raise ProtocolValidationError("gzip_wrapper_depth", context={"maximum": _MAX_GZIP_WRAPPER_DEPTH})
         packed = result if isinstance(result, GzipPacked) else cast(GzipPacked, decode_message_body(result))
-        result = await _unpack_gzip(packed, max_output_size=max_output_size)
+        result = await budget.unpack(packed)
     return body if result is body.result else RpcResult(body.req_msg_id, result)
 
 

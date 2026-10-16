@@ -2,11 +2,17 @@ from __future__ import annotations
 
 import asyncio
 import json
+import subprocess
+from collections.abc import Mapping
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
-from typing import Any
+from types import SimpleNamespace
+from typing import Any, TextIO
 
 import pytest
 import tools.bench.reporting as reporting
+from tools.bench import benchmark_live_media_limit as benchmark
+from tools.bench import benchmark_matrix as matrix
 from tools.bench.reporting import (
     BENCHMARK_SCHEMA,
     LoopLagProbe,
@@ -15,6 +21,10 @@ from tools.bench.reporting import (
     sample_statistics,
     write_benchmark_report,
 )
+
+from miniproto.file_id import encode_file_id
+from miniproto.media.download import MediaDownloadResult
+from miniproto.types import Media
 
 
 def test_loop_lag_probe_skips_missed_cadences_instead_of_emitting_a_catch_up_storm() -> None:
@@ -123,3 +133,202 @@ def test_environment_distinguishes_running_loop_from_platform_preference(monkeyp
     assert environment["event_loop"]["preferred_backend"] == "preferred-loop"
     assert environment["event_loop"]["running_backend"] == actual
     assert reporting.collect_environment()["event_loop"]["running_backend"] is None
+
+
+class OfflineClient:
+    def __init__(self, *, fail_upload: bool = False) -> None:
+        self.media = Media(id=17, access_hash=23, file_reference=b"synthetic", dc_id=2, size=4, file_name="sample.bin")
+        self.fail_upload = fail_upload
+        self.upload_peers: list[str] = []
+        self.history_peers: list[str] = []
+        self.downloads = 0
+        self.disconnected = False
+        self.caption = ""
+
+    async def send_file(self, peer: str, source: Path, **kwargs: Any) -> SimpleNamespace:
+        self.upload_peers.append(peer)
+        if self.fail_upload:
+            raise RuntimeError("phone peer is not cached")
+        assert await asyncio.to_thread(source.read_bytes) == b"data"
+        self.caption = kwargs["caption"]
+        await kwargs["progress"](4, 4)
+        return SimpleNamespace(id=31, media=None)
+
+    async def get_history(self, peer: str, *, limit: int) -> list[SimpleNamespace]:
+        self.history_peers.append(peer)
+        assert limit == 20
+        return [SimpleNamespace(id=31, text=self.caption, media=self.media)]
+
+    async def download_media(self, media: Media, target: Path | None, **kwargs: Any) -> MediaDownloadResult:
+        assert media.id == 17
+        assert target is None
+        assert kwargs["limit"] == kwargs["total_size"] == 4
+        self.downloads += 1
+        await kwargs["progress"](4, 4)
+        return MediaDownloadResult(bytes_downloaded=4, offset=0, destination=None, data=b"data")
+
+    async def disconnect(self) -> None:
+        self.disconnected = True
+
+
+def install_offline_client(monkeypatch: pytest.MonkeyPatch, client: OfflineClient) -> None:
+    def forbid_live_work(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("offline privacy tests must not use credentials, sessions or Telegram")
+
+    def require_offline_env(env: Mapping[str, str], *, actor: str) -> None:
+        assert actor in {"user", "bot"}
+        assert set(env) <= {
+            "MINIPROTO_LIVE_BENCH_USER_PEER",
+            "MINIPROTO_LIVE_BENCH_BOT_PEER",
+            "MINIPROTO_LIVE_BENCH_BOT_FILE_ID",
+        }
+
+    async def authorize(actor: str, _args: object, env: Mapping[str, str]) -> OfflineClient:
+        require_offline_env(env, actor=actor)
+        return client
+
+    for name in ("Client", "EncryptedSQLiteSessionStorage", "load_dotenv"):
+        monkeypatch.setattr(benchmark, name, forbid_live_work)
+    monkeypatch.setattr(benchmark, "require_live_env", require_offline_env)
+    monkeypatch.setattr(benchmark, "authorized_client", authorize)
+
+
+def report_args(tmp_path: Path, actor: str) -> Any:
+    source = tmp_path / "source.bin"
+    source.write_bytes(b"data")
+    return benchmark.parse_args(
+        [
+            "--actor",
+            actor,
+            "--operation",
+            "both",
+            "--size",
+            "4",
+            "--file",
+            str(source),
+            "--download-destination",
+            "memory",
+            "--progress-interval",
+            "0",
+            "--json",
+            str(tmp_path / "summary.json"),
+        ],
+        {},
+    )
+
+
+@pytest.mark.parametrize(
+    ("actor", "peer", "expected_label"),
+    [
+        ("user", "+15550198276", "user:configured-peer"),
+        ("bot", "+15550923481", "bot:configured-peer"),
+        ("user", "@private_user_target", "user:configured-peer"),
+        ("bot", "@private_bot_target", "bot:configured-peer"),
+        ("user", "-1007654321987", "user:configured-peer"),
+        ("bot", "-1008123456790", "bot:configured-peer"),
+        ("user", "self", "self"),
+        ("user", "Saved_Messages", "self"),
+    ],
+)
+def test_transfer_reports_omit_configured_peers_but_preserve_rpc_targets(
+    actor: str,
+    peer: str,
+    expected_label: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    client = OfflineClient()
+    install_offline_client(monkeypatch, client)
+    summaries: list[benchmark.BenchmarkSummary] = []
+    print_summary = benchmark.print_summary
+
+    def capture_summary(summary: benchmark.BenchmarkSummary) -> None:
+        summaries.append(summary)
+        print_summary(summary)
+
+    monkeypatch.setattr(benchmark, "print_summary", capture_summary)
+    args = report_args(tmp_path, actor)
+    env = {f"MINIPROTO_LIVE_BENCH_{actor.upper()}_PEER": peer}
+
+    assert asyncio.run(benchmark._run_benchmark(args, env, None)) == 0
+
+    captured = capsys.readouterr()
+    raw_json = (tmp_path / "summary.json").read_bytes()
+    report = json.loads(raw_json)
+    if expected_label != "self":
+        assert peer not in captured.out + captured.err
+        assert peer.encode() not in raw_json
+    assert f"peer={expected_label}" in captured.out
+    assert client.upload_peers == [peer]
+    assert client.history_peers == [peer]
+    assert client.downloads == 1
+    assert client.disconnected
+    assert [result.peer for result in summaries[0].results] == [expected_label, expected_label]
+    assert [result["operation"] for result in report["results"]] == ["upload", "download"]
+    for result in report["results"]:
+        assert result["peer"] == expected_label
+        assert result["bytes"] == 4
+        assert result["media_dc_id"] == 2
+        assert result["message_id"] == 31
+        assert result["file_id"] == encode_file_id(client.media)
+        assert result["transfer_mib_s"] == pytest.approx(4 / (1024 * 1024 * result["transfer_duration_s"]))
+
+
+def test_failed_upload_does_not_print_confidential_peer(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    peer = "+15550741926"
+    client = OfflineClient(fail_upload=True)
+    install_offline_client(monkeypatch, client)
+    args = report_args(tmp_path, "user")
+
+    with pytest.raises(RuntimeError, match="phone peer is not cached"):
+        asyncio.run(benchmark._run_benchmark(args, {"MINIPROTO_LIVE_BENCH_USER_PEER": peer}, None))
+
+    captured = capsys.readouterr()
+    assert "peer=user:configured-peer" in captured.out
+    assert peer not in captured.out + captured.err
+    assert client.upload_peers == [peer]
+    assert client.disconnected
+    assert not (tmp_path / "summary.json").exists()
+
+
+def test_matrix_artifacts_capture_redacted_download_reports(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    peer = "+15550379824"
+    client = OfflineClient()
+    install_offline_client(monkeypatch, client)
+    env = {"MINIPROTO_LIVE_BENCH_BOT_PEER": peer, "MINIPROTO_LIVE_BENCH_BOT_FILE_ID": encode_file_id(client.media)}
+    monkeypatch.setattr(matrix.os, "environ", env)
+    monkeypatch.setattr(matrix, "collect_environment", lambda: {"python": "offline"})
+    matrix.prepare_run_directory(tmp_path, mode="smoke", resume=False)
+    cell = matrix.MatrixCell(
+        lanes=1, byte_window=4, chunk_size=512 * 1024, launch_stagger=True, destination="memory", warm=False, repeat=1
+    )
+
+    def execute_offline_child(
+        command: list[str], *, check: bool, stdout: TextIO, stderr: int, env: dict[str, str]
+    ) -> subprocess.CompletedProcess[str]:
+        assert command[2] == "tools/bench/benchmark_live_media_limit.py"
+        assert check is False
+        assert stderr == subprocess.STDOUT
+        args = benchmark.parse_args(command[3:], env)
+        with redirect_stdout(stdout), redirect_stderr(stdout):
+            result = asyncio.run(benchmark.run_benchmark(args, env))
+        return subprocess.CompletedProcess(command, result)
+
+    monkeypatch.setattr(matrix.subprocess, "run", execute_offline_child)
+
+    status = matrix.run_matrix((cell,), tmp_path, execute=matrix.subprocess_executor, resume=False)
+
+    assert status["completed"] == [cell.id]
+    assert status["failed"] == []
+    assert client.downloads == 1
+    report = json.loads((tmp_path / "raw" / f"{cell.id}.json").read_text(encoding="utf-8"))
+    assert report["results"][0]["peer"] == "bot:configured-peer"
+    assert report["results"][0]["bytes"] == 4
+    log = (tmp_path / "logs" / f"{cell.id}.log").read_text(encoding="utf-8")
+    assert "bot.download:" in log
+    for artifact in tmp_path.rglob("*"):
+        if artifact.is_file():
+            assert peer.encode() not in artifact.read_bytes()

@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.connection.transport.ConnectionEndpoint"
 source_path: "src/miniproto/connection/transport.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/transport.py#L38"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/connection/transport.py#L39"
 aliases: ["miniproto.connection.ConnectionEndpoint"]
 module: "miniproto.connection.transport"
 ---

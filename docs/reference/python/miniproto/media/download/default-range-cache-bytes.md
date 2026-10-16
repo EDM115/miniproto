@@ -7,7 +7,7 @@ language: "python"
 kind: "attribute"
 qualified_name: "miniproto.media.download.DEFAULT_RANGE_CACHE_BYTES"
 source_path: "src/miniproto/media/download.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L70"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L72"
 aliases: ["miniproto.media.DEFAULT_RANGE_CACHE_BYTES"]
 module: "miniproto.media.download"
 ---

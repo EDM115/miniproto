@@ -42,6 +42,7 @@ from tools.bench.benchmark_live_media_limit import (
     parse_size,
     prompt_code,
     required_env,
+    safe_file_name,
     start_progress_heartbeat,
     stop_progress_heartbeat,
     transfer_counters,
@@ -1022,16 +1023,6 @@ def file_digest(path: Path) -> str:
         while chunk := handle.read(4 * MIB):
             digest.update(chunk)
     return digest.hexdigest()
-
-
-def safe_file_name(value: str) -> str:
-    """Replace unsafe filename characters with underscores, retaining a nonempty fallback.
-
-    Args:
-        value: Remote-provided or fallback filename component to make path-safe.
-    """
-    cleaned = "".join(ch if ch.isalnum() or ch in {"-", "_", "."} else "_" for ch in value)
-    return cleaned or "telegram-file.bin"
 
 
 def print_summary(summary: MultiSessionDownloadSummary) -> None:

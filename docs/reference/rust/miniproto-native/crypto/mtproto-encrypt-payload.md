@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::crypto::mtproto_encrypt_payload"
 source_path: "rust/miniproto/src/crypto.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L200"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L204"
 aliases: ["miniproto._native.mtproto_encrypt_payload"]
 python_visible: true
 ---
@@ -15,7 +15,7 @@ python_visible: true
 ## Provenance
 
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L200)
+- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L204)
 - Python exposure: `miniproto._native.mtproto_encrypt_payload` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -39,7 +39,7 @@ fn mtproto_encrypt_payload(py: _, auth_key: _, plaintext_with_padding: _, client
 fn mtproto_encrypt_payload(py: Python<'_>, auth_key: Vec<u8>, plaintext_with_padding: Vec<u8>, client_to_server: bool) -> PyResult<(Vec<u8>, Vec<u8>, Vec<u8>)>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:200-210`*
+*Defined in `rust/miniproto/src/crypto.rs:204-214`*
 
 Encrypts padded MTProto plaintext for Python `mtproto_encrypt_payload`.
 

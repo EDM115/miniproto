@@ -32,7 +32,7 @@ Public TL primitive and object codec APIs.
 - [`decode_object`](./codec/decode-object/) — Decode a primitive or generated TL object selected by its constructor.
 - [`decode_string`](./codec/decode-string/) — Decode a UTF-8 TL string.
 - [`decode_uint`](./codec/decode-uint/) — Decode an unsigned 32-bit TL value.
-- [`decode_vector`](./codec/decode-vector/) — Decode a boxed TL vector.
+- [`decode_vector`](./codec/decode-vector/) — Decode a boxed TL vector whose elements consume wire bytes.
 - [`deserialize_object`](./codec/deserialize-object/) — Deserialize one generated TL object of an expected class.
 - [`encode_bool`](./codec/encode-bool/) — Encode a TL ``Bool`` constructor.
 - [`encode_bytes`](./codec/encode-bytes/) — Encode TL's length-prefixed, padded byte-string value.
@@ -44,5 +44,5 @@ Public TL primitive and object codec APIs.
 - [`encode_long`](./codec/encode-long/) — Encode a signed TL ``long``.
 - [`encode_string`](./codec/encode-string/) — UTF-8 encode a string as a TL byte string.
 - [`encode_uint`](./codec/encode-uint/) — Encode an unsigned 32-bit TL value.
-- [`encode_vector`](./codec/encode-vector/) — Encode a boxed TL vector.
+- [`encode_vector`](./codec/encode-vector/) — Encode a boxed TL vector whose elements consume wire bytes.
 - [`serialize_object`](./codec/serialize-object/) — Serialize a generated TL object using its generated or generic metadata path.

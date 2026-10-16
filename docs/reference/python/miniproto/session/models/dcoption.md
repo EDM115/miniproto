@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.session.models.DCOption"
 source_path: "src/miniproto/session/models.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/models.py#L72"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/models.py#L73"
 aliases: ["miniproto.DCOption","miniproto.session.DCOption"]
 module: "miniproto.session.models"
 ---

@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.media.download.download_file"
 source_path: "src/miniproto/media/download.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L1348"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L1443"
 aliases: ["miniproto.media.download_file"]
 module: "miniproto.media.download"
 ---
@@ -48,7 +48,7 @@ Download media into memory, a path or a caller-owned binary stream.
 - **range_cache_max_bytes** (<code>[int](#int)</code>) – Capacity used by an implicit shared cache.
 - **read_ahead_bytes** (<code>[int](#int)</code>) – Speculative cache-fill distance ahead of consumed parts. Disabled for open-ended requests or finite ranges reaching the known EOF.
 - **verify_plain_hashes** (<code>[bool](#bool)</code>) – Verify non-CDN data against complete SHA-256 hash intervals, fetching missing interval bytes before writing the requested slice. Retained resume bytes are not checked.
-- **file_reference_refresher** (<code>[FileReferenceRefresher](#miniproto.media.download.FileReferenceRefresher) | None</code>) – Optional sync/async callback for one stale-reference refresh per part.
+- **file_reference_refresher** (<code>[FileReferenceRefresher](#miniproto.media.download.FileReferenceRefresher) | None</code>) – Optional sync/async callback for one stale-reference refresh per part. The returned location must preserve its concrete type and every field except ``file_reference``.
 
 **Returns:**
 

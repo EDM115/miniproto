@@ -6,6 +6,7 @@ import asyncio
 import base64
 import logging
 import socket as socket_module
+import ssl
 import time
 from collections import deque
 from collections.abc import Awaitable, Callable
@@ -181,10 +182,13 @@ async def _open_proxy_connection(endpoint: ConnectionEndpoint, proxy_url: str) -
 
     Args:
         endpoint: Final MTProto destination requested through the proxy.
-        proxy_url: HTTP CONNECT or SOCKS5 URL with optional credentials. ``http`` and ``https`` both use plain TCP to the proxy here, while ``socks`` and ``socks5`` select SOCKS5.
+        proxy_url: HTTP CONNECT or SOCKS5 URL with optional credentials. ``https`` verifies TLS to the proxy before CONNECT, ``http`` uses plain TCP, and ``socks`` and ``socks5`` select SOCKS5.
     """
     proxy = _parse_proxy_url(proxy_url)
-    reader, writer = await asyncio.open_connection(proxy.host, proxy.port)
+    if proxy.scheme == "https":
+        reader, writer = await asyncio.open_connection(proxy.host, proxy.port, ssl=ssl.create_default_context(), server_hostname=proxy.host)  # fmt: skip
+    else:
+        reader, writer = await asyncio.open_connection(proxy.host, proxy.port)
     try:
         match proxy.scheme:
             case "http" | "https":
@@ -194,7 +198,11 @@ async def _open_proxy_connection(endpoint: ConnectionEndpoint, proxy_url: str) -
             case _:
                 raise TransportError(f"unsupported proxy scheme: {proxy.scheme}")
     except BaseException:
-        writer.close()
+        if proxy.scheme == "https":
+            # Failed TLS tunnels must not wait for the proxy's close-notify response
+            writer.transport.abort()
+        else:
+            writer.close()
         with suppress(Exception):
             await writer.wait_closed()
         raise
@@ -202,7 +210,7 @@ async def _open_proxy_connection(endpoint: ConnectionEndpoint, proxy_url: str) -
 
 
 def _parse_proxy_url(proxy_url: str) -> _ProxyConfig:
-    """Parse a proxy URL and apply SOCKS/HTTP default ports.
+    """Parse a proxy URL and apply SOCKS/HTTP/HTTPS default ports.
 
     Args:
         proxy_url: User-configured proxy URL to normalize.
@@ -210,7 +218,7 @@ def _parse_proxy_url(proxy_url: str) -> _ProxyConfig:
     parsed = urlsplit(proxy_url)
     if not parsed.scheme or parsed.hostname is None:
         raise TransportError("proxy must be a URL such as socks5://host:1080 or http://host:8080")
-    default_port = 1080 if parsed.scheme in {"socks", "socks5"} else 8080
+    default_port = 1080 if parsed.scheme in {"socks", "socks5"} else 443 if parsed.scheme == "https" else 8080
     return _ProxyConfig(
         scheme=parsed.scheme.casefold(),
         host=parsed.hostname,

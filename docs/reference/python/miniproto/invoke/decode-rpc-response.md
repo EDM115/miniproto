@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.invoke.decode_rpc_response"
 source_path: "src/miniproto/invoke.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L207"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L210"
 module: "miniproto.invoke"
 ---
 

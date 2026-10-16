@@ -53,7 +53,11 @@ _FAST_SERVICE_IDS = frozenset(
 )
 type ByteBuffer = bytes | memoryview
 DEFAULT_GZIP_MAX_OUTPUT_SIZE = 16 * 1024 * 1024
+DEFAULT_GZIP_MAX_INPUT_SIZE = 32 * 1024 * 1024
+DEFAULT_GZIP_MAX_MEMBERS = 1024
 MAX_GZIP_WRAPPER_DEPTH = 16
+_GZIP_INITIAL_INPUT_CHUNK_SIZE = 64
+_GZIP_MAX_INPUT_CHUNK_SIZE = 64 * 1024
 
 
 @dataclass(frozen=True, slots=True)
@@ -174,37 +178,65 @@ class GzipPacked:
 
     packed_data: ByteBuffer
 
-    def unpack(self, *, max_output_size: int = DEFAULT_GZIP_MAX_OUTPUT_SIZE) -> bytes:
-        """Decompress valid gzip members under one total output bound.
+    def unpack(
+        self,
+        *,
+        max_output_size: int = DEFAULT_GZIP_MAX_OUTPUT_SIZE,
+        max_input_size: int = DEFAULT_GZIP_MAX_INPUT_SIZE,
+        max_members: int = DEFAULT_GZIP_MAX_MEMBERS,
+    ) -> bytes:
+        """Decompress valid gzip members under input, output and member bounds.
 
         Args:
             max_output_size: Maximum combined decompressed bytes, defaulting to 16 MiB.
+            max_input_size: Maximum compressed bytes including padding, defaulting to 32 MiB.
+            max_members: Maximum concatenated members including empty members, defaulting to 1024.
 
         Returns:
             Uncompressed message-body bytes.
 
         Raises:
-            ValueError: If the output bound is not positive.
-            ProtocolValidationError: If gzip data is invalid, truncated or expands beyond the bound.
+            ValueError: If a bound is not positive.
+            ProtocolValidationError: If gzip data is invalid, truncated or exceeds a bound.
         """
         if max_output_size <= 0:
             raise ValueError("gzip maximum output size must be positive")
-        remaining = bytes(self.packed_data)
-        if not remaining:
+        if max_input_size <= 0:
+            raise ValueError("gzip maximum input size must be positive")
+        if max_members <= 0:
+            raise ValueError("gzip maximum member count must be positive")
+        if memoryview(self.packed_data).nbytes > max_input_size:
+            raise ProtocolValidationError("gzip_input_too_large", context={"maximum": max_input_size})
+        data = memoryview(bytes(self.packed_data))
+        if not data:
             raise ProtocolValidationError("gzip_payload_invalid")
         output = bytearray()
-        while remaining:
+        offset = 0
+        members = 0
+        while offset < len(data):
+            if members == max_members:
+                raise ProtocolValidationError("gzip_member_limit", context={"maximum": max_members})
+            members += 1
             try:
                 decompressor = zlib.decompressobj(16 + zlib.MAX_WBITS)
-                chunk = decompressor.decompress(remaining, max_output_size - len(output) + 1)
+                input_chunk_size = _GZIP_INITIAL_INPUT_CHUNK_SIZE
+                while True:
+                    end = min(offset + input_chunk_size, len(data))
+                    chunk = decompressor.decompress(data[offset:end], max_output_size - len(output) + 1)
+                    if len(output) + len(chunk) > max_output_size or decompressor.unconsumed_tail:
+                        raise ProtocolValidationError("gzip_payload_too_large", context={"maximum": max_output_size})
+                    output.extend(chunk)
+                    offset = end - len(decompressor.unused_data)
+                    if decompressor.eof:
+                        break
+                    if offset == len(data):
+                        raise ProtocolValidationError("gzip_payload_invalid")
+                    # Grow only within a member so empty members cannot repeatedly copy large unread suffixes
+                    input_chunk_size = min(input_chunk_size * 2, _GZIP_MAX_INPUT_CHUNK_SIZE)
             except zlib.error as exc:
                 raise ProtocolValidationError("gzip_payload_invalid") from exc
-            if len(output) + len(chunk) > max_output_size or decompressor.unconsumed_tail:
-                raise ProtocolValidationError("gzip_payload_too_large", context={"maximum": max_output_size})
-            if not decompressor.eof:
-                raise ProtocolValidationError("gzip_payload_invalid")
-            output.extend(chunk)
-            remaining = decompressor.unused_data.lstrip(b"\x00")
+            while offset < len(data) and data[offset] == 0:
+                offset += 1
         return bytes(output)
 
 

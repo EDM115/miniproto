@@ -10,9 +10,17 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
-from tools.schema.parser import TLEntry, TLParameter, TLSchema, iter_public_params
+from tools.schema.parser import (
+    TLEntry,
+    TLParameter,
+    TLSchema,
+    iter_public_params,
+    validate_flag_index,
+    validate_flag_parameters,
+)
 
 Direction = Literal["encode", "decode"]
+_SERVICE_NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*")
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,6 +44,11 @@ class FastField:
     value_index: int | None
     flag_group: int | None = None
     flag_index: int | None = None
+
+    def __post_init__(self) -> None:
+        """Reject invalid optional bits before creating native field descriptors."""
+        if self.wire_type == "true" or self.flag_index is not None:
+            validate_flag_index(self.flag_index, field_name=self.name)
 
 
 @dataclass(frozen=True, slots=True)
@@ -106,7 +119,7 @@ def load_fast_entries(
         Exactly 30 unique, validated reviewed fast-path entries.
 
     Raises:
-        ValueError: Manifest version, provenance, selection, fields or uniqueness validation fails.
+        ValueError: Manifest version, provenance, selection, service names, fields or uniqueness validation fails.
     """
     manifest = json.loads(manifest_text if manifest_text is not None else manifest_path.read_text(encoding="utf-8"))
     if manifest.get("version") != 1:
@@ -139,6 +152,9 @@ def load_fast_entries(
             )
         )
     for item in manifest.get("mtproto", ()):
+        name = item.get("name")
+        if not isinstance(name, str) or _SERVICE_NAME_RE.fullmatch(name) is None:
+            raise ValueError(f"invalid Rust TL fast-path service name {name!r}")
         fields = tuple(
             FastField(
                 name=str(field["name"]),
@@ -150,12 +166,12 @@ def load_fast_entries(
             for index, field in enumerate(item.get("fields", ()))
         )
         directions = _directions(item)
-        _validate_decode_fields(str(item["name"]), directions, fields)
+        _validate_decode_fields(name, directions, fields)
         entries.append(
             FastEntry(
                 source="mtproto",
                 kind="service",
-                name=str(item["name"]),
+                name=name,
                 python_type=str(item["python_type"]),
                 constructor_id=int(str(item["constructor_id"]), 16),
                 directions=directions,
@@ -234,7 +250,7 @@ def render_rust(entries: tuple[FastEntry, ...], schema_layer: int, schema_sha256
             [
                 "    FastConstructorSpec {",
                 f"        constructor_id: 0x{entry.constructor_id:08x},",
-                f"        name: {entry.name!r},".replace("'", '"'),
+                f"        name: {_rust_string_literal(entry.name)},",
                 f"        encode: {str('encode' in entry.directions).lower()},",
                 f"        decode: {str('decode' in entry.directions).lower()},",
                 f"        value_count: {len(entry.value_fields)},",
@@ -254,6 +270,29 @@ def render_rust(entries: tuple[FastEntry, ...], schema_layer: int, schema_sha256
         lines.append(f"        0x{entry.constructor_id:08x} => Some(&FAST_CONSTRUCTORS[{index}]),")
     lines.extend(["        _ => None,", "    }", "}", ""])
     return "\n".join(lines)
+
+
+def _rust_string_literal(value: str) -> str:
+    """Encode one Unicode scalar string as a single Rust string literal.
+
+    Args:
+        value: Text to preserve as literal data in generated Rust source.
+
+    Raises:
+        ValueError: The input contains a surrogate, which Rust strings cannot represent.
+    """
+    escaped = []
+    for character in value:
+        codepoint = ord(character)
+        if 0xD800 <= codepoint <= 0xDFFF:
+            raise ValueError("Rust string literal cannot contain surrogate code points")
+        if character in {'"', "\\"}:
+            escaped.append("\\" + character)
+        elif 0x20 <= codepoint <= 0x7E:
+            escaped.append(character)
+        else:
+            escaped.append(f"\\u{{{codepoint:x}}}")
+    return '"' + "".join(escaped) + '"'
 
 
 def render_python_metadata(entries: tuple[FastEntry, ...], schema_layer: int, schema_sha256: str) -> str:
@@ -323,6 +362,7 @@ def _api_fields(entry: TLEntry) -> tuple[FastField, ...]:
     Raises:
         ValueError: Public-field normalization diverges from the parsed declaration or a selected field layout is unsupported.
     """
+    validate_flag_parameters(entry.params)
     group_indexes: dict[str, int] = {}
     value_index = 0
     fields: list[FastField] = []
@@ -453,6 +493,8 @@ def _rust_field(field: FastField) -> str:
     Args:
         field: Reviewed normalized field metadata.
     """
+    if field.wire_type == "true" or field.flag_index is not None:
+        validate_flag_index(field.flag_index, field_name=field.name)
     if field.wire_type == "flags":
         return f"FastFieldSpec::Flags {{ group: {field.flag_group or 0} }}"
     if field.wire_type == "true":

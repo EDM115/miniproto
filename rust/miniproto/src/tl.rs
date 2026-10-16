@@ -3,6 +3,8 @@
 //! Primitive `tl_*` exports share the Python fallback's calling conventions. Optional `tl_fast_encode` and `tl_fast_decode` exports return `None` when the constructor has no matching fast path. Malformed wire data raises `ValueError`, checked allocation failures raise `MemoryError`, and PyO3 conversion errors propagate unchanged. Large primitive-vector operations detach from Python.
 //! `generated_tl.rs` supplies trusted metadata. Some descriptor indices and bit positions rely on generator invariants instead of per-call validation.
 
+use std::borrow::Cow;
+
 use pyo3::IntoPyObjectExt;
 use pyo3::exceptions::{PyMemoryError, PyValueError};
 use pyo3::prelude::*;
@@ -705,12 +707,16 @@ fn tl_encode_int_vector(py: Python<'_>, values: Vec<i32>) -> PyResult<Vec<u8>> {
 #[pyfunction]
 fn tl_decode_int_vector(
     py: Python<'_>,
-    data: Vec<u8>,
+    data: Cow<'_, [u8]>,
     offset: i128,
 ) -> PyResult<(Vec<i32>, usize)> {
     let offset = normalize_vector_offset(offset)?;
-    let work_bytes = data.len().saturating_sub(offset);
-    detach_if_large(py, work_bytes, move || decode_i32_vector(&data, offset))
+    let (_, payload_offset, next_offset) = decode_vector_layout(&data, offset, 4)?;
+    let payload = &data[payload_offset..next_offset];
+    let values = detach_if_large(py, payload.len(), move || {
+        decode_i32_vector_payload(payload)
+    })?;
+    Ok((values, next_offset))
 }
 
 /// Encodes Python `tl_encode_long_vector(values)` as a generic TL vector of 64-bit integers.
@@ -740,12 +746,16 @@ fn tl_encode_long_vector(py: Python<'_>, values: Vec<i64>) -> PyResult<Vec<u8>> 
 #[pyfunction]
 fn tl_decode_long_vector(
     py: Python<'_>,
-    data: Vec<u8>,
+    data: Cow<'_, [u8]>,
     offset: i128,
 ) -> PyResult<(Vec<i64>, usize)> {
     let offset = normalize_vector_offset(offset)?;
-    let work_bytes = data.len().saturating_sub(offset);
-    detach_if_large(py, work_bytes, move || decode_i64_vector(&data, offset))
+    let (_, payload_offset, next_offset) = decode_vector_layout(&data, offset, 8)?;
+    let payload = &data[payload_offset..next_offset];
+    let values = detach_if_large(py, payload.len(), move || {
+        decode_i64_vector_payload(payload)
+    })?;
+    Ok((values, next_offset))
 }
 
 /// Borrows `length` bytes at `offset` from a TL buffer.
@@ -896,17 +906,31 @@ fn encode_i32_vector(values: &[i32]) -> PyResult<Vec<u8>> {
 ///
 /// - `data`: Complete TL input buffer.
 /// - `offset`: Byte offset at which the generic vector begins.
+#[cfg(test)]
 fn decode_i32_vector(data: &[u8], offset: usize) -> PyResult<(Vec<i32>, usize)> {
-    let (count, payload_offset, next_offset) = decode_vector_layout(data, offset, 4)?;
+    let (_, payload_offset, next_offset) = decode_vector_layout(data, offset, 4)?;
+    Ok((
+        decode_i32_vector_payload(&data[payload_offset..next_offset])?,
+        next_offset,
+    ))
+}
+
+/// Decodes the validated payload of a signed 32-bit vector without copying its input
+///
+/// # Arguments
+///
+/// - `payload`: Validated vector element bytes with a length divisible by four
+fn decode_i32_vector_payload(payload: &[u8]) -> PyResult<Vec<i32>> {
+    let count = payload.len() / 4;
     validate_vector_allocation(count, size_of::<i32>())?;
     let mut values = Vec::new();
     values
         .try_reserve_exact(count)
         .map_err(|_| PyMemoryError::new_err("failed to allocate TL vector"))?;
-    for &bytes in data[payload_offset..next_offset].as_chunks::<4>().0 {
+    for &bytes in payload.as_chunks::<4>().0 {
         values.push(i32::from_le_bytes(bytes));
     }
-    Ok((values, next_offset))
+    Ok(values)
 }
 
 /// Serializes signed 64-bit values as a generic boxed TL vector.
@@ -939,16 +963,29 @@ fn encode_i64_vector(values: &[i64]) -> PyResult<Vec<u8>> {
 /// - `data`: Complete TL input buffer.
 /// - `offset`: Byte offset at which the generic vector begins.
 fn decode_i64_vector(data: &[u8], offset: usize) -> PyResult<(Vec<i64>, usize)> {
-    let (count, payload_offset, next_offset) = decode_vector_layout(data, offset, 8)?;
+    let (_, payload_offset, next_offset) = decode_vector_layout(data, offset, 8)?;
+    Ok((
+        decode_i64_vector_payload(&data[payload_offset..next_offset])?,
+        next_offset,
+    ))
+}
+
+/// Decodes the validated payload of a signed 64-bit vector without copying its input
+///
+/// # Arguments
+///
+/// - `payload`: Validated vector element bytes with a length divisible by eight
+fn decode_i64_vector_payload(payload: &[u8]) -> PyResult<Vec<i64>> {
+    let count = payload.len() / 8;
     validate_vector_allocation(count, size_of::<i64>())?;
     let mut values = Vec::new();
     values
         .try_reserve_exact(count)
         .map_err(|_| PyMemoryError::new_err("failed to allocate TL vector"))?;
-    for &bytes in data[payload_offset..next_offset].as_chunks::<8>().0 {
+    for &bytes in payload.as_chunks::<8>().0 {
         values.push(i64::from_le_bytes(bytes));
     }
-    Ok((values, next_offset))
+    Ok(values)
 }
 
 /// Validates a generic vector header and returns its count, payload start and next offset.
@@ -1057,7 +1094,81 @@ fn checked_vector_capacity(count: usize, element_width: usize) -> PyResult<usize
 /// Unit tests for TL primitives, vectors and generated native fast paths.
 #[cfg(test)]
 mod tests {
+    use std::alloc::{GlobalAlloc, Layout, System};
+    use std::cell::Cell;
+
     use super::*;
+
+    thread_local! {
+        static ALLOCATED_BYTES: Cell<Option<usize>> = const { Cell::new(None) };
+    }
+
+    struct CountingAllocator;
+
+    // Only the measuring test thread records allocations, other tests use System unchanged
+    unsafe impl GlobalAlloc for CountingAllocator {
+        unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+            let pointer = unsafe { System.alloc(layout) };
+            let _ = ALLOCATED_BYTES.try_with(|total| {
+                if let Some(bytes) = total.get() {
+                    total.set(Some(bytes.saturating_add(layout.size())));
+                }
+            });
+            pointer
+        }
+
+        unsafe fn dealloc(&self, pointer: *mut u8, layout: Layout) {
+            unsafe { System.dealloc(pointer, layout) };
+        }
+    }
+
+    #[global_allocator]
+    static TEST_ALLOCATOR: CountingAllocator = CountingAllocator;
+
+    #[test]
+    /// Checks that repeated primitive-vector bindings allocate by values rather than input padding
+    fn python_vector_bindings_allocate_for_values_only() {
+        Python::initialize();
+        Python::attach(|py| {
+            let decoders = [
+                (wrap_pyfunction!(tl_decode_int_vector, py).unwrap(), 4),
+                (wrap_pyfunction!(tl_decode_long_vector, py).unwrap(), 8),
+            ];
+            for (decoder, width) in decoders {
+                for count in [0_usize, 3] {
+                    for repetitions in [32, 64] {
+                        for padding in [32 * 1024, 64 * 1024] {
+                            let mut buffer = vec![0xA5; 3];
+                            for _ in 0..repetitions {
+                                buffer.extend_from_slice(&TL_VECTOR_CONSTRUCTOR_ID.to_le_bytes());
+                                buffer.extend_from_slice(&(count as i32).to_le_bytes());
+                                for value in [-65_537_i64, 0x10203, -7].iter().take(count) {
+                                    buffer.extend_from_slice(&value.to_le_bytes()[..width]);
+                                }
+                            }
+                            buffer.resize(buffer.len() + padding, 0x5A);
+                            let data = PyBytes::new(py, &buffer);
+                            decoder.call1((&data, 3)).unwrap();
+
+                            ALLOCATED_BYTES.set(Some(0));
+                            let mut succeeded = true;
+                            for index in 0..repetitions {
+                                let offset = 3 + index * (8 + count * width);
+                                succeeded &= decoder.call1((&data, offset)).is_ok();
+                            }
+                            let allocated = ALLOCATED_BYTES.replace(None).unwrap();
+
+                            assert!(succeeded);
+                            assert!(
+                                allocated <= repetitions * (count * width + 64),
+                                "width={width}, count={count}, repetitions={repetitions}, padding={padding}, allocated={allocated}"
+                            );
+                        }
+                    }
+                }
+            }
+        });
+    }
 
     #[test]
     /// Checks fixed-width integer codec round-trips.

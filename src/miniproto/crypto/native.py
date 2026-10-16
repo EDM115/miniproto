@@ -1111,18 +1111,18 @@ def pq_factorize(pq: int) -> tuple[int, int]:
     """Factor the composite integer used by the MTProto handshake.
 
     Args:
-        pq: A composite integer greater than or equal to four.
+        pq: A composite integer in the inclusive range four through ``2**64 - 1``.
 
     Returns:
         The two factors in ascending order.
 
     Raises:
-        ValueError: If ``pq`` is too small or prime.
+        ValueError: If ``pq`` is outside the supported range, prime or exceeds the factorization work budget.
 
-    Uses the selected backend's Pollard-rho-style implementation.  It is a
-    protocol helper, not a general-purpose factorization service; runtime grows
-    with the input and no fixed latency guarantee is made.
+    Both backends limit Pollard-rho to sixteen attempts of at most 100,000 iterations each. This synchronous protocol helper has a finite work budget, not a fixed latency guarantee.
     """
+    if not 4 <= pq <= (1 << 64) - 1:
+        raise ValueError("pq must be a composite integer in the range 4..2**64-1")
     left, right = _native_impl.pq_factorize(pq)
     return int(left), int(right)
 

@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::crypto::mtproto_derive_aes_key_iv"
 source_path: "rust/miniproto/src/crypto.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L170"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L174"
 aliases: ["miniproto._native.mtproto_derive_aes_key_iv"]
 python_visible: true
 ---
@@ -15,7 +15,7 @@ python_visible: true
 ## Provenance
 
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L170)
+- Source: [`rust/miniproto/src/crypto.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/crypto.rs#L174)
 - Python exposure: `miniproto._native.mtproto_derive_aes_key_iv` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -39,7 +39,7 @@ fn mtproto_derive_aes_key_iv(py: _, auth_key: _, msg_key: _, client_to_server: b
 fn mtproto_derive_aes_key_iv(py: Python<'_>, auth_key: Vec<u8>, msg_key: Vec<u8>, client_to_server: bool) -> PyResult<(Vec<u8>, Vec<u8>)>
 ```
 
-*Defined in `rust/miniproto/src/crypto.rs:170-186`*
+*Defined in `rust/miniproto/src/crypto.rs:174-190`*
 
 Derives the AES-256 key and IV used by Python `mtproto_derive_aes_key_iv`.
 

@@ -1,11 +1,18 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import gzip
+import ipaddress
 import logging
 import socket
+import ssl
 import time
-from collections.abc import Mapping
+from collections import OrderedDict
+from collections.abc import Callable, Iterable, Iterator, Mapping
+from contextlib import suppress
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any, cast
 
 import pytest
@@ -1111,9 +1118,8 @@ def test_sender_paces_reconnects_when_connections_flap() -> None:
             loop = asyncio.get_running_loop()
             started = loop.time()
             assert await sender.request(b"req1", retry_safe=True, request_timeout=5.0) == b"okay"
-            elapsed = loop.time() - started
-            # The reconnect after a young connection dies must wait out the cooldown.
-            assert elapsed >= 0.2
+            # Compare the deadline directly to avoid rounding in elapsed-time subtraction
+            assert loop.time() >= started + 0.2
             await sender.disconnect()
 
     event_loop.run(run())
@@ -2788,3 +2794,537 @@ def test_abridged_transport_does_not_treat_payload_prefix_as_error_frame() -> No
         assert await transport.read_packet(reader) == payload
 
     event_loop.run(run())
+
+
+@pytest.mark.parametrize(
+    ("proxy_url", "expected_port", "secure"),
+    [
+        ("https://proxy.example", 443, True),
+        ("HTTPS://proxy.example:8443", 8443, True),
+        ("http://proxy.example", 8080, False),
+        ("socks5://proxy.example", 1080, False),
+        ("socks://proxy.example", 1080, False),
+    ],
+)
+def test_proxy_scheme_selects_tls_before_connect(
+    monkeypatch: pytest.MonkeyPatch, proxy_url: str, expected_port: int, secure: bool
+) -> None:
+    async def run() -> None:
+        writes: list[bytes] = []
+        opened = False
+
+        class Writer:
+            def write(self, data: bytes) -> None:
+                assert opened
+                writes.append(data)
+
+            async def drain(self) -> None:
+                pass
+
+        async def open_connection(
+            host: str, port: int, **kwargs: object
+        ) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
+            nonlocal opened
+            assert (host, port) == ("proxy.example", expected_port)
+            assert not writes
+            if secure:
+                context = kwargs["ssl"]
+                assert isinstance(context, ssl.SSLContext)
+                assert context.verify_mode == ssl.CERT_REQUIRED
+                assert context.check_hostname
+                assert kwargs["server_hostname"] == "proxy.example"
+            else:
+                assert not kwargs
+            reader = asyncio.StreamReader()
+            reader.feed_data(
+                b"\x05\x00\x05\x00\x00\x01\x00\x00\x00\x00\x00\x00"
+                if proxy_url.startswith("socks")
+                else b"HTTP/1.1 200 Connection Established\r\n\r\n"
+            )
+            opened = True
+            return reader, cast("asyncio.StreamWriter", Writer())
+
+        monkeypatch.setattr(transport_module.asyncio, "open_connection", open_connection)
+        await default_stream_connector(ConnectionEndpoint("destination.example", 443), TransportConfig(proxy=proxy_url))
+        assert writes
+
+    event_loop.run(run())
+
+
+@pytest.fixture
+def proxy_tls_contexts(tmp_path: Path, request: pytest.FixtureRequest) -> tuple[ssl.SSLContext, ssl.SSLContext]:
+    pytest.importorskip("cryptography")
+    from cryptography import x509
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
+
+    now = datetime.now(UTC)
+    ca_key = ec.generate_private_key(ec.SECP256R1())
+    ca_name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "test proxy CA")])
+    ca_cert = (
+        x509.CertificateBuilder()
+        .subject_name(ca_name)
+        .issuer_name(ca_name)
+        .public_key(ca_key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now - timedelta(days=1))
+        .not_valid_after(now + timedelta(days=1))
+        .add_extension(x509.BasicConstraints(ca=True, path_length=0), critical=True)
+        .add_extension(x509.KeyUsage(True, False, False, False, False, True, True, False, False), critical=True)
+        .add_extension(x509.SubjectKeyIdentifier.from_public_key(ca_key.public_key()), critical=False)
+        .sign(ca_key, hashes.SHA256())
+    )
+    server_key = ec.generate_private_key(ec.SECP256R1())
+    server_ip = ipaddress.ip_address("192.0.2.1" if getattr(request, "param", None) == "mismatch" else "127.0.0.1")
+    server_cert = (
+        x509.CertificateBuilder()
+        .subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "localhost")]))
+        .issuer_name(ca_name)
+        .public_key(server_key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now - timedelta(days=1))
+        .not_valid_after(now + timedelta(days=1))
+        .add_extension(x509.BasicConstraints(ca=False, path_length=None), critical=True)
+        .add_extension(x509.KeyUsage(True, False, False, False, False, False, False, False, False), critical=True)
+        .add_extension(x509.SubjectAlternativeName([x509.IPAddress(server_ip)]), critical=False)
+        .add_extension(x509.ExtendedKeyUsage([ExtendedKeyUsageOID.SERVER_AUTH]), critical=False)
+        .add_extension(x509.AuthorityKeyIdentifier.from_issuer_public_key(ca_key.public_key()), critical=False)
+        .sign(ca_key, hashes.SHA256())
+    )
+    cert_path, key_path = tmp_path / "proxy.pem", tmp_path / "proxy-key.pem"
+    cert_path.write_bytes(server_cert.public_bytes(serialization.Encoding.PEM))
+    key_path.write_bytes(
+        server_key.private_bytes(
+            serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()
+        )
+    )
+    server_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    server_context.load_cert_chain(cert_path, key_path)
+    client_context = ssl.create_default_context(cadata=ca_cert.public_bytes(serialization.Encoding.PEM).decode("ascii"))
+    return server_context, client_context
+
+
+@pytest.mark.parametrize(
+    "loop_factory", [asyncio.new_event_loop, event_loop.new_event_loop], ids=["stdlib", "optimized"]
+)
+def test_https_proxy_authenticates_inside_tls_and_preserves_tunnel(
+    monkeypatch: pytest.MonkeyPatch,
+    proxy_tls_contexts: tuple[ssl.SSLContext, ssl.SSLContext],
+    loop_factory: Callable[[], asyncio.AbstractEventLoop],
+) -> None:
+    server_context, client_context = proxy_tls_contexts
+    monkeypatch.setattr(transport_module.ssl, "create_default_context", lambda: client_context)
+
+    async def run() -> None:
+        observed = asyncio.get_running_loop().create_future()
+
+        async def handle(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+            try:
+                assert writer.get_extra_info("ssl_object") is not None
+                request = await reader.readuntil(b"\r\n\r\n")
+                writer.write(b"HTTP/1.1 200 Connection Established\r\n\r\ntunnel-ready")
+                await writer.drain()
+                payload = await reader.readexactly(4)
+                observed.set_result((request, payload))
+            except Exception as exc:
+                observed.set_exception(exc)
+            finally:
+                writer.close()
+                await writer.wait_closed()
+
+        async with await asyncio.start_server(handle, "127.0.0.1", 0, ssl=server_context) as server:
+            port = server.sockets[0].getsockname()[1]
+            reader, writer = await default_stream_connector(
+                ConnectionEndpoint("2001:db8::42", 443),
+                TransportConfig(proxy=f"https://proxy%40user:p%3Ass@127.0.0.1:{port}", connect_timeout=2.0),
+            )
+            try:
+                assert writer.get_extra_info("ssl_object") is not None
+                assert await reader.readexactly(12) == b"tunnel-ready"
+                writer.write(b"ping")
+                await writer.drain()
+                request, payload = await asyncio.wait_for(observed, 2.0)
+                assert request.startswith(b"CONNECT [2001:db8::42]:443 HTTP/1.1\r\nHost: [2001:db8::42]:443\r\n")
+                assert b"Proxy-Authorization: Basic " + base64.b64encode(b"proxy@user:p:ss") + b"\r\n" in request
+                assert payload == b"ping"
+            finally:
+                writer.close()
+                await writer.wait_closed()
+
+    with asyncio.Runner(loop_factory=loop_factory) as runner:
+        runner.run(run())
+
+
+@pytest.mark.parametrize(
+    ("proxy_tls_contexts", "failure"),
+    [("matching", "untrusted"), ("mismatch", "hostname")],
+    indirect=["proxy_tls_contexts"],
+)
+def test_https_proxy_certificate_failure_sends_no_connect(
+    monkeypatch: pytest.MonkeyPatch, proxy_tls_contexts: tuple[ssl.SSLContext, ssl.SSLContext], failure: str
+) -> None:
+    server_context, trusted_context = proxy_tls_contexts
+    context = ssl.create_default_context() if failure == "untrusted" else trusted_context
+    monkeypatch.setattr(transport_module.ssl, "create_default_context", lambda: context)
+
+    async def run() -> None:
+        application_requests: list[bytes] = []
+
+        async def handle(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+            application_requests.append(await reader.read(4096))
+            writer.close()
+            await writer.wait_closed()
+
+        async with await asyncio.start_server(handle, "127.0.0.1", 0, ssl=server_context) as server:
+            port = server.sockets[0].getsockname()[1]
+            with pytest.raises(TransportError) as raised:
+                await default_stream_connector(
+                    ConnectionEndpoint("destination.example", 443),
+                    TransportConfig(proxy=f"https://test-user:test-password@127.0.0.1:{port}", connect_timeout=2.0),
+                )
+            assert isinstance(raised.value.__cause__, ssl.SSLCertVerificationError)
+            assert not application_requests
+
+    event_loop.run(run())
+
+
+def test_https_proxy_never_retries_plaintext_after_tls_failure() -> None:
+    async def run() -> None:
+        seen: list[bytes] = []
+
+        async def handle(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+            seen.append(await reader.read(4096))
+            writer.write(b"HTTP/1.1 200 Connection Established\r\n\r\n")
+            await writer.drain()
+            writer.close()
+            await writer.wait_closed()
+
+        async with await asyncio.start_server(handle, "127.0.0.1", 0) as server:
+            port = server.sockets[0].getsockname()[1]
+            with pytest.raises(TransportError):
+                _, writer = await default_stream_connector(
+                    ConnectionEndpoint("destination.example", 443),
+                    TransportConfig(proxy=f"https://test-user:test-password@127.0.0.1:{port}", connect_timeout=2.0),
+                )
+                writer.close()
+                await writer.wait_closed()
+            assert len(seen) == 1
+            assert seen[0].startswith(b"\x16\x03")
+            assert b"CONNECT " not in seen[0]
+            assert b"Proxy-Authorization" not in seen[0]
+            assert base64.b64encode(b"test-user:test-password") not in seen[0]
+
+    event_loop.run(run())
+
+
+@pytest.mark.parametrize("failure", ["reject", "cancel"])
+def test_https_proxy_failed_connect_closes_without_waiting_for_tls_peer(
+    monkeypatch: pytest.MonkeyPatch, proxy_tls_contexts: tuple[ssl.SSLContext, ssl.SSLContext], failure: str
+) -> None:
+    server_context, client_context = proxy_tls_contexts
+    monkeypatch.setattr(transport_module.ssl, "create_default_context", lambda: client_context)
+
+    async def run() -> None:
+        request_received = asyncio.Event()
+        peer_writers: list[asyncio.StreamWriter] = []
+        client_writers: list[asyncio.StreamWriter] = []
+        original_open = asyncio.open_connection
+
+        async def open_connection(
+            host: str, port: int, *, ssl: ssl.SSLContext, server_hostname: str
+        ) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
+            reader, writer = await original_open(host, port, ssl=ssl, server_hostname=server_hostname)
+            client_writers.append(writer)
+            return reader, writer
+
+        monkeypatch.setattr(transport_module.asyncio, "open_connection", open_connection)
+
+        async def handle(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+            peer_writers.append(writer)
+            await reader.readuntil(b"\r\n\r\n")
+            cast("asyncio.Transport", writer.transport).pause_reading()
+            if failure == "reject":
+                writer.write(b"HTTP/1.1 407 Proxy Authentication Required\r\n\r\n")
+                await writer.drain()
+            request_received.set()
+
+        async with await asyncio.start_server(handle, "127.0.0.1", 0, ssl=server_context) as server:
+            port = server.sockets[0].getsockname()[1]
+            pending = asyncio.create_task(
+                default_stream_connector(
+                    ConnectionEndpoint("destination.example", 443),
+                    TransportConfig(proxy=f"https://127.0.0.1:{port}", connect_timeout=10.0),
+                )
+            )
+            try:
+                await asyncio.wait_for(request_received.wait(), 2.0)
+                if failure == "cancel":
+                    pending.cancel()
+                done, _ = await asyncio.wait({pending}, timeout=1.0)
+                assert pending in done, "failed CONNECT must release TLS resources without waiting for the peer"
+                if failure == "cancel":
+                    with pytest.raises(asyncio.CancelledError):
+                        await pending
+                else:
+                    with pytest.raises(TransportError, match="407"):
+                        await pending
+                assert len(client_writers) == 1
+                assert client_writers[0].is_closing()
+                await asyncio.wait_for(client_writers[0].wait_closed(), 1.0)
+            finally:
+                for writer in peer_writers + client_writers:
+                    writer.transport.abort()
+                    with suppress(Exception):
+                        await asyncio.wait_for(writer.wait_closed(), 1.0)
+                if not pending.done():
+                    pending.cancel()
+                with suppress(BaseException):
+                    await pending
+
+    event_loop.run(run())
+
+
+REPLAY_AUTH_KEY = bytes(range(256))
+
+
+REPLAY_SESSION_ID = 456
+
+
+REPLAY_NOW = 1_000.0
+
+
+REPLAY_MSG_ID_BASE = 1_000 << 32
+
+
+@pytest.fixture
+def _fixed_replay_time(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(sender_module.time, "time", lambda: REPLAY_NOW)
+
+
+def _replay_sender(window: int, retained: tuple[int, ...] = ()) -> MTProtoSender:
+    state = MTProtoState(auth_key=REPLAY_AUTH_KEY, session_id=REPLAY_SESSION_ID, duplicate_window=window)
+    for offset in retained:
+        state.commit_incoming(REPLAY_MSG_ID_BASE + offset, content_related=False, now=REPLAY_NOW)
+    return MTProtoSender(ConnectionEndpoint("127.0.0.1", 443), TransportConfig(), state)
+
+
+def _replay_container(*offsets: int) -> MessageContainer:
+    return MessageContainer(
+        tuple(MessageContainerItem(REPLAY_MSG_ID_BASE + offset, 1, MsgsAck(())) for offset in offsets)
+    )
+
+
+def _replay_envelope(
+    sender: MTProtoSender, body: object, *, offset: int = 501, session_id: int = REPLAY_SESSION_ID
+) -> DecodedEncryptedMessage:
+    return DecodedEncryptedMessage(
+        sender.state.auth_key_id, 0, session_id, REPLAY_MSG_ID_BASE + offset, 0, encode_message_body(body), b""
+    )
+
+
+def _replay_state_snapshot(state: MTProtoState) -> tuple[object, ...]:
+    return (
+        tuple(state._seen_msg_ids.items()),
+        tuple(state._pending_acks.items()),
+        state.time_trusted,
+        state.time_offset,
+        state.server_salt,
+    )
+
+
+@pytest.mark.usefixtures("_fixed_replay_time")
+def test_replay_floor_falls_before_the_window_fills_and_retains_numeric_maxima() -> None:
+    async def run() -> None:
+        sender = _replay_sender(4, (101,))
+        dispatch = await sender._prevalidate_and_commit_incoming(
+            _replay_envelope(sender, _replay_container(401, 51, 71, 61))
+        )
+
+        assert tuple(message.msg_id - REPLAY_MSG_ID_BASE for message, _body in dispatch) == (401, 51, 71, 61)
+        assert tuple(msg_id - REPLAY_MSG_ID_BASE for msg_id in sender.state._seen_msg_ids) == (101, 501, 401, 71)
+        assert tuple(msg_id - REPLAY_MSG_ID_BASE for msg_id in sender.state.pop_pending_acks()) == (401, 51, 71, 61)
+        assert sender.state.message_statuses(
+            tuple(REPLAY_MSG_ID_BASE + offset for offset in (51, 61, 71, 101, 401, 501))
+        ) == bytes((1, 1, 4, 20, 4, 20))
+
+    asyncio.run(run())
+
+
+@pytest.mark.usefixtures("_fixed_replay_time")
+def test_replay_floor_rejects_at_the_exact_retained_plus_provisional_threshold() -> None:
+    async def run() -> None:
+        sender = _replay_sender(4, (101,))
+        before = _replay_state_snapshot(sender.state)
+        with pytest.raises(ProtocolValidationError, match="replay_floor"):
+            await sender._prevalidate_and_commit_incoming(_replay_envelope(sender, _replay_container(401, 51, 49)))
+        assert _replay_state_snapshot(sender.state) == before
+
+    asyncio.run(run())
+
+
+@pytest.mark.usefixtures("_fixed_replay_time")
+def test_retained_duplicate_still_counts_as_a_staged_id_for_the_replay_threshold() -> None:
+    async def run() -> None:
+        sender = _replay_sender(3, (101,))
+        before = _replay_state_snapshot(sender.state)
+        with pytest.raises(ProtocolValidationError, match="replay_floor"):
+            await sender._prevalidate_and_commit_incoming(_replay_envelope(sender, _replay_container(101, 51)))
+        assert _replay_state_snapshot(sender.state) == before
+
+    asyncio.run(run())
+
+
+@pytest.mark.usefixtures("_fixed_replay_time")
+def test_suppressed_descendant_lowers_the_floor_without_committing_or_dispatching() -> None:
+    async def run() -> None:
+        sender = _replay_sender(4, (401,))
+        body = MessageContainer(
+            (
+                MessageContainerItem(REPLAY_MSG_ID_BASE + 401, 1, _replay_container(51)),
+                MessageContainerItem(REPLAY_MSG_ID_BASE + 201, 1, MsgsAck(())),
+            )
+        )
+        dispatch = await sender._prevalidate_and_commit_incoming(_replay_envelope(sender, body))
+
+        assert tuple(message.msg_id - REPLAY_MSG_ID_BASE for message, _body in dispatch) == (201,)
+        assert tuple(msg_id - REPLAY_MSG_ID_BASE for msg_id in sender.state._seen_msg_ids) == (401, 501, 201)
+        assert tuple(msg_id - REPLAY_MSG_ID_BASE for msg_id in sender.state.pop_pending_acks()) == (201, 401)
+
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize(
+    ("offsets", "reason"),
+    [
+        ((101, 101), "duplicate_msg_id_in_container"),
+        ((101, 200), "msg_id_parity"),
+        ((101, 505), "container_child_msg_id_not_less"),
+        ((101, (31 << 32) + 1), "msg_id_future"),
+        ((101, (-301 << 32) + 1), "msg_id_past"),
+    ],
+)
+@pytest.mark.parametrize("trusted", [False, True])
+@pytest.mark.usefixtures("_fixed_replay_time")
+def test_late_invalid_member_preserves_history_clock_and_pending_acks(
+    offsets: tuple[int, ...], reason: str, trusted: bool
+) -> None:
+    async def run() -> None:
+        sender = _replay_sender(8, (301,) if trusted else ())
+        sender.state.queue_ack(REPLAY_MSG_ID_BASE + 301)
+        before = _replay_state_snapshot(sender.state)
+        with pytest.raises(ProtocolValidationError, match=reason):
+            await sender._prevalidate_and_commit_incoming(_replay_envelope(sender, _replay_container(*offsets)))
+        assert _replay_state_snapshot(sender.state) == before
+        assert sender._incoming.empty()
+
+    asyncio.run(run())
+
+
+@pytest.mark.usefixtures("_fixed_replay_time")
+def test_wrong_session_rejects_before_any_history_or_ack_commit() -> None:
+    async def run() -> None:
+        sender = _replay_sender(4, (101,))
+        before = _replay_state_snapshot(sender.state)
+        with pytest.raises(ProtocolValidationError, match="session_id"):
+            await sender._prevalidate_and_commit_incoming(
+                _replay_envelope(sender, _replay_container(201, 301), session_id=REPLAY_SESSION_ID + 1)
+            )
+        assert _replay_state_snapshot(sender.state) == before
+
+    asyncio.run(run())
+
+
+@pytest.mark.usefixtures("_fixed_replay_time")
+def test_public_collection_validation_keeps_replay_and_duplicate_guards() -> None:
+    state = _replay_sender(4, (101,)).state
+    provisional = {REPLAY_MSG_ID_BASE + offset for offset in (501, 401, 51)}
+    before = _replay_state_snapshot(state)
+
+    assert state.validate_incoming(
+        REPLAY_MSG_ID_BASE + 71, session_id=REPLAY_SESSION_ID, now=REPLAY_NOW, provisional_seen_msg_ids=provisional
+    )
+    assert not state.validate_incoming(
+        REPLAY_MSG_ID_BASE + 101,
+        session_id=REPLAY_SESSION_ID,
+        now=REPLAY_NOW,
+        provisional_seen_msg_ids=provisional,
+        allow_duplicate=True,
+    )
+    with pytest.raises(ProtocolValidationError, match="replay_floor"):
+        state.validate_incoming(
+            REPLAY_MSG_ID_BASE + 49, session_id=REPLAY_SESSION_ID, now=REPLAY_NOW, provisional_seen_msg_ids=provisional
+        )
+    with pytest.raises(ProtocolValidationError, match="duplicate_msg_id"):
+        state.validate_incoming(
+            REPLAY_MSG_ID_BASE + 51,
+            session_id=REPLAY_SESSION_ID,
+            now=REPLAY_NOW,
+            provisional_seen_msg_ids=provisional,
+            allow_duplicate=True,
+        )
+    assert _replay_state_snapshot(state) == before
+
+
+@pytest.mark.usefixtures("_fixed_replay_time")
+def test_batch_snapshot_refreshes_after_legacy_insertion_order_eviction() -> None:
+    async def run() -> None:
+        sender = _replay_sender(2, (101, 301))
+        assert sender.state.record_incoming(REPLAY_MSG_ID_BASE + 51, content_related=False)
+        dispatch = await sender._prevalidate_and_commit_incoming(_replay_envelope(sender, _replay_container(71)))
+
+        assert tuple(message.msg_id - REPLAY_MSG_ID_BASE for message, _body in dispatch) == (71,)
+        assert tuple(msg_id - REPLAY_MSG_ID_BASE for msg_id in sender.state._seen_msg_ids) == (301, 501)
+        assert sender.state.pop_pending_acks() == (REPLAY_MSG_ID_BASE + 71,)
+
+    asyncio.run(run())
+
+
+class _CountedHistory(OrderedDict[int, int]):
+    def __init__(self, values: OrderedDict[int, int]) -> None:
+        super().__init__(values)
+        self.visits = 0
+        self.passes = 0
+
+    def __iter__(self) -> Iterator[int]:
+        self.passes += 1
+        for msg_id in super().__iter__():
+            self.visits += 1
+            yield msg_id
+
+
+@pytest.mark.usefixtures("_fixed_replay_time")
+def test_receive_batch_does_not_rescan_staged_ids_or_evict_one_history_scan_per_child(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def measure(children: int) -> int:
+        window = 7
+        sender = _replay_sender(window, tuple(range(1, 4 * window, 4)))
+        history = _CountedHistory(sender.state._seen_msg_ids)
+        sender.state._seen_msg_ids = history
+        minimum_visits = 0
+
+        def counted_min(values: Iterable[int], *, default: int | None = None) -> int | None:
+            def counted() -> Iterator[int]:
+                nonlocal minimum_visits
+                for msg_id in values:
+                    minimum_visits += 1
+                    yield msg_id
+
+            return min(counted(), default=default)
+
+        monkeypatch.setattr(state_module, "min", counted_min, raising=False)
+        offsets = tuple(range(101, 101 + 4 * children, 4))
+        dispatch = await sender._prevalidate_and_commit_incoming(
+            _replay_envelope(sender, _replay_container(*offsets), offset=1001)
+        )
+
+        assert tuple(message.msg_id - REPLAY_MSG_ID_BASE for message, _body in dispatch) == offsets
+        assert minimum_visits <= window
+        assert history.passes <= 2
+        assert history.visits <= 2 * window + children + 1
+        return history.visits + minimum_visits
+
+    small = asyncio.run(measure(16))
+    large = asyncio.run(measure(32))
+    assert large <= 2 * small

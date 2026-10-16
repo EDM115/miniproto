@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.auth.key_exchange.AuthKeyTransport.send_unencrypted"
 source_path: "src/miniproto/auth/key_exchange.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/auth/key_exchange.py#L462"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/auth/key_exchange.py#L465"
 aliases: ["miniproto.auth.AuthKeyTransport.send_unencrypted"]
 module: "miniproto.auth.key_exchange"
 ---

@@ -7,7 +7,7 @@ language: "python"
 kind: "attribute"
 qualified_name: "miniproto.invoke.SenderFactory"
 source_path: "src/miniproto/invoke.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L148"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L151"
 module: "miniproto.invoke"
 ---
 

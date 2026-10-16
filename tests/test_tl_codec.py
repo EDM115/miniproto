@@ -1,14 +1,25 @@
 from __future__ import annotations
 
+import gzip
+import struct
 import sys
+from collections.abc import Callable, Iterator
 from subprocess import run
+from types import ModuleType
+from typing import Any
 
 import pytest
 
+import miniproto._native_fallback as fallback
+from miniproto import _native_fallback
+from miniproto.crypto import native
+from miniproto.invoke import decode_result_payload
+from miniproto.mtproto.codec import GzipPacked
 from miniproto.raw import functions, types
 from miniproto.raw.base import TLObject
+from miniproto.tl import TLCodecError, decode_object, decode_vector, deserialize_object, encode_vector, serialize_object
 from miniproto.tl import codec as tl_codec
-from miniproto.tl import decode_object, decode_vector, deserialize_object, encode_vector, serialize_object
+from miniproto.tl.codec import decode_value
 
 
 def test_raw_facades_load_and_cache_only_requested_shards() -> None:
@@ -336,3 +347,248 @@ def _assert_layer230_wire(value: TLObject, expected_hex: str) -> None:
     assert decoded == value
     assert offset == 4 + len(expected)
 # fmt: on
+
+
+def _vector_header(count: int) -> bytes:
+    return bytes.fromhex("15c4b51c") + count.to_bytes(4, "little", signed=True)
+
+
+@pytest.fixture(params=["native", "fallback"])
+def _vector_backend(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    implementation = pytest.importorskip("miniproto._native") if request.param == "native" else _native_fallback
+    monkeypatch.setattr(native, "_native_impl", implementation)
+
+
+@pytest.mark.parametrize("item_type", ["true", " true ", "!true", "(true)", "!((true))"])
+@pytest.mark.parametrize("count", [0, 1, 2**31 - 1])
+@pytest.mark.usefixtures("_vector_backend")
+def test_true_vectors_are_rejected_before_decoding_any_item(monkeypatch: pytest.MonkeyPatch, item_type: str, count: int) -> None:  # fmt: skip
+    def forbidden_decode(*args: object) -> None:
+        pytest.fail("true vector rejection must precede element decoding")
+
+    monkeypatch.setattr(tl_codec, "decode_value", forbidden_decode)
+
+    with pytest.raises(TLCodecError, match="zero-width true"):
+        decode_vector(_vector_header(count), 0, item_type)
+
+
+@pytest.mark.parametrize("expression", ["Vector<true>", "vector true", "!(Vector<(true)>)", "Vector<Vector<true>>", "(vector vector true)"])  # fmt: skip
+@pytest.mark.parametrize("as_memoryview", [False, True])
+@pytest.mark.usefixtures("_vector_backend")
+def test_true_vectors_are_rejected_through_value_and_rpc_decoders(monkeypatch: pytest.MonkeyPatch, expression: str, as_memoryview: bool) -> None:  # fmt: skip
+    decode_value = tl_codec.decode_value
+
+    def guarded_decode(type_name: str, data: bytes | memoryview, offset: int) -> tuple[Any, int]:
+        if "ector" not in type_name:
+            pytest.fail("true vector rejection must precede element decoding")
+        return decode_value(type_name, data, offset)
+
+    monkeypatch.setattr(tl_codec, "decode_value", guarded_decode)
+    data = _vector_header(2**31 - 1)
+    if expression.count("ector") == 2:
+        data = _vector_header(1) + data
+    encoded = memoryview(data) if as_memoryview else data
+
+    with pytest.raises(TLCodecError, match="zero-width true"):
+        decode_value(expression, encoded, 0)
+    with pytest.raises(TLCodecError, match="zero-width true"):
+        decode_result_payload(encoded, expression)
+
+
+@pytest.mark.parametrize("item_type", ["true", " true ", "!true", "(true)", "!((true))"])
+@pytest.mark.usefixtures("_vector_backend")
+def test_true_vector_encoder_rejects_type_before_consuming_items(item_type: str) -> None:
+    def forbidden_items() -> Iterator[bool]:
+        pytest.fail("true vector rejection must precede iterable consumption")
+        yield True
+
+    with pytest.raises(TLCodecError, match="zero-width true"):
+        encode_vector(forbidden_items(), item_type)
+    with pytest.raises(TLCodecError, match="zero-width true"):
+        encode_vector((), item_type)
+
+
+@pytest.mark.parametrize("expression", ["Vector<true>", "vector true", "!(Vector<(true)>)", "Vector<Vector<true>>", "(vector vector true)"])  # fmt: skip
+@pytest.mark.usefixtures("_vector_backend")
+def test_value_encoder_rejects_nested_true_vectors(expression: str) -> None:
+    values = ((True,),) if expression.count("ector") == 2 else (True,)
+
+    with pytest.raises(TLCodecError, match="zero-width true"):
+        tl_codec.encode_value(expression, values)
+
+
+@pytest.mark.usefixtures("_vector_backend")
+def test_standalone_true_and_optional_true_flags_keep_zero_width_semantics() -> None:
+    assert tl_codec.encode_value("true", True) == b""
+    assert tl_codec.decode_value("true", b"prefix", 6) == (True, 6)
+    username = types.Username(username="abc", deletable=True, expired=False)
+    encoded = bytes.fromhex("473607b4 04000000 03616263")
+
+    assert username.serialize() == encoded
+    assert types.Username.deserialize(encoded) == username
+
+
+@pytest.mark.parametrize(
+    ("item_type", "body", "expected"),
+    [
+        ("Bool", bytes.fromhex("b5757299 379779bc"), (True, False)),
+        ("string", bytes.fromhex("01610000 00000000"), ("a", "")),
+        ("InputPeer", bytes.fromhex("c97ea07d ea183b7f"), (types.InputPeerSelf(), types.InputPeerEmpty())),
+        ("Vector<int>", bytes.fromhex("15c4b51c 00000000 15c4b51c 01000000 fdffffff"), ((), (-3,))),
+        ("int", bytes.fromhex("fdffffff 07000000"), (-3, 7)),
+        ("#", bytes.fromhex("fdffffff 07000000"), (-3, 7)),
+        ("long", bytes.fromhex("fdffffffffffffff 0700000000000000"), (-3, 7)),
+    ],
+)
+@pytest.mark.parametrize("as_memoryview", [False, True])
+@pytest.mark.usefixtures("_vector_backend")
+def test_ordinary_vectors_keep_values_and_exact_offsets(item_type: str, body: bytes, expected: tuple[Any, ...], as_memoryview: bool) -> None:  # fmt: skip
+    vector = _vector_header(2) + body
+    data = b"prefix!!" + vector + b"tail"
+    encoded = memoryview(data) if as_memoryview else data
+
+    assert decode_vector(encoded, 8, item_type) == (expected, 8 + len(vector))
+    assert encode_vector(expected, item_type) == vector
+
+
+@pytest.mark.parametrize("item_type", ["Bool", "string", "InputPeer", "Vector<int>", "int", "#", "long"])
+@pytest.mark.usefixtures("_vector_backend")
+def test_ordinary_empty_vectors_remain_supported(item_type: str) -> None:
+    assert decode_vector(_vector_header(0), 0, item_type) == ((), 8)
+    assert encode_vector((), item_type) == _vector_header(0)
+
+
+@pytest.mark.parametrize("item_type", ["Bool", "string", "InputPeer", "Vector<int>", "int", "#", "long"])
+@pytest.mark.parametrize("data", [_vector_header(-1), _vector_header(1), _vector_header(0)[:-1]])
+@pytest.mark.usefixtures("_vector_backend")
+def test_ordinary_vectors_still_reject_negative_and_truncated_counts(item_type: str, data: bytes) -> None:
+    with pytest.raises(ValueError):
+        decode_vector(data, 0, item_type)
+
+
+VECTOR_ID = 0x1CB5C415
+
+
+BytesLike = bytes | bytearray | memoryview
+
+
+def _vector(values: tuple[int, ...], code: str = "i") -> bytes:
+    return struct.pack("<Ii", VECTOR_ID, len(values)) + struct.pack(f"<{len(values)}{code}", *values)
+
+
+@pytest.fixture(params=["native", "fallback"])
+def backend(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> ModuleType:
+    implementation = pytest.importorskip("miniproto._native") if request.param == "native" else fallback
+    monkeypatch.setattr(native, "_native_impl", implementation)
+    return implementation
+
+
+@pytest.mark.parametrize(
+    ("kind", "code", "values"),
+    [("int", "i", (-(2**31), 0x10203, 2**31 - 1)), ("long", "q", (-(2**63), 2**40 + 7, 2**63 - 1))],
+)
+@pytest.mark.parametrize("buffer_type", [bytes, bytearray, memoryview])
+def test_vector_decoders_preserve_signed_values_and_nonzero_offsets(
+    backend: ModuleType, kind: str, code: str, values: tuple[int, ...], buffer_type: Callable[[bytes], BytesLike]
+) -> None:
+    encoded = _vector(values, code)
+    data = buffer_type(b"pre" + encoded + bytes(8192))
+
+    decoded, offset = getattr(native, f"tl_decode_{kind}_vector")(data, 3)
+
+    assert decoded == values
+    assert offset == 3 + len(encoded)
+
+
+@pytest.mark.parametrize(("kind", "code"), [("int", "i"), ("long", "q")])
+@pytest.mark.parametrize("buffer_type", [bytes, bytearray, memoryview, list])
+def test_direct_native_vector_bindings_keep_supported_input_types(
+    kind: str, code: str, buffer_type: Callable[[bytes], object]
+) -> None:
+    extension = pytest.importorskip("miniproto._native")
+    encoded = _vector((-65_537, 0x10203, -7), code)
+
+    values, offset = getattr(extension, f"tl_decode_{kind}_vector")(buffer_type(b"pre" + encoded + b"tail"), 3)
+
+    assert tuple(values) == (-65_537, 0x10203, -7)
+    assert offset == 3 + len(encoded)
+
+
+@pytest.mark.parametrize(("kind", "code", "large"), [("int", "i", 2**30 + 3), ("long", "q", 2**50 + 3)])
+@pytest.mark.parametrize("buffer_type", [bytes, memoryview])
+def test_nested_vectors_keep_empty_fields_and_independent_offsets(
+    backend: ModuleType, kind: str, code: str, large: int, buffer_type: Callable[[bytes], bytes | memoryview]
+) -> None:
+    expected = ((), (-7, large, 19), (3,))
+    encoded = struct.pack("<Ii", VECTOR_ID, len(expected)) + b"".join(_vector(values, code) for values in expected)
+
+    values, offset = decode_value(f"Vector<Vector<{kind}>>", buffer_type(b"pre" + encoded + b"tail"), 3)
+
+    assert values == expected
+    assert offset == 3 + len(encoded)
+
+
+def _updates_payload() -> tuple[bytes, types.Updates]:
+    items = (
+        types.UpdateReadMessagesContents(messages=(), pts=7, pts_count=0),
+        types.UpdateStickerSetsOrder(order=(2**40 + 3, -7), masks=True),
+        types.UpdateDeleteMessages(messages=(-17, 0x10203), pts=11, pts_count=2),
+        types.UpdateStickerSetsOrder(order=(), emojis=True),
+    ) * 16
+    wire_items = (
+        struct.pack("<II", 0xF8227181, 0) + _vector(()) + struct.pack("<ii", 7, 0),
+        struct.pack("<II", 0x0BB2D201, 1) + _vector((2**40 + 3, -7), "q"),
+        struct.pack("<I", types.UpdateDeleteMessages.CONSTRUCTOR_ID)
+        + _vector((-17, 0x10203))
+        + struct.pack("<ii", 11, 2),
+        struct.pack("<II", 0x0BB2D201, 2) + _vector((), "q"),
+    ) * 16
+    payload = (
+        struct.pack("<IIi", 0x74AE4240, VECTOR_ID, len(items))
+        + b"".join(wire_items)
+        + _vector(())
+        + _vector(())
+        + struct.pack("<ii", 123, 9)
+    )
+    return payload, types.Updates(updates=items, users=(), chats=(), date=123, seq=9)
+
+
+@pytest.mark.parametrize("buffer_type", [bytes, memoryview])
+def test_generated_updates_decode_many_small_integer_vectors(
+    backend: ModuleType, buffer_type: Callable[[bytes], bytes | memoryview]
+) -> None:
+    payload, expected = _updates_payload()
+
+    assert types.Updates.deserialize(buffer_type(payload)) == expected
+
+
+def test_gzip_rpc_result_bytes_decode_many_small_integer_vectors(backend: ModuleType) -> None:
+    payload, expected = _updates_payload()
+
+    assert decode_result_payload(GzipPacked(gzip.compress(payload))) == expected
+
+
+@pytest.mark.parametrize("buffer_type", [bytes, memoryview])
+def test_generated_photo_keeps_progressive_size_vectors(
+    backend: ModuleType, buffer_type: Callable[[bytes], bytes | memoryview]
+) -> None:
+    sizes = (
+        types.PhotoSizeProgressive(type="a", w=13, h=29, sizes=()),
+        types.PhotoSizeProgressive(type="b", w=61, h=37, sizes=(17, 31, 101)),
+    ) * 16
+    wire_sizes = (
+        struct.pack("<I", 0xFA3EFB95) + b"\x01a\x00\x00" + struct.pack("<ii", 13, 29) + _vector(()),
+        struct.pack("<I", 0xFA3EFB95) + b"\x01b\x00\x00" + struct.pack("<ii", 61, 37) + _vector((17, 31, 101)),
+    ) * 16
+    payload = (
+        struct.pack("<IIqq", 0xFB197A65, 1, 2**40 + 3, -7)
+        + b"\x02xy\x00"
+        + struct.pack("<iIi", 123, VECTOR_ID, len(sizes))
+        + b"".join(wire_sizes)
+        + struct.pack("<i", 4)
+    )
+    expected = types.Photo(
+        has_stickers=True, id=2**40 + 3, access_hash=-7, file_reference=b"xy", date=123, sizes=sizes, dc_id=4
+    )
+
+    assert types.Photo.deserialize(buffer_type(payload)) == expected

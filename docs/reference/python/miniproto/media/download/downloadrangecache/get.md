@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.media.download.DownloadRangeCache.get"
 source_path: "src/miniproto/media/download.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L215"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L234"
 aliases: ["miniproto.media.DownloadRangeCache.get"]
 module: "miniproto.media.download"
 ---

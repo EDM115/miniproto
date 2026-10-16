@@ -2,26 +2,32 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
-from typing import Any
+from datetime import UTC, datetime, timedelta, timezone
+from pathlib import Path
+from typing import Any, Literal
 
 import pytest
 
+import miniproto.peers as peers_module
 from miniproto import (
     AuthKey,
     Client,
     ClientConfig,
     DCOption,
+    EncryptedSQLiteSessionStorage,
     InMemorySessionStorage,
     Peer,
     SessionRecord,
     UserIdentity,
     event_loop,
 )
-from miniproto.peers import PeerCache, _merge_entries, _raw_usernames
+from miniproto.peers import PeerCache, _find_username_entry, _merge_entries, _raw_usernames
 from miniproto.raw import functions, types
-from miniproto.session.models import PeerCacheEntry, UpdateState, session_record_from_mapping
-from miniproto.session.storage import SessionPayload
+from miniproto.session.models import PeerCacheEntry, UpdateState, session_record_from_mapping, session_record_to_mapping
+from miniproto.session.peer_merge import merge_peer_entry
+from miniproto.session.storage import SessionPayload, deserialize_session_data, serialize_session_data
+from miniproto.updates.manager import UpdateManager
+from miniproto.updates.state import EntityReference, UpdateCursor, entity_reference_from_peer
 
 AUTH_KEY = b"p" * 256
 
@@ -437,6 +443,7 @@ def test_partial_same_key_merge_advances_updated_at_and_preserves_fields() -> No
             phone="+1 555 0100",
             updated_at=new,
             raw={"first_name": "Alice", "usernames": ["AliceAlt"], "last_name": "Example"},
+            username_observed_at={"alice": old, "alicealt": old},
         ),
     )
 
@@ -453,7 +460,7 @@ def test_full_entity_merge_clears_removed_username_and_phone() -> None:
 
     assert merged.username is None
     assert merged.phone is None
-    assert merged.raw == {"_miniproto_complete": True, "usernames": []}
+    assert merged.raw == {"_miniproto_complete": True, "usernames": [], "_miniproto_full_observation_revision": 1}
 
 
 def test_raw_usernames_excludes_inactive_aliases() -> None:
@@ -900,3 +907,219 @@ def test_failed_peer_mutation_does_not_publish_incoming_indexes() -> None:
         assert cache.index_stats == warm
 
     run(scenario())
+
+
+def test_peer_merge_keeps_full_revision_through_partials_without_mutating_inputs() -> None:
+    revision_key = "_miniproto_full_observation_revision"
+    current = PeerCacheEntry(id=71, kind="user", username="current", raw={"_miniproto_complete": True, revision_key: 7})
+    partial = PeerCacheEntry(
+        id=71, kind="user", raw={"_miniproto_complete": False, "first_name": "Partial", revision_key: 999}
+    )
+    full = PeerCacheEntry(
+        id=71, kind="user", username="replacement", raw={"_miniproto_complete": True, revision_key: 999}
+    )
+    snapshots = tuple(dict(entry.raw or {}) for entry in (current, partial, full))
+    merged_partial = merge_peer_entry(current, partial)
+    assert merged_partial.raw is not None and merged_partial.raw[revision_key] == 7
+    merged_full = merge_peer_entry(merged_partial, full)
+    assert merged_full.raw is not None and merged_full.raw[revision_key] == 8
+    assert merged_full.username == "replacement"
+    assert "first_name" not in merged_full.raw
+    assert tuple(dict(entry.raw or {}) for entry in (current, partial, full)) == snapshots
+
+
+ALIAS_TTL_STORAGE_KEY = b"offline-alias-ttl-fixture-key"
+
+
+# fmt: off
+@pytest.mark.parametrize("kind", ["user", "channel"])
+@pytest.mark.parametrize("route", ["direct", "updates"])
+@pytest.mark.parametrize("reload", [False, True], ids=["warm", "reload"])
+def test_partial_metadata_cannot_extend_alias_ttl_after_reassignment(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, kind: Literal["user", "channel"], route: str, reload: bool) -> None:
+    async def scenario() -> None:
+        path = tmp_path / "session.sqlite"
+        storage = EncryptedSQLiteSessionStorage(path, key=ALIAS_TTL_STORAGE_KEY)
+        old = datetime.now(UTC) - timedelta(days=2)
+        initial = PeerCacheEntry(id=71, kind=kind, access_hash=710, username="Primary", updated_at=old, raw={"_miniproto_complete": True, "usernames": ["Secondary"]})
+        await storage.save(SessionRecord(peers=(initial,)))
+        requests: list[str] = []
+
+        async def remote(request: object) -> object:
+            assert isinstance(request, functions.ContactsResolveUsername)
+            requests.append(request.username)
+            new_id = 99 if request.username == "primary" else 100
+            return types.ContactsResolvedPeer(peer=types.PeerUser(user_id=new_id), users=(types.User(id=new_id, access_hash=new_id * 10, username=request.username),), chats=())
+
+        config = ClientConfig(api_id=1, api_hash="offline", session_storage=storage)
+        cache = PeerCache(config, storage, remote)
+        manager = UpdateManager(config, storage, remote)
+
+        class ObservationClock:
+            moment: datetime | None = old + timedelta(hours=1)
+
+            @classmethod
+            def now(cls, tz: object) -> datetime:
+                del tz
+                return datetime.now(UTC) if cls.moment is None else cls.moment
+
+        monkeypatch.setattr(peers_module, "datetime", ObservationClock)
+        try:
+            for alias in ("primary", "secondary"):
+                assert await cache.resolve_peer(f"@{alias}") == Peer(id=71, kind=kind, access_hash=710)
+            ObservationClock.moment = None
+            for name in ("First partial", "Second partial"):
+                entity = types.User(id=71, access_hash=999, min=True, first_name=name) if kind == "user" else types.Channel(id=71, access_hash=999, min=True, title=name, photo=types.ChatPhotoEmpty(), date=100)
+                if route == "direct":
+                    await cache.remember_raw_entities(entity)
+                else:
+                    await manager.handle_raw_update(types.Updates(updates=(), users=(entity,) if kind == "user" else (), chats=(entity,) if kind == "channel" else (), date=100, seq=0))
+            record = session_record_from_mapping(await storage.load() or {})
+            retained = record.peers[0]
+            assert retained.updated_at > old + timedelta(days=1)
+            assert retained.username_observed_at == {"primary": old, "secondary": old}
+            assert await cache.resolve_peer(Peer(id=71, kind=kind)) == Peer(id=71, kind=kind, access_hash=710)
+            for alias in ("primary", "secondary"):
+                assert _find_username_entry(record.peers, alias) is None
+            if reload:
+                await storage.close()
+                storage = EncryptedSQLiteSessionStorage(path, key=ALIAS_TTL_STORAGE_KEY)
+                cache = PeerCache(config, storage, remote)
+            for alias, new_id in (("primary", 99), ("secondary", 100)):
+                for _ in range(2):
+                    assert await cache.resolve_peer(f"@{alias}") == Peer(id=new_id, kind="user", access_hash=new_id * 10)
+            assert requests == ["primary", "secondary"]
+        finally:
+            await storage.close()
+
+    event_loop.run(scenario())
+
+
+@pytest.mark.parametrize(("age", "fresh"), [(timedelta(microseconds=-1), False), (timedelta(0), True), (timedelta(hours=24) - timedelta(microseconds=1), True), (timedelta(hours=24), True), (timedelta(hours=24) + timedelta(microseconds=1), False)])
+@pytest.mark.parametrize("alias", ["primary", "secondary"])
+def test_alias_ttl_boundaries_match_for_record_and_index_lookup(monkeypatch: pytest.MonkeyPatch, age: timedelta, fresh: bool, alias: str) -> None:
+    now = datetime(2026, 10, 16, 12, tzinfo=UTC)
+
+    class LookupClock:
+        @staticmethod
+        def now(tz: object) -> datetime:
+            del tz
+            return now
+
+    monkeypatch.setattr(peers_module, "datetime", LookupClock)
+    observed = now - age
+    entry = PeerCacheEntry(id=71, kind="user", access_hash=710, username="Primary", updated_at=now, raw={"usernames": ["Secondary"]}, username_observed_at={"primary": observed, "secondary": observed})
+    assert _find_username_entry((entry,), f"https://t.me/{alias.upper()}") == (entry if fresh else None)
+
+    async def scenario() -> None:
+        requests: list[str] = []
+
+        async def remote(request: object) -> object:
+            assert isinstance(request, functions.ContactsResolveUsername)
+            requests.append(request.username)
+            return types.ContactsResolvedPeer(peer=types.PeerUser(user_id=99), users=(types.User(id=99, access_hash=990, username=alias),), chats=())
+
+        storage = InMemorySessionStorage(SessionRecord(peers=(entry,)))
+        cache = PeerCache(ClientConfig(api_id=1, api_hash="offline"), storage, remote)
+        assert await cache.resolve_peer(f"@{alias}") == Peer(id=71 if fresh else 99, kind="user", access_hash=710 if fresh else 990)
+        assert requests == ([] if fresh else [alias])
+
+    event_loop.run(scenario())
+
+
+def test_partial_confirmation_only_refreshes_the_aliases_actually_observed(monkeypatch: pytest.MonkeyPatch) -> None:
+    old = datetime(2026, 10, 12, 12, tzinfo=UTC)
+    first = old + timedelta(days=2)
+    second = first + timedelta(hours=1)
+    current = PeerCacheEntry(id=71, kind="user", username="Primary", updated_at=old, raw={"_miniproto_complete": True, "usernames": ["Secondary"]})
+    primary = merge_peer_entry(current, PeerCacheEntry(id=71, kind="user", username="PRIMARY", updated_at=first))
+    assert primary.username_observed_at == {"primary": first, "secondary": old}
+    assert primary.updated_at == first
+
+    class LookupClock:
+        @staticmethod
+        def now(tz: object) -> datetime:
+            del tz
+            return first
+
+    monkeypatch.setattr(peers_module, "datetime", LookupClock)
+    assert _find_username_entry((primary,), "primary") == primary
+    assert _find_username_entry((primary,), "secondary") is None
+
+    async def scenario() -> None:
+        requests: list[str] = []
+
+        async def remote(request: object) -> object:
+            assert isinstance(request, functions.ContactsResolveUsername)
+            requests.append(request.username)
+            return types.ContactsResolvedPeer(peer=types.PeerUser(user_id=99), users=(types.User(id=99, access_hash=990, username="secondary"),), chats=())
+
+        storage = InMemorySessionStorage(SessionRecord(peers=(primary,)))
+        cache = PeerCache(ClientConfig(api_id=1, api_hash="offline"), storage, remote)
+        assert await cache.resolve_peer("@primary") == Peer(id=71, kind="user")
+        assert await cache.resolve_peer("@secondary") == Peer(id=99, kind="user", access_hash=990)
+        assert requests == ["secondary"]
+
+    event_loop.run(scenario())
+    secondary = merge_peer_entry(primary, PeerCacheEntry(id=71, kind="user", updated_at=second, raw={"usernames": ["Secondary"]}))
+    assert secondary.username_observed_at == {"primary": first, "secondary": second}
+    assert secondary.updated_at == second
+    cursor = UpdateCursor(entities=(entity_reference_from_peer(primary),)).with_entities((EntityReference(id=71, kind="user", title="New title", updated_at=second),))
+    projected = cursor.entities[0].to_peer_cache_entry()
+    assert projected.username_observed_at == {"primary": first, "secondary": old}
+    assert projected.updated_at == second
+    assert projected.raw is not None and projected.raw["usernames"] == ["Secondary"]
+
+
+@pytest.mark.parametrize("replacement", [False, True], ids=["remove", "replace"])
+def test_full_observation_replaces_aliases_and_confirmation_times(replacement: bool) -> None:
+    old = datetime(2026, 10, 12, 12, tzinfo=UTC)
+    new = old + timedelta(days=2)
+    current = PeerCacheEntry(id=71, kind="user", username="oldprimary", updated_at=old, raw={"_miniproto_complete": True, "usernames": ["oldsecondary"]})
+    incoming = EntityReference(id=71, kind="user", username="newprimary" if replacement else None, usernames=("newsecondary",) if replacement else (), complete=True, updated_at=new)
+    merged = UpdateCursor(entities=(entity_reference_from_peer(current),)).with_entities((incoming,)).entities[0].to_peer_cache_entry()
+    assert merged.username == ("newprimary" if replacement else None)
+    assert merged.username_observed_at == ({"newprimary": new, "newsecondary": new} if replacement else {})
+    assert merged.raw == {"_miniproto_complete": True, "usernames": ["newsecondary"] if replacement else []}
+
+
+def test_alias_times_survive_mapping_storage_and_cursor_projection() -> None:
+    observed = datetime(2026, 10, 12, 14, 30, tzinfo=timezone(timedelta(hours=2)))
+    entry = PeerCacheEntry(id=71, kind="user", username="Primary", updated_at=observed + timedelta(days=2), raw={"_miniproto_complete": True, "usernames": ["Secondary"]}, username_observed_at={"@PRIMARY": observed, "https://t.me/Secondary": observed.replace(tzinfo=None), "unowned": observed})
+    expected = {"primary": observed, "secondary": datetime(2026, 10, 12, 14, 30, tzinfo=UTC)}
+    assert entry.username_observed_at == expected
+    record = SessionRecord(peers=(entry,))
+    for restored in (session_record_from_mapping(session_record_to_mapping(record)), session_record_from_mapping(deserialize_session_data(serialize_session_data(record)))):
+        assert restored.peers[0].username_observed_at == expected
+        projected = UpdateCursor.from_record(restored).entities[0].to_peer_cache_entry()
+        assert projected.username_observed_at == expected
+        assert projected.updated_at == entry.updated_at
+
+
+@pytest.mark.parametrize("stored_times", [None, {}], ids=["legacy-missing", "explicit-empty"])
+def test_old_or_unverified_records_require_resolution_without_losing_numeric_peers(stored_times: dict[str, datetime] | None) -> None:
+    async def scenario() -> None:
+        raw_peer: dict[str, object] = {"id": 71, "kind": "user", "access_hash": 710, "username": "primary", "updated_at": datetime.now(UTC), "raw": {"_miniproto_complete": True, "usernames": ["secondary"]}}
+        if stored_times is not None:
+            raw_peer["username_observed_at"] = stored_times
+        record = session_record_from_mapping({"peers": [raw_peer]})
+        assert record.peers[0].username_observed_at == {}
+        projected = UpdateCursor.from_record(record).with_entities((EntityReference(id=71, kind="user", title="Partial"),)).entities[0].to_peer_cache_entry()
+        assert projected.username_observed_at == {}
+        restored = session_record_from_mapping(deserialize_session_data(serialize_session_data(SessionRecord(peers=(projected,)))))
+        assert restored.peers[0].username_observed_at == {}
+        requests: list[str] = []
+
+        async def remote(request: object) -> object:
+            assert isinstance(request, functions.ContactsResolveUsername)
+            requests.append(request.username)
+            return types.ContactsResolvedPeer(peer=types.PeerUser(user_id=99), users=(types.User(id=99, access_hash=990, username=request.username),), chats=())
+
+        storage = InMemorySessionStorage(restored)
+        cache = PeerCache(ClientConfig(api_id=1, api_hash="offline"), storage, remote)
+        assert await cache.resolve_peer(71) == Peer(id=71, kind="user", access_hash=710)
+        for alias in ("primary", "secondary"):
+            assert _find_username_entry(restored.peers, alias) is None
+            assert await cache.resolve_peer(f"@{alias}") == Peer(id=99, kind="user", access_hash=990)
+        assert requests == ["primary", "secondary"]
+
+    event_loop.run(scenario())

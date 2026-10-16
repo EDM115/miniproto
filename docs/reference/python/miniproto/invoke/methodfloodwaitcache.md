@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.invoke.MethodFloodWaitCache"
 source_path: "src/miniproto/invoke.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L366"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/invoke.py#L369"
 module: "miniproto.invoke"
 ---
 

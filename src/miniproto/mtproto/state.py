@@ -5,8 +5,10 @@ from __future__ import annotations
 import secrets
 import time
 from collections import OrderedDict
-from collections.abc import Collection
+from collections.abc import Collection, Iterable, Iterator
 from dataclasses import dataclass, field
+from heapq import nsmallest
+from itertools import chain
 
 from miniproto.crypto.mtproto import auth_key_id
 from miniproto.errors import ProtocolValidationError
@@ -14,6 +16,48 @@ from miniproto.errors import ProtocolValidationError
 MAX_SERVER_MSG_ID_FUTURE_SKEW = 30
 MAX_SERVER_MSG_ID_PAST_SKEW = 300
 _SERVER_MSG_ID_PARITY = 1
+
+
+class _IncomingReplayWindow(Collection[int]):
+    """Keep the retained snapshot and staged replay floor for one synchronous validation pass."""
+
+    __slots__ = ("_minimum", "_retained_count", "_staged")
+
+    def __init__(self, retained: Collection[int]) -> None:
+        """Snapshot retained replay bounds before staging new IDs.
+
+        Args:
+            retained: Accepted IDs whose count and numeric minimum seed this transaction.
+        """
+        self._retained_count = len(retained)
+        self._minimum = min(retained, default=None)
+        self._staged: set[int] = set()
+
+    def __contains__(self, msg_id: object) -> bool:
+        """Return whether this transaction has staged an ID.
+
+        Args:
+            msg_id: Candidate ID checked against the staged set.
+        """
+        return msg_id in self._staged
+
+    def __iter__(self) -> Iterator[int]:
+        """Iterate the IDs staged by this transaction."""
+        return iter(self._staged)
+
+    def __len__(self) -> int:
+        """Return the number of distinct staged IDs."""
+        return len(self._staged)
+
+    def add(self, msg_id: int) -> None:
+        """Stage one validated ID without re-enumerating the earlier candidates.
+
+        Args:
+            msg_id: Validated ID contributing to provisional replay bounds.
+        """
+        self._staged.add(msg_id)
+        if self._minimum is None or msg_id < self._minimum:
+            self._minimum = msg_id
 
 
 @dataclass(slots=True)
@@ -104,6 +148,10 @@ class MTProtoState:
         """Return whether an accepted incoming message has established the session clock."""
         return self._time_trusted
 
+    def _incoming_replay_window(self) -> _IncomingReplayWindow:
+        """Snapshot replay bounds after collection, before validation runs without yielding."""
+        return _IncomingReplayWindow(self._seen_msg_ids)
+
     def validate_incoming(
         self,
         msg_id: int,
@@ -137,9 +185,19 @@ class MTProtoState:
         duplicate = msg_id in self._seen_msg_ids
         if (duplicate and not allow_duplicate) or msg_id in provisional_seen_msg_ids:
             raise ProtocolValidationError("duplicate_msg_id", context={"msg_id": msg_id})
-        replay_window = (*self._seen_msg_ids, *provisional_seen_msg_ids)
-        if not duplicate and replay_window and len(replay_window) >= self.duplicate_window and msg_id <= min(replay_window):  # fmt: skip
-            raise ProtocolValidationError("replay_floor", context={"msg_id": msg_id})
+        if not duplicate:
+            if isinstance(provisional_seen_msg_ids, _IncomingReplayWindow):
+                replay_count = provisional_seen_msg_ids._retained_count + len(provisional_seen_msg_ids)
+                replay_floor = provisional_seen_msg_ids._minimum
+            else:
+                replay_count = len(self._seen_msg_ids) + len(provisional_seen_msg_ids)
+                replay_floor = (
+                    min(chain(self._seen_msg_ids, provisional_seen_msg_ids))
+                    if replay_count >= self.duplicate_window
+                    else None
+                )
+            if replay_count >= self.duplicate_window and replay_floor is not None and msg_id <= replay_floor:
+                raise ProtocolValidationError("replay_floor", context={"msg_id": msg_id})
         if self._time_trusted or provisional_time_offset is not None:
             offset = self.time_offset if provisional_time_offset is None else provisional_time_offset
             current_time = (time.time() if now is None else now) + offset
@@ -158,16 +216,28 @@ class MTProtoState:
             content_related: Queue an acknowledgement when ``True`` (the default).
             now: Optional wall-clock time used when initially trusting the server clock.
         """
-        self._seen_msg_ids[msg_id] = 4 if content_related else 20
-        while len(self._seen_msg_ids) > self.duplicate_window:
-            self._seen_msg_ids.pop(min(self._seen_msg_ids))
-        if content_related:
-            self._pending_acks[msg_id] = time.monotonic()
-        if not self._time_trusted:
-            server_time = msg_id >> 32
-            if server_time > 0:
-                self.time_offset = server_time - (time.time() if now is None else now)
-            self._time_trusted = True
+        self._commit_incoming_batch(((msg_id, content_related),), now=now)
+
+    def _commit_incoming_batch(self, messages: Iterable[tuple[int, bool]], *, now: float | None = None) -> None:
+        """Record unique validated IDs in traversal order and evict the lowest IDs once per batch.
+
+        Args:
+            messages: Validated message IDs paired with their acknowledgement requirement, in traversal order.
+            now: Optional wall-clock time used when initially trusting the server clock.
+        """
+        for msg_id, content_related in messages:
+            self._seen_msg_ids[msg_id] = 4 if content_related else 20
+            if content_related:
+                self._pending_acks[msg_id] = time.monotonic()
+            if not self._time_trusted:
+                server_time = msg_id >> 32
+                if server_time > 0:
+                    self.time_offset = server_time - (time.time() if now is None else now)
+                self._time_trusted = True
+        excess = len(self._seen_msg_ids) - self.duplicate_window
+        if excess > 0:
+            for msg_id in nsmallest(excess, self._seen_msg_ids):
+                del self._seen_msg_ids[msg_id]
 
     def record_incoming(self, msg_id: int, *, content_related: bool = True) -> bool:
         """Record a server message unless it is already known, without envelope validation.

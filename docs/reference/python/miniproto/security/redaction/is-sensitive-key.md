@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.security.redaction.is_sensitive_key"
 source_path: "src/miniproto/security/redaction.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/security/redaction.py#L47"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/security/redaction.py#L56"
 aliases: ["miniproto.security.is_sensitive_key"]
 module: "miniproto.security.redaction"
 ---

@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import gzip
-from dataclasses import dataclass, field
+from collections.abc import Callable, Coroutine, Mapping
+from dataclasses import dataclass, field, replace
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
 
@@ -23,6 +25,7 @@ from miniproto import (
     event_loop,
 )
 from miniproto.auth.bootstrap import ensure_auth_key
+from miniproto.auth.key_exchange import AuthKeyExchangeResult
 from miniproto.auth.service import AuthService
 from miniproto.client import _CachedSessionStorage, _MediaInvokeContext
 from miniproto.connection.sender import MTProtoSender
@@ -36,10 +39,12 @@ from miniproto.errors import (
     FloodPremiumWait,
     FloodWait,
     InvalidCode,
+    InvalidDatacenter,
     ProtocolValidationError,
     ResultTypeMismatch,
     RpcError,
     SessionStorageError,
+    classify_rpc_error,
 )
 from miniproto.invoke import (
     TELEGRAM_LAYER,
@@ -49,12 +54,13 @@ from miniproto.invoke import (
     clear_invalid_auth_key,
     decode_result_payload,
     is_retryable_request,
+    load_session_record,
 )
 from miniproto.mtproto.codec import BadServerSalt, GzipPacked, RpcErrorBody, RpcResult, encode_message_body, gzip_pack
 from miniproto.observability import InMemoryMetrics, get_metrics_sink, set_metrics_sink
 from miniproto.raw import functions, types
 from miniproto.session.models import PeerCacheEntry, UpdateState, session_record_from_mapping
-from miniproto.session.storage import SessionPayload
+from miniproto.session.storage import EncryptedSQLiteSessionStorage, SessionPayload, SessionStorage
 
 AUTH_KEY = b"k" * 256
 
@@ -70,6 +76,8 @@ class FakeSender:
     retry_safety: list[bool] = field(default_factory=list)
     disconnected: int = 0
     is_connected: bool = True
+    auth_key_dc_id: int | None = None
+    state: SimpleNamespace | None = None
 
     async def request(
         self,
@@ -1134,7 +1142,7 @@ def test_auth_request_does_not_force_ambiguous_transport_replay(monkeypatch: pyt
 def test_invoke_clears_invalid_auth_key_when_telegram_rejects_it() -> None:
     async def scenario() -> None:
         storage = storage_with_auth(user=UserIdentity(id=42, access_hash=9000, username="alice", phone="+9996621234"))
-        sender = FakeSender([rpc_error(401, "AUTH_KEY_UNREGISTERED")])
+        sender = FakeSender([rpc_error(401, "AUTH_KEY_UNREGISTERED")], auth_key_dc_id=2, state=SimpleNamespace(auth_key=AUTH_KEY))  # fmt: skip
         client = await connected_client(sender, storage)
         with pytest.raises(AuthKeyNotFound):
             await client.invoke(functions.HelpGetNearestDc())
@@ -1367,3 +1375,712 @@ def test_disconnect_surfaces_deterministic_exception_to_pending_invoke() -> None
             await task
 
     run(scenario())
+
+
+PRIMARY_KEY = b"p" * 256
+
+
+SECONDARY_KEY = b"s" * 256
+
+
+REPLACEMENT_KEY = b"r" * 256
+
+
+UNRELATED_KEY = b"u" * 256
+
+
+STORAGE_KEY = b"synthetic-storage-key-for-tests"
+
+
+def stored_record() -> SessionRecord:
+    return SessionRecord(
+        dc_id=2,
+        auth_key=AuthKey(dc_id=2, key=PRIMARY_KEY),
+        user=UserIdentity(id=42, username="synthetic"),
+        dc_options=(DCOption(id=2, ip_address="127.0.0.2", port=443), DCOption(id=4, ip_address="127.0.0.4", port=443)),
+        metadata={
+            "server_salt": 17,
+            "unrelated": "retained",
+            "dc_auth": {"4": {"key": SECONDARY_KEY, "salt": 23}, "5": {"key": UNRELATED_KEY, "salt": 29}},
+        },
+    )
+
+
+def auth_error(name: str, representation: str) -> object:
+    if representation == "wire":
+        return encode_message_body(RpcErrorBody(error_code=401, error_message=name))
+    if representation == "generated":
+        return types.Error(code=401, text=name).serialize()
+    error = RpcError(name, code=401)
+    return classify_rpc_error(error) if representation == "typed" else error
+
+
+class KeyedSender:
+    def __init__(self, dc_id: int, key: bytes, response: object, *, blocked: bool = False) -> None:
+        self.auth_key_dc_id = dc_id
+        self.state = SimpleNamespace(auth_key=key)
+        self.response = response
+        self.is_connected = True
+        self.disconnected = 0
+        self.started = asyncio.Event()
+        self.release = asyncio.Event()
+        if not blocked:
+            self.release.set()
+
+    async def request(self, body: object, *, content_related: bool = True, retry_safe: bool, request_timeout: float | None = None) -> object:  # fmt: skip
+        del body, content_related, retry_safe, request_timeout
+        self.started.set()
+        await self.release.wait()
+        if isinstance(self.response, BaseException):
+            raise self.response
+        return self.response
+
+    async def disconnect(self) -> None:
+        self.disconnected += 1
+        self.is_connected = False
+
+
+def client_for(storage: SessionStorage) -> Client:
+    client = Client(ClientConfig(api_id=1, api_hash="synthetic", session_storage=storage, media_idle_close=None))
+    client._connected = True
+    return client
+
+
+async def install_route(client: Client, sender: KeyedSender, route: str) -> Callable[[], Coroutine[Any, Any, object]]:
+    if route == "main":
+        client._sender = sender
+
+        async def invoke_main() -> object:
+            return await client.invoke(functions.HelpGetNearestDc())
+
+        return invoke_main
+    dc_id = sender.auth_key_dc_id
+    if route == "cdn":
+        client._cdn_senders[dc_id] = sender
+        context = _MediaInvokeContext(client, 0, kind="download")
+
+        async def invoke_cdn() -> object:
+            return await context.invoke_cdn(functions.UploadGetCdnFile(file_token=b"synthetic", offset=0, limit=4096), dc_id=dc_id)  # fmt: skip
+
+        return invoke_cdn
+    assert route == "download" or route == "upload"
+    pool = await client._get_media_pool(kind=route, lane_count=1, dc_id=dc_id)
+    pool._lanes[0]._sender = sender
+
+    async def invoke_media() -> object:
+        async with _MediaInvokeContext(client, 1, kind=route, dc_id=dc_id) as context:
+            request = (
+                functions.UploadSaveFilePart(file_id=1, file_part=0, bytes=b"synthetic")
+                if route == "upload"
+                else functions.UploadGetFile(
+                    location=types.InputDocumentFileLocation(
+                        id=1, access_hash=2, file_reference=b"synthetic", thumb_size=""
+                    ),
+                    offset=0,
+                    limit=4096,
+                )
+            )
+            return await context(request)
+
+    return invoke_media
+
+
+@pytest.mark.parametrize("route", ["cdn", "download", "upload"])
+@pytest.mark.parametrize("name", ["AUTH_KEY_INVALID", "AUTH_KEY_PERM_EMPTY", "AUTH_KEY_UNREGISTERED"])
+def test_secondary_failure_preserves_primary_login_on_disk(tmp_path: Path, route: str, name: str) -> None:
+    async def scenario() -> None:
+        path = tmp_path / "session.sqlite"
+        storage = EncryptedSQLiteSessionStorage(path, STORAGE_KEY)
+        before = stored_record()
+        await storage.save(before)
+        client = client_for(storage)
+        primary = KeyedSender(2, PRIMARY_KEY, types.NearestDc(country="FR", this_dc=2, nearest_dc=2))
+        client._sender = primary
+        sender = KeyedSender(4, SECONDARY_KEY, auth_error(name, "wire"))
+        client._cdn_auth_cache = {4: (SECONDARY_KEY, 23), 5: (UNRELATED_KEY, 29)}
+        client._dc_auth_cache = {4: (SECONDARY_KEY, 23), 5: (UNRELATED_KEY, 29)}
+        invoke = await install_route(client, sender, route)
+        with pytest.raises(AuthKeyNotFound):
+            await invoke()
+        assert sender.disconnected == 1
+        assert primary.disconnected == 0
+        assert isinstance(await client.invoke(functions.HelpGetNearestDc()), types.NearestDc)
+        if route == "cdn":
+            expected = before
+            assert client._cdn_auth_cache == {5: (UNRELATED_KEY, 29)}
+            assert client._dc_auth_cache == {4: (SECONDARY_KEY, 23), 5: (UNRELATED_KEY, 29)}
+            assert 4 not in client._cdn_senders
+        else:
+            expected = replace(
+                before, metadata={**before.metadata, "dc_auth": {"5": {"key": UNRELATED_KEY, "salt": 29}}}
+            )
+            assert client._dc_auth_cache == {5: (UNRELATED_KEY, 29)}
+            assert client._cdn_auth_cache == {4: (SECONDARY_KEY, 23), 5: (UNRELATED_KEY, 29)}
+        await storage.close()
+        reopened = EncryptedSQLiteSessionStorage(path, STORAGE_KEY)
+        try:
+            assert load_session_record(await reopened.load(), 2) == expected
+        finally:
+            await reopened.close()
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("representation", ["wire", "generated", "typed", "raw"])
+@pytest.mark.parametrize("route", ["main", "cdn"])
+def test_error_forms_share_scoped_cleanup_even_when_cdn_key_bytes_match_primary(
+    route: str, representation: str
+) -> None:
+    async def scenario() -> None:
+        before = stored_record()
+        storage = InMemorySessionStorage(before)
+        client = client_for(storage)
+        sender = KeyedSender(2, PRIMARY_KEY, auth_error("AUTH_KEY_UNREGISTERED", representation))
+        client._cdn_auth_cache[2] = (PRIMARY_KEY, 17)
+        invoke = await install_route(client, sender, route)
+        with pytest.raises(AuthKeyNotFound):
+            await invoke()
+        expected = before if route == "cdn" else replace(before, auth_key=None, user=None)
+        assert load_session_record(await storage.load(), 2) == expected
+        assert sender.disconnected == 1
+        assert (2 in client._cdn_auth_cache) == (route == "main")
+
+    asyncio.run(scenario())
+
+
+def test_same_dc_media_failure_clears_its_shared_primary_key() -> None:
+    async def scenario() -> None:
+        before = stored_record()
+        storage = InMemorySessionStorage(before)
+        client = client_for(storage)
+        sender = KeyedSender(2, PRIMARY_KEY, auth_error("AUTH_KEY_INVALID", "generated"))
+        invoke = await install_route(client, sender, "download")
+        with pytest.raises(AuthKeyNotFound):
+            await invoke()
+        assert load_session_record(await storage.load(), 2) == replace(before, auth_key=None, user=None)
+        assert sender.disconnected == 1
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("route", ["main", "cdn", "download"])
+def test_stale_failure_preserves_replacement_key_and_sender(route: str) -> None:
+    async def scenario() -> None:
+        before = stored_record()
+        storage = InMemorySessionStorage(before)
+        client = client_for(storage)
+        dc_id, old_key = (2, PRIMARY_KEY) if route == "main" else (4, SECONDARY_KEY)
+        sender = KeyedSender(dc_id, old_key, auth_error("AUTH_KEY_UNREGISTERED", "raw"), blocked=True)
+        invoke = await install_route(client, sender, route)
+        task = asyncio.create_task(invoke())
+        await sender.started.wait()
+        replacement = KeyedSender(dc_id, REPLACEMENT_KEY, True)
+        await install_route(client, replacement, route)
+        if route == "main":
+            expected = replace(before, auth_key=AuthKey(dc_id=2, key=REPLACEMENT_KEY), user=UserIdentity(id=99))
+        elif route == "download":
+            expected = replace(before, metadata={**before.metadata, "dc_auth": {**before.metadata["dc_auth"], "4": {"key": REPLACEMENT_KEY, "salt": 31}}})  # fmt: skip
+        else:
+            expected = before
+        await client._storage.save(expected)
+        client._dc_auth_cache[dc_id] = (REPLACEMENT_KEY, 31)
+        client._cdn_auth_cache[dc_id] = (REPLACEMENT_KEY, 31)
+        sender.state.auth_key = REPLACEMENT_KEY
+        sender.release.set()
+        with pytest.raises(AuthKeyNotFound):
+            await task
+        assert load_session_record(await storage.load(), 2) == expected
+        assert client._dc_auth_cache[dc_id] == (REPLACEMENT_KEY, 31)
+        assert client._cdn_auth_cache[dc_id] == (REPLACEMENT_KEY, 31)
+        assert replacement.disconnected == 0
+
+    asyncio.run(scenario())
+
+
+def test_old_primary_failure_after_migration_only_clears_matching_source_dc_credential() -> None:
+    async def scenario() -> None:
+        before = stored_record()
+        storage = InMemorySessionStorage(before)
+        client = client_for(storage)
+        sender = KeyedSender(2, PRIMARY_KEY, auth_error("AUTH_KEY_UNREGISTERED", "typed"), blocked=True)
+        invoke = await install_route(client, sender, "main")
+        task = asyncio.create_task(invoke())
+        await sender.started.wait()
+        migrated = replace(before, dc_id=4, auth_key=AuthKey(dc_id=4, key=SECONDARY_KEY), metadata={**before.metadata, "dc_auth": {"2": {"key": PRIMARY_KEY, "salt": 17}, "4": {"key": SECONDARY_KEY, "salt": 23}}})  # fmt: skip
+        await client._storage.save(migrated)
+        replacement = KeyedSender(4, SECONDARY_KEY, True)
+        client._sender = replacement
+        client._dc_auth_cache = {2: (PRIMARY_KEY, 17), 4: (SECONDARY_KEY, 23)}
+        sender.release.set()
+        with pytest.raises(AuthKeyNotFound):
+            await task
+        expected = replace(
+            migrated, metadata={**migrated.metadata, "dc_auth": {"4": {"key": SECONDARY_KEY, "salt": 23}}}
+        )
+        assert load_session_record(await storage.load(), 2) == expected
+        assert client._dc_auth_cache == {4: (SECONDARY_KEY, 23)}
+        assert replacement.disconnected == 0
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("provenance", ["unknown", "different-dc"])
+def test_missing_or_different_dc_provenance_cannot_clear_primary(provenance: str) -> None:
+    async def scenario() -> None:
+        before = stored_record()
+        storage = InMemorySessionStorage(before)
+        client = client_for(storage)
+        sender = KeyedSender(4, PRIMARY_KEY, auth_error("AUTH_KEY_INVALID", "typed"))
+        if provenance == "unknown":
+            del sender.auth_key_dc_id
+        invoke = await install_route(client, sender, "main")
+        with pytest.raises(AuthKeyNotFound):
+            await invoke()
+        assert load_session_record(await storage.load(), 2) == before
+        assert sender.disconnected == 1
+
+    asyncio.run(scenario())
+
+
+def test_builtin_sender_construction_binds_selected_dc_to_actual_encryption_key() -> None:
+    async def scenario() -> None:
+        storage = InMemorySessionStorage(stored_record())
+        config = ClientConfig(api_id=1, api_hash="synthetic", session_storage=storage)
+        sender = await build_sender_from_session(config, storage, dc_id_override=4, auth_key_override=SECONDARY_KEY)
+        assert cast(Any, sender).auth_key_dc_id == 4
+        assert cast(Any, sender).state.auth_key == SECONDARY_KEY
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("route", ["main", "download"])
+def test_replacement_committed_immediately_before_atomic_cleanup_survives(route: str) -> None:
+    async def scenario() -> None:
+        class PausedMutationStorage(InMemorySessionStorage):
+            def __init__(self) -> None:
+                super().__init__(stored_record())
+                self.started = asyncio.Event()
+                self.release = asyncio.Event()
+
+            async def mutate(self, transform: Callable[[Mapping[str, Any] | None], SessionPayload | None]) -> Mapping[str, Any] | None:  # fmt: skip
+                self.started.set()
+                await self.release.wait()
+                return await super().mutate(transform)
+
+        storage = PausedMutationStorage()
+        client = client_for(storage)
+        dc_id, key = (2, PRIMARY_KEY) if route == "main" else (4, SECONDARY_KEY)
+        sender = KeyedSender(dc_id, key, auth_error("AUTH_KEY_UNREGISTERED", "typed"))
+        invoke = await install_route(client, sender, route)
+        task = asyncio.create_task(invoke())
+        await storage.started.wait()
+        before = stored_record()
+        replacement = replace(before, auth_key=AuthKey(dc_id=2, key=REPLACEMENT_KEY), user=UserIdentity(id=99), metadata={**before.metadata, "dc_auth": {"4": {"key": REPLACEMENT_KEY, "salt": 31}}})  # fmt: skip
+        await storage.save(replacement)
+        storage.release.set()
+        with pytest.raises(AuthKeyNotFound):
+            await task
+        assert load_session_record(await storage.load(), 2) == replacement
+        assert load_session_record(await client._storage.load(), 2) == replacement
+        assert sender.disconnected == 1
+
+    asyncio.run(scenario())
+
+
+SOURCE_KEY = b"s" * 256
+
+
+TARGET_KEY = b"t" * 256
+
+
+SOURCE_SALT = 123
+
+
+TARGET_SALT = 789
+
+
+EXPORTED = types.AuthExportedAuthorization(id=55, bytes=b"synthetic-export")
+
+
+def source_record(*, authenticated: bool) -> SessionRecord:
+    return SessionRecord(
+        dc_id=2,
+        auth_key=AuthKey(dc_id=2, key=SOURCE_KEY),
+        dc_options=(DCOption(id=2, ip_address="127.0.0.2", port=443), DCOption(id=4, ip_address="127.0.0.4", port=443)),
+        user=UserIdentity(id=42, username="alice") if authenticated else None,
+        metadata={"server_salt": SOURCE_SALT, "unrelated": "preserved"},
+    )
+
+
+class MigrationScenario:
+    def __init__(self, storage: SessionStorage, monkeypatch: pytest.MonkeyPatch) -> None:
+        self.storage = storage
+        self.client = Client(ClientConfig(api_id=1, api_hash="synthetic", session_storage=storage))
+        self.client._connected = True
+        self.client._latest_server_salt = SOURCE_SALT
+        self.source = MigrationSender(self, source=True)
+        self.client._sender = self.source
+        self.targets: list[MigrationSender] = []
+        self.failure: str | None = None
+        self.block: str | None = None
+        self.started = asyncio.Event()
+        self.release = asyncio.Event()
+        self.exports = 0
+        self.transport_closes = 0
+        self.setup_calls = 0
+        scenario = self
+
+        class Transport:
+            def __init__(self, *args: object, **kwargs: object) -> None:
+                pass
+
+            async def close(self) -> None:
+                scenario.transport_closes += 1
+
+        async def exchange(_exchange: object) -> AuthKeyExchangeResult:
+            scenario.setup_calls += 1
+            await scenario.step("setup")
+            return AuthKeyExchangeResult(auth_key=TARGET_KEY, auth_key_id=b"t" * 8, server_salt=TARGET_SALT, time_offset=0, dc_id=4)  # fmt: skip
+
+        async def build(*args: object, **kwargs: object) -> MigrationSender:
+            assert kwargs["dc_id_override"] == 4
+            assert kwargs["auth_key_override"] == TARGET_KEY
+            assert kwargs["server_salt_override"] == TARGET_SALT
+            await scenario.step("build")
+            sender = MigrationSender(scenario, source=False)
+            scenario.targets.append(sender)
+            return sender
+
+        monkeypatch.setattr(client_module, "UnencryptedAuthKeyTransport", Transport)
+        monkeypatch.setattr(client_module.AuthKeyExchange, "create_auth_key", exchange)
+        monkeypatch.setattr(client_module, "build_sender_from_session", build)
+
+    async def step(self, stage: str) -> None:
+        await self.assert_source()
+        if self.failure == stage:
+            raise RuntimeError(f"{stage} failed")
+        if self.block == stage:
+            self.started.set()
+            await self.release.wait()
+
+    async def assert_source(self) -> SessionRecord:
+        record = load_session_record(await self.storage.load(), 2)
+        assert record.dc_id == 2
+        assert record.auth_key is not None
+        assert record.auth_key.dc_id == 2
+        assert record.auth_key.key == SOURCE_KEY
+        assert record.metadata["server_salt"] == SOURCE_SALT
+        assert record.metadata["unrelated"] == "preserved"
+        assert self.client._latest_server_salt == SOURCE_SALT
+        assert self.source.disconnected == 0
+        return record
+
+    async def migrate(self) -> None:
+        await self.client._migrate_main_session(self.source, DatacenterMigration(4, kind="USER"))
+
+    async def assert_target(self) -> None:
+        record = load_session_record(await self.storage.load(), 2)
+        assert record.dc_id == 4
+        assert record.auth_key is not None
+        assert record.auth_key.dc_id == 4
+        assert record.auth_key.key == TARGET_KEY
+        assert record.metadata["server_salt"] == TARGET_SALT
+        assert record.metadata["dc_auth"]["2"] == {"key": SOURCE_KEY, "salt": SOURCE_SALT}
+        assert record.metadata["dc_auth"]["4"] == {"key": TARGET_KEY, "salt": TARGET_SALT}
+        assert record.metadata["unrelated"] == "preserved"
+        assert self.client._latest_server_salt == TARGET_SALT
+
+
+class MigrationSender:
+    def __init__(self, scenario: MigrationScenario, *, source: bool) -> None:
+        self.scenario = scenario
+        self.source = source
+        self.disconnected = 0
+        self.connection_initialized = False
+        self.is_connected = True
+
+    async def request(self, body: object, *, retry_safe: bool, **kwargs: object) -> bytes:
+        request = body
+        while hasattr(request, "query"):
+            request = request.query
+        assert retry_safe is False
+        if self.source:
+            assert isinstance(request, functions.AuthExportAuthorization)
+            assert request.dc_id == 4
+            self.scenario.exports += 1
+            await self.scenario.step("export")
+            return EXPORTED.serialize()
+        assert isinstance(request, functions.AuthImportAuthorization)
+        assert request.id == EXPORTED.id
+        assert request.bytes == EXPORTED.bytes
+        await self.scenario.step("import")
+        return types.AuthAuthorization(user=types.User(id=42, username="alice")).serialize()
+
+    async def disconnect(self) -> None:
+        self.disconnected += 1
+        if not self.source:
+            await self.scenario.step("disconnect")
+        self.is_connected = False
+
+
+@pytest.mark.parametrize(
+    ("authenticated", "stage"),
+    [
+        (False, "setup"),
+        (True, "setup"),
+        (False, "build"),
+        (True, "build"),
+        (True, "import"),
+        (False, "disconnect"),
+        (True, "disconnect"),
+    ],
+)
+def test_migration_failure_keeps_source_active_and_allows_retry(
+    monkeypatch: pytest.MonkeyPatch, authenticated: bool, stage: str
+) -> None:
+    async def scenario() -> None:
+        initial = source_record(authenticated=authenticated)
+        storage = InMemorySessionStorage(initial)
+        migration = MigrationScenario(storage, monkeypatch)
+        migration.failure = stage
+        with pytest.raises(RuntimeError, match=f"{stage} failed"):
+            await migration.migrate()
+        retained = await migration.assert_source()
+        assert retained.user == initial.user
+        assert migration.transport_closes == 1
+        if stage in {"import", "disconnect"}:
+            assert migration.targets[0].disconnected == 1
+        rebuilt = cast(MTProtoSender, await build_sender_from_session(migration.client.config, storage))
+        assert rebuilt.endpoint.host == "127.0.0.2"
+        assert rebuilt.state.auth_key == SOURCE_KEY
+        assert rebuilt.state.server_salt == SOURCE_SALT
+        migration.failure = None
+        await migration.migrate()
+        await migration.assert_target()
+        assert migration.exports == (2 if authenticated else 0)
+        assert migration.targets[-1].disconnected == 1
+        assert not migration.targets[-1].is_connected
+        assert migration.setup_calls == (2 if stage == "setup" else 1)
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("selection", ["persisted", "legacy_default", "override"])
+def test_sender_rejects_key_dc_mismatch_before_construction(monkeypatch: pytest.MonkeyPatch, selection: str) -> None:
+    async def scenario() -> None:
+        initial: SessionPayload
+        if selection == "legacy_default":
+            initial = {
+                "auth_key": {"dc_id": 2, "key": SOURCE_KEY},
+                "dc_options": [{"id": 4, "ip_address": "127.0.0.4", "port": 443}],
+            }
+        else:
+            initial = replace(source_record(authenticated=True), dc_id=2 if selection == "override" else 4)
+        storage = InMemorySessionStorage(initial)
+        config = ClientConfig(api_id=1, api_hash="synthetic", dc_id=4, session_storage=storage)
+        before = await storage.load()
+
+        def forbid_construction(*args: object, **kwargs: object) -> None:
+            pytest.fail("mismatched key/DC reached built-in sender construction")
+
+        monkeypatch.setattr(invoke_module, "MTProtoState", forbid_construction)
+        monkeypatch.setattr(invoke_module, "MTProtoSender", forbid_construction)
+        with pytest.raises(InvalidDatacenter, match="selected DC does not match the stored auth key DC"):
+            await build_sender_from_session(config, storage, dc_id_override=4 if selection == "override" else None)
+        assert await storage.load() == before
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("stored_dc", [2, 4])
+def test_paired_dc_and_key_override_preserves_target_provenance(stored_dc: int) -> None:
+    async def scenario() -> None:
+        storage = InMemorySessionStorage(replace(source_record(authenticated=True), dc_id=stored_dc))
+        config = ClientConfig(api_id=1, api_hash="synthetic", session_storage=storage)
+        before = await storage.load()
+        sender = await build_sender_from_session(
+            config, storage, dc_id_override=4, auth_key_override=TARGET_KEY, server_salt_override=TARGET_SALT
+        )
+        assert isinstance(sender, MTProtoSender)
+        assert sender.endpoint.host == "127.0.0.4"
+        assert sender.state.auth_key == TARGET_KEY
+        assert sender.state.server_salt == TARGET_SALT
+        assert cast(Any, sender).auth_key_dc_id == 4
+        assert await storage.load() == before
+
+    asyncio.run(scenario())
+
+
+def test_sender_without_selected_dc_uses_stored_key_owner_before_config_default() -> None:
+    async def scenario() -> None:
+        storage = InMemorySessionStorage(replace(source_record(authenticated=True), dc_id=None))
+        config = ClientConfig(api_id=1, api_hash="synthetic", dc_id=4, session_storage=storage)
+        sender = await build_sender_from_session(config, storage)
+        assert isinstance(sender, MTProtoSender)
+        assert sender.endpoint.host == "127.0.0.2"
+        assert sender.state.auth_key == SOURCE_KEY
+        assert cast(Any, sender).auth_key_dc_id == 2
+
+    asyncio.run(scenario())
+
+
+def test_custom_sender_factory_keeps_its_documented_construction_bypass(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def scenario() -> None:
+        initial = replace(source_record(authenticated=True), dc_id=4)
+        storage = InMemorySessionStorage(initial)
+        config = ClientConfig(api_id=1, api_hash="synthetic", session_storage=storage)
+        custom_sender = cast(RawSender, object())
+
+        def factory(record: SessionRecord) -> RawSender:
+            assert record.dc_id == 4
+            assert record.auth_key is not None and record.auth_key.dc_id == 2
+            return custom_sender
+
+        def forbid_construction(*args: object, **kwargs: object) -> None:
+            pytest.fail("custom factory reached built-in sender construction")
+
+        monkeypatch.setattr(invoke_module, "MTProtoSender", forbid_construction)
+        assert await build_sender_from_session(config, storage, factory) is custom_sender
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("stage", ["setup", "build", "import", "disconnect"])
+def test_migration_cancellation_keeps_source_active_and_drains_cleanup(
+    monkeypatch: pytest.MonkeyPatch, stage: str
+) -> None:
+    async def scenario() -> None:
+        migration = MigrationScenario(InMemorySessionStorage(source_record(authenticated=True)), monkeypatch)
+        migration.block = stage
+        task = asyncio.create_task(migration.migrate())
+        await asyncio.wait_for(migration.started.wait(), timeout=2)
+        task.cancel()
+        if stage == "disconnect":
+            await asyncio.sleep(0)
+            assert not task.done()
+            task.cancel()
+            migration.release.set()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        await migration.assert_source()
+        if stage in {"import", "disconnect"}:
+            assert migration.targets[0].disconnected == 1
+            assert not migration.targets[0].is_connected
+        assert migration.transport_closes == 1
+        migration.block = None
+        await migration.migrate()
+        await migration.assert_target()
+        assert migration.exports == 2
+
+    asyncio.run(scenario())
+
+
+def test_migration_cleanup_failure_preserves_import_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def scenario() -> None:
+        migration = MigrationScenario(InMemorySessionStorage(source_record(authenticated=True)), monkeypatch)
+        migration.failure = "import"
+
+        async def fail_cleanup(sender: MigrationSender) -> None:
+            sender.disconnected += 1
+            raise ValueError("cleanup failed")
+
+        monkeypatch.setattr(MigrationSender, "disconnect", fail_cleanup)
+        with pytest.raises(RuntimeError, match="import failed"):
+            await migration.migrate()
+        await migration.assert_source()
+        assert migration.targets[0].disconnected == 1
+
+    asyncio.run(scenario())
+
+
+def test_failed_migration_retains_source_in_reopened_storage(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    async def scenario() -> None:
+        path = tmp_path / "migration.sqlite"
+        storage = EncryptedSQLiteSessionStorage(path, key=b"synthetic-storage-key-for-tests")
+        await storage.save(source_record(authenticated=True))
+        migration = MigrationScenario(storage, monkeypatch)
+        migration.failure = "import"
+        with pytest.raises(RuntimeError, match="import failed"):
+            await migration.migrate()
+        await migration.client._storage.close()
+        reopened = EncryptedSQLiteSessionStorage(path, key=b"synthetic-storage-key-for-tests")
+        retry = MigrationScenario(reopened, monkeypatch)
+        await retry.assert_source()
+        await retry.migrate()
+        await retry.assert_target()
+        assert retry.setup_calls == 0
+        assert retry.exports == 1
+        await retry.client._storage.close()
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("replacement_present", [False, True])
+def test_cancellation_after_activation_starts_reconciles_committed_target(
+    monkeypatch: pytest.MonkeyPatch, replacement_present: bool
+) -> None:
+    class CommitGateStorage(InMemorySessionStorage):
+        def __init__(self) -> None:
+            super().__init__(source_record(authenticated=True))
+            self.started = asyncio.Event()
+            self.release = asyncio.Event()
+
+        async def mutate(self, transform: Callable[[Mapping[str, Any] | None], SessionPayload | None]) -> Mapping[str, Any] | None:  # fmt: skip
+            current = await self.load()
+            transformed = transform(current)
+            if isinstance(transformed, SessionRecord) and transformed.dc_id == 4:
+                self.started.set()
+                await self.release.wait()
+            return await super().mutate(transform)
+
+    async def scenario() -> None:
+        class TargetSender:
+            connection_initialized = True
+            is_connected = True
+            disconnected = 0
+
+            async def request(self, body: object, **kwargs: object) -> bytes:
+                assert isinstance(body, functions.HelpGetNearestDc)
+                return types.NearestDc(country="CH", this_dc=4, nearest_dc=4).serialize()
+
+            async def disconnect(self) -> None:
+                self.disconnected += 1
+                self.is_connected = False
+
+        storage = CommitGateStorage()
+        migration = MigrationScenario(storage, monkeypatch)
+        task = asyncio.create_task(migration.migrate())
+        await asyncio.wait_for(storage.started.wait(), timeout=2)
+        replacement = TargetSender() if replacement_present else None
+        if replacement is not None:
+            migration.client._sender = replacement
+        task.cancel()
+        await asyncio.sleep(0)
+        assert not task.done()
+        storage.release.set()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        await migration.assert_target()
+        cached = load_session_record(await migration.client._storage.load(), 2)
+        assert cached.dc_id == 4
+        assert cached.auth_key is not None and cached.auth_key.key == TARGET_KEY
+        assert migration.client._sender is replacement
+        assert migration.source.disconnected == (0 if replacement_present else 1)
+        if replacement is not None:
+            assert replacement.disconnected == 0
+        else:
+            assert not migration.source.is_connected
+
+        def rebuild(record: SessionRecord) -> TargetSender:
+            assert record.dc_id == 4
+            assert record.auth_key is not None and record.auth_key.key == TARGET_KEY
+            assert record.metadata["server_salt"] == TARGET_SALT
+            return TargetSender()
+
+        monkeypatch.setattr(client_module, "build_sender_from_session", build_sender_from_session)
+        migration.client._sender_factory = rebuild
+        result = await migration.client.invoke(functions.HelpGetNearestDc())
+        assert isinstance(result, types.NearestDc)
+        assert result.this_dc == 4
+
+    asyncio.run(scenario())

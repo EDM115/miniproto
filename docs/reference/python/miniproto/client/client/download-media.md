@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.client.Client.download_media"
 source_path: "src/miniproto/client.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L1071"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/client.py#L1143"
 aliases: ["miniproto.Client.download_media"]
 module: "miniproto.client"
 ---

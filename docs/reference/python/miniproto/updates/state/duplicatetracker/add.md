@@ -7,7 +7,7 @@ language: "python"
 kind: "function"
 qualified_name: "miniproto.updates.state.DuplicateTracker.add"
 source_path: "src/miniproto/updates/state.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/updates/state.py#L288"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/updates/state.py#L295"
 aliases: ["miniproto.updates.DuplicateTracker.add"]
 module: "miniproto.updates.state"
 ---

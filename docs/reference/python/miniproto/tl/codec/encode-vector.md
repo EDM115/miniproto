@@ -1,6 +1,6 @@
 ---
 title: "miniproto.tl.codec.encode_vector"
-description: "Encode a boxed TL vector."
+description: "Encode a boxed TL vector whose elements consume wire bytes."
 generated: true
 editUrl: false
 language: "python"
@@ -18,7 +18,7 @@ module: "miniproto.tl.codec"
 encode_vector(values: Iterable[Any], item_type: str) -> bytes
 ```
 
-Encode a boxed TL vector.
+Encode a boxed TL vector whose elements consume wire bytes.
 
 **Parameters:**
 
@@ -28,3 +28,7 @@ Encode a boxed TL vector.
 **Returns:**
 
 - <code>[bytes](#bytes)</code> – Vector constructor, item count and encoded items.
+
+**Raises:**
+
+- <code>[TLCodecError](#miniproto.tl.codec.TLCodecError)</code> – If the element type is zero-width ``true``, including an empty vector.

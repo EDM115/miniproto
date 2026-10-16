@@ -14,7 +14,8 @@ SchemaKind = Literal["type", "function"]
 IgnoredDeclarationKind = Literal["primitive", "alias", "test_combinator"]
 
 _LINE_RE = re.compile(r"^(?P<name>[A-Za-z0-9_.]+)#(?P<constructor_id>[0-9A-Fa-f]+)(?P<body>.*?)= (?P<result>.+);$")
-_FLAG_RE = re.compile(r"^(?P<flag>[A-Za-z_][A-Za-z0-9_]*)\.(?P<index>\d+)\?(?P<inner>.+)$")
+_DECLARATION_NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*")
+_FLAG_RE = re.compile(r"(?P<flag>[A-Za-z_][A-Za-z0-9_]*)\.(?P<index>[0-9]+)\?(?P<inner>[^?]+)")
 _VECTOR_RE = re.compile(r"^[Vv]ector[< ](?P<inner>.+?)[>]?$")
 _PARAM_COMMENT_RE = re.compile(r"^@param\s+(?P<name>\S+)(?:\s+.+)?$")
 _LAYER_COMMENT_RE = re.compile(r"^LAYER\s+[1-9]\d*$")
@@ -73,6 +74,11 @@ class TLParameter:
     is_template: bool = False
     is_flags_marker: bool = False
 
+    def __post_init__(self) -> None:
+        """Reject optional indexes outside the supported flags word before rendering."""
+        if self.is_optional or self.flag_index is not None:
+            validate_flag_index(self.flag_index, field_name=self.name)
+
 
 @dataclass(frozen=True, slots=True)
 class TLEntry:
@@ -105,6 +111,10 @@ class TLEntry:
     source_line: str
     line_number: int
     comments: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        """Check that conditional fields refer to preceding flags words."""
+        validate_flag_parameters(self.params)
 
 
 @dataclass(frozen=True, slots=True)
@@ -170,6 +180,44 @@ class TLSchemaParseError(ValueError):
     """Raised when a TL or normalized JSON schema violates supported parser rules."""
 
     pass
+
+
+def validate_flag_index(index: int | None, *, field_name: str) -> int:
+    """Require an integer bit position within one 32-bit TL flags word.
+
+    Args:
+        index: Parsed or programmatically supplied optional-field bit position.
+        field_name: Parameter name used in schema diagnostics.
+
+    Raises:
+        TLSchemaParseError: The bit position is not an integer in the inclusive range 0 through 31.
+    """
+    if type(index) is not int or not 0 <= index <= 31:
+        raise TLSchemaParseError(f"parameter {field_name!r}: optional flag index must be an integer from 0 through 31")
+    return index
+
+
+def validate_flag_parameters(params: Sequence[TLParameter]) -> None:
+    """Validate conditional bits and their preceding flags-marker declarations.
+
+    Args:
+        params: All parameters of one declaration in source order.
+
+    Raises:
+        TLSchemaParseError: A flag bit is invalid or its marker is absent, repeated or declared too late.
+    """
+    flags: set[str] = set()
+    for param in params:
+        if param.is_flags_marker:
+            if param.name in flags:
+                raise TLSchemaParseError(f"duplicate flags marker {param.name!r}")
+            flags.add(param.name)
+        if param.is_optional:
+            validate_flag_index(param.flag_index, field_name=param.name)
+            if param.flag not in flags:
+                raise TLSchemaParseError(
+                    f"parameter {param.name!r}: optional field must reference a preceding flags marker"
+                )
 
 
 def parse_schema_file(path: str | Path) -> TLSchema:
@@ -313,6 +361,7 @@ def _parse_entry(line: str, *, kind: SchemaKind, line_number: int, comments: tup
             raise TLSchemaParseError(f"line {line_number}: unknown constructor-id-free TL declaration {line!r}")
         raise TLSchemaParseError(f"line {line_number}: expected TL declaration, got {line!r}")
     raw_name = match.group("name")
+    _validate_declaration_name(raw_name, line_number=line_number)
     namespace, short_name = _split_qualified_name(raw_name)
     body = match.group("body").strip()
     params = tuple(_parse_param(part) for part in _tokenize_body(body))
@@ -322,7 +371,7 @@ def _parse_entry(line: str, *, kind: SchemaKind, line_number: int, comments: tup
         name=raw_name,
         namespace=namespace,
         short_name=short_name,
-        python_class_name=_python_class_name(raw_name),
+        python_class_name=python_class_name(raw_name),
         constructor_id=int(constructor_id_hex, 16),
         constructor_id_hex=constructor_id_hex,
         result_type=match.group("result").strip(),
@@ -353,6 +402,7 @@ def _parse_json_entry(item: object, *, kind: SchemaKind, line_number: int) -> TL
     raw_params = item.get("params", ())
     if not isinstance(raw_name, str) or not raw_name:
         raise TLSchemaParseError(f"JSON schema entry {line_number}: missing {name_key}")
+    _validate_declaration_name(raw_name, line_number=line_number)
     if not isinstance(result_type, str) or not result_type:
         raise TLSchemaParseError(f"JSON schema entry {line_number}: missing result type")
     if not isinstance(raw_params, Sequence) or isinstance(raw_params, str):
@@ -370,7 +420,7 @@ def _parse_json_entry(item: object, *, kind: SchemaKind, line_number: int) -> TL
         name=raw_name,
         namespace=namespace,
         short_name=short_name,
-        python_class_name=_python_class_name(raw_name),
+        python_class_name=python_class_name(raw_name),
         constructor_id=constructor_id,
         constructor_id_hex=constructor_id_hex,
         result_type=result_type,
@@ -440,12 +490,17 @@ def _parse_param(part: str) -> TLParameter:
     flag: str | None = None
     flag_index: int | None = None
     is_optional = False
-    flag_match = _FLAG_RE.match(type_name)
+    flag_match = _FLAG_RE.fullmatch(type_name)
     if flag_match is not None:
         flag = flag_match.group("flag")
-        flag_index = int(flag_match.group("index"))
+        index_text = flag_match.group("index").lstrip("0") or "0"
+        if len(index_text) > 2:
+            raise TLSchemaParseError(f"parameter {name!r}: optional flag index must be an integer from 0 through 31")
+        flag_index = validate_flag_index(int(index_text), field_name=name)
         type_name = flag_match.group("inner")
         is_optional = True
+    elif "?" in type_name:
+        raise TLSchemaParseError(f"parameter {name!r}: malformed optional field type")
     vector_item = _vector_item_type(type_name)
     is_generic = type_name.startswith("!") or (type_name[:1].isupper() and type_name.endswith("Type"))
     return TLParameter(
@@ -497,7 +552,28 @@ def _split_qualified_name(name: str) -> tuple[str | None, str]:
     return namespace, short_name
 
 
-def _python_class_name(name: str) -> str:
+def _validate_declaration_name(name: str, *, line_number: int) -> None:
+    """Reject declaration names that cannot produce plain Python identifiers.
+
+    TL identifiers use Latin letters, digits and underscores: https://core.telegram.org/mtproto/TL-formal
+    Preserve supported nested namespaces and leading underscores while requiring each component to be an identifier.
+
+    Args:
+        name: Qualified declaration name before any case conversion.
+        line_number: Source position for diagnostics.
+    """
+    if _DECLARATION_NAME_RE.fullmatch(name) is None:
+        raise TLSchemaParseError(f"line {line_number}: invalid declaration name {name!r}")
+    namespace, short_name = _split_qualified_name(name)
+    identifiers = [python_class_name(name), python_class_name(short_name)]
+    if namespace is not None:
+        identifiers.append(namespace.replace(".", "_"))
+    for identifier in identifiers:
+        if not identifier.isidentifier() or keyword.iskeyword(identifier):
+            raise TLSchemaParseError(f"line {line_number}: invalid generated identifier {identifier!r} for {name!r}")
+
+
+def python_class_name(name: str) -> str:
     """Convert a schema declaration name into a collision-safe Python class name.
 
     Args:
@@ -618,6 +694,41 @@ def _validate_unique_entries(entries: Sequence[TLEntry]) -> None:
                     f"and {entry.name!r} at line {entry.line_number}"
                 )
         constructor_ids[entry.constructor_id] = (entry.name, entry.line_number)
+    _validate_namespace_aliases(entries, class_names)
+
+
+def _validate_namespace_aliases(entries: Sequence[TLEntry], class_names: Mapping[tuple[SchemaKind, str], int]) -> None:
+    """Reject collisions between flattened namespaces, generated classes and short aliases.
+
+    Args:
+        entries: Parsed declarations with validated identifier spellings.
+        class_names: Generated class identifiers and their source positions.
+    """
+    namespaces: dict[tuple[SchemaKind, str], str] = {}
+    aliases: dict[tuple[SchemaKind, str, str], str] = {}
+    for entry in entries:
+        if entry.namespace is None:
+            continue
+        namespace_name = entry.namespace.replace(".", "_")
+        namespace_key = (entry.kind, namespace_name)
+        previous_namespace = namespaces.get(namespace_key)
+        if previous_namespace is not None and previous_namespace != entry.namespace:
+            raise TLSchemaParseError(
+                f"line {entry.line_number}: duplicate generated namespace {namespace_name!r} for {previous_namespace!r} and {entry.namespace!r}"
+            )
+        if namespace_key in class_names:
+            raise TLSchemaParseError(
+                f"line {entry.line_number}: generated namespace {namespace_name!r} collides with a generated class"
+            )
+        namespaces[namespace_key] = entry.namespace
+        alias_name = python_class_name(entry.short_name)
+        alias_key = (entry.kind, entry.namespace, alias_name)
+        previous_alias = aliases.get(alias_key)
+        if previous_alias is not None:
+            raise TLSchemaParseError(
+                f"line {entry.line_number}: duplicate generated alias {alias_name!r} for {previous_alias!r} and {entry.name!r}"
+            )
+        aliases[alias_key] = entry.name
 
 
 def iter_public_params(params: Iterable[TLParameter]) -> tuple[TLParameter, ...]:

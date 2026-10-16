@@ -2,16 +2,26 @@
   "miniproto": {
     "format": "mp1 fixed header with canonical URL-safe base64",
     "record_fixture": "tests.test_session_strings.rich_record",
+    "legacy": {
+      "plain": {
+        "length": 2204,
+        "sha256": "aafbd88f74cdadff39bea36309447d1b66e16dcf9a409251c59adf3e8f7b4fa9"
+      },
+      "protected": {
+        "length": 2220,
+        "sha256": "c5208e36a6a91d14f7c0acce6f3ef94bd76d930bfa9939477ece8eaadbc93086"
+      }
+    },
     "plain": {
-      "length": 2204,
-      "sha256": "aafbd88f74cdadff39bea36309447d1b66e16dcf9a409251c59adf3e8f7b4fa9"
+      "length": 2342,
+      "sha256": "855b66caf29a0bb12960f016f7b86f17ac74da86881f187fe18cceee256d48cd"
     },
     "protected": {
       "passphrase": "golden passphrase",
       "salt": "000102030405060708090a0b0c0d0e0f",
       "nonce": "000102030405060708090a0b",
-      "length": 2220,
-      "sha256": "c5208e36a6a91d14f7c0acce6f3ef94bd76d930bfa9939477ece8eaadbc93086"
+      "length": 2358,
+      "sha256": "fcfaf71d178f694784977a13529737c1805fd3c8755d5e37305b6f46d06eee75"
     }
   },
   "telethon": {

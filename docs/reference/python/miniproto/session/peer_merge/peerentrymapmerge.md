@@ -7,7 +7,7 @@ language: "python"
 kind: "class"
 qualified_name: "miniproto.session.peer_merge.PeerEntryMapMerge"
 source_path: "src/miniproto/session/peer_merge.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/peer_merge.py#L14"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/session/peer_merge.py#L15"
 module: "miniproto.session.peer_merge"
 ---
 

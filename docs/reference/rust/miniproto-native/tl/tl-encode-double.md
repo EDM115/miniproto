@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::tl::tl_encode_double"
 source_path: "rust/miniproto/src/tl.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L616"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L618"
 aliases: ["miniproto._native.tl_encode_double"]
 python_visible: true
 ---
@@ -15,7 +15,7 @@ python_visible: true
 ## Provenance
 
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L616)
+- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L618)
 - Python exposure: `miniproto._native.tl_encode_double` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -36,7 +36,7 @@ fn tl_encode_double(value: f64) -> _
 fn tl_encode_double(value: f64) -> Vec<u8>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:616-618`*
+*Defined in `rust/miniproto/src/tl.rs:618-620`*
 
 Encodes Python `tl_encode_double(value)` as eight IEEE-754 little-endian bytes.
 

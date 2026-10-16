@@ -20,6 +20,8 @@ _MT_PROTO_MAX_PADDING = 1024
 _TL_VECTOR_CONSTRUCTOR_ID = 0x1CB5C415
 _SCRYPT_MAX_MEMORY_BYTES = 256 * 1024 * 1024
 _SCRYPT_MAX_WORK_BYTES = 1024 * 1024 * 1024
+_PQ_FACTOR_ATTEMPTS = 16
+_PQ_FACTOR_ITERATIONS = 100_000
 
 
 def native_available() -> bool:
@@ -399,8 +401,8 @@ def pq_factorize(pq: int) -> tuple[int, int]:
     Args:
         pq: Composite integer supplied by the MTProto handshake.
     """
-    if pq < 4:
-        raise ValueError("pq must be a composite integer >= 4")
+    if not 4 <= pq <= (1 << 64) - 1:
+        raise ValueError("pq must be a composite integer in the range 4..2**64-1")
     factor = _factor(pq)
     if factor in (1, pq):
         raise ValueError("pq must be composite")
@@ -822,8 +824,7 @@ def _factor(value: int) -> int:
         return 2
     if _is_prime(value):
         return value
-    c = 1
-    while True:
+    for c in range(1, _PQ_FACTOR_ATTEMPTS + 1):
         x = 2
         y = 2
         d = 1
@@ -837,7 +838,7 @@ def _factor(value: int) -> int:
             """
             return (item * item + constant) % value
 
-        for _ in range(100_000):
+        for _ in range(_PQ_FACTOR_ITERATIONS):
             x = step(x)
             y = step(step(y))
             d = math.gcd(abs(x - y), value)
@@ -845,7 +846,7 @@ def _factor(value: int) -> int:
                 break
         if 1 < d < value:
             return d
-        c += 1
+    raise ValueError("pq factorization work budget exhausted")
 
 
 def _checked_offset(data: bytes | bytearray | memoryview, offset: int, length: int) -> int:

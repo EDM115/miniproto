@@ -7,7 +7,7 @@ language: "python"
 kind: "attribute"
 qualified_name: "miniproto.media.download.MAX_DOWNLOAD_CHUNK_SIZE"
 source_path: "src/miniproto/media/download.py"
-source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L65"
+source_url: "https://github.com/EDM115/miniproto/blob/master/src/miniproto/media/download.py#L67"
 aliases: ["miniproto.media.MAX_DOWNLOAD_CHUNK_SIZE"]
 module: "miniproto.media.download"
 ---

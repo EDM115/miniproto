@@ -15,6 +15,8 @@ from miniproto.errors import NotFound, RpcError, Unauthorized, classify_rpc_erro
 from miniproto.invoke import load_session_record
 from miniproto.raw import functions, types
 from miniproto.session.models import PeerCacheEntry, SessionRecord, UserIdentity
+from miniproto.session.peer_aliases import normalize_username as _normalize_username
+from miniproto.session.peer_aliases import peer_usernames
 from miniproto.session.peer_merge import (
     PeerEntryMapMerge,
     PeerKey,
@@ -396,7 +398,7 @@ class PeerCache:
         now = datetime.now(UTC)
         for key in _owner_tuple(owners):
             entry = self._index_bundle.entries_by_key[key]
-            if now - entry.updated_at <= USERNAME_CACHE_TTL:
+            if _username_is_fresh(entry, normalized, now):
                 return entry
         return None
 
@@ -562,18 +564,7 @@ def _entry_usernames(entry: PeerCacheEntry) -> tuple[str, ...]:
     Args:
         entry: Cached peer entry whose primary and raw usernames are inspected.
     """
-    values: list[str] = []
-    primary = _normalize_username(entry.username or "")
-    if primary is not None:
-        values.append(primary)
-    raw = entry.raw if isinstance(entry.raw, Mapping) else {}
-    raw_usernames = raw.get("usernames", ())
-    if isinstance(raw_usernames, Iterable) and not isinstance(raw_usernames, str | bytes):
-        for raw_username in raw_usernames:
-            username = _normalize_username(str(raw_username))
-            if username is not None and username not in values:
-                values.append(username)
-    return tuple(values)
+    return peer_usernames(entry.username, entry.raw)
 
 
 def input_peer_from_peer(peer: Peer) -> object:
@@ -917,11 +908,23 @@ def _find_username_entry(entries: Iterable[PeerCacheEntry], username: str) -> Pe
         return None
     now = datetime.now(UTC)
     for entry in entries:
-        if now - entry.updated_at > USERNAME_CACHE_TTL:
-            continue
-        if _entry_has_username(entry, normalized):
+        if _username_is_fresh(entry, normalized, now) and _entry_has_username(entry, normalized):
             return entry
     return None
+
+
+def _username_is_fresh(entry: PeerCacheEntry, username: str, now: datetime) -> bool:
+    """Check one alias's own observation time, rejecting unknown or future times.
+
+    Args:
+        entry: Cached owner whose alias time is inspected.
+        username: Normalized username being resolved.
+        now: Current UTC lookup time.
+    """
+    if entry.username_observed_at is None:
+        return False
+    observed_at = entry.username_observed_at.get(username)
+    return observed_at is not None and observed_at <= now and now - observed_at <= USERNAME_CACHE_TTL
 
 
 def _entry_has_username(entry: PeerCacheEntry, username: str) -> bool:
@@ -973,21 +976,6 @@ def _maybe_int(value: str) -> int | None:
         return int(value)
     except ValueError:
         return None
-
-
-def _normalize_username(value: str) -> str | None:
-    """Canonicalize @handles and t.me URLs, returning ``None`` for empty input.
-
-    Args:
-        value: User-entered handle or supported t.me URL.
-    """
-    rendered = value.strip()
-    for prefix in ("https://t.me/", "http://t.me/", "t.me/"):
-        if rendered.casefold().startswith(prefix):
-            rendered = rendered[len(prefix) :]
-            break
-    rendered = rendered.removeprefix("@").split("/", 1)[0].strip().casefold()
-    return rendered or None
 
 
 def _normalize_phone(value: str | None) -> str | None:

@@ -7,7 +7,7 @@ language: "rust"
 kind: "function"
 qualified_name: "miniproto_native::tl::tl_fast_decode"
 source_path: "rust/miniproto/src/tl.rs"
-source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L202"
+source_url: "https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L204"
 aliases: ["miniproto._native.tl_fast_decode"]
 python_visible: true
 ---
@@ -15,7 +15,7 @@ python_visible: true
 ## Provenance
 
 - Rust visibility: `restricted`
-- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L202)
+- Source: [`rust/miniproto/src/tl.rs`](https://github.com/EDM115/miniproto/blob/master/rust/miniproto/src/tl.rs#L204)
 - Python exposure: `miniproto._native.tl_fast_decode` (confirmed from adjacent PyO3 attributes)
 
 ## Signature
@@ -40,7 +40,7 @@ fn tl_fast_decode(py: _, constructor_id: u32, data: &[u8], offset: usize, boxed:
 fn tl_fast_decode(py: Python<'_>, constructor_id: u32, data: &[u8], offset: usize, boxed: bool) -> PyResult<Option<(Py<pyo3::types::PyTuple>, usize)>>
 ```
 
-*Defined in `rust/miniproto/src/tl.rs:202-258`*
+*Defined in `rust/miniproto/src/tl.rs:204-260`*
 
 Attempts Python `tl_fast_decode` for a generated constructor at `offset`.
 

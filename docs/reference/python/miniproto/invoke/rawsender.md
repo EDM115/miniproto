@@ -16,3 +16,5 @@ module: "miniproto.invoke"
 Bases: <code>[Protocol](#typing.Protocol)</code>
 
 Minimal connected sender capability required by the RPC invocation layer.
+
+Credential invalidation additionally requires ``auth_key_dc_id`` and ``state.auth_key`` provenance. Custom senders without these optional attributes are disconnected on invalid-key errors without mutating stored credentials.
