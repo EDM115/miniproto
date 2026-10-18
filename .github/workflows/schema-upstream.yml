@@ -2,7 +2,7 @@ name: Upstream schema freshness
 
 on:
   schedule:
-    - cron: "0 0 * * SUN"
+    - cron: "0 8 * * SUN"
   workflow_dispatch:
 
 permissions:

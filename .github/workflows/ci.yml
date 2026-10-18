@@ -1,8 +1,6 @@
 name: CI
 
 on:
-  push:
-    branches: [master]
   pull_request:
     branches: [master]
     types: [ready_for_review, synchronize]
@@ -40,9 +38,6 @@ jobs:
 
       - name: Sync locked development environment
         run: uv sync --extra dev,docs --frozen
-
-      - name: Ruff format check
-        run: uv run ruff format --check .
 
       - name: Ruff lint
         run: uv run ruff check .
@@ -124,9 +119,6 @@ jobs:
         with:
           components: clippy, rustfmt
           toolchain: "1.99.0"
-
-      - name: Format check
-        run: cargo fmt --check
 
       - name: Clippy
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings

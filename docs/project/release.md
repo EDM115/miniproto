@@ -30,15 +30,16 @@ The steps below describe a reusable release procedure. They do not report the cu
 
 Every distribution and both sidecars receive a GitHub artifact attestation in the build workflow. The Cargo package is built once in an isolated `CARGO_TARGET_DIR`; the wheel matrix already compiles and exercises the native extension on all eight platform targets, so the release workflow does not perform a redundant standalone Cargo target matrix.
 
-`.github/workflows/publish-release.yml`, named **Publish release**, accepts an exact build run ID and version. Its verification job requires a successful `workflow_dispatch` run of the expected build workflow in `EDM115/miniproto`, checks that the source commit is reachable from `master`, checks Python/Cargo/archive versions, validates all checksums and expected files and verifies every GitHub attestation against the expected signer workflow and source commit. Only then do isolated jobs create a populated draft GitHub release, publish the 25 Python distributions through PyPI Trusted Publishing, publish the Cargo package through crates.io Trusted Publishing, compare the downloaded registry crate byte-for-byte with the attested candidate and finally make the already-populated GitHub release public.
+`.github/workflows/publish-release.yml`, named **Publish release**, accepts an exact build run ID and version. Its verification job requires a successful `workflow_dispatch` run of the expected build workflow in `EDM115/miniproto`, checks that the source commit is reachable from `master`, checks Python/Cargo/archive versions, validates all checksums and expected files and verifies every GitHub attestation against the expected signer workflow and source commit. Only then do isolated jobs create a populated draft GitHub release, publish the Cargo package through crates.io Trusted Publishing, compare the downloaded registry crate byte-for-byte with the attested candidate, publish the 25 Python distributions through PyPI Trusted Publishing and optionally make the already-populated GitHub release public.  
+The GitHub release title comes from the first `##` heading in the verified source commit's `CHANGELOG.md`, with inline Markdown formatting removed. For example, ``## `v0.1.0` - First Alpha release`` becomes `v0.1.0 - First Alpha release`. The notes contain everything below that heading until the next `##` heading or EOF, preserving Markdown and ignoring heading-like text inside fenced code blocks. The release tag still comes from the exact `version` input, independently of the changelog title.
 
 There is no transaction spanning all three services. The chosen order keeps the GitHub release as a draft until both registries succeed:
 
 1. Verify the complete candidate.
 2. Create the draft release and attach all 28 immutable assets.
-3. Publish all wheels and the Python sdist to PyPI.
-4. Publish the Cargo source package to crates.io and verify its bytes.
-5. Publish the GitHub draft as the immutable latest release.
+3. Publish the Cargo source package to crates.io and verify its bytes.
+4. Publish all wheels and the Python sdist to PyPI.
+5. Publish the GitHub draft as the immutable latest release or prerelease, unless `keep_draft` is enabled.
 
 ## One-time repository and registry setup
 
@@ -174,6 +175,7 @@ gh workflow run publish-release.yml `
   -f version=$version
 ```
 
+The optional Boolean inputs `keep_draft` and `prerelease` both default to `false`. Add `-f keep_draft=true` to publish packages while leaving the populated GitHub release as a draft. Add `-f prerelease=true` to mark it as a prerelease and prevent it from becoming Latest, including when combined with `keep_draft=true` for later manual publication. These controls apply to the GitHub release, both registry publication jobs still run.  
 Approve the `release` environment only after checking the displayed version, source commit and build run ID. Watch the publish run through completion:
 
 ```pwsh
@@ -289,7 +291,7 @@ $tag = "v$version"
 
 gh release view $tag `
   --repo $repository `
-  --json tagName,targetCommitish,isDraft,isImmutable,url,assets
+  --json tagName,targetCommitish,isDraft,isPrerelease,isLatest,isImmutable,url,assets
 
 $postRelease = ".tmp/post-release-$version"
 uv venv --python 3.14 $postRelease
@@ -300,9 +302,9 @@ uv pip install --python $python "miniproto==$version"
 cargo info "miniproto@$version"
 ```
 
-On Linux or macOS, use `$postRelease/bin/python` for the clean PyPI import. Download the public GitHub assets into a new directory, verify `SHA256SUMS` and `release-manifest.json` with `miniproto-release-artifacts verify`, then run `gh attestation verify` with `.github/workflows/build-wheels.yml` as the signer.
+On Linux or macOS, use `$postRelease/bin/python` for the clean PyPI import. Download the GitHub assets into a new directory, using authenticated access for a retained draft, verify `SHA256SUMS` and `release-manifest.json` with `miniproto-release-artifacts verify`, then run `gh attestation verify` with `.github/workflows/build-wheels.yml` as the signer.
 
-Confirm that PyPI lists exactly 24 wheels and one sdist. Confirm that crates.io serves the `.crate` bytes already checked by the publisher. Confirm that the GitHub release is public, its tag targets the verified build SHA and it contains all 28 assets. If any surface disagrees, stop announcing the release; package versions and immutable release assets cannot be overwritten.
+Confirm that PyPI lists exactly 24 wheels and one sdist. Confirm that crates.io serves the `.crate` bytes already checked by the publisher. Confirm that the GitHub release state matches the dispatch inputs: `keep_draft=true` leaves a draft, `prerelease=true` marks a prerelease without Latest, and both defaults produce a public Latest release. Its tag must target the verified build SHA and it must contain all 28 assets. If any surface disagrees, stop announcing the release, package versions and immutable release assets cannot be overwritten.
 
 ## Continuous versus authoritative artifacts
 

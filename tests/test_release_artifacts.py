@@ -231,3 +231,54 @@ def test_manifest_verification_rejects_a_different_workflow_attempt(tmp_path: Pa
             expected_source_sha="a" * 40,
             expected_event="workflow_dispatch",
         )
+
+
+@pytest.mark.parametrize("next_release", ["", "## `v0.0.98` - Previous release\nOlder notes\n"])
+def test_release_notes_extract_only_the_first_level_two_section(tmp_path: Path, next_release: str) -> None:
+    module = _release_artifacts_module()
+    changelog = tmp_path / "CHANGELOG.md"
+    notes = "\n### Features\n\nNew behavior  \nSecond line\n\n```markdown\n## Example inside a code fence\n```\n\n"
+    changelog.write_text(
+        "# Project changelog\n\nIntroductory text\n\n## `v0.1.0` - First Alpha release\n" + notes + next_release,
+        encoding="utf-8",
+    )
+    output = tmp_path / "release-metadata"
+
+    result = module.main(["notes", "--changelog", str(changelog), "--output-dir", str(output)])
+
+    assert result == 0
+    assert (output / "release-title.txt").read_text(encoding="utf-8") == "v0.1.0 - First Alpha release\n"
+    assert (output / "release-notes.md").read_text(encoding="utf-8") == notes
+
+
+@pytest.mark.parametrize(
+    ("heading", "expected"),
+    [
+        ("## `v0.1.0` - **First _Alpha_ release**", "v0.1.0 - First Alpha release"),
+        ("  ## [v0.1.0](https://example.com/release) - *Alpha* ###", "v0.1.0 - Alpha"),
+        ("## `v0.1.0_alpha` - release_candidate", "v0.1.0_alpha - release_candidate"),
+        ("## ``v0.1.0_**literal**`` - ~~Preview~~", "v0.1.0_**literal** - Preview"),
+    ],
+)
+def test_release_notes_render_the_heading_as_plain_text(heading: str, expected: str) -> None:
+    module = _release_artifacts_module()
+
+    title, notes = module.extract_changelog_release(f"{heading}\nRelease notes\n")
+
+    assert title == expected
+    assert notes == "Release notes\n"
+
+
+def test_release_notes_ignore_fenced_headings_before_the_release() -> None:
+    module = _release_artifacts_module()
+    changelog = "~~~markdown\n## Not a release\n~~~~\n## `v0.1.0` - Alpha\nNotes\n"
+
+    assert module.extract_changelog_release(changelog) == ("v0.1.0 - Alpha", "Notes\n")
+
+
+@pytest.mark.parametrize("changelog", ["# Changelog\n### Features\n", "## \nNotes\n", "## ``\nNotes\n"])
+def test_release_notes_reject_a_missing_or_empty_release_heading(changelog: str) -> None:
+    module = _release_artifacts_module()
+
+    with pytest.raises(module.ReleaseArtifactError, match="heading"):
+        module.extract_changelog_release(changelog)

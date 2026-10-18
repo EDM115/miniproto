@@ -27,10 +27,77 @@ _SIDECAR_NAMES = {"release-manifest.json", "SHA256SUMS"}
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _SOURCE_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 _VERSION_RE = re.compile(r"^[0-9]+(?:\.[0-9]+)+(?:[A-Za-z0-9.!+_-]*)$")
+_TITLE_MARKUP_RE = re.compile(
+    r"(?P<ticks>`+)(?P<code>.*?)(?P=ticks)"
+    r"|!?\[(?P<label>[^\]]*)\]\([^)]*\)"
+    r"|(?P<strong>\*\*|__|~~)(?P<strong_text>.+?)(?P=strong)"
+    r"|(?<!\w)(?P<emphasis>[*_])(?P<emphasis_text>\S(?:.*?\S)?)(?P=emphasis)(?!\w)"
+)
 
 
 class ReleaseArtifactError(ValueError):
     """Report a malformed, incomplete, mismatched or modified release candidate."""
+
+
+def _plain_release_title(heading: str) -> str:
+    """Remove inline Markdown formatting from a release heading while preserving code contents.
+
+    Args:
+        heading: Heading contents without ATX heading markers.
+
+    Returns:
+        Plain-text release title.
+    """
+    return _TITLE_MARKUP_RE.sub(
+        lambda match: (
+            match.group("code")
+            if match.group("code") is not None
+            else _plain_release_title(
+                next(text for text in match.group("label", "strong_text", "emphasis_text") if text is not None)
+            )
+        ),
+        heading,
+    ).strip()
+
+
+def extract_changelog_release(changelog: str) -> tuple[str, str]:
+    """Extract the first level-two ATX heading and its Markdown body through the next such heading or EOF.
+
+    Args:
+        changelog: Complete changelog text with newest release first.
+
+    Returns:
+        Plain-text release title and the unchanged section body, including Markdown spacing.
+
+    Raises:
+        ReleaseArtifactError: No release heading exists or its plain-text title is empty.
+    """
+    title: str | None = None
+    notes: list[str] = []
+    fence: tuple[str, int] | None = None
+    for line in changelog.splitlines(keepends=True):
+        content = line.rstrip("\r\n")
+        marker = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", content)
+        if marker is not None:
+            delimiter, info = marker.groups()
+            if fence is None and (delimiter[0] != "`" or "`" not in info):
+                fence = (delimiter[0], len(delimiter))
+            elif fence is not None and delimiter[0] == fence[0] and len(delimiter) >= fence[1] and not info.strip():
+                fence = None
+        elif fence is None:
+            heading = re.match(r"^ {0,3}##(?:[ \t]+(.*))?$", content)
+            if heading is not None:
+                if title is not None:
+                    break
+                title = _plain_release_title(re.sub(r"[ \t]+#+[ \t]*$", "", heading.group(1) or ""))
+                if not title:
+                    raise ReleaseArtifactError("the first level-two changelog heading has an empty release title")
+                continue
+        if title is not None:
+            notes.append(line)
+    if title is None:
+        raise ReleaseArtifactError("the changelog has no level-two release heading")
+    return title, "".join(notes)
 
 
 def _normalize_distribution_name(value: str) -> str:
@@ -531,11 +598,11 @@ def _parser() -> argparse.ArgumentParser:
     """Build the side-effect-free command-line parser.
 
     Returns:
-        Configured parser with `manifest` and `verify` subcommands.
+        Configured parser with `manifest`, `verify` and `notes` subcommands.
     """
     parser = argparse.ArgumentParser(
         prog="miniproto-release-artifacts",
-        description="Create or verify checksums and provenance for a complete miniproto release candidate.",
+        description="Prepare changelog notes or create and verify checksums and provenance for a miniproto release candidate.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -566,11 +633,16 @@ def _parser() -> argparse.ArgumentParser:
     )
     verify.add_argument("--source-sha", required=True, help="Expected full source commit SHA.")
     verify.add_argument("--event", required=True, help="Expected source workflow event.")
+    notes = subparsers.add_parser("notes", help="Extract the newest changelog section for a GitHub release.")
+    notes.add_argument("--changelog", type=Path, required=True, help="Markdown changelog with newest release first.")
+    notes.add_argument(
+        "--output-dir", type=Path, required=True, help="Directory receiving release-title.txt and release-notes.md."
+    )
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run release manifest generation or verification.
+    """Run release manifest generation, verification or changelog extraction.
 
     Args:
         argv: Optional argument sequence; defaults to process arguments.
@@ -581,6 +653,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = _parser()
     args = parser.parse_args(argv)
     try:
+        if args.command == "notes":
+            title, notes = extract_changelog_release(args.changelog.read_text(encoding="utf-8"))
+            args.output_dir.mkdir(parents=True, exist_ok=True)
+            (args.output_dir / "release-title.txt").write_text(title + "\n", encoding="utf-8", newline="")
+            (args.output_dir / "release-notes.md").write_text(notes, encoding="utf-8", newline="")
+            print(f"Extracted changelog section: {title}")
+            return 0
         if args.command == "manifest":
             manifest_path, checksums_path = build_release_manifest(
                 artifacts_dir=args.artifacts_dir,

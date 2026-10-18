@@ -370,7 +370,8 @@ gh workflow run publish-release.yml `
   -f version=0.1.0
 ```
 
-The supported publisher is the separate, protected `.github/workflows/publish-release.yml` workflow. It downloads one exact successful **Build release artifacts** run, verifies its source commit, shared version, complete file set, checksums and every build attestation, then publishes the 25 Python distributions through PyPI OIDC Trusted Publishing. The build workflow never receives publication authority.
+The supported publisher is the separate, protected `.github/workflows/publish-release.yml` workflow. It downloads one exact successful **Build release artifacts** run, verifies its source commit, shared version, complete file set, checksums and every build attestation, then publishes the 25 Python distributions through PyPI OIDC Trusted Publishing. The build workflow never receives publication authority.  
+GitHub release titles and notes come from the first `##` changelog section, ending at the next `##` heading or EOF. Add `-f keep_draft=true` to leave the GitHub release as a draft after package publication, or `-f prerelease=true` to publish a prerelease instead of Latest. Both Boolean inputs default to `false` and can be combined.
 
 Do not select a build by recency, combine files from different runs or locally rebuild one file under an existing release version. See the [release guide](project/release.md) for exact remote build/download/verification commands, required Trusted Publisher settings, immutable GitHub release handling, failure recovery and the emergency local token path.
 
