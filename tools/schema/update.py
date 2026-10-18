@@ -91,11 +91,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         argv: Optional CLI arguments; defaults to process arguments.
 
     Returns:
-        ``0`` when update/check succeeds or ``1`` when ``--check-upstream`` finds stale files.
+        ``0`` when update/check succeeds, including provenance-only drift, or ``1`` when ``--check-upstream`` finds stale schema inputs.
     """
     parser = argparse.ArgumentParser(description="Update pinned Telegram schema inputs.")
     parser.add_argument(
-        "--check-upstream", action="store_true", help="fetch upstream and fail when pinned schema inputs are stale"
+        "--check-upstream",
+        action="store_true",
+        help="fetch upstream and fail on changed schema inputs, report provenance-only drift without failing",
     )
     parser.add_argument(
         "--report", type=Path, help="write a machine-readable upstream source and drift report to this path"
@@ -105,16 +107,33 @@ def main(argv: Sequence[str] | None = None) -> int:
     snapshot = build_upstream_snapshot()
     files = render_pinned_files(snapshot, root=_REPO_ROOT)
     stale = stale_pinned_files(files)
+    provenance_only = tuple(
+        path
+        for path in stale
+        if path.name == "schema-metadata.json" and _pinned_file_matches(path, files[path], ignore_provenance=True)
+    )
+    stale_schema = tuple(path for path in stale if path not in provenance_only)
     if args.report is not None:
         args.report.parent.mkdir(parents=True, exist_ok=True)
-        args.report.write_text(render_upstream_report(snapshot, stale, root=_REPO_ROOT), encoding="utf-8", newline="")
+        args.report.write_text(
+            render_upstream_report(snapshot, stale, root=_REPO_ROOT, provenance_only=provenance_only),
+            encoding="utf-8",
+            newline="",
+        )
         print(f"wrote upstream schema report: {args.report}")
     if args.check_upstream:
-        if stale:
-            for path in stale:
+        if stale_schema:
+            for path in stale_schema:
                 print(f"stale pinned schema input: {path}")
             return 1
-        print("pinned schema inputs match upstream")
+        if provenance_only:
+            print(
+                f"pinned schema inputs match upstream at Layer {snapshot.schema_layer}, only provenance metadata differs (no schema regeneration required)"
+            )
+            for path in provenance_only:
+                print(f"changed provenance metadata: {path}")
+        else:
+            print(f"pinned schema inputs match upstream at Layer {snapshot.schema_layer}")
         return 0
     write_pinned_files(files)
     print(
@@ -271,32 +290,47 @@ def render_pinned_files(snapshot: UpstreamSchemaSnapshot, *, root: Path) -> dict
     }
 
 
-def render_upstream_report(snapshot: UpstreamSchemaSnapshot, stale: Sequence[Path], *, root: Path) -> str:
+def render_upstream_report(
+    snapshot: UpstreamSchemaSnapshot, stale: Sequence[Path], *, root: Path, provenance_only: Sequence[Path] = ()
+) -> str:
     """Render a machine-readable report describing upstream provenance and stale pins.
 
     Args:
         snapshot: Validated upstream snapshot.
         stale: Output paths differing from their expected pinned content.
         root: Repository root used to make report paths relative.
+        provenance_only: Stale paths whose differences affect only provenance, without changing schema inputs.
 
     Returns:
         Deterministic JSON report text.
     """
     root = root.resolve()
     stale_inputs: list[str] = []
+    stale_schema_inputs: list[str] = []
+    stale_provenance_inputs: list[str] = []
+    provenance_paths = {path.resolve() for path in provenance_only}
     for path in stale:
         resolved = path.resolve()
         try:
-            stale_inputs.append(resolved.relative_to(root).as_posix())
+            report_path = resolved.relative_to(root).as_posix()
         except ValueError:
-            stale_inputs.append(resolved.as_posix())
+            report_path = resolved.as_posix()
+        stale_inputs.append(report_path)
+        (stale_provenance_inputs if resolved in provenance_paths else stale_schema_inputs).append(report_path)
     return _json_document(
         {
             "canonical_source": "tdlib",
             "fetch_date": snapshot.fetch_date,
             "schema_layer": snapshot.schema_layer,
             "changelog_latest_layer": snapshot.changelog_latest_layer,
+            "status": "inputs_changed"
+            if stale_schema_inputs
+            else "provenance_only"
+            if stale_provenance_inputs
+            else "current",
             "stale_pinned_inputs": stale_inputs,
+            "stale_schema_inputs": stale_schema_inputs,
+            "stale_provenance_inputs": stale_provenance_inputs,
             "sources": snapshot.source_metadata,
             "comparisons": snapshot.source_diff,
         }
@@ -349,25 +383,31 @@ def stale_pinned_files(files: Mapping[Path, str]) -> tuple[Path, ...]:
     return tuple(stale)
 
 
-def _pinned_file_matches(path: Path, expected: str) -> bool:
+def _pinned_file_matches(path: Path, expected: str, *, ignore_provenance: bool = False) -> bool:
     """Compare one pinned file to expected content without exposing read errors.
 
     Args:
         path: Pinned destination path.
         expected: Deterministic expected content.
+        ignore_provenance: Also ignore per-source provenance and the advisory changelog layer when comparing metadata.
     """
     try:
         actual = path.read_bytes().decode("utf-8")
-    except UnicodeDecodeError:
+    except (OSError, UnicodeDecodeError):
         return False
     if path.name != "schema-metadata.json":
         return actual == expected
-    actual_metadata = json.loads(actual)
-    expected_metadata = json.loads(expected)
+    try:
+        actual_metadata = json.loads(actual)
+        expected_metadata = json.loads(expected)
+    except json.JSONDecodeError:
+        return False
     if not isinstance(actual_metadata, dict) or not isinstance(expected_metadata, dict):
         return actual == expected
-    actual_metadata.pop("fetch_date", None)
-    expected_metadata.pop("fetch_date", None)
+    ignored_fields = ("fetch_date", "sources", "changelog_latest_layer") if ignore_provenance else ("fetch_date",)
+    for field in ignored_fields:
+        actual_metadata.pop(field, None)
+        expected_metadata.pop(field, None)
     return actual_metadata == expected_metadata
 
 

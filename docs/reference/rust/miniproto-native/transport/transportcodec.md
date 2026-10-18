@@ -124,17 +124,15 @@ Python-visible incremental TCP framing codec, exported as `miniproto._native.Tra
 
 ##### `impl DerefToPyAny for TransportCodec`
 
-##### `impl ExtractPyClassWithClone for TransportCodec`
-
 ##### `impl IntoPyObject for TransportCodec`
 
 - <span id="transportcodec-intopyobject-type-target"></span>`type Target = TransportCodec`
 
-- <span id="transportcodec-intopyobject-type-output"></span>`type Output = Bound<'py, <TransportCodec as IntoPyObject>::Target>`
+- <span id="transportcodec-intopyobject-type-output"></span>`type Output = Bound<'py, TransportCodec>`
 
 - <span id="transportcodec-intopyobject-type-error"></span>`type Error = PyErr`
 
-- <span id="transportcodec-intopyobject-into-pyobject"></span>`fn into_pyobject(self, py: ::pyo3::Python<'py>) -> ::std::result::Result<<Self as ::pyo3::conversion::IntoPyObject>::Output, <Self as ::pyo3::conversion::IntoPyObject>::Error>`
+- <span id="transportcodec-intopyobject-into-pyobject"></span>`fn into_pyobject(self, py: ::pyo3::Python<'py>) -> ::pyo3::PyResult<::pyo3::Bound<'py, Self>>`
 
 ##### `impl IntoPyObjectExt for TransportCodec`
 
@@ -146,17 +144,7 @@ Python-visible incremental TCP framing codec, exported as `miniproto._native.Tra
 
 ##### `impl PyClassImpl for TransportCodec`
 
-- <span id="transportcodec-pyclassimpl-const-module"></span>`const MODULE: ::std::option::Option<&str>`
-
-- <span id="transportcodec-pyclassimpl-const-is-basetype"></span>`const IS_BASETYPE: bool`
-
-- <span id="transportcodec-pyclassimpl-const-is-subclass"></span>`const IS_SUBCLASS: bool`
-
-- <span id="transportcodec-pyclassimpl-const-is-mapping"></span>`const IS_MAPPING: bool`
-
-- <span id="transportcodec-pyclassimpl-const-is-sequence"></span>`const IS_SEQUENCE: bool`
-
-- <span id="transportcodec-pyclassimpl-const-is-immutable-type"></span>`const IS_IMMUTABLE_TYPE: bool`
+- <span id="transportcodec-pyclassimpl-const-module"></span>`const MODULE: ::core::option::Option<&str>`
 
 - <span id="transportcodec-pyclassimpl-type-layout"></span>`type Layout = <<TransportCodec as PyClassImpl>::BaseNativeType as PyClassBaseType>::Layout`
 
@@ -174,11 +162,13 @@ Python-visible incremental TCP framing codec, exported as `miniproto._native.Tra
 
 - <span id="transportcodec-pyclassimpl-items-iter"></span>`fn items_iter() -> ::pyo3::impl_::pyclass::PyClassItemsIter`
 
-- <span id="transportcodec-pyclassimpl-const-raw-doc"></span>`const RAW_DOC: &'static ::std::ffi::CStr`
+- <span id="transportcodec-pyclassimpl-const-raw-doc"></span>`const RAW_DOC: &'static ::core::ffi::CStr`
 
-- <span id="transportcodec-pyclassimpl-const-doc"></span>`const DOC: &'static ::std::ffi::CStr`
+- <span id="transportcodec-pyclassimpl-const-doc"></span>`const DOC: &'static ::core::ffi::CStr`
 
 - <span id="transportcodec-pyclassimpl-lazy-type-object"></span>`fn lazy_type_object() -> &'static ::pyo3::impl_::pyclass::LazyTypeObject<Self>`
+
+- <span id="transportcodec-pyclassimpl-traverse"></span>`fn __traverse__(&self, visit: ::pyo3::gc::PyVisit<'_>) -> ::core::result::Result<(), ::pyo3::gc::PyTraverseError>`
 
 ##### `impl PyClassNewTextSignature for TransportCodec`
 
@@ -199,10 +189,6 @@ Python-visible incremental TCP framing codec, exported as `miniproto._native.Tra
 - <span id="transportcodec-pytypecheck-classinfo-object"></span>`fn classinfo_object(py: Python<'_>) -> Bound<'_, PyAny>`
 
 ##### `impl PyTypeInfo for TransportCodec`
-
-- <span id="transportcodec-pytypeinfo-const-name"></span>`const NAME: &str`
-
-- <span id="transportcodec-pytypeinfo-const-module"></span>`const MODULE: ::std::option::Option<&str>`
 
 - <span id="transportcodec-pytypeinfo-type-object-raw"></span>`fn type_object_raw(py: ::pyo3::Python<'_>) -> *mut ::pyo3::ffi::PyTypeObject`
 

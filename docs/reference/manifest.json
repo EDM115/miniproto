@@ -5192,7 +5192,7 @@
       "path": "rust/miniproto-native/transport/index.md",
       "qualified_name": "miniproto_native::transport",
       "route": "/reference/rust/miniproto-native/transport/",
-      "sha256": "d6103a3dc86cd8092aa8fd6d262a5ff4f9b9c4551ae6928ea71be711fabd3f99",
+      "sha256": "aa86397093e30bd6712c4fd33715af87fd4f2740120986e77c7a4d9489672217",
       "source_path": "rust/miniproto/src/transport.rs"
     },
     {
@@ -5219,7 +5219,7 @@
       "path": "rust/miniproto-native/transport/transportcodec.md",
       "qualified_name": "miniproto_native::transport::TransportCodec",
       "route": "/reference/rust/miniproto-native/transport/transportcodec/",
-      "sha256": "2e3174f9675e9b43b54e7a57d428f90fb74c20559eafdee562e382e3ceafc660",
+      "sha256": "3aa4dfb556a78bac62bed304baaafec0794449fc2bc200911079b02cfcc2596e",
       "source_path": "rust/miniproto/src/transport.rs"
     },
     {
@@ -42185,7 +42185,7 @@
     "tools/docs/manifest.py": "46e30be3c350bf4654033c484b88ba389a185eea8b1ef8c0ab3d21131dc4ba6c",
     "tools/docs/model.py": "5b992da6c8fd840f5dc91d3f07c47db051b35749cd901a655629b009ac46f856",
     "tools/schema/rpc-errors.json": "fb7304a7f7e66a6750f9ca842dd1406ed3798eebd6f4f2d993924135848ee82e",
-    "tools/schema/schema-metadata.json": "d3a38e5d35be4319317610ace032d13a2a83d1860ae8031c33e87911372b5a1d",
+    "tools/schema/schema-metadata.json": "f07a5ada401776dbd86a42f4c82010eddfdfe9956c58bd0dbfade8bb66808b62",
     "tools/schema/schema.json": "07bd85484be5eed4cc63fddd8684e7e6710a071fd883d1c494670b9a15eaa276",
     "tools/schema/telegram-bindings.json": "1d6b30c8a26daf220cb7239c952022e6a866d6e0af56064ce7ed18f37235c833"
   }

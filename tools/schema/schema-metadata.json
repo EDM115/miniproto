@@ -8,7 +8,7 @@
     "tdesktop",
     "core_json"
   ],
-  "fetch_date": "2026-10-13",
+  "fetch_date": "2026-10-18",
   "function_count": 854,
   "generated_file_manifest": [
     "src/miniproto/raw/base.py",
@@ -81,7 +81,7 @@
       "url": "https://core.telegram.org/schema/json"
     },
     "core_schema_page": {
-      "bytes": 708557,
+      "bytes": 708703,
       "constructor_count": 0,
       "declaration_count": 0,
       "derived_tl_sha256": "2a96b10894fc0f20152acee19f7c9149abb948b51ed9e271b8f71aa2fb434002",
@@ -89,17 +89,17 @@
       "function_count": 0,
       "normalization": "trailing_page_generation_timing_removed",
       "role": "documentation_and_tl_mirror",
-      "sha256": "482a660a58063dadfb7771a6c17448ee0477b413dfdaab28a7298ecaab535e8a",
+      "sha256": "49450321dd01dd886f0c830685b7caf9390aa2c55db7d32f092b01a62ad901d4",
       "url": "https://core.telegram.org/schema"
     },
     "layer_changelog": {
-      "bytes": 902699,
+      "bytes": 902853,
       "constructor_count": 0,
       "declaration_count": 0,
       "function_count": 0,
       "normalization": "trailing_page_generation_timing_removed",
       "role": "drift_context",
-      "sha256": "352e75d5a617b73d9134d4d97bf5e290d3f029e5f15831816c1f6b6d0f032d63",
+      "sha256": "57e483db51bbbfb50ef290b7098356b8b3828bb0ca78b0691f94e6bef8aa4214",
       "url": "https://core.telegram.org/api/layers"
     },
     "rpc_errors": {

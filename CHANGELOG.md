@@ -116,6 +116,8 @@
 
 ### Tooling & Other changes
 
+📦️ build : refresh Python and frontend tooling plus their lockfiles, upgrade PyO3 to 0.30.1 and revalidate the Layer 230 schema sources while retaining TypeScript 6, pnpm 11 and Node 26  
+🐛 fix : report upstream schema provenance-only drift without failing CI, while retaining failures for changed schema inputs, layer metadata and RPC error data  
 👷 ci : run Python 3.13/3.14 quality and tests, genuine GIL-disabled CPython 3.14t acceptance, stable Rust checks, schema freshness, all non-live benchmark families, source distributions and strict docs generation/build/search acceptance  
 👷 ci : isolate authoritative release construction in a dispatch-only workflow that builds the 24-lane Linux glibc/musl, Windows and macOS wheel matrix plus one Python sdist and one Cargo source package, then attests every distribution  
 👷 ci : publish only a run-ID-selected, checksum- and attestation-verified candidate through isolated PyPI/crates.io OIDC jobs before making the fully populated GitHub release public and immutable  

@@ -177,6 +177,71 @@ def test_stale_pinned_files_reports_only_changed_inputs(tmp_path: Path) -> None:
     assert stale_pinned_files(files) == (tmp_path / "tools/schema/rpc-errors.json",)
 
 
+@pytest.mark.parametrize(
+    ("change", "expected_exit", "expected_status"),
+    [
+        ("none", 0, "current"),
+        ("provenance", 0, "provenance_only"),
+        ("schema_same_layer", 1, "inputs_changed"),
+        ("layer", 1, "inputs_changed"),
+        ("rpc_errors", 1, "inputs_changed"),
+        ("metadata_layer", 1, "inputs_changed"),
+        ("metadata_hash", 1, "inputs_changed"),
+        ("missing_metadata", 1, "inputs_changed"),
+        ("malformed_metadata", 1, "inputs_changed"),
+    ],
+)
+def test_check_upstream_distinguishes_provenance_from_schema_changes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, change: str, expected_exit: int, expected_status: str
+) -> None:
+    payloads = _upstream_payloads()
+    baseline = build_upstream_snapshot(fetch_url=payloads.__getitem__, fetch_date="2026-08-11")
+    pins = render_pinned_files(baseline, root=tmp_path)
+    write_pinned_files(pins)
+    metadata_path = tmp_path / "tools/schema/schema-metadata.json"
+    if change == "provenance":
+        payloads["https://core.telegram.org/schema"] += b"<footer>Updated navigation</footer>"
+        payloads["https://core.telegram.org/api/layers"] += b"<h3>Layer 229</h3>"
+    elif change == "schema_same_layer":
+        tdlib_url = next(url for url in payloads if "tdlib" in url)
+        payloads[tdlib_url] = TDLIB_TL.replace(
+            b"boolTrue#997275b5 = Bool;", b"boolTrue#997275b5 = Bool;\nboolFalse#bc799737 = Bool;"
+        )
+    elif change == "layer":
+        desktop_url = next(url for url in payloads if "tdesktop" in url)
+        payloads[desktop_url] = TDESKTOP_TL.replace(b"LAYER 228", b"LAYER 229")
+    elif change == "rpc_errors":
+        payloads["https://core.telegram.org/api/errors.json"] = ERRORS_JSON.replace(b"Please wait", b"Wait")
+    elif change in {"metadata_layer", "metadata_hash"}:
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+        metadata["schema_layer" if change == "metadata_layer" else "schema_tl_sha256"] = (
+            227 if change == "metadata_layer" else "0" * 64
+        )
+        metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
+    elif change == "missing_metadata":
+        metadata_path.unlink()
+    elif change == "malformed_metadata":
+        metadata_path.write_text("{invalid", encoding="utf-8")
+    before = {path: path.read_bytes() if path.exists() else None for path in pins}
+    upstream = build_upstream_snapshot(fetch_url=payloads.__getitem__, fetch_date="2026-08-12")
+    monkeypatch.setattr(schema_update, "_REPO_ROOT", tmp_path)
+    monkeypatch.setattr(schema_update, "build_upstream_snapshot", lambda: upstream)
+    report_path = tmp_path / "schema-upstream-report.json"
+
+    result = schema_update.main(["--check-upstream", "--report", str(report_path)])
+
+    assert result == expected_exit
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["status"] == expected_status
+    assert bool(report["stale_schema_inputs"]) is bool(expected_exit)
+    assert report["stale_provenance_inputs"] == (
+        ["tools/schema/schema-metadata.json"] if change == "provenance" else []
+    )
+    if change in {"schema_same_layer", "rpc_errors", "provenance"}:
+        assert report["schema_layer"] == baseline.schema_layer
+    assert {path: path.read_bytes() if path.exists() else None for path in pins} == before
+
+
 def test_stale_pinned_files_ignores_metadata_fetch_date(tmp_path: Path) -> None:
     def fetch_url(url: str) -> bytes:
         return _upstream_payloads()[url]
