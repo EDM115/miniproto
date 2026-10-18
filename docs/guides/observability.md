@@ -1,0 +1,38 @@
+---
+title: Observability
+description: Configure redacting logs, best-effort metric sinks and resource snapshots without changing client behavior.
+slug: /guides/observability
+generated: false
+---
+
+# Observability
+
+Call the package logging configuration before client activity begins. It installs one handler on the `miniproto` root logger, clears handlers already attached to that logger and sets `propagate` to `False`. It controls the `miniproto` logger branch, not unrelated application loggers.
+
+```python
+from miniproto import MemoryMonitor, configure_logging
+
+
+configure_logging("INFO", format="json")
+
+monitor = MemoryMonitor(trace_allocations=True)
+before = monitor.start()
+# Run a bounded workload here.
+after = monitor.finish()
+```
+
+`format="text"` is the default; `format="json"` emits compact structured records. The formatter redacts recognized secret-bearing mapping keys and key/value-like text before output. It cannot discover every secret embedded in arbitrary strings, exception messages or user-provided objects. Keep authorization material, passphrases, proxy URLs with credentials and session strings out of log fields before they reach the formatter. The [production-operation guide](./production-operation.md) has the operational credential boundary.
+
+## Metrics are best-effort and synchronous
+
+Use `set_metrics_sink(...)` to install the process-global sink consumed by `record_metric(...)`. A sink receives a name, numeric value, unit and optional attributes. Miniproto calls it synchronously, so keep it fast or enqueue work inside the sink. Miniproto suppresses ordinary sink exceptions and continues the protocol operation. Detect missing telemetry in the sink or a separate monitor.
+
+The process-global sink also means libraries should not replace it casually. Let the application owner choose the sink, establish allowed attributes and apply its own cardinality and retention policy. Known secret-bearing attribute keys pass through redaction, but that safety net cannot identify arbitrary secrets in values or unknown key names. Keep credentials and unbounded user identifiers out of metric attributes.
+
+## Resource snapshots measure a point in time
+
+`resource_snapshot()` records RSS or working-set bytes when the platform reports them, active `tracemalloc` counters when tracing is enabled and the current garbage-collector object count. `MemoryMonitor.start()` stores the first snapshot. `sample()` adds another snapshot and `finish()` returns the interval delta. Windows reports the current working set. On Linux and macOS, `resource.getrusage().ru_maxrss` reports lifetime peak RSS, so its delta cannot show current memory growth.
+
+With `trace_allocations=True`, the monitor starts `tracemalloc` only when tracing was not already active; `finish()` stops tracing only if that monitor started it. This leaves an outer profiler's tracing session running. RSS may be unavailable, and a lifetime peak is not a current-memory measurement, so a snapshot delta alone cannot prove a memory leak.
+
+For useful comparisons, sample the same workload boundary, warm-up state, input size and process configuration. The [performance and benchmarks guide](./performance-and-benchmarks.md) explains the repository commands and what their output can establish.

@@ -1,0 +1,72 @@
+---
+title: "messages.translateResult"
+description: "No description provided by the pinned schema."
+generated: true
+editUrl: false
+language: "telegram"
+kind: "type"
+qualified_name: "messages.translateResult"
+source_path: "tools/schema/schema.json"
+source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
+namespace: "messages"
+schema_source: "tdlib"
+constructor_id: "0x33db32f8"
+---
+
+# `messages.translateResult`
+
+No description provided by the pinned schema.
+
+## Signature
+
+```tl
+messages.translateResult#33db32f8 result:Vector<TextWithEntities> = messages.TranslatedText;
+```
+
+## Result type
+
+`messages.TranslatedText`
+
+## Parameters
+
+| Name | Type | Flag | Default | Description |
+| --- | --- | --- | --- | --- |
+| result | Vector<TextWithEntities> | — | — | No description provided by the pinned schema. |
+
+## Python binding
+
+```python
+from miniproto.raw.types import MessagesTranslateResult
+```
+
+Public access: `miniproto.raw.types.MessagesTranslateResult`.
+
+## Class reference
+
+```python
+from miniproto.raw.types import MessagesTranslateResult
+
+# Refer to the raw constructor class without constructing it or calling Telegram
+constructor_type = MessagesTranslateResult
+```
+
+## Result family
+
+[`messages.TranslatedText`](/reference/telegram/types/results/messages-translated-text/)
+
+## Relationships
+
+- Result family: [`messages.TranslatedText`](/reference/telegram/types/results/messages-translated-text/)
+- Returned by: [`messages.translateText`](/reference/telegram/functions/messages/translate-text/)
+
+## Provenance
+
+- structural source: `tdlib`
+- canonical schema: https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/telegram_api.tl
+- prose merge precedence: TDLib → Telegram Desktop → Core JSON
+- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 230 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
+
+## Source-diff notes
+
+- tdlib_vs_core: changed_count=55; core_only_count=18; overlap_count=2338; tdlib_only_count=225
+- tdlib_vs_tdesktop: changed_count=0; overlap_count=2553; tdesktop_only=null; tdlib_only=accessPointRule, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret

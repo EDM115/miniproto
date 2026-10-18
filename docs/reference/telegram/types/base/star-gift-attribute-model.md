@@ -1,0 +1,83 @@
+---
+title: "starGiftAttributeModel"
+description: "No description provided by the pinned schema."
+generated: true
+editUrl: false
+language: "telegram"
+kind: "type"
+qualified_name: "starGiftAttributeModel"
+source_path: "tools/schema/schema.json"
+source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
+namespace: "base"
+schema_source: "tdlib"
+constructor_id: "0x565251e2"
+---
+
+# `starGiftAttributeModel`
+
+No description provided by the pinned schema.
+
+## Signature
+
+```tl
+starGiftAttributeModel#565251e2 flags:# crafted:flags.0?true name:string document:Document rarity:StarGiftAttributeRarity = StarGiftAttribute;
+```
+
+## Result type
+
+`StarGiftAttribute`
+
+## Parameters
+
+| Name | Type | Flag | Default | Description |
+| --- | --- | --- | --- | --- |
+| flags | # | flag word | — | No description provided by the pinned schema. |
+| crafted | flags.0?true | flags.0 | — | No description provided by the pinned schema. |
+| name | string | — | — | No description provided by the pinned schema. |
+| document | Document | — | — | No description provided by the pinned schema. |
+| rarity | StarGiftAttributeRarity | — | — | No description provided by the pinned schema. |
+
+## Flags
+
+| Parameter | Bit | Meaning |
+| --- | ---: | --- |
+| crafted | 0 | Controlled by `flags`; present when this bit is set. |
+
+## Python binding
+
+```python
+from miniproto.raw.types import StarGiftAttributeModel
+```
+
+Public access: `miniproto.raw.types.StarGiftAttributeModel`.
+
+## Class reference
+
+```python
+from miniproto.raw.types import StarGiftAttributeModel
+
+# Refer to the raw constructor class without constructing it or calling Telegram
+constructor_type = StarGiftAttributeModel
+```
+
+## Result family
+
+[`StarGiftAttribute`](/reference/telegram/types/results/star-gift-attribute/)
+
+## Relationships
+
+- Result family: [`StarGiftAttribute`](/reference/telegram/types/results/star-gift-attribute/)
+- Related constructors: [`starGiftAttributeBackdrop`](/reference/telegram/types/base/star-gift-attribute-backdrop/), [`starGiftAttributeOriginalDetails`](/reference/telegram/types/base/star-gift-attribute-original-details/), [`starGiftAttributePattern`](/reference/telegram/types/base/star-gift-attribute-pattern/)
+- Accepted by: [`payments.resaleStarGifts`](/reference/telegram/types/payments/resale-star-gifts/), [`payments.starGiftUpgradeAttributes`](/reference/telegram/types/payments/star-gift-upgrade-attributes/), [`payments.starGiftUpgradePreview`](/reference/telegram/types/payments/star-gift-upgrade-preview/), [`starGiftUnique`](/reference/telegram/types/base/star-gift-unique/)
+
+## Provenance
+
+- structural source: `tdlib`
+- canonical schema: https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/telegram_api.tl
+- prose merge precedence: TDLib → Telegram Desktop → Core JSON
+- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 230 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
+
+## Source-diff notes
+
+- tdlib_vs_core: changed_count=55; core_only_count=18; overlap_count=2338; tdlib_only_count=225
+- tdlib_vs_tdesktop: changed_count=0; overlap_count=2553; tdesktop_only=null; tdlib_only=accessPointRule, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret

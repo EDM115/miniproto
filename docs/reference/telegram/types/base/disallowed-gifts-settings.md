@@ -1,0 +1,87 @@
+---
+title: "disallowedGiftsSettings"
+description: "No description provided by the pinned schema."
+generated: true
+editUrl: false
+language: "telegram"
+kind: "type"
+qualified_name: "disallowedGiftsSettings"
+source_path: "tools/schema/schema.json"
+source_url: "https://github.com/EDM115/miniproto/blob/master/tools/schema/schema.json"
+namespace: "base"
+schema_source: "tdlib"
+constructor_id: "0x71f276c4"
+---
+
+# `disallowedGiftsSettings`
+
+No description provided by the pinned schema.
+
+## Signature
+
+```tl
+disallowedGiftsSettings#71f276c4 flags:# disallow_unlimited_stargifts:flags.0?true disallow_limited_stargifts:flags.1?true disallow_unique_stargifts:flags.2?true disallow_premium_gifts:flags.3?true disallow_stargifts_from_channels:flags.4?true = DisallowedGiftsSettings;
+```
+
+## Result type
+
+`DisallowedGiftsSettings`
+
+## Parameters
+
+| Name | Type | Flag | Default | Description |
+| --- | --- | --- | --- | --- |
+| flags | # | flag word | — | No description provided by the pinned schema. |
+| disallow_unlimited_stargifts | flags.0?true | flags.0 | — | No description provided by the pinned schema. |
+| disallow_limited_stargifts | flags.1?true | flags.1 | — | No description provided by the pinned schema. |
+| disallow_unique_stargifts | flags.2?true | flags.2 | — | No description provided by the pinned schema. |
+| disallow_premium_gifts | flags.3?true | flags.3 | — | No description provided by the pinned schema. |
+| disallow_stargifts_from_channels | flags.4?true | flags.4 | — | No description provided by the pinned schema. |
+
+## Flags
+
+| Parameter | Bit | Meaning |
+| --- | ---: | --- |
+| disallow_unlimited_stargifts | 0 | Controlled by `flags`; present when this bit is set. |
+| disallow_limited_stargifts | 1 | Controlled by `flags`; present when this bit is set. |
+| disallow_unique_stargifts | 2 | Controlled by `flags`; present when this bit is set. |
+| disallow_premium_gifts | 3 | Controlled by `flags`; present when this bit is set. |
+| disallow_stargifts_from_channels | 4 | Controlled by `flags`; present when this bit is set. |
+
+## Python binding
+
+```python
+from miniproto.raw.types import DisallowedGiftsSettings
+```
+
+Public access: `miniproto.raw.types.DisallowedGiftsSettings`.
+
+## Class reference
+
+```python
+from miniproto.raw.types import DisallowedGiftsSettings
+
+# Refer to the raw constructor class without constructing it or calling Telegram
+constructor_type = DisallowedGiftsSettings
+```
+
+## Result family
+
+[`DisallowedGiftsSettings`](/reference/telegram/types/results/disallowed-gifts-settings/)
+
+## Relationships
+
+- Result family: [`DisallowedGiftsSettings`](/reference/telegram/types/results/disallowed-gifts-settings/)
+- Accepted by: [`globalPrivacySettings`](/reference/telegram/types/base/global-privacy-settings/), [`userFull`](/reference/telegram/types/base/user-full/)
+
+## Provenance
+
+- structural source: `tdlib`
+- canonical schema: https://raw.githubusercontent.com/tdlib/td/refs/heads/master/td/generate/scheme/telegram_api.tl
+- prose merge precedence: TDLib → Telegram Desktop → Core JSON
+- source note: Canonical structure is the pinned TDLib telegram_api.tl; Layer 230 comes only from the matching Telegram Desktop end-of-file marker; core.telegram.org inputs enrich documentation and RPC error metadata without overriding structure.
+
+## Source-diff notes
+
+- tdlib_vs_core: changed_count=55; core_only_count=18; overlap_count=2338; tdlib_only_count=225
+- tdlib_vs_tdesktop: changed_count=0; overlap_count=2553; tdesktop_only=null; tdlib_only=accessPointRule, help.configSimple, inputPeerPhotoFileLocationLegacy, inputStickerSetThumbLegacy, invokeWithApnsSecretPrefix, invokeWithBusinessConnectionPrefix, invokeWithGooglePlayIntegrityPrefix, invokeWithReCaptchaPrefix, ipPort, ipPortSecret

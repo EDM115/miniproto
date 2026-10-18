@@ -1,0 +1,36 @@
+name: Bug report
+description: Report any bug you found
+title: "[BUG] "
+labels: ["bug"]
+assignees:
+  - EDM115
+body:
+  - type: textarea
+    id: bug_description
+    attributes:
+      label: Describe the bug
+      description: Describe what happened and include any error message.
+  - type: textarea
+    id: steps_to_reproduce
+    attributes:
+      label: Steps to reproduce
+      description: List the commands or Python calls that reproduce the bug, including your Python version, platform and miniproto version or commit.
+      placeholder: |
+        1. Do this
+        2. Then that
+        3. See error
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: Expected behavior
+      description: Describe the result you expected from those steps.
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Add screenshots if they show details missing from the text or logs.
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional context
+      description: Include relevant configuration and whether the same operation worked before.

@@ -1,0 +1,84 @@
+---
+title: Codebase Concerns
+description: Source-backed release, security, performance, complexity and evidence risks that contributors must preserve or resolve.
+slug: /project/codebase/concerns/
+generated: false
+---
+
+# Codebase concerns
+
+This page ranks evidence and change risks by their impact on release claims and work in the named areas. Some entries describe missing evidence rather than defects.
+
+## Top risks
+
+| Severity | Concern                                                                                                          | Evidence                                                                                                    | Impact                                                                                                           | Suggested action                                                                                                                                      |
+| -------- | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| High     | A release spans PyPI, crates.io and GitHub, which have no cross-service transaction                                    | `docs/project/release.md`, `.github/workflows/publish-release.yml`                                        | A failure after one registry accepts files can leave publication incomplete or inconsistent                | Keep the GitHub release in draft until both registries pass; use the documented recovery and post-publication checks                                  |
+| High     | Historical hosted CI, documentation and 24-wheel evidence is tied to commit `c815339…` from 2026-08-19                 | GitHub Actions runs `32228452630`, `32228472756`, `32228463727`; `docs/project/release.md`                | Those runs do not establish the status of a later source tree or its release candidate                     | Use a successful artifact-build run for the exact source commit selected for each release                                                               |
+| Medium   | Credentialed Telegram/CDN/proxy behavior remains separately gated and environment-dependent                      | `tests/integration/README.md`, `docs/faked-methods.md`, `.env.example`                                      | Fake-server correctness does not prove current service-side limits or every DC edge                              | Run only authorized narrow live gates and report not-run/blocked conditions honestly                                                                  |
+| Medium   | Three central orchestration modules are both large and high-churn                                                | `src/miniproto/client.py`, `src/miniproto/media/download.py`, `src/miniproto/connection/sender.py`          | A lifecycle change can cross request, task, storage, sender, scheduler and cleanup ownership                    | Require focused cancellation/fake-server/parity tests before the full suite; refactor only behind behavior-preserving tests                           |
+| Medium   | The Windows ARM64 dependency marker excludes `cryptography`                                                       | `pyproject.toml`, `.github/workflows/build-wheels.yml`                                                      | That platform depends on the native implementation for crypto capabilities that otherwise use `cryptography` | Keep the native capability checks; change the marker only when the supported dependency set includes Windows ARM64 wheels                             |
+| Medium   | Durable storage uses a project-owned encrypt-then-MAC construction rather than a named library AEAD primitive    | `src/miniproto/session/storage.py`                                                                          | No break is established, but custom cryptographic composition and compatibility increase audit burden            | Preserve nonce/key-separation/MAC-before-decrypt invariants, obtain specialist review and evaluate a versioned migration to a standard AEAD envelope |
+| Medium   | The raw API and generated reference depend on several upstream pins with different roles and versions            | `tools/schema/schema-metadata.json`, `tools/schema/schema-source-diff.json`, `tools/schema/rpc-errors.json` | An upstream source can drift or disagree without a runtime package change                                        | Keep offline pins authoritative, scheduled freshness informational and review structural/prose/error diffs before regeneration                       |
+| Low      | The brand generator hard-codes concept 03, its palette and the Nunito font subset                                | `docs-site/scripts/build-brand.ts`, `docs/project/brand.md`                                                 | Replacing the mark without updating the generator can produce mismatched derivatives                            | Update source, font and palette inputs together, rebuild the assets and run the site acceptance checks                                                |
+
+## Technical debt
+
+| Debt item                                                | Why it exists                                                                                    | Where                                                       | Risk if ignored                                                                  | Suggested fix                                                                                                              |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Large orchestration files                                | Alpha development concentrated cross-cutting protocol/media behavior before stable seams emerged | `client.py`, `media/download.py`, `connection/sender.py`    | Review cost and ownership mistakes grow with each feature                        | Split only where tests prove a stable lifecycle boundary; do not introduce forwarding-only abstractions                    |
+| Broad benchmark configuration surface                    | Live-media experimentation records many explicit variables to make runs reproducible             | `.env.example`, `tools/bench/benchmark_live_media_limit.py` | Configuration/help/docs can drift and live comparisons can become incomparable   | Keep CLI-help, environment, normalized-report and workflow-contract tests synchronized                                    |
+| No numeric coverage threshold                            | Quality gates prioritize behavioral protocol/parity/fake-server matrices                         | `pyproject.toml`, `.github/workflows/ci.yml`                | A weakly exercised new branch may pass unrelated broad checks                    | Add targeted tests for each behavior change; consider coverage reporting only after defining exclusions for generated code |
+| Full external-library comparison remains future evidence | Current benchmarks emphasize native/fallback and internal/runtime acceptance                     | `docs/guides/performance-and-benchmarks.md`                 | Readers may mistake internal results for cross-library comparisons                | Keep claims limited to recorded commands until a controlled cross-library matrix exists                                    |
+
+The maintained-source scan found no tracked `TODO`, `FIXME` or `HACK` markers under `src/`, `rust/miniproto/src/` or `tools/`. Telegram RPC names containing the word `TODO` and cached/generated test trees are data/artifacts, not debt markers.
+
+## Security concerns
+
+| Risk                                    | Category                   | Evidence                                                              | Current mitigation                                                                                                   | Gap                                                                                                                                     |
+| --------------------------------------- | -------------------------- | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Authorization/session disclosure        | Sensitive-data exposure    | `SECURITY.md`, `session/storage.py`, `session/strings.py`             | Encrypted durable domains, protected native strings, redacted representations/log helpers, import replacement checks | Process memory, direct serialization, third-party bearer formats, user logs and copied credentials remain outside automatic protection |
+| Unsafe replay after transport ambiguity | Protocol integrity         | `invoke.py`, `connection/sender.py`, `errors.py`                      | Retry-safety classification and `AmbiguousRpcResult`                                                                 | Caller-supplied `retry=True` can still be unsafe if the application misclassifies a write                                               |
+| Malformed hostile network input         | Input validation           | `mtproto/codec.py`, `connection/framing.py`, `tl/codec.py`            | Bounded decoding, auth/padding checks, prevalidation before state mutation, fatal transport closure                  | New generated/native paths must retain exact validation parity and panic-free behavior                                                  |
+| Custom session-storage cryptography     | Cryptographic design       | `session/storage.py`                                                  | Fresh nonce, separate derived keys, HMAC authentication verified before plaintext decode                             | Independent cryptographic review and a standard versioned envelope migration are not recorded                                           |
+| Credentialed CI/live tests              | Secret-management boundary | `.env.example`, `live-media-bench.yml`, `tests/integration/README.md` | Manual/explicit gates, repository secrets, task-owned encrypted session paths, no ordinary-PR secrets                | Maintainer must still review logs/artifacts and prevent untrusted workflow execution                                                    |
+| Native supply/provenance                | Software supply chain      | `pyproject.toml`, `Cargo.lock`, release-artifact and publish workflows | Exact/locked dependencies, clean wheel install, native import, complete checksums, per-artifact GitHub attestations, protected PyPI/crates.io OIDC publication | A build workflow definition does not establish the status of a registry or GitHub release; check the exact candidate and public files after each publication |
+
+## Performance and scaling concerns
+
+| Concern                              | Evidence                                                                | Current symptom                                                                               | Scaling risk                                                                      | Suggested improvement                                                                                  |
+| ------------------------------------ | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Platform-sensitive backend wins      | `tools/bench/benchmark_session_crypto_backends.py`, CI benchmark matrix | Rust wins the recorded protected-session workload while bulk AES-GCM can favor `cryptography` | A machine-specific router can regress another OS/CPU/interpreter                  | Keep capability routing conservative and collect comparable multi-platform samples before thresholds   |
+| Media throughput depends on Telegram | `media/download.py`, `benchmark_live_media_limit.py`, `docs/media.md`   | Floods, DC placement, account type, network, disk and file shape change tails                | Higher concurrency can worsen rate limits or memory without increasing throughput | Preserve byte budgets/fixed slots/pacing and compare repeated normalized live samples                  |
+| Static reference scale               | `docs/reference/manifest.json`, `docs-site/astro.config.ts`             | Thousands of committed pages make Astro/Pagefind builds non-trivial                           | Build time and search index size rise with future layers/docs                     | Keep sidebar collapsed, search chunked, generated output deterministic and docs in a dedicated CI job |
+| Process-local caches/indexes         | `peers.py`, `media/download.py`, `media/scheduler.py`                   | Each process owns peer/range/scheduler state                                                  | Multi-process applications do not share warm indexes or transfer budgets          | Document per-process semantics; use application-level coordination if cross-process limits matter      |
+
+## Fragile and high-churn areas
+
+The 2026-08-19 repository scan used `git log --since='90 days ago' --name-only`. It found the highest churn in `docs/development.md` (43 appearances), `PROGRESS.md` (43), `src/miniproto/client.py` (30), `docs/THOUGHTS.md` (27), `tests/test_media_download.py` (23), `docs/media.md` (21) and `.env.example`, `.github/workflows/ci.yml`, `pyproject.toml`, `src/miniproto/media/download.py`, `tests/test_live_media_limit_benchmark.py` and `tools/bench/benchmark_live_media_limit.py` (20 each). Churn helps locate coordination points; it does not establish defects.
+
+| Area                           | Why fragile                                                                                                                 | Safe change strategy                                                                                        |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Client/sender lifecycle        | Pending aliases, receive tasks, reconnect, storage, update dispatch and media pools share shutdown/cancellation boundaries | Trace the owner of every task/future/slot and test cancellation before/after each ownership transfer        |
+| Media download/live benchmark  | Ordering, adaptive windows, flood policy, lanes, writer rollback, hashes and reporting evolve together                     | Keep engine correctness separate from live tuning; test fake invokers and accounting before live comparison |
+| Development/progress/workflows | Commands and claimed evidence can drift from implemented CI                                                                 | Change command, CLI help, workflow contract, docs and progress evidence in one reviewed unit               |
+| Schema/reference generation    | Very large output magnifies one generator/source error                                                                      | Review source metadata and small focused fixtures, then run deterministic full stale checks                 |
+
+## External state
+
+Workflow definitions describe available actions, not their current results. Check the exact workflow run and public registry or GitHub release before saying that a version, artifact or site has been published.
+
+## Evidence
+
+- `CHANGELOG.md`
+- `docs/project/release.md`
+- `plans/2026-08-19-rust-library-consumption-plan.md`
+- `pyproject.toml`
+- `rust/miniproto/Cargo.toml`
+- `src/miniproto/client.py`
+- `src/miniproto/media/download.py`
+- `src/miniproto/session/storage.py`
+- `tools/schema/schema-metadata.json`
+- `.github/workflows/build-wheels.yml`
+- `.github/workflows/publish-release.yml`
+- `SECURITY.md`

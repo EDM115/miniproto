@@ -1,0 +1,30 @@
+name: Feature request
+description: Suggest an idea for this project
+title: "[FEATURE REQUEST] "
+labels: ["enhancement"]
+assignees:
+  - EDM115
+body:
+  - type: textarea
+    id: feature_description
+    attributes:
+      label: Describe the problem or use case
+      description: Explain the operation you need and what prevents you from doing it today.
+      placeholder: I need to perform this Telegram operation, but the current API requires [...]
+  - type: textarea
+    id: solution
+    attributes:
+      label: Describe the solution you'd like
+      description: Describe the API or behavior you want and include a short usage example if possible.
+      placeholder: |
+        I would like to call [...] and receive [...]
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Describe alternatives you've considered
+      description: Describe any workaround or other API you tried and why it did not meet your needs.
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional context
+      description: Include relevant Telegram documentation, examples or screenshots.
