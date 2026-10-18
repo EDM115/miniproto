@@ -96,7 +96,8 @@
 🐛 fix : drain old account senders, cached keys, delayed salts and update state before session replacement, preserve subscriber objects and reject disconnected media setup  
 🐛 fix : pin attachment identity through reference renewal and multi-session assembly, derive automatic cache keys from the effective raw location and grow destination files only as chunks arrive  
 🐛 fix : bound unknown-length upload spooling before disk writes, reject unknown DCs before pool allocation and charge CDN wire attempts to the actual destination's shared scheduler  
-🐛 fix : preserve full-entity alias removal and active secondary usernames through update persistence, prevent stale cursor snapshots from undoing fresh RPC corrections and age each username independently of unrelated metadata
+🐛 fix : preserve full-entity alias removal and active secondary usernames through update persistence, prevent stale cursor snapshots from undoing fresh RPC corrections and age each username independently of unrelated metadata  
+🐛 fix : retain an admitted full peer when a concurrent partial first insertion occurs during update recovery, preserve newer full observations and carry their authority through later partial merges
 
 ### Documentation
 

@@ -3725,7 +3725,7 @@
       "path": "python/miniproto/session/peer_merge/merge-peer-entries.md",
       "qualified_name": "miniproto.session.peer_merge.merge_peer_entries",
       "route": "/reference/python/miniproto/session/peer_merge/merge-peer-entries/",
-      "sha256": "eecf3129a7db23a47eedbc63abf216eebc73aa1aeae16c849409f02411294077",
+      "sha256": "0b3e7312e5acf500bbdb60483bfc3d683543a8720d37e0add6c09a9d58857c60",
       "source_path": "src/miniproto/session/peer_merge.py"
     },
     {
@@ -3734,7 +3734,7 @@
       "path": "python/miniproto/session/peer_merge/merge-peer-entry-map-with-metadata.md",
       "qualified_name": "miniproto.session.peer_merge.merge_peer_entry_map_with_metadata",
       "route": "/reference/python/miniproto/session/peer_merge/merge-peer-entry-map-with-metadata/",
-      "sha256": "fd066a2b5faca339f7d229544ef5e94d85384c1bc0f51e2d292a7d7265995a99",
+      "sha256": "cc4275957b5ff5bf86f6e6a12d8af99281c2612a37aa56ba7d9de625c6647526",
       "source_path": "src/miniproto/session/peer_merge.py"
     },
     {
@@ -3743,7 +3743,7 @@
       "path": "python/miniproto/session/peer_merge/merge-peer-entry-map.md",
       "qualified_name": "miniproto.session.peer_merge.merge_peer_entry_map",
       "route": "/reference/python/miniproto/session/peer_merge/merge-peer-entry-map/",
-      "sha256": "30a5c1c784cfc02d8ca1915a47ea35464be45f829db9d75eeeddd3c30313f985",
+      "sha256": "6b9504df72bd02db0a845f47cb15ad505f0294ef9d5092e9082851a8bf3c2f28",
       "source_path": "src/miniproto/session/peer_merge.py"
     },
     {
@@ -3752,7 +3752,7 @@
       "path": "python/miniproto/session/peer_merge/merge-peer-entry.md",
       "qualified_name": "miniproto.session.peer_merge.merge_peer_entry",
       "route": "/reference/python/miniproto/session/peer_merge/merge-peer-entry/",
-      "sha256": "9203e89178a47bb0f33530ea15b973d5421dde37dbdf848f4717396d376ad634",
+      "sha256": "37e95e13572b6c7b5e02431a418500c46fa8e2689b899649300ef8dd9e1d2711",
       "source_path": "src/miniproto/session/peer_merge.py"
     },
     {
@@ -42166,7 +42166,7 @@
     "src/miniproto/session/__init__.py": "23e9aeab951555b851cb306bd32ea2e334a78f97d120130d49f2023077a24d90",
     "src/miniproto/session/models.py": "cf02d3471414113e25d4c1ecd4070ddcaa5b7cd4bdb5aefd40c2adb1f8549af8",
     "src/miniproto/session/peer_aliases.py": "5dbdc76cb077bc56a25a6cab3d9d11b53e29ec26979a03b9ecf328f2e7e32b3e",
-    "src/miniproto/session/peer_merge.py": "930d8a56896cfb97039ccff30877d82179842f8f783549bb8b1accca493838b8",
+    "src/miniproto/session/peer_merge.py": "9c06ddae6a01d16a42aeca1cdf8ed100c9bdd558385275a6c3b19e9d1d8fbbde",
     "src/miniproto/session/storage.py": "2e8695b8165bd56c5f6192f408a48742ad974bd9451499321996373fb3d6e527",
     "src/miniproto/session/strings.py": "6deab2ed53d0b996b503e9f0cf39e8fae799ca4eb716586fcc087ff4194af90a",
     "src/miniproto/tl/__init__.py": "b49669c841735a755df123eb6284fc2df546a85e7be4033af250ac334cd38f04",
@@ -42174,7 +42174,7 @@
     "src/miniproto/tl/fast.py": "6ca636bc0f6a3e12cba40c97be36944af225fd258afd85be3b33b715eda5b7e4",
     "src/miniproto/types.py": "d70cdb5aca9c7d01f50d4f349fc8ca923b980281fd3d5e3729def6859d172b7f",
     "src/miniproto/updates/__init__.py": "35fd2beca5c77663c0ebe244e241954c48b0622318db575e43eb03a9a95b7d9d",
-    "src/miniproto/updates/manager.py": "fe657f43989e858baf2915303353be11b8dd3200b7bc6a801abea00a11f3ce67",
+    "src/miniproto/updates/manager.py": "96bd560e12732b14f304f350d8814b0758d5b4caa0a2883ebeab2fd860284f15",
     "src/miniproto/updates/state.py": "02161bdac5eab4714464497a2d92cef5703ae907502dc3806d414a408b277579",
     "tools/docs/__init__.py": "7669646d766c8f6217eb78231e4daabe221cf89f38434cbcdd9f394e1953b9b9",
     "tools/docs/__main__.py": "e76e4f1db85f1487e5f5119e48e69ec114fb5165cbe36975e3305629b2d43da3",

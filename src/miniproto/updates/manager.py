@@ -814,7 +814,7 @@ def _merge_observed_peers(
     for entity, baseline in observations:
         key = (entity.kind, entity.id)
         current = snapshot.get(key)
-        if current != baseline and (current is None or baseline is None):
+        if current != baseline and current is None:
             continue
         incoming = entity.to_peer_cache_entry()
         if not entity.complete:
@@ -822,7 +822,7 @@ def _merge_observed_peers(
         previous = merged.get(key)
         candidate = incoming if previous is None else merge_peer_entry(previous, incoming)
         if current != baseline:
-            assert current is not None and baseline is not None
+            assert current is not None
             candidate = _retain_newer_peer_fields(candidate, baseline, current)
         if entity.kind == "self":
             merged.pop(("user", entity.id), None)
@@ -831,17 +831,20 @@ def _merge_observed_peers(
 
 
 def _retain_newer_peer_fields(
-    candidate: PeerCacheEntry, baseline: PeerCacheEntry, current: PeerCacheEntry
+    candidate: PeerCacheEntry, baseline: PeerCacheEntry | None, current: PeerCacheEntry
 ) -> PeerCacheEntry:
     """Retain newer fields without discarding unrelated pending alias removals
 
     Args:
         candidate: Result of applying the pending observation to earlier transaction observations.
-        baseline: Durable peer snapshot captured when this observation was admitted.
+        baseline: Durable peer snapshot captured at admission, or ``None`` before the peer's first insertion.
         current: Current durable peer at mutation entry, excluding this transaction's changes.
     """
-    if _full_observation_revision(current) != _full_observation_revision(baseline):
+    baseline_revision = 0 if baseline is None else _full_observation_revision(baseline)
+    if _full_observation_revision(current) != baseline_revision:
         return current
+    if baseline is None:
+        baseline = PeerCacheEntry(id=current.id, kind=current.kind, username_observed_at={})
     baseline_raw = dict(baseline.raw or {})
     current_raw = dict(current.raw or {})
     raw = dict(candidate.raw or {})

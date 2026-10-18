@@ -1592,6 +1592,76 @@ def test_partial_observation_during_recovery_does_not_block_independent_alias_re
     event_loop.run(scenario())
 
 
+@pytest.mark.parametrize("concurrent", ["partial", "full", "full-then-partial"])
+def test_first_full_peer_survives_concurrent_partial_insert(tmp_path: Path, concurrent: str) -> None:
+    async def scenario() -> None:
+        path = tmp_path / "first-peer.sqlite"
+        storage = EncryptedSQLiteSessionStorage(path, key=OBSERVATION_STORAGE_KEY)
+        await storage.save(SessionRecord())
+        config = ClientConfig(api_id=1, api_hash="offline", session_storage=storage)
+        concurrent_peer: PeerCacheEntry | None = None
+        recovery_requests = 0
+
+        async def remote(request: object) -> object:
+            nonlocal concurrent_peer, recovery_requests
+            if isinstance(request, functions.ContactsResolveUsername):
+                raise NotFound("alias absent from newer full observation")
+            assert isinstance(request, functions.UpdatesGetDifference)
+            recovery_requests += 1
+            assert not session_record_from_mapping(await storage.load() or {}).peers
+            if concurrent != "partial":
+                await cache.remember_raw_entities(types.User(id=71, access_hash=800, first_name="Newer full"))
+            if concurrent != "full":
+                await cache.remember_raw_entities(types.User(id=71, min=True, access_hash=999, first_name="Partial"))
+            concurrent_peer = session_record_from_mapping(await storage.load() or {}).peers[0]
+            return types.UpdatesDifferenceEmpty(date=102, seq=2)
+
+        cache = PeerCache(config, storage, remote)
+
+        async def check(candidate: PeerCache) -> None:
+            access_hash = 717 if concurrent == "partial" else 800
+            expected = Peer(id=71, kind="user", access_hash=access_hash)
+            assert await candidate.resolve_peer(71) == expected
+            assert await candidate.resolve_input_peer(71) == types.InputPeerUser(user_id=71, access_hash=access_hash)
+            for alias in ("@newprimary", "@newsecondary"):
+                if concurrent == "partial":
+                    assert await candidate.resolve_peer(alias) == expected
+                else:
+                    with pytest.raises(NotFound, match="alias absent from newer full observation"):
+                        await candidate.resolve_peer(alias)
+            if concurrent == "partial":
+                assert await candidate.resolve_peer(OBSERVATION_NEW_PHONE) == expected
+
+        try:
+            manager = UpdateManager(config, storage, remote)
+            full = types.User(id=71, access_hash=717, first_name="Admitted full", username="newprimary", phone=OBSERVATION_NEW_PHONE, usernames=(types.Username(username="newsecondary", active=True),))  # fmt: skip
+            await manager.handle_raw_update(pushed(full, seq=2))
+            assert recovery_requests == 1
+            record = session_record_from_mapping(await storage.load() or {})
+            assert record.update_state is not None and record.update_state.seq == 2
+            assert len(record.peers) == 1
+            peer = record.peers[0]
+            if concurrent == "partial":
+                assert peer.access_hash == 717
+                assert peer.username == "newprimary"
+                assert peer.raw is not None and peer.raw["_miniproto_complete"] is True
+                assert peer.raw["first_name"] == "Partial"
+            else:
+                assert peer == concurrent_peer
+            await check(cache)
+            await storage.close()
+            reloaded = EncryptedSQLiteSessionStorage(path, key=OBSERVATION_STORAGE_KEY)
+            try:
+                assert session_record_from_mapping(await reloaded.load() or {}).peers == record.peers
+                await check(PeerCache(config, reloaded, remote))
+            finally:
+                await reloaded.close()
+        finally:
+            await storage.close()
+
+    event_loop.run(scenario())
+
+
 @pytest.mark.parametrize("full_source", ["rpc", "push"])
 @pytest.mark.parametrize("partial_count", [1, 3])
 def test_full_alias_absence_authority_survives_later_partials_and_reload(tmp_path: Path, full_source: str, partial_count: int) -> None:

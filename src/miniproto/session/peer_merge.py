@@ -30,13 +30,14 @@ class PeerEntryMapMerge:
 
 
 def _full_observation_revision(peer: PeerCacheEntry) -> int:
-    """Read internal full-observation authority, treating untagged entries as revision zero
+    """Read full-observation authority, counting an unversioned full entry as its first observation
 
     Args:
         peer: Canonical peer entry whose full-observation revision is inspected.
     """
-    revision = (peer.raw or {}).get(_FULL_OBSERVATION_REVISION_KEY, 0)
-    return revision if type(revision) is int and revision > 0 else 0
+    raw = peer.raw or {}
+    revision = raw.get(_FULL_OBSERVATION_REVISION_KEY, 0)
+    return revision if type(revision) is int and revision > 0 else int(raw.get("_miniproto_complete") is True)
 
 
 def merge_peer_entry(current: PeerCacheEntry, incoming: PeerCacheEntry) -> PeerCacheEntry:
