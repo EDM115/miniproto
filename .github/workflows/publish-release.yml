@@ -226,7 +226,7 @@ jobs:
           path: release-assets
           digest-mismatch: error
 
-      - name: Create draft and attach every immutable release asset
+      - name: Create or resume the matching draft and attach missing release assets
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -238,14 +238,51 @@ jobs:
           python -m tools.release_artifacts notes \
             --changelog CHANGELOG.md \
             --output-dir release-metadata
-          gh release create "$RELEASE_TAG" \
-            --repo "$GITHUB_REPOSITORY" \
-            --draft \
-            --prerelease="$PRERELEASE" \
-            --target "$SOURCE_SHA" \
-            --title "$(cat release-metadata/release-title.txt)" \
+          release_args=(
+            "$RELEASE_TAG"
+            --repo "$GITHUB_REPOSITORY"
+            --draft
+            --prerelease="$PRERELEASE"
+            --title "$(cat release-metadata/release-title.txt)"
             --notes-file release-metadata/release-notes.md
-          gh release upload "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" release-assets/*
+          )
+          release_assets=(release-assets/*)
+          existing_release_id="$(gh api "repos/$GITHUB_REPOSITORY/releases" --paginate --jq ".[] | select(.tag_name == \"$RELEASE_TAG\") | .id")"
+          if [[ -n "$existing_release_id" ]]; then
+            if [[ ! "$existing_release_id" =~ ^[1-9][0-9]*$ ]]; then
+              printf 'multiple GitHub releases already use %s\n' "$RELEASE_TAG" >&2
+              exit 1
+            fi
+            gh api "repos/$GITHUB_REPOSITORY/releases/$existing_release_id" > existing-release.json
+            python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          release = json.loads(Path("existing-release.json").read_text(encoding="utf-8"))
+          if release.get("draft") is not True or release.get("target_commitish") != os.environ["SOURCE_SHA"]:
+              raise SystemExit("existing GitHub release must be a draft targeting the verified source commit")
+          expected = {path.name: path for path in Path("release-assets").iterdir() if path.is_file()}
+          assets = release["assets"]
+          existing_names = {asset["name"] for asset in assets}
+          if len(existing_names) != len(assets) or existing_names - expected.keys():
+              raise SystemExit("existing GitHub draft contains duplicate or unexpected assets")
+          for asset in assets:
+              digest = "sha256:" + hashlib.sha256(expected[asset["name"]].read_bytes()).hexdigest()
+              if asset.get("digest") != digest:
+                  raise SystemExit(f"existing GitHub draft asset differs from the attested candidate: {asset['name']}")
+          missing = [path.as_posix() + "\n" for name, path in sorted(expected.items()) if name not in existing_names]
+          Path("release-metadata/assets-to-upload.txt").write_text("".join(missing), encoding="utf-8", newline="\n")
+          PY
+            mapfile -t release_assets < release-metadata/assets-to-upload.txt
+            gh release edit "${release_args[@]}"
+          else
+            gh release create "${release_args[@]}" --target "$SOURCE_SHA"
+          fi
+          if [[ ${#release_assets[@]} -gt 0 ]]; then
+            gh release upload "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" "${release_assets[@]}"
+          fi
 
   crates:
     name: Publish verified source to crates.io
@@ -284,13 +321,16 @@ jobs:
           set -euo pipefail
           expected="verified-crate/miniproto-$RELEASE_VERSION.crate"
           registry="registry-miniproto-$RELEASE_VERSION.crate"
+          registry_metadata_url="https://crates.io/api/v1/crates/miniproto/$RELEASE_VERSION"
           registry_url="https://crates.io/api/v1/crates/miniproto/$RELEASE_VERSION/download"
+          curl_args=(--location --silent --show-error --user-agent "miniproto-release-publisher (https://github.com/EDM115/miniproto)")
 
-          if ! existing_status="$(curl --location --silent --show-error --output "$registry" --write-out '%{http_code}' "$registry_url")"; then
+          if ! existing_status="$(curl "${curl_args[@]}" --output registry-version.json --write-out '%{http_code}' "$registry_metadata_url")"; then
             printf 'could not determine whether crates.io already contains miniproto %s\n' "$RELEASE_VERSION" >&2
             exit 1
           fi
           if [[ "$existing_status" == "200" ]]; then
+            curl "${curl_args[@]}" --fail --output "$registry" "$registry_url"
             cmp --silent "$expected" "$registry" || {
               printf 'existing crates.io archive differs from the attested build artifact\n' >&2
               exit 1
@@ -305,7 +345,7 @@ jobs:
 
           cargo publish --locked -p miniproto
           for attempt in {1..12}; do
-            if curl --fail --location --silent --show-error \
+            if curl "${curl_args[@]}" --fail \
               "$registry_url" \
               --output "$registry"; then
               break

@@ -4,12 +4,20 @@ import hashlib
 import importlib
 import io
 import json
+import os
+import shutil
+import subprocess
+import sys
 import tarfile
+import urllib.error
+import urllib.request
 import zipfile
+from email.message import Message
 from pathlib import Path
 from types import ModuleType
 
 import pytest
+import yaml
 
 
 def _release_artifacts_module() -> ModuleType:
@@ -19,6 +27,28 @@ def _release_artifacts_module() -> ModuleType:
         The imported release-artifact module.
     """
     return importlib.import_module("tools.release_artifacts")
+
+
+def _release_workflow_bash() -> str:
+    """Locate Bash for executing publication steps with mocked external commands.
+
+    Returns:
+        Bash executable path, preferring Git Bash on Windows.
+    """
+    bash = shutil.which("bash")
+    git = shutil.which("git")
+    if os.name == "nt" and git is not None:
+        bash = next(
+            (
+                str(parent / "bin/bash.exe")
+                for parent in Path(git).resolve().parents
+                if (parent / "bin/bash.exe").is_file()
+            ),
+            bash,
+        )
+    if bash is None:
+        pytest.skip("Bash is required to execute the release workflow step")
+    return bash
 
 
 def _write_wheel(path: Path, version: str) -> None:
@@ -282,3 +312,258 @@ def test_release_notes_reject_a_missing_or_empty_release_heading(changelog: str)
 
     with pytest.raises(module.ReleaseArtifactError, match="heading"):
         module.extract_changelog_release(changelog)
+
+
+@pytest.mark.parametrize(
+    ("registry_case", "expected_status", "should_publish"),
+    [
+        ("missing", 0, True),
+        ("identical", 0, False),
+        ("different", 1, False),
+        ("forbidden", 1, False),
+        ("unavailable", 1, False),
+    ],
+)
+def test_crates_publication_checks_metadata_before_downloading(
+    tmp_path: Path, registry_case: str, expected_status: int, should_publish: bool
+) -> None:
+    bash = _release_workflow_bash()
+    workflow = yaml.safe_load(
+        (Path(__file__).resolve().parents[1] / ".github/workflows/publish-release.yml").read_text(encoding="utf-8")
+    )
+    commands = workflow["jobs"]["crates"]["steps"][-1]["run"]
+    (tmp_path / "verified-crate").mkdir()
+    (tmp_path / "verified-crate/miniproto-0.0.99.crate").write_bytes(b"attested crate bytes")
+    mocks = r"""
+curl() {
+  local output='' url='' status=200 body='attested crate bytes' write_status=false fail=false
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --output) output="$2"; shift 2 ;;
+      --write-out) write_status=true; shift 2 ;;
+      --user-agent) printf '%s\n' "$2" >> user-agents.txt; shift 2 ;;
+      --fail) fail=true; shift ;;
+      https://*) url="$1"; shift ;;
+      *) shift ;;
+    esac
+  done
+  printf '%s\n' "$url" >> requests.txt
+  if [[ "$REGISTRY_CASE" == forbidden ]]; then
+    status=403
+  elif [[ "$REGISTRY_CASE" == unavailable ]]; then
+    status=503
+  elif [[ "$url" != */download ]]; then
+    if [[ "$REGISTRY_CASE" == missing ]]; then status=404; fi
+    body='{"version":{}}'
+  elif [[ "$REGISTRY_CASE" == missing && ! -f published ]]; then
+    status=403
+  elif [[ "$REGISTRY_CASE" == different ]]; then
+    body='different crate bytes'
+  fi
+  printf '%s' "$body" > "$output"
+  if [[ "$write_status" == true ]]; then printf '%s' "$status"; fi
+  if [[ "$fail" == true && "$status" -ge 400 ]]; then return 22; fi
+}
+cargo() { printf '%s\n' "$*" >> cargo-calls.txt; touch published; }
+sleep() { :; }
+"""
+    script = tmp_path / "publish.sh"
+    script.write_text(mocks + commands, encoding="utf-8", newline="")
+
+    result = subprocess.run(  # noqa: S603 - Execute repository workflow code with mocked publication commands
+        [bash, "--noprofile", "--norc", script.as_posix()],
+        cwd=tmp_path,
+        env={**os.environ, "RELEASE_VERSION": "0.0.99", "REGISTRY_CASE": registry_case},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == expected_status, result.stdout + result.stderr
+    assert (tmp_path / "published").exists() is should_publish
+    requests = (tmp_path / "requests.txt").read_text().splitlines()
+    assert requests[0] == "https://crates.io/api/v1/crates/miniproto/0.0.99"
+    assert all(agent for agent in (tmp_path / "user-agents.txt").read_text().splitlines())
+    if should_publish:
+        assert (tmp_path / "cargo-calls.txt").read_text().splitlines() == ["publish --locked -p miniproto"]
+    if expected_status == 0:
+        assert (tmp_path / "registry-miniproto-0.0.99.crate").read_bytes() == b"attested crate bytes"
+
+
+@pytest.mark.parametrize(
+    ("release_case", "expected_status", "expected_mutation"),
+    [
+        ("absent", 0, "create"),
+        ("complete", 0, "edit"),
+        ("partial", 0, "edit"),
+        ("other-sha", 1, None),
+        ("published", 1, None),
+        ("extra-asset", 1, None),
+        ("different-bytes", 1, None),
+        ("lookup-forbidden", 22, None),
+        ("metadata-unavailable", 22, None),
+        ("duplicates", 1, None),
+    ],
+)
+def test_github_publication_resumes_only_a_matching_draft(
+    tmp_path: Path, release_case: str, expected_status: int, expected_mutation: str | None
+) -> None:
+    repo = Path(__file__).resolve().parents[1]
+    workflow = yaml.safe_load((repo / ".github/workflows/publish-release.yml").read_text(encoding="utf-8"))
+    commands = workflow["jobs"]["draft-release"]["steps"][-1]["run"]
+    (tmp_path / "CHANGELOG.md").write_text("## `v0.1.0` - Alpha\nNotes\n", encoding="utf-8")
+    (tmp_path / "release-assets").mkdir()
+    artifacts = {"example.whl": b"attested wheel", "release-manifest.json": b"attested manifest"}
+    for name, data in artifacts.items():
+        (tmp_path / "release-assets" / name).write_bytes(data)
+    remote = {
+        "draft": release_case != "published",
+        "target_commitish": ("b" if release_case == "other-sha" else "a") * 40,
+        "assets": [
+            {"name": name, "digest": "sha256:" + hashlib.sha256(data).hexdigest()}
+            for name, data in artifacts.items()
+            if release_case != "partial" or name == "release-manifest.json"
+        ],
+    }
+    if release_case == "extra-asset":
+        remote["assets"].append({"name": "unexpected.whl"})
+    if release_case == "different-bytes":
+        remote["assets"][0]["digest"] = "sha256:" + "0" * 64
+    (tmp_path / "remote-release.json").write_text(json.dumps(remote), encoding="utf-8")
+    mocks = r"""
+python() { "$RELEASE_TEST_PYTHON" "$@"; }
+gh() {
+  if [[ "$1" == api ]]; then
+    if [[ "$2" == */releases/123 ]]; then
+      if [[ "$RELEASE_CASE" == metadata-unavailable ]]; then return 22; fi
+      cat remote-release.json
+      return 0
+    fi
+    if [[ "$RELEASE_CASE" == lookup-forbidden ]]; then return 22; fi
+    if [[ "$RELEASE_CASE" == absent ]]; then return 0; fi
+    if [[ "$RELEASE_CASE" == duplicates ]]; then printf '123\n456\n'; else printf '123\n'; fi
+  elif [[ "$1" == release && "$2" == view ]]; then
+    cat remote-release.json
+  else
+    printf '%s\n' "$2" >> gh-mutations.txt
+    printf '%s\n' "$*" >> gh-arguments.txt
+  fi
+}
+"""
+    script = tmp_path / "draft.sh"
+    script.write_text(mocks + commands, encoding="utf-8", newline="")
+    result = subprocess.run(  # noqa: S603 - Execute repository workflow code with mocked publication commands
+        [_release_workflow_bash(), "--noprofile", "--norc", script.as_posix()],
+        cwd=tmp_path,
+        env={
+            **os.environ,
+            "PYTHONPATH": str(repo),
+            "RELEASE_TEST_PYTHON": Path(sys.executable).as_posix(),
+            "RELEASE_CASE": release_case,
+            "RELEASE_TAG": "v0.0.99",
+            "PRERELEASE": "true",
+            "SOURCE_SHA": "a" * 40,
+            "GITHUB_REPOSITORY": "EDM115/miniproto",
+        },
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == expected_status, result.stdout + result.stderr
+    mutation_log = tmp_path / "gh-mutations.txt"
+    expected_mutations = [expected_mutation] if expected_mutation else []
+    if release_case in {"absent", "partial"}:
+        expected_mutations.append("upload")
+    assert (mutation_log.read_text().splitlines() if mutation_log.exists() else []) == expected_mutations
+    if expected_mutation:
+        arguments = (tmp_path / "gh-arguments.txt").read_text().splitlines()
+        assert all("--clobber" not in command for command in arguments)
+        assert "--prerelease=true" in arguments[0]
+        assert "--draft" in arguments[0]
+        if release_case in {"absent", "partial"}:
+            assert "release-assets/example.whl" in arguments[-1]
+            assert ("release-assets/release-manifest.json" in arguments[-1]) is (release_case == "absent")
+
+
+@pytest.mark.parametrize(
+    "registry_case",
+    [
+        "missing",
+        "identical",
+        "partial",
+        "forbidden",
+        "unavailable",
+        "digest-mismatch",
+        "download-mismatch",
+        "download-forbidden",
+        "unexpected-file",
+    ],
+)
+def test_pypi_publication_uses_json_existence_and_verifies_existing_bytes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, registry_case: str
+) -> None:
+    repo = Path(__file__).resolve().parents[1]
+    workflow = yaml.safe_load((repo / ".github/workflows/publish-release.yml").read_text(encoding="utf-8"))
+    commands = next(step["run"] for step in workflow["jobs"]["pypi"]["steps"] if step.get("id") == "prepare-pypi")
+    code = commands.split("\n", 1)[1].rsplit("\nPY", 1)[0]
+    distributions = {
+        "miniproto-0.0.99-cp314-cp314-win_amd64.whl": b"attested wheel",
+        "miniproto-0.0.99.tar.gz": b"attested sdist",
+    }
+    (tmp_path / "dist").mkdir()
+    for name, data in distributions.items():
+        (tmp_path / "dist" / name).write_bytes(data)
+    published = []
+    for name, data in distributions.items():
+        if registry_case == "partial" and name.endswith(".tar.gz"):
+            continue
+        published.append(
+            {
+                "filename": name,
+                "digests": {
+                    "sha256": "0" * 64 if registry_case == "digest-mismatch" else hashlib.sha256(data).hexdigest()
+                },
+                "url": f"https://files.pythonhosted.org/{name}",
+            }
+        )
+    if registry_case == "unexpected-file":
+        published.append({"filename": "unexpected.whl"})
+    requests = []
+
+    def fake_urlopen(url: str, *, timeout: int) -> io.BytesIO:
+        requests.append(url)
+        if url == "https://pypi.org/pypi/miniproto/0.0.99/json":
+            status = {"missing": 404, "forbidden": 403, "unavailable": 503}.get(registry_case)
+            if status is not None:
+                raise urllib.error.HTTPError(url, status, "fixture response", Message(), io.BytesIO())
+            return io.BytesIO(json.dumps({"urls": published}).encode())
+        if registry_case == "download-forbidden":
+            raise urllib.error.HTTPError(url, 403, "fixture response", Message(), io.BytesIO())
+        name = url.rsplit("/", 1)[-1]
+        return io.BytesIO(b"different bytes" if registry_case == "download-mismatch" else distributions[name])
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("RELEASE_VERSION", "0.0.99")
+    monkeypatch.setenv("GITHUB_OUTPUT", str(tmp_path / "github-output"))
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    if registry_case in {"missing", "identical", "partial"}:
+        exec(compile(code, "publish-release/prepare-pypi", "exec"), {})  # noqa: S102 - Execute the workflow step with mocked HTTP
+        selected = {path.name: path.read_bytes() for path in (tmp_path / "publish-dist").iterdir()}
+        expected = (
+            distributions
+            if registry_case == "missing"
+            else {
+                name: data
+                for name, data in distributions.items()
+                if registry_case == "partial" and name.endswith(".tar.gz")
+            }
+        )
+        assert selected == expected
+        outputs = dict(line.split("=", 1) for line in (tmp_path / "github-output").read_text().splitlines())
+        assert outputs["has_missing"] == ("true" if expected else "false")
+    else:
+        with pytest.raises((urllib.error.HTTPError, SystemExit)):
+            exec(compile(code, "publish-release/prepare-pypi", "exec"), {})  # noqa: S102 - Execute the workflow step with mocked HTTP
+        assert not (tmp_path / "github-output").exists()
+    assert requests[0] == "https://pypi.org/pypi/miniproto/0.0.99/json"
